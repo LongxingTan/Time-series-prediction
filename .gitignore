@@ -1,0 +1,6 @@
+/.idea/*
+/__pycache__/*
+/raw_data/*
+/data/*
+/output/*
+/bert_pretrained/*
