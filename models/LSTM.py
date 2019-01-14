@@ -66,6 +66,12 @@ class LSTM():
                 print('step {}, loss {}'.format(step, loss))
             self.saver.save(self.sess, './tf_rnn.ckpt')
 
+    def eval(self):
+        pass
+
+    def predict(self):
+        pass
+
 
     def predict_point(self,x_test):
         self.load_model()
@@ -152,5 +158,3 @@ if __name__=='__main__':
     plt.plot(trainPredictPlot)
     plt.plot(testPredictPlot)
     plt.show()
-
-
