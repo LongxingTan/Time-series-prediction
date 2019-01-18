@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
-from utils import *
+
 
 class Config:
     time_state=5
@@ -12,7 +12,7 @@ class Config:
     n_epochs=15
     batch_size=1
     n_layers=1
-
+config = Config()
 
 class LSTM():
     def __init__(self):
@@ -51,7 +51,6 @@ class LSTM():
 
     def train(self,x_train,y_train,n_epochs=1000):
         self.build()
-
         with self.sess:
             #print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
             global_step = tf.Variable(0, name='step', trainable=False)
@@ -106,7 +105,7 @@ class LSTM():
 
 if __name__=='__main__':
     config = Config()
-    ts = TS()
+
 
     '''
     data = ts.import_data('./Data/Repair_list.xlsx')
@@ -121,8 +120,7 @@ if __name__=='__main__':
     lstm.predict_multi(x, predict_steps=20)
 
 '''
-    dataset = pd.read_csv('./Data/international-airline-passengers.csv', usecols=[1], engine='python', skipfooter=3,
-                              sep=';')
+    dataset = pd.read_csv('../data/LSTM_data.csv', usecols=[1], engine='python', sep=',')
     dataset = dataset.values.astype('float32')
     scaler = MinMaxScaler(feature_range=(0, 1))
     dataset = scaler.fit_transform(dataset)
@@ -131,8 +129,11 @@ if __name__=='__main__':
     test_size = len(dataset) - train_size
     train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
     print(len(train), len(test))
-    trainX, trainY = ts.create_model_input(train, time_state=5)
-    testX, testY=ts.create_model_input(test,time_state=5)
+
+    from prepare_model_input import *
+    ts=Input_builder()
+    trainX, trainY = ts.prepare_RNN_data(train, time_state=5)
+    testX, testY=ts.prepare_RNN_data(test,time_state=5)
 
 
 
