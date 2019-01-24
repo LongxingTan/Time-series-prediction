@@ -1,0 +1,1 @@
+#reder to the mixed gaussian, solve the cp issue again

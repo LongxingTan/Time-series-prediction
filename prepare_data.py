@@ -115,6 +115,7 @@ class Prepare_Denza(Prepare_Data):
         self.failures['Deliverydate']=pd.to_datetime(self.failures['handover date-Update(customer)(retail by 31/12/2018)'],
                                                      format='%Y-%m-%d',errors='ignore')
 
+
     def find_interval(self):
         #make the known time series
         self.failures['Interval']=list(map(lambda x: int(x.days),self.failures['Repairdate']-self.failures['Deliverydate']))
@@ -124,15 +125,21 @@ class Prepare_Denza(Prepare_Data):
 
     def find_failures(self):
         #make the predicted failures & failures_diff
-        self.failures_aggby_date=self.failures.groupby(['Repairdate'])['Part name'].count()
+        if self.interval_type=='daily':
+            self.failures_aggby_calendar=self.failures.groupby(['Repairdate'])['Part name'].count().reset_index(name='Failures')
+        elif self.interval_type=='weekly':
+            self.failures['Repair week'] = self.failures['Repairdate'].apply(lambda x: x.strftime('%Y%V'))
+            self.failures_aggby_calendar=self.failures.groupby(['Repair week'])['Part name'].count().reset_index(name='Failures')
+        elif self.interval_type=='monthly':
+            self.failures['Repair month'] = self.failures['Repairdate'].apply(lambda x: x.strftime('%Y%m'))
+            self.failures_aggby_calendar=self.failures.groupby(['Repair month'])['Part name'].count().reset_index(name='Failures')
         self.failures_aggby_interval=self.failures.groupby(['Interval'])['Part name'].count().reset_index(name='Failures')
 
 
     def create_feature_samples(self):
         #create the features of samples
-        self.samples_aggby_date = self.samples.groupby(['retail date'])['Model year'].count()
-        self.samples_aggby_interval = self.samples.groupby(['Interval'])['Model year'].count().reset_index(
-            name='Samples')
+        self.samples_aggby_date = self.samples.groupby(['retail date'])['Model year'].count().reset_index(name='Samples')
+        self.samples_aggby_interval = self.samples.groupby(['Interval'])['Model year'].count().reset_index(name='Samples')
         self.samples_aggby_interval = self.samples_aggby_interval.loc[self.samples_aggby_interval['Interval'] > 0, :]
 
         self.data_aggby_interval = self.samples_aggby_interval.merge(self.failures_aggby_interval, on='Interval',
