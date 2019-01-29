@@ -70,6 +70,7 @@ class Prepare_Mercedes(Prepare_Data):
         self.samples_aggby_interval = self.samples.groupby(['Interval'])['FIN'].count().reset_index(name='Samples')
         self.samples_aggby_interval = self.samples_aggby_interval.loc[self.samples_aggby_interval['Interval'] > 0, :]
 
+
         self.samples_aggby_date = self.samples.groupby(['Initial registration date'])['FIN'].count().reset_index(name='Samples')
 
         self.data_aggby_interval = self.samples_aggby_interval.merge(self.failures_aggby_interval, on='Interval',
@@ -97,10 +98,11 @@ class Prepare_Mercedes(Prepare_Data):
 
 
 class Prepare_Denza(Prepare_Data):
-    def __init__(self,interval_type='weekly'):
+    def __init__(self,production_file,repair_file,output_file='Weibull_data.csv',interval_type='weekly',):
         super(Prepare_Denza,self).__init__()
         self.interval_type = interval_type
-        self.import_examples(['./raw_data/production_2018.xlsx', './raw_data/failure_2018.xlsx'])
+        self.output_file=output_file
+        self.import_examples([production_file, repair_file])
         self.find_interval()
         self.find_failures()
         self.create_feature_samples()
@@ -133,7 +135,8 @@ class Prepare_Denza(Prepare_Data):
         elif self.interval_type=='monthly':
             self.failures['Repair month'] = self.failures['Repairdate'].apply(lambda x: x.strftime('%Y%m'))
             self.failures_aggby_calendar=self.failures.groupby(['Repair month'])['Part name'].count().reset_index(name='Failures')
-        self.failures_aggby_interval=self.failures.groupby(['Interval'])['Part name'].count().reset_index(name='Failures')
+        self.failures_aggby_interval=self.failures.groupby(['Interval'])['VIN'].count().reset_index(name='Failures')
+
 
 
     def create_feature_samples(self):
@@ -142,13 +145,18 @@ class Prepare_Denza(Prepare_Data):
         self.samples_aggby_interval = self.samples.groupby(['Interval'])['Model year'].count().reset_index(name='Samples')
         self.samples_aggby_interval = self.samples_aggby_interval.loc[self.samples_aggby_interval['Interval'] > 0, :]
 
+        interval_full=pd.DataFrame({'Interval':range(int(0.95*max(self.samples_aggby_interval['Interval'])))})
+        self.samples_aggby_interval=self.samples_aggby_interval.merge(interval_full,on='Interval',how='right').fillna(0)
+
         self.data_aggby_interval = self.samples_aggby_interval.merge(self.failures_aggby_interval, on='Interval',
                                                                      how='left').fillna(0)
         interval_type_num=self.interval_dict[self.interval_type]
         self.data_aggby_interval['Interval'] = self.data_aggby_interval['Interval'] //interval_type_num + 1
         self.data_aggby_interval=self.data_aggby_interval.groupby(['Interval']).sum().reset_index()
-        #print(self.data_aggby_interval)
+        self.data_aggby_interval.sort_values(by=['Interval'],ascending=False,inplace=True)
         self.data_aggby_interval['Samples_cum'] = self.data_aggby_interval['Samples'].cumsum()
+        self.data_aggby_interval.sort_values(by=['Interval'], ascending=True, inplace=True)
+        self.data_aggby_interval=self.data_aggby_interval.loc[self.data_aggby_interval['Samples_cum'] > 0, :]
         #self.data_aggby_date=self.samples_aggby_date.merge(self.failures_aggby_date,left_on='retail date',right_on='Repairdate')
 
 
@@ -158,7 +166,7 @@ class Prepare_Denza(Prepare_Data):
         self.data_aggby_interval['Survival_rate']=1-self.data_aggby_interval['Failure_rate']
         self.data_aggby_interval['Survival_rate_cum']=self.data_aggby_interval['Survival_rate'].cumprod()
         self.data_aggby_interval['Failure_rate_cum']=1-self.data_aggby_interval['Survival_rate_cum']
-        self._write_csv(self.data_aggby_interval,'Weibull_data.csv')
+        self._write_csv(self.data_aggby_interval, self.output_file)
 
 
     def create_feature_auto_corr(self):
