@@ -18,10 +18,10 @@ def main(config):
                               output_file='Weibull_data_400.csv')
 
     input_builder=prepare_model_input.Input_builder('data/Weibull_data_300.csv')
-    x1,y1=input_builder.create_weibull_data()
+    x1,y1=input_builder.create_weibull_input()
 
     input_builder2 = prepare_model_input.Input_builder('data/Weibull_data_400.csv')
-    x2, y2 = input_builder2.create_weibull_data()
+    x2, y2 = input_builder2.create_weibull_input()
 
     weibull_model=models.weibull.Weibull_model()
     weight1,bias1=weibull_model.train(x1,y1)
