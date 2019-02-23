@@ -1,11 +1,21 @@
-# Survival_prediction_Mercedes
+# Time series prediction
 
-The project "Early Reliability Inidcator" is to predict the warranty claims' future development, so that we can sense the series issues in advance, as well as measure the vehicle's quality performance in the field. It includes mainly three parts:
+The repository implement the time series prediction for single variable or multi variables with different models
 
-1. Weibull regression for each damaged part.
+## Model
+- Weibull regression
+- LSTM
+- WTTE (what time to the next event)
+- seq2seq
 
+## Dependencies
+- Python 3.6
+- Tensorflow 1.12.0
+- sklearn 0.20.2
+- stat 0.9.0
 
-2. Chi-square condidence level.
+## Usage
+python run_prediction.py
 
-
-3. WTTE-RNN based on the real-time-monitoring EV data.
+## Purpose
+The project is to predict the warranty claims' future development, so that we can sense the series issues in advance, as well as measure the vehicle's quality performance in the field for automitive industry
