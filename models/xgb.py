@@ -1,4 +1,4 @@
-import xgboost
+
 from xgboost.sklearn import XGBRegressor
 import scipy.stats as st
 from sklearn.model_selection import RandomizedSearchCV
@@ -29,10 +29,16 @@ class Xgb(object):
     def eval(self):
         pass
 
-    def predict(self):
-        pass
+    def predict(self,x):
+        self.model.predict(x)
 
     def plot(self):
+        pass
+
+    def restore(self):
+        pass
+
+    def save(self):
         pass
 
     def feature_importance_plot(self):

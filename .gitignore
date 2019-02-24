@@ -4,3 +4,6 @@
 /data/*
 /output/*
 .gitignore
+/model_checkpoint/*
+/models/*
+!/models/*.py

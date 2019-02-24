@@ -4,16 +4,18 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import numpy as np
-
+import tensorflow as tf
 
 class Config:
-    time_state=5
-    hidden_size=[8]
+    n_states=5
+    n_features=1
+
+    n_layers = 1
+    hidden_size=[128]
     learning_rate=10e-3
     n_epochs=15
     batch_size=1
-    n_layers=1
-config = Config()
+
 
 
 def run_prediction():
@@ -31,7 +33,7 @@ def run_prediction():
     lstm.train(x, y)
     lstm.predict_multi(x, predict_steps=20)
 
-'''
+
     dataset = pd.read_csv('../data/LSTM_data.csv', usecols=[1], engine='python', sep=',')
     dataset = dataset.values.astype('float32')
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -41,16 +43,21 @@ def run_prediction():
     test_size = len(dataset) - train_size
     train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
     print(len(train), len(test))
+'''
+    input_builder = Input_builder('LSTM_data.csv')
+    trainX, trainY = input_builder.create_RNN_input(time_state=config.n_states)
+    testX, testY = input_builder.create_RNN_input(time_state=config.n_states)
 
-    input_builder = Input_builder()
-    trainX, trainY = input_builder.create_RNN_input(train, time_state=5)
-    testX, testY = input_builder.create_RNN_input(test, time_state=5)
+    #session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+    sess = tf.Session()
 
-    lstm = Time_LSTM(config)
+    lstm = Time_LSTM(sess=sess,config=config)
     lstm.train(trainX, trainY)
     trainPredict = lstm.predict_point(trainX)
     testPredict = lstm.predict_point(testX)
+    sess.close()
 
+'''
     trainPredict = scaler.inverse_transform(trainPredict.reshape(-1, 1))
     trainY = scaler.inverse_transform(trainY)
     testPredict = scaler.inverse_transform(testPredict.reshape(-1, 1))
@@ -68,6 +75,7 @@ def run_prediction():
     plt.plot(trainPredictPlot)
     plt.plot(testPredictPlot)
     plt.show()
+'''
 
 if __name__=='__main__':
     run_prediction()
