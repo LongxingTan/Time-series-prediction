@@ -22,6 +22,9 @@ class Prepare_Data(object):
     def _write_csv(cls,export_data,export_name):
         export_data.to_csv('./data/'+export_name,sep=',',index=False)
 
+    def normalize(self,values: np.ndarray):
+        return (values - values.mean()) / np.std(values)
+
 
 
 class Prepare_Mercedes(Prepare_Data):
@@ -187,12 +190,10 @@ class Prepare_Denza(Prepare_Data):
         self._write_csv(self.data_aggby_interval, self.output_file)
 
 
-    def create_feature_auto_corr(self):
+    def create_feature_auto_corr(self,x):
         # create the features of week_to_week auto_correlation and month_to_month_auto_correlation
-        """
-                       http://stackoverflow.com/q/14297012/190597
-                       http://en.wikipedia.org/wiki/Autocorrelation#Estimation
-                       """
+        """ http://stackoverflow.com/q/14297012/190597
+        http://en.wikipedia.org/wiki/Autocorrelation#Estimation """
         n = len(x)
         variance = x.var()
         x = x - x.mean()
@@ -210,9 +211,6 @@ class Prepare_Denza(Prepare_Data):
         pass
 
     def create_batch_features_dl(self):
-        pass
-
-    def normalize(self):
         pass
 
     def power_transform(self):

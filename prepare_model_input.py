@@ -10,7 +10,6 @@ class Input_builder(object):
         x, y = self.examples['Interval'].values, self.examples['Failure_rate_cum'].values
         return x,y
 
-
     def create_RNN_input(self,time_state):
         data=self.examples.iloc[:,-1].values
         x,y=[],[]
@@ -38,3 +37,7 @@ class Input_builder(object):
 
     def _read_csv(self,data_dir):
         self.examples=pd.read_csv(data_dir)
+
+class Input_pipe(object):
+    def __init__(self):
+        pass

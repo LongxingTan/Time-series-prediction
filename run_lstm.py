@@ -17,7 +17,6 @@ class Config:
     batch_size=1
 
 
-
 def run_prediction():
     config = Config()
 
@@ -77,5 +76,5 @@ def run_prediction():
     plt.show()
 '''
 
-if __name__=='__main__':
+if __name__ == '__main__':
     run_prediction()

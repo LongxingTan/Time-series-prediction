@@ -21,22 +21,8 @@ class Config(object):
     batch_size = 1
 
 
-
 def run_prediction():
     config = Config()
-
-    '''
-
-    dataset = pd.read_csv('../data/LSTM_data.csv', usecols=[1], engine='python', sep=',')
-    dataset = dataset.values.astype('float32')
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    dataset = scaler.fit_transform(dataset)
-
-    train_size = int(len(dataset) * 0.67)
-    test_size = len(dataset) - train_size
-    train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
-    print(len(train), len(test))
-'''
     input_builder = Input_builder('LSTM_data.csv')
     trainX, trainY = input_builder.create_seq2seq_input(input_seq_length=config.input_seq_length,
                                                         output_seq_length=config.output_seq_length)
@@ -48,5 +34,6 @@ def run_prediction():
     seq2seq = Time_Seq2seq(sess=sess,config=config)
     seq2seq.train(trainX, trainY)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     run_prediction()

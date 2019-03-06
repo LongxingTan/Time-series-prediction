@@ -3,7 +3,10 @@
 /raw_data/*
 /data/*
 /output/*
+/result/*
 .gitignore
 /model_checkpoint/*
 /models/*
 !/models/*.py
+*.csv
+test.py

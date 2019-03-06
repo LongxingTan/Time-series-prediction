@@ -47,7 +47,6 @@ class Time_Seq2seq(object):
         self.global_step=tf.train.get_or_create_global_step()
 
     def _build_encoder(self):
-
         print(len(self.encoder_inputs),[i.get_shape().as_list() for i in self.encoder_inputs])
         with tf.variable_scope("encoder"):
             cell = self._build_encoder_cell()

@@ -11,9 +11,6 @@ class Config(object):
 
 
 
-
-
-
 from sklearn.preprocessing import normalize
 
 def load_file(name):

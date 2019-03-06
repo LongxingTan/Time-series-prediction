@@ -1,4 +1,4 @@
-
+# weibull is a time series prediction model widely used in survival analysis
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import linear_model
