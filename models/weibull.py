@@ -20,6 +20,7 @@ class Weibull_model(object):
         print("Weibull model train finished: {}%".format(100*self.model.score(self.x_weibull,self.y_weibull)))
         self.weight_weibull=self.model.coef_[0]
         self.bias_weibull=self.model.intercept_
+        print("Weight: %s, Bias: %s" % (self.weight_weibull,self.bias_weibull))
         return self.weight_weibull,self.bias_weibull
 
     def eval(self,x_test,y_test):
@@ -74,7 +75,7 @@ class Weibull_model(object):
         ax.tick_params(axis='both', which='major', labelsize=15)
         ax.set_xlabel('Operating months', fontsize=25)
         ax.set_ylabel('Failure probability [%]', fontsize=25)
-        plt.savefig('./output/weibull.png', format='png', bbox_inches='tight', transparent=True, dpi=600)
+        plt.savefig('./result/weibull.png', format='png', bbox_inches='tight', transparent=True, dpi=600)
         #plt.show()
 
     def plot_two(self,x1,y1,w1,b1,x2,y2,w2,b2):
@@ -99,7 +100,7 @@ class Weibull_model(object):
         ax.tick_params(axis='both', which='major', labelsize=15)
         ax.set_xlabel('Operating weeks', fontsize=25)
         ax.set_ylabel('Failure probability [%]', fontsize=25)
-        plt.savefig('./output/weibull_two.png', format='png', bbox_inches='tight', transparent=True, dpi=600)
+        plt.savefig('./result/weibull_two.png', format='png', bbox_inches='tight', transparent=True, dpi=600)
         #plt.show()
 
     def plot_calendar(self):
@@ -117,4 +118,4 @@ class Weibull_model(object):
         ax.plot(time, failure_rate)
         ax.set(xlabel='time', ylabel='failure rate interval',title='Failure rate by time')
         ax.grid()
-        fig.savefig("./output/weibull_density.png")
+        fig.savefig("./result/weibull_density.png")

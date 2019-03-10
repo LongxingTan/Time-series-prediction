@@ -108,7 +108,7 @@ class Time_Seq2seq(object):
         for i in range(self.config.n_epochs):
             _, loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
             print(loss)
-        self.saver.save(self.sess, './model_checkpoint/seq2seq.ckpt')
+        self.saver.save(self.sess, './result/checkpoint/seq2seq.ckpt')
 
     def eval(self):
         pass

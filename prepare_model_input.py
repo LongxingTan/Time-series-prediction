@@ -4,7 +4,7 @@ import os
 
 class Input_builder(object):
     def __init__(self,data_dir):
-        self._read_csv(os.path.join('./data',data_dir))
+        self._read_csv(data_dir)
 
     def create_weibull_input(self):
         x, y = self.examples['Interval'].values, self.examples['Failure_rate_cum'].values
@@ -22,7 +22,7 @@ class Input_builder(object):
         y=y.reshape(y.shape[0],1)
         return x,y
 
-    def create_seq2seq_input(self,input_seq_length,output_seq_length):
+    def create_seq2seq_basic_input(self,input_seq_length,output_seq_length):
         data=self.examples.iloc[:,-1].values
         x,y=[],[]
         for i in range(len(data)-input_seq_length-output_seq_length-1):

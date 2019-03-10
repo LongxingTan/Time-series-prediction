@@ -1,10 +1,12 @@
 # feature engineering refer to:  https://github.com/Arturus/kaggle-web-traffic
 import os
+import logging
 import numpy as np
 import pandas as pd
 from prepare_data import Prepare_Data
 
 # feature based on the calendar time
+epsilon=10e-7
 class Prepare_Mercedes_calendar(Prepare_Data):
     def __init__(self, failure_file,interval_type='weekly',failure_type='fault location'):
         super(Prepare_Mercedes_calendar,self).__init__()
@@ -12,29 +14,14 @@ class Prepare_Mercedes_calendar(Prepare_Data):
         self.failure_type=failure_type
         failures=self.import_examples(failure_file)
         self.failures_aggby_calendar=self.aggregate_failures(failures)
-        print('shape',self.failures_aggby_calendar.shape)
         start_ids,stop_ids=self.choose_start_stop(self.failures_aggby_calendar.values)
 
-        raw_year_autocorr=self.batch_autocorr(self.failures_aggby_calendar.values,int(365.25//7),start_ids,stop_ids,1.5)
-        year_unknown_pct=np.sum(np.isnan(raw_year_autocorr))/len(raw_year_autocorr)
-
-        raw_quarter_autocorr=self.batch_autocorr(self.failures_aggby_calendar.values,int(round(365.25/4//7)),start_ids,stop_ids,2)
-        quarter_unknown_pct=np.sum(np.isnan(raw_quarter_autocorr))/len(raw_quarter_autocorr)
-
-        print("Percent of undefined autocorr = yearly:%.3f, quarterly:%.3f" % (year_unknown_pct, quarter_unknown_pct))
-
-
-        year_autocorr = self.normalize(np.nan_to_num(raw_year_autocorr))
-        quarter_autocorr = self.normalize(np.nan_to_num(raw_quarter_autocorr)) # => [batch_size]
-
-        auto_corr_features = np.stack([quarter_autocorr, year_autocorr])
-
-        print(self.failures_aggby_calendar.columns)
-
-
-        self.lagged_ix=self.lag_indexes(self.failures_aggby_calendar,offsets=[1,3,5]) #13,26,52 weeks
-
-        print(self.lagged_ix.shape)
+        history_as_feature=self.create_history_as_feature(self.failures_aggby_calendar.values)
+        median_as_feature=self.create_median_as_feature(self.failures_aggby_calendar.values)
+        time_style_feature=self.create_time_features(self.failures_aggby_calendar)
+        lagged_feature = self.create_auto_regression_feature(data=self.failures_aggby_calendar,offsets=[4,8])
+        auto_corr_features=self.create_auto_correlation_feature(self.failures_aggby_calendar.values,start_ids,stop_ids)
+        self.features=np.concatenate([history_as_feature,median_as_feature,time_style_feature,lagged_feature,auto_corr_features],axis=-1)
 
 
     def import_examples(self,data_dir):
@@ -85,6 +72,66 @@ class Prepare_Mercedes_calendar(Prepare_Data):
                     break
         return start_idx,end_idx
 
+    def create_history_as_feature(self,data):
+        # batch_size * n_time => batch_size * n_time *1
+        mean=np.mean(data,axis=-1,keepdims=True)
+        std=np.std(data,axis=-1,keepdims=True)
+        history_as_feature=(data-mean)/(std+epsilon)
+        history_as_feature=np.expand_dims(history_as_feature,-1)
+        return history_as_feature
+
+    def create_auto_regression_feature(self,data,offsets):
+        # features for auto regression,  batch_size *n_time=> batch_size* n_time * len(offsets)
+        lagged_ix = self.lag_indexes(data, offsets=offsets)  # 13,26,52 weeks
+        lag_mask = lagged_ix < 0
+        cropped_lags = np.maximum(lagged_ix, 0)
+
+        lagged_feature = np.take(data.values, cropped_lags, axis=-1)
+        lag_zeros = np.zeros_like(lagged_feature)
+        lagged_feature = np.where(np.logical_or(lag_mask, np.isnan(lagged_feature)), lag_zeros, lagged_feature)
+        return lagged_feature
+
+    def create_vehicle_features(self, data):
+        # carline, long or short version, as feature
+        data['Carline'] = data['FIN'].astype(str).str.slice(0, 3)
+
+
+    def create_time_features(self, data):
+        batch,_=data.shape
+        year_week=list(data.columns)
+        week=list(map(lambda x: int(x[-2:]),year_week))
+        week_period = 52 / (2 * np.pi)
+        dow_norm=[i/week_period for i in week]
+        dow = np.stack([np.cos(dow_norm), np.sin(dow_norm)], axis=-1) # => n_time*2
+        dow_feature=np.tile(dow,(batch,1,1)) # => batch_size * n_time *2
+        return dow_feature
+
+    def create_auto_correlation_feature(self,data,start_ids,stop_ids):
+        _, n_time=data.shape
+        raw_year_autocorr = self.batch_autocorr(data, int(365.25 // 7), start_ids, stop_ids, 1.5)
+        year_unknown_pct = np.sum(np.isnan(raw_year_autocorr)) / len(raw_year_autocorr)
+        raw_quarter_autocorr = self.batch_autocorr(data, int(round(365.25 / 4 // 7)), start_ids, stop_ids, 2)
+        quarter_unknown_pct = np.sum(np.isnan(raw_quarter_autocorr)) / len(raw_quarter_autocorr)
+
+        logging.info("Undefined autocorr = yearly:%.3f, quarterly:%.3f" % (year_unknown_pct, quarter_unknown_pct))
+        year_autocorr = self._normalize(np.nan_to_num(raw_year_autocorr))
+        quarter_autocorr = self._normalize(np.nan_to_num(raw_quarter_autocorr))  # => [batch_size]
+
+        auto_corr_features = np.stack([quarter_autocorr, year_autocorr])
+        auto_corr_features=np.expand_dims(auto_corr_features.T,1)
+        auto_corr_features=np.tile(auto_corr_features,(1,n_time,1))
+        return auto_corr_features
+
+    def create_median_as_feature(self,data):
+        _, n_time = data.shape
+        popularity = np.mean(data,axis=1,keepdims=True)
+        mean=np.mean(popularity,axis=-1,keepdims=True)
+        std=np.mean(popularity,axis=-1,keepdims=True)
+        popularity = (popularity - mean) / (std+epsilon)
+        popularity=np.expand_dims(popularity,1)
+        popularity=np.tile(popularity,(1,n_time,1))
+        return popularity
+
     def mask_short_series(self,data,start_idx,end_idx,threshold):
         issue_mask=(end_idx-start_idx)/data.shape[1]<threshold
         print("Masked %d issues from %d" % (issue_mask.sum(),len(data)))
@@ -92,9 +139,8 @@ class Prepare_Mercedes_calendar(Prepare_Data):
         data=data[inv_mask]
         return data
 
-
     def batch_autocorr(self,data,lag,starts,ends,threshold,backoffdet=0):
-        # auto correlation as feature
+        # auto correlation as feature  => n_lag*n_issue
         n_series,n_time=data.shape
         max_end=n_time-backoffdet
         corr=np.empty(n_series,dtype=np.float32)
@@ -131,35 +177,11 @@ class Prepare_Mercedes_calendar(Prepare_Data):
             new_index=np.roll(base_index,offset)
             new_index[:offset]=-1
             new_indexs.append(new_index)
-        new_indexs=np.array(new_indexs)
+        new_indexs=np.array(new_indexs).T
         return new_indexs
-
-    def create_vehicle_features(self,data):
-        # carline, long or short version, as feature
-        pass
-
-    def create_time_features(self,data):
-        # month,weekday as feature
-        features_days = pd.date_range(data_start, data_end)
-        week_period = 7 / (2 * np.pi)
-        dow_norm = features_days.dayofweek.values / week_period
-        dow = np.stack([np.cos(dow_norm), np.sin(dow_norm)], axis=-1)
 
 
 if __name__ == '__main__':
     mercedes=Prepare_Mercedes_calendar(failure_file = './raw_data/failures')
-    data=mercedes.failures_aggby_calendar.values[:,:10]
-
-    lagged_ix = mercedes.lagged_ix[:,:10]
-    lag_mask=lagged_ix<0
-    cropped_lags=np.maximum(lagged_ix,0)
-    lagged_frequency=np.take(data,cropped_lags)
-    lag_zeros=np.zeros_like(lagged_frequency)
-    lagged_frequency=np.where(np.logical_or(lag_mask,np.isnan(lagged_frequency)),lag_zeros,lagged_frequency)
-
-    data_df=pd.DataFrame(data)
-    data_df.to_csv("data.csv")
-    new_df=pd.DataFrame(lagged_frequency)
-    new_df.to_csv('new.csv')
-
-
+    data=mercedes.failures_aggby_calendar.values
+    features=mercedes.features

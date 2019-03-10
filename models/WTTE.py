@@ -56,7 +56,7 @@ class Time_WTTE(object):
             #mse_epoch.append(mse)
             tf.logging.info('Epoch {},,Loss {}'.format(epoch, loss))
 
-            self.saver.save(self.sess, './model_checkpoint/wtte.ckpt')
+            self.saver.save(self.sess, './result/checkpoint/wtte.ckpt')
 
 
     def eval(self):

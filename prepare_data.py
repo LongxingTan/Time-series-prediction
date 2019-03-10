@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
+epsilon=10e-7
 class Prepare_Data(object):
     '''prepare and transfer data from /raw_data to the model input data '''
     def __init__(self):
@@ -20,15 +21,15 @@ class Prepare_Data(object):
 
     @classmethod
     def _write_csv(cls,export_data,export_name):
-        export_data.to_csv('./data/'+export_name,sep=',',index=False)
+        export_data.to_csv(export_name,sep=',',index=False)
 
-    def normalize(self,values: np.ndarray):
-        return (values - values.mean()) / np.std(values)
+    def _normalize(self,values):
+        return (values - values.mean()) / (np.std(values)+epsilon)
 
 
 
 class Prepare_Mercedes(Prepare_Data):
-    def __init__(self,production_file,repair_file,output_file='Weibull_data.csv',interval_type='weekly'):
+    def __init__(self,production_file,repair_file,output_file='./data/Weibull_data.csv',interval_type='weekly'):
         super(Prepare_Mercedes, self).__init__()
         self.interval_type = interval_type
         self.output_file = output_file
@@ -38,6 +39,8 @@ class Prepare_Mercedes(Prepare_Data):
         self.find_failures()
         self.create_feature_samples()
         self.create_feature_failure_rate()
+        self._write_csv(self.failures_aggby_calendar, './data/LSTM_data.csv')
+        self._write_csv(self.data_aggby_interval, './data/Weibull_data.csv')
 
     def import_examples(self,data_dir):
         self.samples,self.failures=pd.DataFrame(),pd.DataFrame()
@@ -79,7 +82,7 @@ class Prepare_Mercedes(Prepare_Data):
             self.failures_aggby_calendar=self.failures.groupby(['Repair month'])['FIN'].count().reset_index(name='Failures')
         else:
             print("not ready for this interval type yet")
-        self._write_csv(self.failures_aggby_calendar, 'LSTM_data.csv')
+
 
     def create_feature_samples(self):
         # create the features of samples
@@ -107,7 +110,7 @@ class Prepare_Mercedes(Prepare_Data):
         self.data_aggby_interval['Survival_rate'] = 1 - self.data_aggby_interval['Failure_rate']
         self.data_aggby_interval['Survival_rate_cum'] = self.data_aggby_interval['Survival_rate'].cumprod()
         self.data_aggby_interval['Failure_rate_cum'] = 1 - self.data_aggby_interval['Survival_rate_cum']
-        self._write_csv(self.data_aggby_interval, 'Weibull_data.csv')
+
 
     def _fillup_registration_date(self,samples):
         samples['delay']=list(map(lambda x:x.days,self.samples['Initial registration date']-self.samples['Production date']))
@@ -200,9 +203,6 @@ class Prepare_Denza(Prepare_Data):
         r = np.correlate(x, x, mode='full')[-n:]
         assert np.allclose(r, np.array([(x[:n - k] * x[-(n - k):]).sum() for k in range(n)]))
         result = r / (variance * (np.arange(n, 0, -1)))
-
-        pass
-
 
     def create_feature_vehicle(self):
         pass

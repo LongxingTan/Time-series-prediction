@@ -52,7 +52,7 @@ class Time_LSTM():
             _, step, loss = self.sess.run([self.train_op, self.global_step, self.loss],
                                           feed_dict={self.input_x: x_train,self.input_y: y_train,self.dropout_keep_prob: 1.0})
             print('step {}, loss {}'.format(step, loss))
-        self.saver.save(self.sess, './model_checkpoint/lstm.ckpt')
+        self.saver.save(self.sess, './result/checkpoint/lstm.ckpt')
 
 
     def eval(self):

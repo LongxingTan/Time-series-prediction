@@ -21,12 +21,12 @@ class Config(object):
     batch_size = 1
 
 
-def run_prediction():
+def run_prediction_basic():
     config = Config()
     input_builder = Input_builder('LSTM_data.csv')
-    trainX, trainY = input_builder.create_seq2seq_input(input_seq_length=config.input_seq_length,
+    trainX, trainY = input_builder.create_seq2seq_basic_input(input_seq_length=config.input_seq_length,
                                                         output_seq_length=config.output_seq_length)
-    testX, testY = input_builder.create_seq2seq_input(input_seq_length=config.input_seq_length,
+    testX, testY = input_builder.create_seq2seq_basic_input(input_seq_length=config.input_seq_length,
                                                       output_seq_length=config.output_seq_length)
 
     sess = tf.Session()
@@ -36,4 +36,4 @@ def run_prediction():
 
 
 if __name__ == '__main__':
-    run_prediction()
+    run_prediction_basic()

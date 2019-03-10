@@ -36,11 +36,11 @@ def main(config):
     weibull_model.predict_by_calendar(interval_samples=denza_300.data_aggby_interval['Samples'],
                                       calendar_failures=denza_300.failures_aggby_calendar,
                                       predicted_interval=12,
-                                      output_file='./output/calendar_predict1.csv')
+                                      output_file='./result/calendar_predict1.csv')
     weibull_model2.predict_by_calendar(interval_samples=denza_400.data_aggby_interval['Samples'],
                                        calendar_failures=denza_400.failures_aggby_calendar,
                                        predicted_interval=12,
-                                       output_file='./output/calendar_predict2.csv')
+                                       output_file='./result/calendar_predict2.csv')
 
 
 

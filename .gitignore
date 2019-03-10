@@ -1,5 +1,6 @@
 /.idea/*
 /__pycache__/*
+/crawler/*
 /raw_data/*
 /data/*
 /output/*
