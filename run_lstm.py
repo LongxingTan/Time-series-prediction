@@ -1,7 +1,7 @@
 from prepare_model_input import Input_builder
 from models.LSTM import Time_LSTM
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -43,7 +43,7 @@ def run_prediction():
     train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
     print(len(train), len(test))
 '''
-    input_builder = Input_builder('LSTM_data.csv')
+    input_builder = Input_builder('./data/LSTM_data.csv')
     trainX, trainY = input_builder.create_RNN_input(time_state=config.n_states)
     testX, testY = input_builder.create_RNN_input(time_state=config.n_states)
 

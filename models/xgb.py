@@ -1,7 +1,9 @@
-
+import os
+import logging
 from xgboost.sklearn import XGBRegressor
 import scipy.stats as st
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.externals import joblib
 
 
 xgb_params={
@@ -36,10 +38,13 @@ class Xgb(object):
         pass
 
     def restore(self):
-        pass
+        path = os.path.join('./result/checkpoint', 'xgb.joblib.dat')
+        self.model=joblib.load(path)
 
     def save(self):
-        pass
+        path = os.path.join('./result/checkpoint', 'xgb.joblib.dat')
+        logging.info('Saving the model to:', path)
+        joblib.dump(self.model, path)
 
     def feature_importance_plot(self):
         importance=self.model.get_fscore()

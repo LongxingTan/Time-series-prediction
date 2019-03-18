@@ -85,5 +85,3 @@ def run_prediction():
     model.train(train_x,train_y)
 
 run_prediction()
-
-

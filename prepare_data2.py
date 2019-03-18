@@ -181,7 +181,26 @@ class Prepare_Mercedes_calendar(Prepare_Data):
         return new_indexs
 
 
+class Input_pipe(object):
+    def __init__(self):
+        pass
+
+    def get_train_features(self):
+        pass
+
+    def get_dev_features(self):
+        pass
+
+    def get_test_features(self):
+        pass
+
+    def create_examples2features(self):
+        pass
+
+
 if __name__ == '__main__':
     mercedes=Prepare_Mercedes_calendar(failure_file = './raw_data/failures')
     data=mercedes.failures_aggby_calendar.values
     features=mercedes.features
+    print(data.shape)
+    print(features.shape)

@@ -1,7 +1,8 @@
 #https://towardsdatascience.com/an-end-to-end-project-on-time-series-analysis-and-forecasting-with-python-4835e6bf050b
 from statsmodels.tsa.arima_model import ARIMA
-from matplotlib import pyplot
-
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import itertools
 
 class Time_ARIMA():
     def __init__(self,config):
@@ -12,9 +13,9 @@ class Time_ARIMA():
         # p is the number of autoregressive terms,
         # d is the number of nonseasonal differences needed for stationarity
         # q is the number of lagged forecast errors in the prediction equation
-        self.model = ARIMA(x,order=(5,1,0))
-        model_fit =self.model.fit(disp=0)
-        print(model_fit.summary())
+        self.model = ARIMA(x, order=(3,1,0))
+        self.model_fit =self.model.fit(disp=0)
+        #print(self.model_fit.summary())
 
     def eval(self):
         pass
@@ -33,6 +34,40 @@ class Time_ARIMA():
             print('predicted=%f, expected=%f' % (yhat, obs))
 
     def plot(self,test,predictions):
-        pyplot.plot(test)
-        pyplot.plot(predictions, color='red')
-        pyplot.show()
+        plt.plot(test)
+        plt.plot(predictions, color='red')
+        plt.show()
+
+        self.model_fit.plot_diagnostics(figsize=(20, 14))
+        plt.show()
+
+    def grid_search(self,train_data):
+        p=range(0,3)
+        d=range(0,3)
+        q=range(0,5)
+        pdq=list(itertools.product(p,d,q))
+        seasonal_pdq=[(x[0],x[1],x[2],12) for x in pdq]
+
+        AIC=[]
+        SARIMAX_model = []
+        for param in pdq:
+            for param_seasonal in seasonal_pdq:
+                try:
+                    mod = sm.tsa.statespace.SARIMAX(train_data,
+                                                    order=param,
+                                                    seasonal_order=param_seasonal,
+                                                    enforce_stationarity=False,
+                                                    enforce_invertibility=False)
+
+                    results = mod.fit()
+
+                    print('SARIMAX{}x{} - AIC:{}'.format(param, param_seasonal, results.aic), end='\r')
+                    AIC.append(results.aic)
+                    SARIMAX_model.append([param, param_seasonal])
+                except:
+                    continue
+
+        print('Minimum AIC {}'.format(min(AIC)))
+        order=SARIMAX_model[AIC.index(min(AIC))][0]
+        seasonal_order=SARIMAX_model[AIC.index(min(AIC))][1]
+        return order,seasonal_order

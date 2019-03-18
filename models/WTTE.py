@@ -5,7 +5,6 @@ class Time_WTTE(object):
         self.config=config
         self.sess = session
 
-
     def build(self):
         self.input_x = tf.placeholder(dtype=tf.float32, shape=(None, self.config.n_state,self.config.n_feature), name='input_x')
         self.input_y = tf.placeholder(dtype=tf.float32, shape=(None, 2), name='input_y')

@@ -4,14 +4,14 @@ The repository implement the time series prediction for single variable or multi
 
 ## Model
 - Weibull regression
-- LSTM
-- WTTE (what time to the next event)
+- ARIMA
+- LSTM & WTTE (what time to the next event)
 - seq2seq
 
 ## Feature
 - Kaplan-meier
 - Auto regression
-- auto correlation
+- Auto correlation
 - Time monitoring related features
 
 ## Dependencies
@@ -26,5 +26,8 @@ The repository implement the time series prediction for single variable or multi
 ## Purpose
 - The project is to predict the warranty claims' future development, so that we can sense the series issues in advance, as well as measure the vehicle's quality performance in the field for automitive industry
 
-## seq2seq
+## Model detail
+- seq2seq
 ![model](https://github.com/LongxingTan/Time_series_prediction/blob/master/image/seq2seq.png)
+
+- ARIMA

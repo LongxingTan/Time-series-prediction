@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import os
+from sklearn.preprocessing import MinMaxScaler
 
 class Input_builder(object):
     def __init__(self,data_dir):
@@ -35,9 +35,18 @@ class Input_builder(object):
         y2 = y.reshape(y.shape[0],-1,y.shape[1])
         return x2,y2
 
+    def create_seq2seq_input(self):
+        pass
+
+    def create_arima_input(self):
+        data = self.examples.iloc[:,-1].values
+        return data
+
+
     def _read_csv(self,data_dir):
         self.examples=pd.read_csv(data_dir)
 
-class Input_pipe(object):
-    def __init__(self):
-        pass
+    def _normalize(self,data):
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        dataset = scaler.fit_transform(data)
+
