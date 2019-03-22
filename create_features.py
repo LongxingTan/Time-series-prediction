@@ -1,76 +1,22 @@
-# feature engineering refer to:  https://github.com/Arturus/kaggle-web-traffic
-import os
 import logging
-import numpy as np
 import pandas as pd
-from prepare_data import Prepare_Data
+import numpy as np
 
-# feature based on the calendar time
 epsilon=10e-7
-class Prepare_Mercedes_calendar(Prepare_Data):
-    def __init__(self, failure_file,interval_type='weekly',failure_type='fault location'):
-        super(Prepare_Mercedes_calendar,self).__init__()
-        self.interval_type=interval_type
-        self.failure_type=failure_type
-        failures=self.import_examples(failure_file)
-        self.failures_aggby_calendar=self.aggregate_failures(failures)
-        start_ids,stop_ids=self.choose_start_stop(self.failures_aggby_calendar.values)
+class Create_features(object):
+    def __init__(self):
+        pass
 
-        history_as_feature=self.create_history_as_feature(self.failures_aggby_calendar.values)
-        median_as_feature=self.create_median_as_feature(self.failures_aggby_calendar.values)
-        time_style_feature=self.create_time_features(self.failures_aggby_calendar)
-        lagged_feature = self.create_auto_regression_feature(data=self.failures_aggby_calendar,offsets=[4,8])
-        auto_corr_features=self.create_auto_correlation_feature(self.failures_aggby_calendar.values,start_ids,stop_ids)
-        self.features=np.concatenate([history_as_feature,median_as_feature,time_style_feature,lagged_feature,auto_corr_features],axis=-1)
+    def __call__(self,data, *args, **kwargs):
+        start_ids, stop_ids = self.choose_start_stop(data.values)
 
-
-    def import_examples(self,data_dir):
-        failures=pd.DataFrame()
-        for file in os.listdir(data_dir):
-            failure=self._read_excel(os.path.join(data_dir,file),
-                                     parse_dates=['Production date','Initial registration date','Repair date','Date of credit (sum)'],
-                                     date_parser=lambda x: pd.datetime.strptime(str(x),"%m/%d/%Y"))
-            failures=failures.append(failure,ignore_index=True)
-        failures = failures.loc[failures['Total costs'] > 0, :]
-        failures['Failure location']=failures['Unnamed: 11']
-        failures['Failure type']=failures['Unnamed: 13']
-        return failures
-
-    def aggregate_failures(self,failures):
-        if self.failure_type=='fault location':
-            failure_type_agg='Failure location'
-        elif self.failure_type=='damage code':
-            failures['Failure']=failures['Failure location']+' '+failures['Failure type']
-            failure_type_agg='Failure'
-        else: raise ValueError ("Unsupported failure type %s" % self.failure_type)
-
-        if self.interval_type=="daily":
-            failures_aggby_calendar = failures.groupby(['Repair date',failure_type_agg])['FIN'].count().reset_index(name='Failures')
-        elif self.interval_type=='weekly':
-            failures['Repair week'] = failures['Repair date'].apply(lambda x: x.strftime('%Y%V'))
-            failures_aggby_calendar=failures.groupby(['Repair week',failure_type_agg]).size().reset_index(name='Failures')
-            failures_aggby_calendar = failures_aggby_calendar.pivot(index='Failure location', columns='Repair week', values='Failures')
-            failures_aggby_calendar=np.log1p(failures_aggby_calendar.fillna(0))
-        elif self.interval_type=='monthly':
-            failures['Repair month'] = failures.loc[:, 'Repair date'].apply(lambda x: x.strftime("%Y%m"))
-            failures_aggby_calendar=failures.groupby(['Repair month',failure_type_agg])['FIN'].count().reset_index(name='Failures')
-        else: raise ValueError("Unsupported interval type %s" % self.interval_type)
-        return failures_aggby_calendar
-
-    def choose_start_stop(self,input:np.ndarray):
-        n_issue,n_time=input.shape
-        start_idx=np.full(n_issue,-1,dtype=np.int32)
-        end_idx=np.full(n_issue,-1,dtype=np.int32)
-        for issue in range(n_issue):
-            for time in range(n_time):
-                if not np.isnan(input[issue,time]) and input[issue,time]>0:
-                    start_idx[issue]=time
-                    break
-            for time in range(n_time-1,-1,-1):
-                if not np.isnan(input[issue,time]) and input[issue,time]>0:
-                    end_idx[issue]=time
-                    break
-        return start_idx,end_idx
+        history_as_feature = self.create_history_as_feature(data.values)
+        median_as_feature = self.create_median_as_feature(data.values)
+        time_style_feature = self.create_time_features(data)
+        lagged_feature = self.create_auto_regression_feature(data=data, offsets=[4, 8])
+        auto_corr_features = self.create_auto_correlation_feature(data.values, start_ids,stop_ids)
+        self.features = np.concatenate(
+            [history_as_feature, median_as_feature, time_style_feature, lagged_feature, auto_corr_features], axis=-1)
 
     def create_history_as_feature(self,data):
         # batch_size * n_time => batch_size * n_time *1
@@ -180,27 +126,20 @@ class Prepare_Mercedes_calendar(Prepare_Data):
         new_indexs=np.array(new_indexs).T
         return new_indexs
 
+    def choose_start_stop(self,input:np.ndarray):
+        n_issue,n_time=input.shape
+        start_idx=np.full(n_issue,-1,dtype=np.int32)
+        end_idx=np.full(n_issue,-1,dtype=np.int32)
+        for issue in range(n_issue):
+            for time in range(n_time):
+                if not np.isnan(input[issue,time]) and input[issue,time]>0:
+                    start_idx[issue]=time
+                    break
+            for time in range(n_time-1,-1,-1):
+                if not np.isnan(input[issue,time]) and input[issue,time]>0:
+                    end_idx[issue]=time
+                    break
+        return start_idx,end_idx
 
-class Input_pipe(object):
-    def __init__(self):
-        pass
-
-    def get_train_features(self):
-        pass
-
-    def get_dev_features(self):
-        pass
-
-    def get_test_features(self):
-        pass
-
-    def create_examples2features(self):
-        pass
-
-
-if __name__ == '__main__':
-    mercedes=Prepare_Mercedes_calendar(failure_file = './raw_data/failures')
-    data=mercedes.failures_aggby_calendar.values
-    features=mercedes.features
-    print(data.shape)
-    print(features.shape)
+    def _normalize(self, values):
+        return (values - values.mean()) / (np.std(values) + epsilon)

@@ -86,7 +86,7 @@ class Time_LSTM():
         #self.sess = tf.InteractiveSession()
         self.saver = tf.train.Saver()
         print(" [*] Loading checkpoints...")
-        self.saver.restore(self.sess, './lstm.ckpt')
+        self.saver.restore(self.sess, './result/checkpoint/lstm.ckpt')
 
     def plot(self):
         pass

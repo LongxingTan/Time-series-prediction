@@ -11,3 +11,4 @@
 !/models/*.py
 *.csv
 test.py
+/.ipynb_checkpoints/*

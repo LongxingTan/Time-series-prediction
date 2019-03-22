@@ -6,16 +6,13 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.externals import joblib
 
 
-xgb_params={
-    'booster':'gbtree',
-}
-
-class Xgb(object):
-    def __init__(self):
+class Time_XGB(object):
+    def __init__(self,params=None):
         pass
 
     def build(self):
         params_sk={
+            'booster': 'gbtree',
             'objective':'reg:linear',
             'subsample':0.8,
             'colsample_bytree':0.85,
@@ -26,13 +23,14 @@ class Xgb(object):
     def train(self,x_train,y_train):
         self.build()
         self.model.fit(x_train,y_train)
+        logging.info(self.model.get_fscore)
 
 
     def eval(self):
         pass
 
-    def predict(self,x):
-        self.model.predict(x)
+    def predict(self,train,predict_window):
+        self.model.predict(train)
 
     def plot(self):
         pass

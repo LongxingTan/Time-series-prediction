@@ -1,15 +1,18 @@
 # Time series prediction
 
-The repository implement the time series prediction for single variable or multi variables with different models
+The repository implements the time series prediction for single variable or multi variables with different models
 
 ## Model
 - Weibull regression
 - ARIMA
 - LSTM & WTTE (what time to the next event)
 - seq2seq
+- GAN
+- xgb
+- svm
 
 ## Feature
-- Kaplan-meier
+- Kaplan-meier (for survival analysis)
 - Auto regression
 - Auto correlation
 - Time monitoring related features
@@ -23,8 +26,14 @@ The repository implement the time series prediction for single variable or multi
 ## Usage
 - python run_prediction.py
 
-## Purpose
+## Introduction
 - The project is to predict the warranty claims' future development, so that we can sense the series issues in advance, as well as measure the vehicle's quality performance in the field for automitive industry
+- 1. create data (if necessary)
+- 2. load data (choose different data types)
+- 3. create features (refer to ![introduction](https://github.com/LongxingTan/Time_series_prediction/blob/master/create_features_intro.ipynb))
+- 4. prepare model input
+- 5. model
+- 6. run prediction
 
 ## Model detail
 - seq2seq

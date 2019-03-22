@@ -1,5 +1,5 @@
 import tensorflow as tf
-from models.WTTE import Time_WTTE
+from models.wtte import Time_WTTE
 import numpy as np
 
 class Config(object):

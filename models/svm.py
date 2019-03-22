@@ -1,6 +1,6 @@
 from sklearn import svm
 
-class Time_svm(object):
+class Time_SVM(object):
     def __init__(self):
         self.model=svm.LinearSVC() # svm.SVC()
 

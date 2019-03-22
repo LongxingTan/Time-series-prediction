@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import itertools
 
 class Time_ARIMA():
-    def __init__(self,config):
-        self.config=config
+    def __init__(self,params=None):
+        pass
 
     def train(self,x):
         # ARIMA order, ARIMA(p,d,q)
@@ -20,10 +20,10 @@ class Time_ARIMA():
     def eval(self):
         pass
 
-    def predict(self,train,test):
+    def predict_point(self,train,test,predict_window):
         history = [x for x in train]
         predictions=[]
-        for t in range(len(test)):
+        for t in range(predict_window):
             self.model = ARIMA(history, order=(5, 1, 0))
             model_fit=self.model.fit(disp=0)
             output=model_fit.forecast()
@@ -31,15 +31,20 @@ class Time_ARIMA():
             predictions.append(yhat)
             obs = test[t]
             history.append(obs)
-            print('predicted=%f, expected=%f' % (yhat, obs))
+        return predictions
 
-    def plot(self,test,predictions):
-        plt.plot(test)
-        plt.plot(predictions, color='red')
+    def predict(self,train,predict_window):
+        self.model.predict(predict_window)
+
+    def plot(self,train,predictions,test=None):
+        plt.plot(range(len(train)),train,label='true',color='blue')
+        plt.plot([i+len(train) for i in range(len(predictions))],predictions, color='red',label='predictions')
+        if test is not None:
+            plt.plot([i+len(train) for i in range(len(test))],test,color='blue',label='true')
         plt.show()
 
-        self.model_fit.plot_diagnostics(figsize=(20, 14))
-        plt.show()
+        #self.model_fit.plot_diagnostics(figsize=(20, 14))
+        #plt.show()
 
     def grid_search(self,train_data):
         p=range(0,3)

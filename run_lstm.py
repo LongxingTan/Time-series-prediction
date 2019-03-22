@@ -1,5 +1,5 @@
-from prepare_model_input import Input_builder
-from models.LSTM import Time_LSTM
+from create_model_input import Input_builder
+from models.lstm import Time_LSTM
 import pandas as pd
 
 import matplotlib.pyplot as plt
