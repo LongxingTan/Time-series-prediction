@@ -14,35 +14,16 @@ parser.add_argument('--do_eval',type=bool, default=True,help='if evaluate the mo
 parser.add_argument('--do_predict',type=bool, default=True,help='if predict the model or not')
 parser.add_argument('--input_seq_length',type=int,default=5,help='sequence length for input')
 parser.add_argument('--output_seq_length',type=int,default=5,help='sequence length for output')
-parser.add_argument('--lstm_hidden_size',type=int, default=100,help='lstm hidden size')
-parser.add_argument('--num_stacked_layers',type=int, default=2,help='lstm hidden size')
+
+parser.add_argument('--num_stacked_layers',type=int, default=1,help='num of stacked layer')
 parser.add_argument('--dropout_keep',type=float, default=0.95,help='dropout keep prob')
 parser.add_argument('--n_epochs', type=int, default=5, help='Number of training epochs')
 parser.add_argument('--batch_size', type=int, default=12, help='Batch size for training')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='learning rate for training')
 
-
-
-
-
 args = parser.parse_args()
 params = vars(args)
 
-
-
-class Config:
-    n_states=5
-    n_features=1
-
-    n_layers = 1
-    hidden_size=[128]
-    learning_rate=10e-3
-    n_epochs=15
-    batch_size=1
-    interval_type = 'weekly'
-    production_file = './raw_data/samples'
-    failure_file = './raw_data/failures'
-    model_input_data = './data/LSTM_data.csv'
 
 class Config(object):
     def __init__(self):

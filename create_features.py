@@ -12,11 +12,11 @@ class Create_features(object):
 
         history_as_feature = self.create_history_as_feature(data.values)
         median_as_feature = self.create_median_as_feature(data.values)
-        time_style_feature = self.create_time_features(data)
+        #time_style_feature = self.create_time_features(data)
         lagged_feature = self.create_auto_regression_feature(data=data, offsets=[4, 8])
         auto_corr_features = self.create_auto_correlation_feature(data.values, start_ids,stop_ids)
-        self.features = np.concatenate(
-            [history_as_feature, median_as_feature, time_style_feature, lagged_feature, auto_corr_features], axis=-1)
+        features = np.concatenate([history_as_feature, median_as_feature, lagged_feature, auto_corr_features], axis=-1)
+        return features
 
     def create_history_as_feature(self,data):
         # batch_size * n_time => batch_size * n_time *1

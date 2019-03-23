@@ -1,6 +1,7 @@
 import tensorflow as tf
 import logging
 
+logging.getLogger("tensorflow").setLevel(logging.INFO)
 class Seq2seq(object):
     def __init__(self,params,mode):
         self.params=params
@@ -49,13 +50,8 @@ class Seq2seq(object):
         return decoder_outputs
 
 
-logging.getLogger("tensorflow").setLevel(logging.INFO)
 
-def build_input_fn(mode,batch_size):
-    mercedes = Prepare_Mercedes_calendar(failure_file='./raw_data/failures')
-    data = mercedes.failures_aggby_calendar.values
-    features = mercedes.features
-
+def build_seq_input_fn(data,features,params,is_training=True):
     def split_and_mask():
         # split the train and eval, mask the target for eval
         train_window,predict_window=int(data.shape[1]*0.7),int(data.shape[1]*0.3)
@@ -69,9 +65,10 @@ def build_input_fn(mode,batch_size):
 
 
     def input_fn():
-        if mode=='train':
+        if is_training:
             input_encoder, input_decoder, output_target=split_and_mask()
-        if mode=='predict':
+            print(input_encoder.shape,input_decoder.shape,output_target.shape)
+        else:
             input_encoder, input_decoder, output_target =extend()
         num_examples,train_window,n_features=input_encoder.shape
         num_examples, predict_window, n_predict_features = input_decoder.shape
@@ -80,15 +77,15 @@ def build_input_fn(mode,batch_size):
             'input_encoder':tf.constant(input_encoder,shape=[num_examples,train_window,n_features],dtype=tf.float32),
             'input_decoder':tf.constant(input_decoder,shape=[num_examples,predict_window, n_predict_features ],dtype=tf.float32),
             'output_target':tf.constant(output_target,shape=[num_examples,predict_window],dtype=tf.float32)})
-        if mode=='train':
+        if is_training:
             d=d.repeat()
             d=d.shuffle(buffer_size=500)
-        d=d.batch(batch_size=batch_size)
+        d=d.batch(batch_size=params['batch_size'])
         return d
     return input_fn
 
 
-def build_model_fn(params):
+def build_seq_model_fn(params):
     def model_fn(features,labels,mode):
         encoder_inputs=features['input_encoder']
         decoder_inputs=features['input_decoder']

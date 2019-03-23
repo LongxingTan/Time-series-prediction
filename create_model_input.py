@@ -60,6 +60,10 @@ class Input_builder(object):
         data = examples.iloc[:,-1].values
         return data
 
+    def create_xgb_input(self,examples):
+        # create date or time related feature as inputs
+        pass
+
     def _read_csv(self,data_dir):
         examples=pd.read_csv(data_dir)
         return examples

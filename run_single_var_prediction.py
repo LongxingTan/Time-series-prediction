@@ -9,7 +9,7 @@ from config import params
 import pandas as pd
 
 
-def run_pred(params,models,mode='predict'):
+def run_pred(params,models,mode='predict',grid_search=False):
     model = models(params)
     if mode == 'train' and os.path.exists(params['calendar_data']):
         pass
@@ -23,8 +23,8 @@ def run_pred(params,models,mode='predict'):
     if mode=='train':
         split=int(len(examples)*0.7)
         train_data,test_data=examples[:split],examples[split:]
-        train_data,test_data=Input_builder()(models=models)
-        model.train(train_data)
+        #train_data,test_data=Input_builder()(models=models)
+        model.train(train_data,grid_search=True)
         predictions=model.predict_point(train_data,test_data,predict_window=len(test_data))
         model.plot(train=train_data,test=test_data,predictions=predictions)
 
