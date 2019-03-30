@@ -67,7 +67,6 @@ def build_seq_input_fn(data,features,params,is_training=True):
     def input_fn():
         if is_training:
             input_encoder, input_decoder, output_target=split_and_mask()
-            print(input_encoder.shape,input_decoder.shape,output_target.shape)
         else:
             input_encoder, input_decoder, output_target =extend()
         num_examples,train_window,n_features=input_encoder.shape

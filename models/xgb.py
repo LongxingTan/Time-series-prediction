@@ -23,22 +23,33 @@ class Time_XGB(object):
         }
 
 
-    def train(self,x_train,y_train,grid_search=False):
+    def train(self,train,grid_search=False):
+        x,y=train[:,1:],train[:,0]
         if grid_search:
-            self.params_sk=self.grid_search(x_train,y_train)
-        self.model = XGBRegressor(**self.params_sk)
-        self.model.fit(x_train,y_train)
-        logging.info(self.model.get_fscore)
+            self.params_sk=self.grid_search(x,y)
+        model = XGBRegressor(**self.params_sk)
+        self.model_final=model.fit(x,y)
 
 
     def eval(self):
         pass
 
-    def predict(self,train,predict_window):
-        self.model.predict(train)
+    def predict(self,test,predict_window=None):
+        x,y=test[:,1:],test[:,0]
+        predictions=self.model_final.predict(x)
+        return predictions,None,None
 
-    def plot(self):
-        pass
+    def plot(self,train,test,predictions,predictions_low,predictions_high):
+        train=train[:,0]
+        plt.plot(range(len(train)), train, label='true', color='blue')
+        plt.plot([i + len(train) for i in range(len(predictions))], predictions, color='red', label='predictions')
+        if test is not None:
+            test=test[:,0]
+            plt.plot([i + len(train) for i in range(len(test))], test, color='blue', label='true')
+        if predictions_high is not None and predictions_low is not None:
+            plt.fill_between([i + len(train) for i in range(len(predictions))], predictions_low, predictions_high,
+                             color='k', alpha=.25)
+        plt.show()
 
     def feature_importance(self,x_train,y_train,x_test,y_test,n_tree,early_stop=True):
         dtrain = xgb.DMatrix(x_train, y_train)
@@ -71,18 +82,22 @@ class Time_XGB(object):
         plt.show()
 
     def grid_search(self,x,y):
+        model = XGBRegressor(**self.params_sk)
         params_grid={
             'n_estimator':st.randint(100,500),
             'max_depth':st.randint(6,20)
         }
-        search_sk=RandomizedSearchCV(self.model,params_grid,cv=5,random_state=1,n_iter=20)
+        search_sk=RandomizedSearchCV(model,params_grid,cv=5,random_state=1,n_iter=20)
         search_sk.fit(x,y)
         # best parameters
         print("best parameters:", search_sk.best_params_)
         print("best score:", search_sk.best_score_)
         # with new parameters
         params_new = {**self.params_sk, **search_sk.best_params_}
-        return  params_new
+        return params_new
 
     def random_search(self):
         pass
+
+    def __str__(self):
+        return "xgb"

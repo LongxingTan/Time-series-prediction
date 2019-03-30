@@ -59,8 +59,7 @@ class Load_Mercedes(object):
             self.failures_aggby_calendar = self.failures.groupby(['Repair week'])['FIN'].count().reset_index(
                 name='Failures')
         elif self.interval_type == 'monthly':
-            self.failures_aggby_calendar = self.failures.groupby(['Repair month'])['FIN'].count().reset_index(
-                name='Failures')
+            self.failures_aggby_calendar = self.failures.groupby(['Repair month'])['FIN'].count().reset_index(name='Failures')
         else:
             print("not ready for this interval type yet")
 
@@ -118,3 +117,46 @@ def load_EMG_data():
 
 
 # load the jet engine data
+class Load_Jet(object):
+    def __init__(self):
+        from sklearn.preprocessing import normalize
+        train = self._load_file('./raw_data/jet_engine_train.csv')
+        test_x = self._load_file('./raw_data/jet_engine_test_x.csv')
+        test_y = self._load_file('./raw_data/jet_engine_test_y.csv')
+        all_x = np.concatenate((train[:, 2:26], test_x[:, 2:26]))
+        all_x = normalize(all_x, axis=0)
+
+        train[:, 2:26] = all_x[0:train.shape[0], :]
+        test_x[:, 2:26] = all_x[train.shape[0]:, :]
+
+        # Make engine numbers and days zero-indexed, for everybody's sanity
+        train[:, 0:2] -= 1
+        test_x[:, 0:2] -= 1
+        train_x, train_y = self._build_data(train[:, 0], train[:, 1], train[:, 2:26], max_time=100, is_test=False)
+
+    def _load_file(self,name):
+        with open(name, 'r') as file:
+            return np.loadtxt(file, delimiter=',')
+
+    def _build_data(self,engine, time, x, is_test, max_time=100):
+        # y[0] will be days remaining, y[1] will be event indicator, always 1 for this data
+        out_y = np.empty((0, 2), dtype=np.float32)
+        # A full history of sensor readings to date for each x
+        out_x = np.empty((0, max_time, 24), dtype=np.float32)
+        for i in range(100):
+            print("Engine: " + str(i))
+            # When did the engine fail? (Last day + 1 for train data, irrelevant for test.)
+            max_engine_time = int(np.max(time[engine == i])) + 1
+            if is_test:
+                start = max_engine_time - 1
+            else:
+                start = 0
+            this_x = np.empty((0, max_time, 24), dtype=np.float32)
+            for j in range(start, max_engine_time):
+                engine_x = x[engine == i]
+                out_y = np.append(out_y, np.array((max_engine_time - j, 1), ndmin=2), axis=0)
+                xtemp = np.zeros((1, max_time, 24))
+                xtemp[:, max_time - min(j, 99) - 1:max_time, :] = engine_x[max(0, j - max_time + 1):j + 1, :]
+                this_x = np.concatenate((this_x, xtemp))
+            out_x = np.concatenate((out_x, this_x))
+        return out_x, out_y

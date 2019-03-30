@@ -1,5 +1,5 @@
 #https://towardsdatascience.com/an-end-to-end-project-on-time-series-analysis-and-forecasting-with-python-4835e6bf050b
-from statsmodels.tsa.arima_model import ARIMA
+
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import itertools
@@ -21,50 +21,38 @@ class Time_ARIMA():
         self.model = sm.tsa.statespace.SARIMAX(x, order=order,seasonal_order=seasonal_order,enforce_stationarity=False,enforce_invertibility=False)
         self.model_result =self.model.fit(disp=0)
         logging.info(self.model_result.summary())
-        self.model_result.plot_diagnostics(figsize=(15, 12))
+        #self.model_result.plot_diagnostics(figsize=(15, 12))
+        return self.model_result
 
-    def eval(self):
-        pass
+    def eval(self,dynamic):
+        output = self.model_result.get_prediction(dynamic=dynamic, full_results=False)
+        return output.predicted_mean
 
-    def predict_point(self,train,test,predict_window):
-        history = [x for x in train]
-        predictions=[]
-        for t in range(predict_window):
-            output=self.model_result.get_prediction(dynamic=False, full_results=True)
-            yhat=output
-            predictions.append(yhat)
-            obs = test[t]
-            history.append(obs)
-        return predictions
 
-    def predict(self,train,predict_window):
+    def predict(self,test,predict_window):
         pred_uc=self.model_result.get_forecast(steps=predict_window)
+        predictions=pred_uc.predicted_mean
         pred_ci = pred_uc.conf_int()
-        ax = train.plot(label='observed', figsize=(15, 10))
-        pred_uc.predicted_mean.plot(ax=ax, label='Forecast in Future')
-        ax.fill_between(pred_ci.index,
-                        pred_ci.iloc[:, 0],
-                        pred_ci.iloc[:, 1], color='k', alpha=.25)
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Complaints')
-        plt.tight_layout()
-        plt.legend()
-        plt.show()
+        predictions_low,predictions_high=pred_ci[:, 0],pred_ci[:, 1]
+        return predictions,predictions_low,predictions_high
 
-    def plot(self,train,predictions,test=None):
+
+    def plot(self,train,predictions,test=None,predictions_low=None,predictions_high=None):
         plt.plot(range(len(train)),train,label='true',color='blue')
         plt.plot([i+len(train) for i in range(len(predictions))],predictions, color='red',label='predictions')
         if test is not None:
             plt.plot([i+len(train) for i in range(len(test))],test,color='blue',label='true')
+        if predictions_high is not None and predictions_low is not None:
+            plt.fill_between([i+len(train) for i in range(len(predictions))],predictions_low,predictions_high,color='k', alpha=.25)
         plt.show()
 
         #self.model_fit.plot_diagnostics(figsize=(20, 14))
         #plt.show()
 
     def grid_search(self,train_data):
-        p=range(0,2)
-        d=range(0,2)
-        q=range(0,3)
+        p=range(0,4)
+        d=range(0,4)
+        q=range(0,5)
         pdq=list(itertools.product(p,d,q))
         seasonal_pdq=[(x[0],x[1],x[2],12) for x in pdq]
 
@@ -91,3 +79,6 @@ class Time_ARIMA():
         order=SARIMAX_model[AIC.index(min(AIC))][0]
         seasonal_order=SARIMAX_model[AIC.index(min(AIC))][1]
         return order,seasonal_order
+
+    def __str__(self):
+        return "arima"

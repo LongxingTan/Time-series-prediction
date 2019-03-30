@@ -51,7 +51,6 @@ def build_lstm_input_fn(x,y,params,is_training=True):
 
 def build_lstm_model_fn(params):
     def model_fn(features,labels,mode):
-
         model=Time_LSTM(params,mode)
         output=model(features)
 

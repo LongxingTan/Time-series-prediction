@@ -8,13 +8,17 @@ class Input_builder(object):
     def __init__(self):
         pass
 
-    def __call__(self, models,x,y=None,train_window=20,train_window_2=None):
-        if models=='weibull':
+    def __call__(self, model,x,y=None,train_window=20,train_window_2=None):
+        if model=='weibull':
             return self.create_weibull_input(x,y,train_window)
-        elif models=='svm' or models=='lstm':
+        elif model=='svm' or model=='lstm':
             return self.create_RNN_input(x,train_window=20)
-        elif models=='seq2seq':
+        elif model=='seq2seq':
             return self.create_seq2seq_basic_input(x,train_window,train_window_2)
+        elif str(model)=='arima':
+            return x.iloc[:,-1].values
+        elif str(model)=='xgb':
+            return self.create_xgb_input(x)
 
     def create_weibull_input(self,x,y,train_windows=20):
         index_end=len(y)-1
@@ -62,7 +66,11 @@ class Input_builder(object):
 
     def create_xgb_input(self,examples):
         # create date or time related feature as inputs
-        pass
+        examples['year']=examples.iloc[:,0].apply(lambda x: int(str(x)[0:4]))
+        examples['week']=examples.iloc[:,0].apply(lambda x: int(str(x)[4:]))
+        examples.drop(columns=['Repair week'],inplace=True)
+        #examples = pd.get_dummies(examples, columns=['year']) # month
+        return examples.values
 
     def _read_csv(self,data_dir):
         examples=pd.read_csv(data_dir)
@@ -71,6 +79,7 @@ class Input_builder(object):
     def _normalize(self,data):
         scaler = MinMaxScaler(feature_range=(0, 1))
         dataset = scaler.fit_transform(data)
+        return dataset
 
 
 class Input_pipe(object):

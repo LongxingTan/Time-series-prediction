@@ -148,3 +148,12 @@ class Weibull_model(object):
         ax.set(xlabel='time', ylabel='failure rate interval',title='Failure rate by time')
         ax.grid()
         fig.savefig("./result/weibull_density.png")
+
+
+# weibull mixed
+# weibull auto regressive
+# weibull kernel
+
+class Mixed_weibull(object):
+    def __init__(self):
+        pass
