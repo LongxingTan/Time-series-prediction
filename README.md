@@ -1,44 +1,103 @@
 # Time series prediction
-The repository implements the time series prediction for single variable or multi variables with different models, with prototypes for experimental purposes only
+This repo implements some common methods for time series prediction, especially deep learning methods in tf2. 
 
-## Model
-- Weibull regression
-- ARIMA
-- LSTM & WTTE (what time to the next event)
-- seq2seq
-- GAN
-- xgb
-- svm
+It's highly welcomed to contribute if you have any better idea, just create a pr.If any question, feel free to open an issue.
 
-## Feature
-- Kaplan-meier (for survival analysis)
-- Auto regression
-- Auto correlation
-- Time monitoring related features
 
-## Dependencies
-- Python 3.6
-- Tensorflow 1.12.0
-- sklearn 0.20.2
-- stat 0.9.0
+<table style="width:100%">
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">ARIMA</a>           
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">Tree (xgboost, lightgbm) </a>           
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">RNN</a>         
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">CNN</a>         
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">Transformer</a>         
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+  <tr>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="source code">GAN</a>         
+      </p>
+    </th>
+    <th>
+      <p align="center">
+           <a href="./00_computer_vision/00_opencv_basic/README.md" name="notebooks">notebooks</a>     
+      </p>
+    </th>
+  </tr>
+</table>
+
+
 
 ## Usage
-<pre><code>
-- python run_prediction.py
-- python run_dl.py (for deep learning methods, it's been rewriten by tf.data and tf.estimator)
-</code></pre>
+1. Install the library
+```
+pip install -r requirements.txt
+```
+2. Download the data
+```
+./data/download_passenger.sh
+```
+3. Train the model
+```
+Python run_train.py
+```
 
-## Introduction
-The project is to predict the warranty claims' future development, so that we can sense the series issues in advance, as well as measure the vehicle's quality performance in the field for automitive industry
-1. create data (if necessary)
-2. load data (it supportes different data sources)
-3. create features (refer to [introduction](https://github.com/LongxingTan/Time_series_prediction/blob/master/create_features_intro.ipynb))
-4. prepare model input
-5. model
-6. run prediction
 
-## Model detail
-- seq2seq
-![model](https://github.com/LongxingTan/Time_series_prediction/blob/master/image/seq2seq.png)
+## Reference and further reading
+https://github.com/awslabs/gluon-ts/
 
-- ARIMA
+## Contributor
+- LongxingTan
