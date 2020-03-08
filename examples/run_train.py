@@ -3,12 +3,23 @@
 # @date: 2020-01
 
 
-from prepare_data import PassengerData
+# categorical_feature
+import sys
+import os
+filePath = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(os.path.split(filePath)[0])
+from data.data_loader import DataLoader
 from deepts.models.model import Model
 
-params={}
-x,y=PassengerData(params).get_examples(data_dir='./international-airline-passengers.csv')
-print(x.values.shape,y.shape)
 
-model=Model(use_model='tcn',loss='mse',optimizer='adam')
-model.fit(x,y,epochs=10)
+def main():
+    params={}
+    data_loader=DataLoader(data_dir='../data/international-airline-passengers.csv')
+    dataset=data_loader(batch_size=8,training=True)
+
+    model=Model(use_model='seq2seq', use_loss='mse',use_optimizer='adam')  # model: seq2seq, tcn, transformer
+    model.train(dataset,n_epochs=10,mode='eager')  # mode can choose eager or fit
+
+
+if __name__=='__main__':
+    main()

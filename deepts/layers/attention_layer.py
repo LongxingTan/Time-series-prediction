@@ -1,4 +1,9 @@
 
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
+# @date: 2020-01
+
+
 import numpy as np
 import tensorflow as tf
 

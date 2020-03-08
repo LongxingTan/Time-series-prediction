@@ -1,4 +1,7 @@
 
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
+# @date: 2020-01
 
 import tensorflow as tf
 from tensorflow.keras.layers import Input,Dense
@@ -16,11 +19,12 @@ class Seq2seq(object):
         self.encoder=Encoder()
         self.decoder=Decoder()
 
-    def __call__(self, inputs_shape):
+    def __call__(self, inputs_shape,training):
         x=Input(inputs_shape)
         encoder_output,encoder_state=self.encoder(x)
         decoder_output = self.decoder(None,encoder_state,x)
-        return tf.keras.Model(x,decoder_output)
+        print('decoder_output',decoder_output)
+        return tf.keras.Model(x,decoder_output,name='seq2seq')
 
 
 class Encoder(object):
@@ -34,7 +38,6 @@ class Encoder(object):
     def __call__(self, inputs, training=None, mask=None):
         inputs,hidden_state=self.rnn(inputs)
         #encoder_hidden_state=tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
-        print('en',inputs.shape,hidden_state.shape)
         return inputs,hidden_state
 
     def initialize_hidden_state(self):

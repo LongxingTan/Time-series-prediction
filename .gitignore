@@ -12,4 +12,7 @@
 /deepts/models/.DS_Store
 /examples/__pycache__/*
 /examples/.DS_Store
+/examples/data/__pycache__/*
+/examples/feature/__pycache__/*
 /temp.py
+/models/*

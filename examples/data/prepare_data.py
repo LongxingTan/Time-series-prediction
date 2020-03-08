@@ -3,10 +3,12 @@
 # @date: 2020-01
 
 import os
+import numpy as np
 import pandas as pd
 #import modin.pandas as pd
 import logging
-from prepare_feature import *
+from feature.prepare_feature import transform2_lagged_feature,multi_step_y
+from feature.norm_feature import FeatureNorm
 
 
 class DataSet(object):
@@ -34,6 +36,7 @@ class PassengerData(DataSet):
         :param params:
         '''
         super(PassengerData,self).__init__(params)
+        self.feature_norm=FeatureNorm()
 
     def preprocess_data(self,data):
         data.columns = ['Month', 'Passengers']
@@ -57,7 +60,27 @@ class PassengerData(DataSet):
         data=self.preprocess_data(data)
 
         x = pd.DataFrame(data['Passengers'])
-        x= transform2_lagged_feature(x)
+        x = self.feature_norm(x)
+        x = transform2_lagged_feature(x)
         y = pd.DataFrame(data['Passengers'])
-        y = multi_step_y(y.values,5)
+        y = np.log1p(y.values)
+        y = multi_step_y(y,5)
+        x,y=self.postprocess(x,y)
+        #for x1,y1 in zip(x,y):
+            #yield x1,y1
+        return (x,y)
+
+    def postprocess(self,x,y):
+        if isinstance(x,pd.DataFrame):
+            x=x.values
+        if len(x.shape)==2:
+            x=x[...,np.newaxis]
+        if isinstance(y,pd.DataFrame):
+            y=y.values
+        if len(y.shape)==2:
+            y=y[...,np.newaxis]
+
+        filter=(np.isnan(y)).any(axis=1)[:,0]  # remove the nan in target
+        x=x[~filter]
+        y=y[~filter]
         return x,y

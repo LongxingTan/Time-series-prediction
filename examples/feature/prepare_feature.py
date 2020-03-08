@@ -27,7 +27,6 @@ def transform2_lagged_feature(x,window_sizes=10):
 def multi_step_y(y,predict_window,predict_gap=1):
     outputs = np.full((y.shape[0], predict_window), np.nan)
     y=y[:,0]
-    print(y.shape)
     for i in range(predict_window):
         outputs_column=np.roll(y,-(i+predict_gap-1)).astype(np.float)
         if (i+predict_gap-1)!=0:

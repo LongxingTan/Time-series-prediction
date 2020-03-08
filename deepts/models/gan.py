@@ -1,4 +1,8 @@
 
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
+# @date: 2020-01
+
 import tensorflow as tf
 from tensorflow.keras.layers import Input,Dense
 
@@ -8,7 +12,7 @@ class GAN(object):
         self.generator=Generator()
         self.discriminator=Discriminator()
 
-    def __call__(self, inputs_shape):
+    def __call__(self, inputs_shape,training):
         x=Input(inputs_shape)
         encoder_output,encoder_state=self.encoder(x)
         decoder_output = self.decoder(None,encoder_state,x)

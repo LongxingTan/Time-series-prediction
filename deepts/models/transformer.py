@@ -1,6 +1,11 @@
 
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
+# @date: 2020-01
+
 import tensorflow as tf
 from deepts.layers.attention_layer import *
+
 # https://github.com/maxjcohen/transformer
 
 params={
@@ -43,7 +48,6 @@ class Transformer(object):
             targets=tf.keras.layers.Input([self.params['predict_window_sizes'],1])
             decoder_output = self.decoder(targets,memory,src_mask,training=training)
             outputs=self.projection(decoder_output)
-            print(tf.math.is_nan(outputs))
 
             return tf.keras.Model([x,targets],outputs)
         else:
