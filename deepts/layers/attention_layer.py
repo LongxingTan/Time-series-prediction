@@ -215,7 +215,9 @@ class PositionEncoding(tf.keras.layers.Layer):
         super(PositionEncoding,self).build(input_shape)
 
     def get_config(self):
-        pass
+        return {
+            'max_len': self.max_len
+        }
 
     def call(self,x,masking=True):
         E = x.get_shape().as_list()[-1]  # static

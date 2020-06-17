@@ -2,7 +2,7 @@
 
 
 ## Introduction
-ARIMA is a short for "Autoregressive Integrated Moving Average model", it's a traditional time-series-prediction model. Basically it's a linear model combined the auto regression model and moving average model.
+ARIMA is a short for "Auto-regressive Integrated Moving Average model", it's a traditional time-series-prediction model. Basically it's a linear model combined the auto regression model and moving average model.
 - Auto regression model is a linear regression model using the history data as its feature. The important hyper parameter is how many days from history are used.
 - Moving average model is a linear regression model using the history residual error as its feature. The important hyper parameter is also history data length.
 - arima

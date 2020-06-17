@@ -18,4 +18,5 @@ MYIDEA.md
 **/.ipynb_checkpoints/
 /examples/data/crawer_data.py
 /reference/*
-/models/*
+/models/variables/*
+/data/*

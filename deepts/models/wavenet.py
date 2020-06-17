@@ -9,7 +9,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from deepts.layers.wavenet_layer import Dense3D, ConvTime
-#tf.config.experimental_run_functions_eagerly(True)  # ??
 
 
 params={

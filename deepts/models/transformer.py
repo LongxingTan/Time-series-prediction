@@ -3,6 +3,7 @@
 # @date: 2020-01
 # paper:
 # other implementations: https://github.com/maxjcohen/transformer
+#                        https://github.com/Trigram19/m5-python-starter
 
 
 import tensorflow as tf

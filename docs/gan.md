@@ -1,7 +1,7 @@
 # GAN
 
 ## Introduction
-
+Generative Adversarial Network(GAN)
 
 ## Performance
 

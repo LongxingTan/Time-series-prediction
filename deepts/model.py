@@ -11,7 +11,7 @@ from deepts.models.transformer import Transformer
 from deepts.models.unet import Unet
 from deepts.models.nbeats import NBeatsNet
 from deepts.models.gan import GAN
-assert tf.__version__>"2.0.0"
+assert tf.__version__>"2.0.0", "Should you consider to use TensorFlow 2?"
 
 
 class Loss(object):
@@ -29,11 +29,11 @@ class Optimizer(object):
     def __init__(self,use_optimizer):
         self.use_optimizer=use_optimizer
 
-    def __call__(self,):
+    def __call__(self,learning_rate):
         if self.use_optimizer == 'adam':
-            return tf.keras.optimizers.Adam(lr=0.001)
+            return tf.keras.optimizers.Adam(lr=learning_rate)
         elif self.use_optimizer == 'sgd':
-            return tf.keras.optimizers.SGD(lr=0.001)
+            return tf.keras.optimizers.SGD(lr=learning_rate)
 
 
 class Model(object):
@@ -66,7 +66,7 @@ class Model(object):
         self.use_loss = use_loss
         self.use_optimizer = use_optimizer
         self.loss_fn = Loss(use_loss)()
-        self.optimizer_fn = Optimizer(use_optimizer)()
+        self.optimizer_fn = Optimizer(use_optimizer)(learning_rate=params['learning_rate'])
         self.model = tf.keras.Model(inputs, outputs, name=use_model)
 
     def train(self, dataset, n_epochs, mode='eager', export_model=False):
@@ -105,17 +105,33 @@ class Model(object):
 
     def eval(self, valid_dataset):
         for step,(x,y) in enumerate(valid_dataset.take(-1)):
-            metrics=self.test_step(x,y)
+            metrics=self.dev_step(x,y)
             print("=> STEP %4d Metrics: %4.2f"%(step, metrics))
 
-    def test_step(self, x, y):
+    def dev_step(self, x, y):
+        '''
+        evaluation step function
+        :param x:
+        :param y:
+        :return:
+        '''
         x=tf.cast(x, tf.float32)
         y=tf.cast(y, tf.float32)
-        y_pred=self.model(x,training=False)
+        try:
+            y_pred=self.model(x,training=False)
+        except:
+            y_pred=self.model((x,tf.ones([tf.shape(x)[0],self.params['output_seq_length'],1],tf.float32)))
         metrics=self.loss_fn(y, y_pred).numpy()
         return metrics
 
     def predict(self, x_test, model_dir, use_model='pb'):
+        '''
+        predict function, don't use self.model here, but saved checkpoint or pb
+        :param x_test:
+        :param model_dir:
+        :param use_model:
+        :return:
+        '''
         if use_model=='pb':
             print('Load saved pb model ...')
             model=tf.saved_model.load(model_dir)
@@ -123,7 +139,7 @@ class Model(object):
             print('Load checkpoint model ...')
             model=self.model.load_weights(model_dir)
 
-        y_pred=model(tf.constant(x_test),True,None)  # To be clarified
+        y_pred=model(x_test,True,None)  # To be clarified, not sure why additional args are necessary here
         return y_pred
 
     def export_model(self):

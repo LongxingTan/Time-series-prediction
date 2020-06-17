@@ -3,10 +3,11 @@
 # @date: 2020-01
 
 import os
+import logging
+import random
 import numpy as np
 import pandas as pd
 #import modin.pandas as pd   # faster Pandas by Berkeley
-import logging
 import matplotlib.pyplot as plt
 from examples.feature.prepare_feature import transform2_lagged_feature,multi_step_y
 from examples.feature.norm_feature import FeatureNorm
@@ -29,10 +30,56 @@ class DataSet(object):
         pass
 
 
+class SineData(DataSet):
+    def __init__(self,params):
+        '''
+        This is a toy data example of sine function with some noise
+        :param params:
+        '''
+        super(SineData,self).__init__(params)
+
+    def preprocess_data(self,data):
+        pass
+
+    def load_data(self,data_dir=None,*args):
+        n_examples=1000
+        sequence_length=10
+
+        x = []
+        y = []
+        for _ in range(n_examples):
+            rand=random.random()*2*np.pi
+            sig1=np.sin(np.linspace(rand,3.*np.pi+rand,sequence_length*2))
+            sig2=np.cos(np.linspace(rand,3.*np.pi+rand,sequence_length*2))
+
+            x1 = sig1[:sequence_length]
+            y1 = sig1[sequence_length:]
+            x2 = sig2[:sequence_length]
+            y2 = sig2[sequence_length:]
+
+            x_ = np.array([x1, x2])
+            y_ = np.array([y1, y2])
+
+            x.append(x_.T)
+            y.append(y_.T)
+
+        x=np.array(x)
+        y=np.array(y)
+
+        return x,y
+
+    def get_examples(self,sample=1,plot=False):
+        x,y=self.load_data()
+
+        if plot:
+            plt.plot(x[0,:])
+            plt.show()
+
+
 class PassengerData(DataSet):
     def __init__(self,params):
         '''
-        For airline passenger data, refer to the notebook/data_introduction.ipynb
+        This is a simple univariable time series data set: airline passenger data
         :param data_dir:
         :param params:
         '''
@@ -56,12 +103,12 @@ class PassengerData(DataSet):
         logging.info("input data shape : {}".format(data.shape))
         return data
 
-    def get_examples(self,data_dir,sample=1,start_date=None,plot=False):
+    def get_examples(self,data_dir,sample=1,start_date=None,plot=False,model_dir='../models'):
         data=self.load_data(data_dir)
         data=self.preprocess_data(data)
 
         x = pd.DataFrame(data['Passengers'])
-        x = self.feature_norm(x)
+        x = self.feature_norm(x,model_dir=model_dir)
         x = transform2_lagged_feature(x,window_sizes=self.params['input_seq_length'])
         y = pd.DataFrame(data['Passengers'])
         y = np.log1p(y.values)
@@ -117,5 +164,7 @@ class M5(DataSet):
 
 if __name__=='__main__':
     data_dir = '../../data/international-airline-passengers.csv'
-    prepare_data = PassengerData(params={})
-    prepare_data.get_examples(data_dir,sample=0.8,plot=True)
+
+    prepare_data = PassengerData(params={'input_seq_length':15,'output_seq_length':5})
+    x,y=prepare_data.get_examples(data_dir,sample=0.8,plot=True,model_dir='../../models')
+    print(x.shape,y.shape)

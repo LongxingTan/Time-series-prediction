@@ -5,7 +5,7 @@ from collections import defaultdict
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--use_model',type=str, default='wavenet',help='use model for train, seq2seq, wavenet, transformer')
+parser.add_argument('--use_model',type=str, default='seq2seq',help='use model for train, seq2seq, wavenet, transformer')
 parser.add_argument('--data_dir',type=str, default='../data/international-airline-passengers.csv',help='dataset directory')
 parser.add_argument('--model_dir',type=str, default='../models/checkpoint',help='saved checkpoint directory')
 parser.add_argument('--saved_model_dir',type=str, default='../models',help='saved pb directory')

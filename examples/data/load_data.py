@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 import functools
-from data.data_reader import PassengerData
+from data.read_data import PassengerData
 
 
 class DataLoader(object):
@@ -26,3 +26,8 @@ class DataParser(object):
     def encode(self):
         pass
 
+
+if __name__=='__main__':
+    data_loader=DataLoader()
+    dataset=data_loader()
+    print(dataset.take(1))
