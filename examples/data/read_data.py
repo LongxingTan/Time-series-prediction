@@ -2,6 +2,7 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 
+
 import os
 import logging
 import random
@@ -156,9 +157,9 @@ class Webtraffic(DataSet):
         pass
 
 
-class M5(DataSet):
+class CF(DataSet):
     def __init__(self,params):
-        super(M5,self).__init__(params)
+        super(CF,self).__init__(params)
         pass
 
 

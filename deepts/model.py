@@ -11,7 +11,7 @@ from deepts.models.transformer import Transformer
 from deepts.models.unet import Unet
 from deepts.models.nbeats import NBeatsNet
 from deepts.models.gan import GAN
-assert tf.__version__>"2.0.0", "Should you consider to use TensorFlow 2?"
+assert tf.__version__>"2.0.0", "what about considering to use TensorFlow 2"
 
 
 class Loss(object):

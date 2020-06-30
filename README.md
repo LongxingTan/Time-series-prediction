@@ -4,41 +4,7 @@ It's highly welcomed to contribute if you have any better idea, just create a PR
 
 #### Ongoing project, welcome to join
 
-<table style="width:100%" align="center">
-  <tr>
-    <th>
-      <p align="center">
-      ARIMA                      
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/arima.md" name="introduction">intro</a>             
-      </p>
-     </th>
-    <th>
-       <p align="center">           
-           <a href="./deepts/models/arima.py" name="code">code</a>     
-      </p>
-    </th> 
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      GBDT                  
-      </p>
-    </th>
-    <th>
-      <p align="center">
-        <a href="./docs/tree.md" name="introduction">intro</a> 
-      </p>
-    </th>
-    <th>   
-      <p align="center">
-           <a href="./deepts/models/tree.py" name="code">code</a>     
-      </p>
-    </th>
-  </tr>
+<table style="width:100%" align="center">  
   <tr>
     <th>
       <p align="center">
@@ -142,6 +108,17 @@ It's highly welcomed to contribute if you have any better idea, just create a PR
     </th>
   </tr>
 </table>
+
+
+-----
+
+Your click will be appreciated :point_down:
+
+<p align="center">
+ <a href=“https://tracking.gitads.io/?repo=Time-series-prediction”> <img src="https://images.gitads.io/Time-series-prediction" alt=“GitAds”/> </a>
+</p>
+
+-----
 
 
 ## Usage
