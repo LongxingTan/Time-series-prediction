@@ -19,7 +19,7 @@ params={
 }
 
 
-class WavenNet(object):
+class WaveNet(object):
     '''
     Temporal convolutional network
     '''
@@ -130,5 +130,5 @@ class Decoder(object):
     def __call__(self, decoder_inputs,encoder_outputs,encoder_inputs,predict_seq_length):
         return self.foward(decoder_inputs,
                            encoder_outputs,
-                           decoder_init_value=tf.expand_dims(encoder_inputs[:,-1,0],1),
+                           decoder_init_value=tf.expand_dims(encoder_inputs[:,-1,0],1),  # Todo: optimize
                            predict_seq_length=predict_seq_length)

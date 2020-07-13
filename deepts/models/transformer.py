@@ -5,6 +5,7 @@
 # other implementations: https://github.com/maxjcohen/transformer
 #                        https://github.com/Trigram19/m5-python-starter
 #                        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_tf_bert.py
+#                        DETR
 
 
 import tensorflow as tf
@@ -91,11 +92,8 @@ class Transformer(object):
         if training:
             tgt = tf.nn.dropout(tgt, rate=self.params["layer_postprocess_dropout"])
         with tf.name_scope('decoder'):
-            logits=self.decoder_stack(tgt,memory,src_mask,tgt_mask,training)  #Todo：mask
+            logits=self.decoder_stack(tgt,memory,src_mask,tgt_mask,training)  # Todo：mask
         return logits
-
-    def predict(self):
-        pass
 
     def get_src_mask(self,x,pad=0):
         src_mask = tf.reduce_all(tf.math.equal(x, pad),axis=-1)
@@ -181,7 +179,7 @@ class DecoderStack(tf.keras.layers.Layer):
             'params':self.params
         }
 
-    def call(self, decoder_inputs,encoder_outputs,src_mask,tgt_mask,training,cache=None,):
+    def call(self, decoder_inputs,encoder_outputs,src_mask,tgt_mask,training,cache=None):
         for n, layer in enumerate(self.layers):
             self_attention_layer = layer[0]
             enc_dec_attention_layer = layer[1]

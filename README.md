@@ -111,8 +111,8 @@ It's highly welcomed to contribute if you have any better idea, just create a PR
 
 
 -----
+Time-series-prediction is being sponsored by the following tool; please help to support us by taking a look and signing up to a free trial
 
-Your click will be appreciated :point_down:
 
 <p align="center">
  <a href=“https://tracking.gitads.io/?repo=Time-series-prediction”> <img src="https://images.gitads.io/Time-series-prediction" alt=“GitAds”/> </a>

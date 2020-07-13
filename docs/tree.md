@@ -9,6 +9,12 @@ XGBoost is introduced in [XGBoost: A Scalable Tree Boosting System](https://arxi
 ## Introduction of LightGBM
 LightGBM is introduces in [LightGBM: A Highly Efficient Gradient Boosting Decision Tree](http://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.pdf)
 
+## GBDT in time series
+For multi-steps time series prediction, there could be 3 different methods.
+
+Recursive or extended, normally there are not so many other quantitive features.
+
+
 ## Performance
 GBDT could also be tuned into SOTA model in time series. I read some implementations of the competition to let me so sure that I'm not so good at tuning the parameters.
 So I believe the performance here could be further optimized.

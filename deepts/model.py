@@ -6,7 +6,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 from deepts.models.seq2seq import Seq2seq
-from deepts.models.wavenet import WavenNet
+from deepts.models.wavenet import WaveNet
 from deepts.models.transformer import Transformer
 from deepts.models.unet import Unet
 from deepts.models.nbeats import NBeatsNet
@@ -43,7 +43,7 @@ class Model(object):
             inputs = Input([params['input_seq_length'], 1])
             outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
         elif use_model == 'wavenet':
-            Model = WavenNet(custom_model_params)
+            Model = WaveNet(custom_model_params)
             inputs = Input([params['input_seq_length'], 1])
             outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
         elif use_model == 'transformer':
@@ -85,7 +85,7 @@ class Model(object):
             callbacks = []
             self.model.fit(dataset,epochs=n_epochs,callbacks=callbacks)
         else:
-            print("unsupported train mode of {}, choose 'eager' or 'fit'".format(mode))
+            raise ValueError("unsupported train mode: {}, please choose 'eager' or 'fit'".format(mode))
 
         if export_model:
             self.export_model()

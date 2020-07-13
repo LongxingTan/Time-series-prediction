@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
@@ -64,26 +63,24 @@ class DenseEinsum(tf.keras.layers.Layer):
         input_rank = input_shape.rank
         self._einsum_string=self._build_einsum_string(input_rank-self._num_summed_dimentions,
                                                       self._num_summed_dimentions,
-                                                      len(self._output_shape)) #"BTF,FCD->BTCD"
+                                                      len(self._output_shape))  # "BTF,FCD->BTCD"
 
         self._kernel_shape = (input_shape[input_rank-self._num_summed_dimentions:].concatenate(self._output_shape))
-        self._kernel = self.add_weight(
-                                    "kernel",
-                                    shape=self._kernel_shape,
-                                    initializer=self._kernel_initializer,
-                                    regularizer=self._kernel_regularizer,
-                                    constraint=self._kernel_constraint,
-                                    dtype=self.dtype,
-                                    trainable=True)
+        self._kernel = self.add_weight("kernel",
+                                       shape=self._kernel_shape,
+                                       initializer=self._kernel_initializer,
+                                       regularizer=self._kernel_regularizer,
+                                       constraint=self._kernel_constraint,
+                                       dtype=self.dtype,
+                                       trainable=True)
         if self._use_bias:
-            self._bias = self.add_weight(
-                "bias",
-                shape=self._output_shape,
-                initializer=self._bias_initializer,
-                regularizer=self._bias_regularizer,
-                constraint=self._bias_constraint,
-                dtype=self.dtype,
-                trainable=True)
+            self._bias = self.add_weight("bias",
+                                         shape=self._output_shape,
+                                         initializer=self._bias_initializer,
+                                         regularizer=self._bias_regularizer,
+                                         constraint=self._bias_constraint,
+                                         dtype=self.dtype,
+                                         trainable=True)
         else:
             self._bias = None
 
@@ -191,8 +188,7 @@ class EmbeddingLayer(tf.keras.layers.Layer):
             self.shared_weights=self.add_weight(name='weights',
                                                 shape=[input_shape[-1],self.embedding_size],
                                                 initializer=tf.random_normal_initializer(mean=0.,
-                                                                                         stddev=self.embedding_size ** -0.5)
-                                                )
+                                                                                         stddev=self.embedding_size ** -0.5))
         super(EmbeddingLayer,self).build(input_shape)
 
     def get_config(self):
@@ -258,3 +254,4 @@ class SublayerConnection(tf.keras.layers.Layer):
         if kwargs['training']:
             y=tf.nn.dropout(y,rate=self.layer_postprocess_dropout)
         return x+y
+

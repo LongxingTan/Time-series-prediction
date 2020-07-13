@@ -18,9 +18,9 @@ def main():
     train_dataset=data_loader(params,data_dir=params['data_dir'], batch_size=params['batch_size'],training=True, sample=0.8)
     valid_dataset=data_loader(params,data_dir=params['data_dir'],batch_size=params['batch_size'], training=True, sample=0.2)
 
-    # model: seq2seq, wavenet, transformer
+    # use_model: seq2seq, wavenet, transformer
     model=Model(params=params, use_model=params['use_model'], use_loss='mse',use_optimizer='adam',custom_model_params={})
-    # train mode can choose eager or fit
+    # mode: eager or fit
     model.train(train_dataset,n_epochs=params['n_epochs'],mode='eager',export_model=True)
     model.eval(valid_dataset)
 
