@@ -16,3 +16,4 @@ MYIDEA.md
 /reference/*
 /models/variables/*
 /data/*
+**/crawl_data.py

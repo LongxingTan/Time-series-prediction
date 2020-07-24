@@ -3,7 +3,7 @@
 ## Introduction
 Wavenet is introduced in [WaveNet: A Generative Model for Raw Audio](https://arxiv.org/abs/1609.03499) by DeepMind, first used in audio generation. Its main components use the causal dilated convolutional neutral network. The kernel of CNN layer share the same weights, so it can also be used to percept the seasonality of time series issue.
 
-The dilated causal convolutional layer
+The dilated causal convolutional layer <br>
 ![wavenet](./assets/wavenet.gif)
 
 It's become a promising method in time series since sjv open-sourced his repo: [web-traffic-forecasting](https://github.com/sjvasquez/web-traffic-forecasting)

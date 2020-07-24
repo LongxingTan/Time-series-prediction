@@ -1,8 +1,9 @@
 # Time series prediction
-This repo implements the common methods of time series prediction, especially deep learning methods in TensorFlow2. 
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)<br>
+This repository implements the common methods of time series prediction, especially deep learning methods in TensorFlow2. 
 It's highly welcomed to contribute if you have any better idea, just create a PR. If any question, feel free to open an issue.
 
-#### Ongoing project, welcome to join
+#### Ongoing project, I will continue to improve this, so you might want to watch/star this repo to revisit.
 
 <table style="width:100%" align="center">  
   <tr>
@@ -111,10 +112,9 @@ It's highly welcomed to contribute if you have any better idea, just create a PR
 
 
 -----
-Time-series-prediction is being sponsored by the following tool; please help to support us by taking a look and signing up to a free trial
-
 
 <p align="center">
+Time-series-prediction is being sponsored by the following tool; please help to support us by taking a look and signing up to a free trial
  <a href=“https://tracking.gitads.io/?repo=Time-series-prediction”> <img src="https://images.gitads.io/Time-series-prediction" alt=“GitAds”/> </a>
 </p>
 
@@ -143,6 +143,7 @@ python run_test.py
 ## Further reading
 - https://github.com/awslabs/gluon-ts/
 - https://github.com/Azure/DeepLearningForTimeSeriesForecasting
+- https://github.com/microsoft/forecasting
 
 ## Contributor
 - [LongxingTan](https://longxingtan.github.io/)

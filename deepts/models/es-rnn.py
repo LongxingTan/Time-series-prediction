@@ -5,9 +5,18 @@
 # other implementations: https://github.com/damitkwr/ESRNN-GPU
 
 
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
+
+
+params={
+
+}
+
+
 class ESRNN(object):
     def __init__(self, custom_model_params):
-        pass
+        params.update(custom_model_params)
 
     def __call__(self, inputs_shape, training):
         pass

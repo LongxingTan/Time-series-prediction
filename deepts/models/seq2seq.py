@@ -4,9 +4,8 @@
 # paper:
 # other implementations:
 
-
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN
 
 params={
     'rnn_size':64,
@@ -30,14 +29,14 @@ class Seq2seq(object):
 class Encoder(object):
     def __init__(self,params):
         self.params=params
-        cell=tf.keras.layers.GRUCell(units=self.params['rnn_size'])
-        self.rnn=tf.keras.layers.RNN(cell,return_state=True,return_sequences=True)
-        self.dense=tf.keras.layers.Dense(units=self.params['dense_size'])
+        cell = GRUCell(units=self.params['rnn_size'])
+        self.rnn = RNN(cell,return_state=True,return_sequences=True)
+        self.dense = Dense(units=self.params['dense_size'])
 
     def __call__(self, inputs, training=None, mask=None):
-        outputs,state=self.rnn(inputs)  # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
+        outputs, state = self.rnn(inputs)  # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         #encoder_hidden_state=tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
-        outputs=self.dense(outputs)  # => batch_size * input_seq_length * dense_size
+        outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs,state
 
     def initialize_hidden_state(self):
@@ -46,10 +45,10 @@ class Encoder(object):
 
 class Decoder(object):
     def __init__(self,params):
-        self.params=params
-        self.rnn_cell=tf.keras.layers.GRUCell(self.params['rnn_size'])
-        self.rnn=tf.keras.layers.RNN(self.rnn_cell,return_state=True,return_sequences=True)
-        self.dense=tf.keras.layers.Dense(units=1)
+        self.params = params
+        self.rnn_cell = GRUCell(self.params['rnn_size'])
+        self.rnn = RNN(self.rnn_cell,return_state=True, return_sequences=True)
+        self.dense = Dense(units=1)
 
     def forward(self,decoder_inputs,encoder_outputs,init_state,decoder_init_value,predict_seq_length):
         def cond_fn(time,prev_output,prev_state,decoder_output_ta):

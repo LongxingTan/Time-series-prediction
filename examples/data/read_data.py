@@ -2,32 +2,28 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 
-
 import os
 import logging
 import random
 import numpy as np
 import pandas as pd
-#import modin.pandas as pd   # faster Pandas by Berkeley
+# import modin.pandas as pd   # faster Pandas by Berkeley
 import matplotlib.pyplot as plt
 from examples.feature.prepare_feature import transform2_lagged_feature,multi_step_y
 from examples.feature.norm_feature import FeatureNorm
 
 
 class DataSet(object):
-    def __init__(self,params):
+    def __init__(self, params):
         self.params = params
 
-    def load_data(self,data_dir,*args):
+    def load_data(self, data_dir, *args):
         raise NotImplementedError('must implement load_data')
 
-    def preprocess_data(self,*args):
-        raise NotImplementedError('must implement preprocess_data')
-
-    def get_examples(self,*args):
+    def get_examples(self, *args):
         raise NotImplementedError('must implement get_examples')
 
-    def save_tf_record(self,*args):
+    def save_tf_record(self, *args):
         pass
 
 
@@ -37,21 +33,19 @@ class SineData(DataSet):
         This is a toy data example of sine function with some noise
         :param params:
         '''
-        super(SineData,self).__init__(params)
+        super(SineData, self).__init__(params)
 
-    def preprocess_data(self,data):
-        pass
-
-    def load_data(self,data_dir=None,*args):
-        n_examples=1000
-        sequence_length=10
+    def load_data(self, data_dir=None, *args):
+        n_examples = 1000
+        sequence_length = 30
+        predict_sequence_length = 10
 
         x = []
         y = []
         for _ in range(n_examples):
-            rand=random.random()*2*np.pi
-            sig1=np.sin(np.linspace(rand,3.*np.pi+rand,sequence_length*2))
-            sig2=np.cos(np.linspace(rand,3.*np.pi+rand,sequence_length*2))
+            rand = random.random()*2*np.pi
+            sig1 = np.sin(np.linspace(rand, 3.*np.pi+rand, sequence_length + predict_sequence_length))
+            sig2 = np.cos(np.linspace(rand, 3.*np.pi+rand, sequence_length + predict_sequence_length))
 
             x1 = sig1[:sequence_length]
             y1 = sig1[sequence_length:]
@@ -64,21 +58,21 @@ class SineData(DataSet):
             x.append(x_.T)
             y.append(y_.T)
 
-        x=np.array(x)
-        y=np.array(y)
+        x = np.array(x)
+        y = np.array(y)
+        return x, y
 
-        return x,y
-
-    def get_examples(self,sample=1,plot=False):
-        x,y=self.load_data()
+    def get_examples(self,data_dir=None, sample=1, plot=False):
+        x, y = self.load_data()
 
         if plot:
             plt.plot(x[0,:])
             plt.show()
+        return x, y[:,:,0:1]
 
 
 class PassengerData(DataSet):
-    def __init__(self,params):
+    def __init__(self, params):
         '''
         This is a simple univariable time series data set: airline passenger data
         :param data_dir:
@@ -87,11 +81,11 @@ class PassengerData(DataSet):
         super(PassengerData,self).__init__(params)
         self.feature_norm=FeatureNorm()
 
-    def preprocess_data(self,data):
+    def preprocess_data(self, data):
         data.columns = ['Month', 'Passengers']
         return data
 
-    def load_data(self,data_dir, skipfooter=0, engine='python', parse_dates=None, date_parser=None):
+    def load_data(self, data_dir, skipfooter=0, engine='python', parse_dates=None, date_parser=None):
         '''
         Use pandas to load the data from data_dir
         :param data_dir: the directory of the processed time series file
@@ -105,21 +99,21 @@ class PassengerData(DataSet):
         return data
 
     def get_examples(self,data_dir,sample=1,start_date=None,plot=False,model_dir='../models'):
-        data=self.load_data(data_dir)
-        data=self.preprocess_data(data)
+        data = self.load_data(data_dir)
+        data = self.preprocess_data(data)
 
         x = pd.DataFrame(data['Passengers'])
-        x = self.feature_norm(x,model_dir=model_dir)
-        x = transform2_lagged_feature(x,window_sizes=self.params['input_seq_length'])
+        x = self.feature_norm(x, model_dir=model_dir)
+        x = transform2_lagged_feature(x, window_sizes=self.params['input_seq_length'])
         y = pd.DataFrame(data['Passengers'])
         y = np.log1p(y.values)
-        y = multi_step_y(y,predict_window=self.params['output_seq_length'])
-        x,y=self.postprocess(x,y)
+        y = multi_step_y(y, predict_window=self.params['output_seq_length'])
+        x, y=self.postprocess(x,y)
 
         if plot:
             plt.plot(data['Passengers'])
             plt.show()
-            in_len= self.params['input_seq_length']
+            in_len = self.params['input_seq_length']
             total_len = in_len + self.params['output_seq_length']
             plt.plot(range(0,in_len),x[40,:,0])
             plt.plot(range(in_len,total_len),y[40,:,0])
@@ -135,8 +129,8 @@ class PassengerData(DataSet):
         #for x1,y1 in zip(x,y):
             #yield x1,y1
 
-    def postprocess(self,x,y):
-        if isinstance(x,pd.DataFrame):
+    def postprocess(self, x, y):
+        if isinstance(x, pd.DataFrame):
             x=x.values
         if len(x.shape)==2:
             x=x[...,np.newaxis]
@@ -151,21 +145,13 @@ class PassengerData(DataSet):
         return x,y
 
 
-class Webtraffic(DataSet):
-    def __init__(self,params):
-        super(Webtraffic,self).__init__(params)
-        pass
-
-
-class CF(DataSet):
-    def __init__(self,params):
-        super(CF,self).__init__(params)
-        pass
-
-
 if __name__=='__main__':
-    data_dir = '../../data/international-airline-passengers.csv'
+    # data_dir = '../../data/international-airline-passengers.csv'
+    #
+    # prepare_data = PassengerData(params={'input_seq_length':15,'output_seq_length':5})
+    # x,y=prepare_data.get_examples(data_dir,sample=0.8,plot=True,model_dir='../../models')
+    # print(x.shape,y.shape)
 
-    prepare_data = PassengerData(params={'input_seq_length':15,'output_seq_length':5})
-    x,y=prepare_data.get_examples(data_dir,sample=0.8,plot=True,model_dir='../../models')
-    print(x.shape,y.shape)
+    data_reader=SineData(params={})
+    x,y=data_reader.get_examples(sample=1 ,plot=True)
+    print(x.shape, y.shape)
