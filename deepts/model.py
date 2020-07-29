@@ -15,25 +15,31 @@ assert tf.__version__>"2.0.0", "what about considering to use TensorFlow 2"
 
 
 class Loss(object):
-    def __init__(self,use_loss):
-        self.use_loss=use_loss
+    def __init__(self, use_loss):
+        self.use_loss = use_loss
 
     def __call__(self,):
         if self.use_loss == 'mse':
             return tf.keras.losses.MeanSquaredError()
         elif self.use_loss == 'rmse':
             return tf.math.sqrt(tf.keras.losses.MeanSquaredError())
+        elif self.use_loss == 'huber':
+            return tf.keras.losses.Huber(delta=1.0)
+        else:
+            raise ValueError("Not supported use_loss: {}".format(self.use_loss))
 
 
 class Optimizer(object):
-    def __init__(self,use_optimizer):
-        self.use_optimizer=use_optimizer
+    def __init__(self, use_optimizer):
+        self.use_optimizer = use_optimizer
 
-    def __call__(self,learning_rate):
+    def __call__(self, learning_rate):
         if self.use_optimizer == 'adam':
             return tf.keras.optimizers.Adam(lr=learning_rate)
         elif self.use_optimizer == 'sgd':
             return tf.keras.optimizers.SGD(lr=learning_rate)
+        else:
+            raise ValueError("Not supported use_optimizer: {}".format(self.use_optimizer))
 
 
 class Model(object):
@@ -61,7 +67,7 @@ class Model(object):
         else:
             raise ValueError("unsupported use_model of {} yet".format(use_model))
 
-        self.params=params
+        self.params = params
         self.use_model = use_model
         self.use_loss = use_loss
         self.use_optimizer = use_optimizer
@@ -90,23 +96,25 @@ class Model(object):
         if export_model:
             self.export_model()
 
-    #@tf.function
+    @tf.function
     def train_step(self, x, y):
         with tf.GradientTape() as tape:
             try:
-                y_pred=self.model(tf.cast(x,tf.float32),training=True)
+                y_pred = self.model(tf.cast(x, tf.float32), training=True)
             except:
-                y_pred = self.model([tf.cast(x, tf.float32),tf.cast(y,tf.float32)], training=True)
-            loss=self.loss_fn(y, y_pred)
+                y_pred = self.model([tf.cast(x, tf.float32), tf.cast(y, tf.float32)], training=True)
+            loss = self.loss_fn(y, y_pred)
+
         gradients = tape.gradient(loss, self.model.trainable_variables)
+        gradients = [(tf.clip_by_value(grad, -10.0, 10.0)) for grad in gradients]
         self.optimizer_fn.apply_gradients(zip(gradients, self.model.trainable_variables))
         print("=> STEP %4d  lr: %.6f  loss: %4.2f" % (self.global_steps, self.optimizer_fn.lr.numpy(), loss))
         self.global_steps.assign_add(1)
 
     def eval(self, valid_dataset):
-        for step,(x,y) in enumerate(valid_dataset.take(-1)):
-            metrics=self.dev_step(x,y)
-            print("=> STEP %4d Metrics: %4.2f"%(step, metrics))
+        for step, (x, y) in enumerate(valid_dataset.take(-1)):
+            metrics = self.dev_step(x,y)
+            print("=> STEP %4d Metrics: %4.2f" % (step, metrics))
 
     def dev_step(self, x, y):
         '''
@@ -115,13 +123,13 @@ class Model(object):
         :param y:
         :return:
         '''
-        x=tf.cast(x, tf.float32)
-        y=tf.cast(y, tf.float32)
+        x = tf.cast(x, tf.float32)
+        y = tf.cast(y, tf.float32)
         try:
-            y_pred=self.model(x,training=False)
+            y_pred = self.model(x, training=False)
         except:
-            y_pred=self.model((x,tf.ones([tf.shape(x)[0],self.params['output_seq_length'],1],tf.float32)))
-        metrics=self.loss_fn(y, y_pred).numpy()
+            y_pred = self.model((x, tf.ones([tf.shape(x)[0], self.params['output_seq_length'], 1], tf.float32)))
+        metrics = self.loss_fn(y, y_pred).numpy()
         return metrics
 
     def predict(self, x_test, model_dir, use_model='pb'):
@@ -134,12 +142,12 @@ class Model(object):
         '''
         if use_model=='pb':
             print('Load saved pb model ...')
-            model=tf.saved_model.load(model_dir)
+            model = tf.saved_model.load(model_dir)
         else:
             print('Load checkpoint model ...')
-            model=self.model.load_weights(model_dir)
+            model = self.model.load_weights(model_dir)
 
-        y_pred=model(x_test,True,None)  # To be clarified, not sure why additional args are necessary here
+        y_pred = model(x_test, True, None)  # To be clarified, not sure why additional args are necessary here
         return y_pred
 
     def export_model(self):

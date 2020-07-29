@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
+# this script shows several examples reading the data, next step is load_data.py
 
 import os
 import logging
@@ -108,7 +109,7 @@ class PassengerData(DataSet):
         y = pd.DataFrame(data['Passengers'])
         y = np.log1p(y.values)
         y = multi_step_y(y, predict_window=self.params['output_seq_length'])
-        x, y=self.postprocess(x,y)
+        x, y = self.postprocess(x,y)
 
         if plot:
             plt.plot(data['Passengers'])
@@ -153,5 +154,5 @@ if __name__=='__main__':
     # print(x.shape,y.shape)
 
     data_reader=SineData(params={})
-    x,y=data_reader.get_examples(sample=1 ,plot=True)
+    x, y = data_reader.get_examples(sample=1, plot=True)
     print(x.shape, y.shape)

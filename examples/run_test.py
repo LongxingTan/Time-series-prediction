@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-03
+# This script is used for testing the new data
 
 import sys
 import os
@@ -16,13 +17,13 @@ from config import params
 
 def main(plot=False):
     x,y=PassengerData(params).get_examples(data_dir='../data/international-airline-passengers.csv',sample=0.2)
-    print(x.shape,y.shape)
+    print(x.shape, y.shape)
 
-    model=Model(params=params,use_model=params['use_model'])
+    model = Model(params=params, use_model=params['use_model'])
     try:
-        y_pred=model.predict(x.astype(np.float32), model_dir=params['saved_model_dir'])
+        y_pred = model.predict(x.astype(np.float32), model_dir=params['saved_model_dir'])
     except:
-        y_pred = model.predict((x.astype(np.float32),np.ones_like(y)), model_dir=params['saved_model_dir'])
+        y_pred = model.predict((x.astype(np.float32), np.ones_like(y)), model_dir=params['saved_model_dir'])
 
     print(y_pred)
 
@@ -42,8 +43,8 @@ def main(plot=False):
             plt.legend()
         plt.show()
 
-    return y,y_pred
+    return y, y_pred
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main(plot=True)

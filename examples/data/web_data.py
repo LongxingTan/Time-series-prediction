@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
+# @date: 2020-01
+# This script will show an example using Kaggle data: https://www.kaggle.com/c/web-traffic-time-series-forecasting
+
 import os
 import numpy as np
 import pandas as pd
@@ -15,7 +20,7 @@ def sequence_mean(x, effective_length):
     return np.sum(x) / effective_length
 
 
-class DataReader(object):
+class WebDataReader(object):
     def __init__(self, data_dir, mode, train_test_ratio=0.9):
         data_cols = [
             'data',  # n_example * n_days
@@ -124,7 +129,7 @@ class DataLoader(object):
         pass
 
     def __call__(self, data_dir, mode, batch_size):
-        data_reader = DataReader(data_dir, mode)
+        data_reader = WebDataReader(data_dir, mode)
         dataset = tf.data.Dataset.from_generator(data_reader.iter,
                                                  output_types=(tf.float32, tf.float32, tf.float32, tf.float32))
         dataset = dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)

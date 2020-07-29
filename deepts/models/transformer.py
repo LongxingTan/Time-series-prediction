@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
-# paper:
+# paper: https://arxiv.org/pdf/1706.03762.pdf
 # other implementations: https://github.com/maxjcohen/transformer
 #                        https://github.com/Trigram19/m5-python-starter
 #                        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_tf_bert.py

@@ -3,6 +3,8 @@
 # @date: 2020-05
 # paper:
 # other implementations: https://github.com/LenzDu/Kaggle-Competition-Favorita/blob/master/cnn.py
+#                        https://github.com/philipperemy/keras-tcn
+#                        https://github.com/emreaksan/stcn
 
 
 import tensorflow as tf
@@ -34,14 +36,14 @@ class CNN(object):
     def __call__(self, x):
         input=x
 
-        c1=self.conv_times[0](x)
-        c2=self.conv_times[1](c1)
-        c2=self.conv_times[2](c2)
-        c2=self.conv_times[3](c2)
+        c1 = self.conv_times[0](x)
+        c2 = self.conv_times[1](c1)
+        c2 = self.conv_times[2](c2)
+        c2 = self.conv_times[3](c2)
         print(c2.shape)
 
-        c4=tf.concat([c1,c2],axis=-1)
-        conv_out=Conv1D(8,1,activation='relu')(c4)
+        c4=tf.concat([c1, c2], axis=-1)
+        conv_out=Conv1D(8, 1, activation='relu')(c4)
         conv_out=Dropout(0.25)(conv_out)
         # conv_out=Flatten()(conv_out)
 
