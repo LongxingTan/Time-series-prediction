@@ -114,13 +114,14 @@ It's highly welcomed to contribute if you have any better idea, just create a PR
 -----
 
 Time-series-prediction is being sponsored by the following tool; please help to support us by taking a look and signing up to a free trial
- <a href=“https://tracking.gitads.io/?repo=Time-series-prediction”> <img src="https://images.gitads.io/Time-series-prediction" alt=“GitAds”/> </a>
+
+<a href="https://tracking.gitads.io/?repo=Time-series-prediction"><img src="https://images.gitads.io/Time-series-prediction" alt="GitAds"/></a>
 
 -----
 
 
 ## Usage
-1. Install the library
+1. Install the required library
 ```bash
 pip install -r requirements.txt
 ```
@@ -128,8 +129,10 @@ pip install -r requirements.txt
 ```bash
 bash ./data/download_passenger.sh
 ```
-3. Train the model, set `custom_model_params` if you want, and pay attention to your own feature engineering.
-As for custom_model_params parameters, please refer to each model's params in `./deepts/models/*this_model*.py`
+3. Train the model <br>
+basically, the model file is in `./deepts`, the example file including data, feature, train, test is in `./examples` <br>
+set `custom_model_params` if you want (refer to each model's params in `./deepts/models/*model_u_choose*.py`), and pay attention to your own feature engineering.
+
 ```bash
 cd examples
 python run_train.py --use_model seq2seq
