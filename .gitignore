@@ -3,7 +3,9 @@
 **/.idea/*
 **/.pytest_cache/
 **/.DS_Store
-.gitignore
+/reference/*
+/data/logs/*
+/data/*
 
 /backup/*
 MYIDEA.md
@@ -11,9 +13,6 @@ MYIDEA.md
 /models/scaler.pkl
 /models/saved_model.pb
 /models/variables/*
-
-/examples/data/crawl_data.py
-/reference/*
-/models/variables/*
-/data/*
-**/crawl_data.py
+/models/checkpoint
+/models/checkpoint.data-00000-of-00001
+/models/checkpoint.index

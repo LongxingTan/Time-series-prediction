@@ -1,7 +1,7 @@
 # Time series prediction
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)<br>
 This repository implements the common methods of time series prediction, especially deep learning methods in TensorFlow2. 
-It's highly welcomed to contribute if you have any better idea, just create a PR. If any question, feel free to open an issue.
+It's welcomed to contribute if you have any better idea, just create a PR. If any question, feel free to open an issue.
 
 #### Ongoing project, I will continue to improve this, so you might want to watch/star this repo to revisit.
 
@@ -130,15 +130,18 @@ pip install -r requirements.txt
 bash ./data/download_passenger.sh
 ```
 3. Train the model <br>
-basically, the model file is in `./deepts`, the example file including data, feature, train, test is in `./examples` <br>
-set `custom_model_params` if you want (refer to each model's params in `./deepts/models/*model_u_choose*.py`), and pay attention to your own feature engineering.
+set `custom_model_params` if you want (refer to each model's params in `./deepts/models/*.py`), and pay attention to your own feature engineering.
 
 ```bash
 cd examples
 python run_train.py --use_model seq2seq
+cd ..
+tensorboard --logdir=./data/logs
+
 ```
 4. Predict new data
 ```bash
+cd examples
 python run_test.py
 ```
 

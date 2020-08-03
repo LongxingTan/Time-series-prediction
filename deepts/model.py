@@ -2,16 +2,16 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 
-
 import tensorflow as tf
 from tensorflow.keras.layers import Input
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping,  ModelCheckpoint, TensorBoard
 from deepts.models.seq2seq import Seq2seq
 from deepts.models.wavenet import WaveNet
 from deepts.models.transformer import Transformer
 from deepts.models.unet import Unet
 from deepts.models.nbeats import NBeatsNet
 from deepts.models.gan import GAN
-assert tf.__version__>"2.0.0", "what about considering to use TensorFlow 2"
+assert tf.__version__ > "2.0.0", "what about considering to use TensorFlow 2?"
 
 
 class Loss(object):
@@ -43,58 +43,77 @@ class Optimizer(object):
 
 
 class Model(object):
-    def __init__(self,params, use_model, use_loss='mse',use_optimizer='adam', custom_model_params={}):
-        if use_model == 'seq2seq':
-            Model = Seq2seq(custom_model_params)
-            inputs = Input([params['input_seq_length'], 1])
-            outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
-        elif use_model == 'wavenet':
-            Model = WaveNet(custom_model_params)
-            inputs = Input([params['input_seq_length'], 1])
-            outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
-        elif use_model == 'transformer':
-            Model = Transformer(custom_model_params)
-            inputs = (Input([params['input_seq_length'],1]),Input([params['output_seq_length'],1]))
-            outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
-        elif use_model == 'unet':
-            Model = Unet(custom_model_params)
-            inputs = Input([params['input_seq_length'], 1])
-            outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
-        elif use_model == 'nbeats':
-            Model = NBeatsNet(custom_model_params)
-            inputs = Input([params['input_seq_length']])
-            outputs = Model(inputs, training=True, predict_seq_length=params['output_seq_length'])
-        else:
-            raise ValueError("unsupported use_model of {} yet".format(use_model))
-
+    def __init__(self, params, use_model, use_loss='mse', use_optimizer='adam', custom_model_params={}):
         self.params = params
         self.use_model = use_model
         self.use_loss = use_loss
         self.use_optimizer = use_optimizer
-        self.loss_fn = Loss(use_loss)()
-        self.optimizer_fn = Optimizer(use_optimizer)(learning_rate=params['learning_rate'])
-        self.model = tf.keras.Model(inputs, outputs, name=use_model)
+        self.custom_model_params = custom_model_params
+        self.input_seq_length = params['input_seq_length']
+        self.output_seq_length = params['output_seq_length']
 
-    def train(self, dataset, n_epochs, mode='eager', export_model=False):
+    def build_model(self, training):
+        if self.use_model == 'seq2seq':
+            Model = Seq2seq(self.custom_model_params)
+            inputs = Input([self.input_seq_length, 1])
+            outputs = Model(inputs, training=training, predict_seq_length=self.output_seq_length)
+        elif self.use_model == 'wavenet':
+            Model = WaveNet(self.custom_model_params)
+            inputs = Input([self.input_seq_length, 1])
+            outputs = Model(inputs, training=training, predict_seq_length=self.output_seq_length)
+        elif self.use_model == 'transformer':
+            Model = Transformer(self.custom_model_params)
+            inputs = (Input([self.input_seq_length, 1]), Input([self.output_seq_length, 1]))
+            outputs = Model(inputs, training=training, predict_seq_length=self.output_seq_length)
+        elif self.use_model == 'unet':
+            Model = Unet(self.custom_model_params)
+            inputs = Input([self.input_seq_length, 1])
+            outputs = Model(inputs, training=training, predict_seq_length=self.output_seq_length)
+        elif self.use_model == 'nbeats':
+            Model = NBeatsNet(self.custom_model_params)
+            inputs = Input([self.input_seq_length])
+            outputs = Model(inputs, training=True, predict_seq_length=self.output_seq_length)
+        else:
+            raise ValueError("unsupported use_model of {} yet".format(self.use_model))
+
+        self.model = tf.keras.Model(inputs, outputs, name=self.use_model)
+        self.loss_fn = Loss(self.use_loss)()
+        self.optimizer_fn = Optimizer(self.use_optimizer)(learning_rate=self.params['learning_rate'])
+
+    def train(self, dataset, n_epochs, valid_dataset=None, mode='eager'):
         print("-" * 35)
         print("Start to train {}, in {} mode".format(self.use_model, mode))
         print("-" * 35)
+        self.build_model(training=True)
+
         if mode == 'eager':
             self.global_steps = tf.Variable(1, trainable=False, dtype=tf.int64)
+            self.log_writer = tf.summary.create_file_writer(self.params['log_dir'])
+
             for epoch in range(1, n_epochs + 1):
                 print("-> EPOCH {}".format(epoch))
+                epoch_loss_train, epoch_loss_valid = [],[]
                 for step, (x, y) in enumerate(dataset.take(-1)):
-                    self.train_step(x, y)
+                    loss = self.train_step(x, y)
+                    print("=> STEP %4d  lr: %.6f  loss: %4.2f" % (self.global_steps, self.optimizer_fn.lr.numpy(), loss))
+
+                    with self.log_writer.as_default():
+                        tf.summary.scalar('loss', loss, step=self.global_steps)
+                    epoch_loss_train.append(loss)
+
+                with self.log_writer.as_default():
+                    tf.summary.scalar('epoch_loss_train', tf.reduce_mean(epoch_loss_train), step=epoch)
+
+            self.model.save_weights(self.params['model_dir'])
 
         elif mode == 'fit':
             self.model.compile(loss=self.loss_fn, optimizer=self.optimizer_fn)
-            callbacks = []
-            self.model.fit(dataset,epochs=n_epochs,callbacks=callbacks)
+            callbacks = [TensorBoard(log_dir=self.params['log_dir']),
+                         ModelCheckpoint(self.params['model_dir'], verbose=1, save_weights_only=True)
+                         ]
+            self.model.fit(dataset, epochs=n_epochs, callbacks=callbacks)
         else:
-            raise ValueError("unsupported train mode: {}, please choose 'eager' or 'fit'".format(mode))
-
-        if export_model:
-            self.export_model()
+            raise ValueError("Unsupported train mode: {}, choose 'eager' or 'fit'".format(mode))
 
     @tf.function
     def train_step(self, x, y):
@@ -108,39 +127,45 @@ class Model(object):
         gradients = tape.gradient(loss, self.model.trainable_variables)
         gradients = [(tf.clip_by_value(grad, -10.0, 10.0)) for grad in gradients]
         self.optimizer_fn.apply_gradients(zip(gradients, self.model.trainable_variables))
-        print("=> STEP %4d  lr: %.6f  loss: %4.2f" % (self.global_steps, self.optimizer_fn.lr.numpy(), loss))
-        self.global_steps.assign_add(1)
 
-    def eval(self, valid_dataset):
+        self.global_steps.assign_add(1)
+        return loss
+
+    def eval(self, valid_dataset, export_model=False):
+        self.build_model(training=False)
+        self.model.load_weights(self.params['model_dir'])
+
         for step, (x, y) in enumerate(valid_dataset.take(-1)):
-            metrics = self.dev_step(x,y)
+            metrics = self.dev_step(x, y)
             print("=> STEP %4d Metrics: %4.2f" % (step, metrics))
+
+        if export_model:
+            self.export_model()
 
     def dev_step(self, x, y):
         '''
         evaluation step function
         :param x:
         :param y:
-        :return:
         '''
         x = tf.cast(x, tf.float32)
         y = tf.cast(y, tf.float32)
         try:
             y_pred = self.model(x, training=False)
         except:
-            y_pred = self.model((x, tf.ones([tf.shape(x)[0], self.params['output_seq_length'], 1], tf.float32)))
+            y_pred = self.model((x, tf.ones([tf.shape(x)[0], self.output_seq_length, 1], tf.float32)))
         metrics = self.loss_fn(y, y_pred).numpy()
         return metrics
 
     def predict(self, x_test, model_dir, use_model='pb'):
         '''
-        predict function, don't use self.model here, but saved checkpoint or pb
+        predict function, it doesn't use self.model here, but saved checkpoint or pb
         :param x_test:
         :param model_dir:
         :param use_model:
         :return:
         '''
-        if use_model=='pb':
+        if use_model == 'pb':
             print('Load saved pb model ...')
             model = tf.saved_model.load(model_dir)
         else:

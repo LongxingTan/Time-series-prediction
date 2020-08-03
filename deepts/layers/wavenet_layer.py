@@ -31,7 +31,7 @@ class Dense3D(tf.keras.layers.Layer):
         self.bias_initializer = bias_initializer
 
     def build(self,input_shape):
-        inputs_units = input_shape[-1] #input.get_shape().as_list()[-1]
+        inputs_units = int(input_shape[-1])  # input.get_shape().as_list()[-1]
         self.kernel = self.add_weight('kernel',
                                       shape=[inputs_units, self.units],
                                       initializer=self.kernel_initializer,

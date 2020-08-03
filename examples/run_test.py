@@ -16,7 +16,7 @@ from config import params
 
 
 def main(plot=False):
-    x,y=PassengerData(params).get_examples(data_dir='../data/international-airline-passengers.csv',sample=0.2)
+    x, y = PassengerData(params).get_examples(data_dir='../data/international-airline-passengers.csv', sample=0.2)
     print(x.shape, y.shape)
 
     model = Model(params=params, use_model=params['use_model'])
@@ -29,17 +29,17 @@ def main(plot=False):
 
     if plot:
         for i in range(y_pred.shape[1]):
-            plt.subplot(y_pred.shape[1],1,i+1)
-            plt.plot(y[:,i,0],label='true')
-            plt.plot(y_pred[:,i],label='pred')
+            plt.subplot(y_pred.shape[1], 1, i+1)
+            plt.plot(y[:, i, 0], label='true')
+            plt.plot(y_pred[:, i], label='pred')
             plt.legend()
         plt.show()
 
         for i in range(36):
-            plt.subplot(6,6,i+1)
-            i=np.random.choice(range(y_pred.shape[0]))
-            plt.plot(y[i,:,0],label='true')
-            plt.plot(y_pred[i,:],label='pred')
+            plt.subplot(6, 6, i+1)
+            i = np.random.choice(range(y_pred.shape[0]))
+            plt.plot(y[i, :, 0], label='true')
+            plt.plot(y_pred[i, :], label='pred')
             plt.legend()
         plt.show()
 

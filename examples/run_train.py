@@ -21,8 +21,8 @@ def main():
     model = Model(params=params, use_model=params['use_model'], use_loss='mse', use_optimizer='adam', custom_model_params={})
 
     # mode: eager or fit
-    model.train(train_dataset, n_epochs=params['n_epochs'], mode='eager', export_model=True)
-    model.eval(valid_dataset)
+    model.train(train_dataset, n_epochs=params['n_epochs'], mode='eager')
+    model.eval(valid_dataset, export_model=True)
 
 
 if __name__ == '__main__':

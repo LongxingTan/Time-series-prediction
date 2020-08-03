@@ -96,7 +96,7 @@ class DenseEinsum(tf.keras.layers.Layer):
 
 
 class Attention(tf.keras.layers.Layer):
-    def __init__(self,hidden_size,num_heads,attention_dropout):
+    def __init__(self, hidden_size, num_heads, attention_dropout):
         if hidden_size%num_heads:
             raise ValueError("Hidden size ({}) must be divisible by the number of heads ({})."
                              .format(hidden_size, num_heads))
@@ -142,7 +142,7 @@ class Attention(tf.keras.layers.Layer):
         #print('*'*10,attention_output.shape)
         return attention_output
 
-    def call(self, query_input, source_input,bias,training,cache=None):
+    def call(self, query_input, source_input, bias=None, training=False, cache=None):
         return self.forward(query_input,source_input,bias,training,cache)
 
 

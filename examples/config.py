@@ -9,10 +9,11 @@ from collections import defaultdict
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--use_model',type=str, default='seq2seq', help='use model for train, seq2seq, wavenet, transformer')
-parser.add_argument('--data_dir',type=str, default='../data/international-airline-passengers.csv', help='dataset directory')
-parser.add_argument('--model_dir',type=str, default='../models/checkpoint', help='saved checkpoint directory')
+parser.add_argument('--use_model', type=str, default='seq2seq', help='use model for train, seq2seq, wavenet, transformer')
+parser.add_argument('--data_dir', type=str, default='../data/international-airline-passengers.csv', help='dataset directory')
+parser.add_argument('--model_dir', type=str, default='../models/checkpoint', help='saved checkpoint directory')
 parser.add_argument('--saved_model_dir', type=str, default='../models', help='saved pb directory')
+parser.add_argument('--log_dir', type=str, default='../data/logs', help='saved pb directory')
 parser.add_argument('--input_seq_length', type=int, default=32, help='sequence length for input')
 parser.add_argument('--output_seq_length', type=int, default=3, help='sequence length for output')
 parser.add_argument('--n_epochs', type=int, default=10, help='Number of training epochs')

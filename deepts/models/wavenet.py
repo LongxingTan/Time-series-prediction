@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense
 from deepts.layers.wavenet_layer import Dense3D, ConvTime
 
 
-params={
+params = {
     'dilation_rates': [2 ** i for i in range(4)],
     'kernel_sizes': [2 for i in range(4)],
     'filters': 128,

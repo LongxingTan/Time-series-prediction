@@ -6,11 +6,14 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN
+from deepts.layers.attention_layer import Attention
+
 
 params = {
     'rnn_size': 64,
     'dense_size': 16,
     'num_stacked_layers': 1,
+    'use_attention': False,
 }
 
 
@@ -19,6 +22,7 @@ class Seq2seq(object):
         params.update(custom_model_params)
         self.encoder = Encoder(params)
         self.decoder = Decoder(params)
+        self.params = params
 
     def __call__(self, inputs, training, predict_seq_length, teacher=None):
         if isinstance(inputs, tuple):
@@ -29,7 +33,11 @@ class Seq2seq(object):
             decoder_feature = None
 
         encoder_output, encoder_state = self.encoder(encoder_feature)
-        decoder_output = self.decoder(decoder_feature, encoder_state, x, predict_seq_length=predict_seq_length, teacher=teacher)
+        decoder_output = self.decoder(decoder_feature, encoder_state, x,
+                                      encoder_output=encoder_output,
+                                      predict_seq_length=predict_seq_length,
+                                      teacher=teacher,
+                                      use_attention=self.params['use_attention'])
         return decoder_output
 
 
@@ -41,7 +49,8 @@ class Encoder(object):
         self.dense = Dense(units=1)
 
     def __call__(self, inputs, training=None, mask=None):
-        outputs, state = self.rnn(inputs)  # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
+        # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
+        outputs, state = self.rnn(inputs)
         #encoder_hidden_state=tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
         outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
@@ -53,8 +62,11 @@ class Decoder(object):
         self.rnn_cell = GRUCell(self.params['rnn_size'])
         self.rnn = RNN(self.rnn_cell, return_state=True, return_sequences=True)
         self.dense = Dense(units=1)
+        self.attention = Attention(hidden_size=32, num_heads=2, attention_dropout=0.8)
 
-    def forward(self, decoder_feature, init_state, decoder_init_value, predict_seq_length, teacher):
+    def forward(self, decoder_feature, init_state, decoder_init_value,
+                encoder_output, predict_seq_length, teacher, use_attention):
+
         def cond_fn(time, prev_output, prev_state, decoder_output_ta):
             return time < predict_seq_length
 
@@ -67,6 +79,11 @@ class Decoder(object):
             if decoder_feature is not None:
                 this_feature = decoder_feature[:, time, :]
                 this_input = tf.concat([this_input, this_feature], axis=1)
+
+            if use_attention:
+                attention_feature = self.attention(tf.expand_dims(prev_state[-1],1), encoder_output)
+                attention_feature = tf.squeeze(attention_feature, 1)
+                this_input = tf.concat([this_input, attention_feature], axis=-1)
 
             this_output, this_state = self.rnn_cell(this_input, prev_state)
             project_output = self.dense(this_output)
@@ -84,21 +101,18 @@ class Decoder(object):
         #decoder_outputs=decoder_outputs
         return decoder_outputs
 
-    def __call__(self, decoder_feature, encoder_state, x, predict_seq_length=1, teacher=None):
+    def __call__(self, decoder_feature, encoder_state, x, encoder_output,
+                 predict_seq_length=1, teacher=None, use_attention=False):
+
         #context_vector=self.attention(x)
         #x=tf.concat([tf.expand_dims(context_vector,1),x],axis=-1)
         #output,state=self.rnn(x)
         #x=self.dense(output)
         return self.forward(decoder_feature=decoder_feature,
                             init_state=[encoder_state],  # for tf2
-                            decoder_init_value=x[:, -1, :],  # Adjust it by your own data!!!
+                            decoder_init_value=x[:, -1, :],
+                            encoder_output=encoder_output,
                             predict_seq_length=predict_seq_length,
-                            teacher=teacher)
+                            teacher=teacher,
+                            use_attention=use_attention)
 
-
-class Attention(object):
-    def __init__(self):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        pass

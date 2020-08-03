@@ -11,7 +11,7 @@ sys.path.append(os.path.split(filePath)[0])
 import functools
 import tensorflow as tf
 from data.read_data import PassengerData, SineData
-from data.web_data import WebDataReader
+from data.read_web_data import WebDataReader
 
 
 class DataLoader(object):
@@ -26,7 +26,7 @@ class DataLoader(object):
 
     def __call__(self, params, data_dir, batch_size, training, sample=1):
         data_reader = self.data_reader(params)
-        dataset = tf.data.Dataset.from_tensor_slices(data_reader.get_examples(data_dir,sample=sample))
+        dataset = tf.data.Dataset.from_tensor_slices(data_reader.get_examples(data_dir, sample=sample))
 
         if training:
             dataset = dataset.shuffle(buffer_size=2000)
