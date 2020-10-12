@@ -35,3 +35,7 @@ def multi_step_y(y, predict_window, predict_gap=1):
             outputs_column[-(i+predict_gap-1):] = np.nan
         outputs[:, i] = outputs_column
     return outputs
+
+
+def simple_moving_average(x):
+    pass

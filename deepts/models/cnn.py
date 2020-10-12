@@ -42,11 +42,11 @@ class CNN(object):
         c2 = self.conv_times[3](c2)
         print(c2.shape)
 
-        c4=tf.concat([c1, c2], axis=-1)
-        conv_out=Conv1D(8, 1, activation='relu')(c4)
-        conv_out=Dropout(0.25)(conv_out)
+        c4 = tf.concat([c1, c2], axis=-1)
+        conv_out = Conv1D(8, 1, activation='relu')(c4)
+        conv_out = Dropout(0.25)(conv_out)
         # conv_out=Flatten()(conv_out)
 
-        conv_out=self.dense_time3(conv_out)
+        conv_out = self.dense_time3(conv_out)
         print(conv_out.shape)
         return conv_out

@@ -111,15 +111,6 @@ It's welcomed to contribute if you have any better idea, just create a PR. If an
 </table>
 
 
------
-
-Time-series-prediction is being sponsored by the following tool; please help to support us by taking a look and signing up to a free trial
-
-<a href="https://tracking.gitads.io/?repo=Time-series-prediction"><img src="https://images.gitads.io/Time-series-prediction" alt="GitAds"/></a>
-
------
-
-
 ## Usage
 1. Install the required library
 ```bash
@@ -130,7 +121,7 @@ pip install -r requirements.txt
 bash ./data/download_passenger.sh
 ```
 3. Train the model <br>
-set `custom_model_params` if you want (refer to each model's params in `./deepts/models/*.py`), and pay attention to your own feature engineering.
+set `custom_model_params` if you want (refer to params in `./deepts/models/*.py`), and pay attention to feature engineering.
 
 ```bash
 cd examples
@@ -152,4 +143,3 @@ python run_test.py
 
 ## Contributor
 - [LongxingTan](https://longxingtan.github.io/)
-

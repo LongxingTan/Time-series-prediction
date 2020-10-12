@@ -5,6 +5,7 @@
 # other implementations: https://github.com/buriburisuri/timeseries_gan
 #                        https://github.com/numancelik34/TimeSeries-GAN/blob/master/conv1d_gan.py
 #                        https://github.com/proceduralia/pytorch-GAN-timeseries
+#                        https://github.com/IvanBongiorni/GAN-RNN_Timeseries-imputation
 
 
 import tensorflow as tf
