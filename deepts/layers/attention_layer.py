@@ -32,7 +32,7 @@ class DenseEinsum(tf.keras.layers.Layer):
         self._bias_constraint = tf.keras.constraints.get(bias_constraint)
         self._einsum_string = None
         self._CHR_IDX = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"]
-        super(DenseEinsum,self).__init__()
+        super(DenseEinsum, self).__init__()
 
     def _build_einsum_string(self, free_input_dims, bound_dims, output_dims):
         input_str = ""

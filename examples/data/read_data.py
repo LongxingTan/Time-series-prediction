@@ -63,13 +63,13 @@ class SineData(DataSet):
         y = np.array(y)
         return x, y
 
-    def get_examples(self,data_dir=None, sample=1, plot=False):
+    def get_examples(self, data_dir=None, sample=1, plot=False):
         x, y = self.load_data()
 
         if plot:
-            plt.plot(x[0,:])
+            plt.plot(x[0, :])
             plt.show()
-        return x, y[:,:,0:1]
+        return x, y[:, :, 0:1]
 
 
 class PassengerData(DataSet):
@@ -99,7 +99,7 @@ class PassengerData(DataSet):
         logging.info("input data shape : {}".format(data.shape))
         return data
 
-    def get_examples(self, data_dir, sample=1, start_date=None, plot=False, model_dir='../models'):
+    def get_examples(self, data_dir, sample=1, start_date=None, plot=False, model_dir='../weights'):
         data = self.load_data(data_dir)
         data = self.preprocess_data(data)
 
@@ -134,7 +134,7 @@ class PassengerData(DataSet):
         if isinstance(x, pd.DataFrame):
             x = x.values
         if len(x.shape) == 2:
-            x = x[...,np.newaxis]
+            x = x[..., np.newaxis]
         if isinstance(y, pd.DataFrame):
             y = y.values
         if len(y.shape) == 2:

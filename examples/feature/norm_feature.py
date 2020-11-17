@@ -10,7 +10,7 @@ class FeatureNorm(object):
     def __init__(self, type='minmax'):
         self.type = type
 
-    def __call__(self, x, mode='train', model_dir='../models', name='scaler'):
+    def __call__(self, x, mode='train', model_dir='../weights', name='scaler'):
         assert len(x.shape) == 2, "Input rank for FeatureNorm should be 2"
         if self.type == 'standard':
             scaler = StandardScaler()
@@ -19,7 +19,7 @@ class FeatureNorm(object):
         else:
             raise ValueError("Unsupported norm type yet: {}".format(self.type))
 
-        if mode=='train':
+        if mode == 'train':
             scaler.fit(x)
             joblib.dump(scaler, os.path.join(model_dir, name+'.pkl'))
         else:
