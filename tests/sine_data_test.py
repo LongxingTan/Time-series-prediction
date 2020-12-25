@@ -8,5 +8,5 @@ import pytest
 from examples.data import read_data
 
 
-data_reader=read_data.SineData(params={'input_seq_length':15,'output_seq_length':5})
-x,y=data_reader.get_examples(plot=True)
+data_reader = read_data.SineData(params={'input_seq_length': 15, 'output_seq_length': 5})
+x, y = data_reader.get_examples(plot=True)

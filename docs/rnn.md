@@ -14,3 +14,4 @@ RNN and its modification LSTM, GRU are good at modeling the sequence data. So it
 
 
 ## Further reading
+- [ES-RNN](https://github.com/Azure/DeepLearningForTimeSeriesForecasting/blob/master/4_ES_RNN.ipynb)

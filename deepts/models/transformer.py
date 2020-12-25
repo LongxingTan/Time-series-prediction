@@ -6,7 +6,6 @@
 #                        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_tf_bert.py
 #                        https://github.com/facebookresearch/detr
 
-
 import tensorflow as tf
 from deepts.layers.attention_layer import *
 
@@ -118,8 +117,8 @@ class Transformer(object):
         attention_bias = tf.expand_dims(tf.expand_dims(attention_bias, 1), 1)  # => batch_size * 1 * 1 * input_length
         return attention_bias
 
-    def get_tgt_mask_bias(self,length):
-        valid_locs = tf.linalg.band_part(tf.ones([length, length], dtype=tf.float32),-1, 0)
+    def get_tgt_mask_bias(self, length):
+        valid_locs = tf.linalg.band_part(tf.ones([length, length], dtype=tf.float32), -1, 0)
         valid_locs = tf.reshape(valid_locs, [1, 1, length, length])
         decoder_bias = -1e9 * (1.0 - valid_locs)
         return decoder_bias
@@ -170,7 +169,7 @@ class DecoderStack(tf.keras.layers.Layer):
         self.params = params
         self.layers = []
 
-    def build(self,input_shape):
+    def build(self, input_shape):
         for _ in range(self.params['n_layers']):
             self_attention_layer = Attention(self.params['attention_hidden_size'],
                                              self.params['num_heads'],

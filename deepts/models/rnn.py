@@ -4,14 +4,13 @@
 # paper:
 # Other implementation: https://github.com/JEddy92/TimeSeries_Seq2Seq/blob/master/notebooks/TS_Seq2Seq_Intro.ipynb
 
-
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Activation
 
-params={
-    'rnn_size':64,
-    'dense_size':16,
-    'num_stacked_layers':1,
+params = {
+    'rnn_size': 64,
+    'dense_size': 16,
+    'num_stacked_layers': 1,
 }
 
 

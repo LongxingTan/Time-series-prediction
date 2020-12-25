@@ -4,7 +4,6 @@
 # paper:
 # other implementations: https://github.com/sjvasquez/web-traffic-forecasting
 
-
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from deepts.layers.wavenet_layer import Dense3D, ConvTime
@@ -93,7 +92,7 @@ class Decoder(object):
         self.dense_5 = tf.keras.layers.Dense(self.params['dense_hidden_size'], name='decoder_dense_5')
         self.dense_6 = tf.keras.layers.Dense(1, name='decoder_dense_6')
 
-    def foward(self,x, decoder_feature, encoder_outputs, predict_seq_length, teacher):
+    def foward(self, x, decoder_feature, encoder_outputs, predict_seq_length, teacher):
         decoder_init_value = x[:, -1, :]
 
         def cond_fn(time, prev_output, decoder_output_ta):

@@ -9,7 +9,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
 
 
-params={
+params = {
 
 }
 

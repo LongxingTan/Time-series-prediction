@@ -81,7 +81,7 @@ class Decoder(object):
                 this_input = tf.concat([this_input, this_feature], axis=1)
 
             if use_attention:
-                attention_feature = self.attention(tf.expand_dims(prev_state[-1],1), encoder_output)
+                attention_feature = self.attention(tf.expand_dims(prev_state[-1], 1), encoder_output)
                 attention_feature = tf.squeeze(attention_feature, 1)
                 this_input = tf.concat([this_input, attention_feature], axis=-1)
 

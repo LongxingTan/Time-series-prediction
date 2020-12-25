@@ -6,17 +6,16 @@
 #                        https://github.com/philipperemy/keras-tcn
 #                        https://github.com/emreaksan/stcn
 
-
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
 from deepts.layers.wavenet_layer import Dense3D, ConvTime
 
 
-params={
-    'dilation_rates':[2 ** i for i in range(4)],
-    'kernel_sizes':[2 for i in range(4)],
-    'filters':128,
-    'dense_hidden_size':64
+params = {
+    'dilation_rates': [2 ** i for i in range(4)],
+    'kernel_sizes': [2 for i in range(4)],
+    'filters': 128,
+    'dense_hidden_size': 64
 }
 
 
@@ -34,7 +33,7 @@ class CNN(object):
         self.dense_time3 = Dense3D(units=1, name='encoder_dense_time_3')
 
     def __call__(self, x):
-        input=x
+        input = x
 
         c1 = self.conv_times[0](x)
         c2 = self.conv_times[1](c1)

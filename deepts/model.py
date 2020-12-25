@@ -92,7 +92,7 @@ class Model(object):
 
             for epoch in range(1, n_epochs + 1):
                 print("-> EPOCH {}".format(epoch))
-                epoch_loss_train, epoch_loss_valid = [],[]
+                epoch_loss_train, epoch_loss_valid = [], []
                 for step, (x, y) in enumerate(dataset.take(-1)):
                     loss = self.train_step(x, y)
                     print("=> STEP %4d  lr: %.6f  loss: %4.2f" % (self.global_steps, self.optimizer_fn.lr.numpy(), loss))
@@ -136,13 +136,13 @@ class Model(object):
         self.model.load_weights(self.params['model_dir'])
 
         for step, (x, y) in enumerate(valid_dataset.take(-1)):
-            metrics = self.dev_step(x, y)
+            metrics = self.valid_step(x, y)
             print("=> STEP %4d Metrics: %4.2f" % (step, metrics))
 
         if export_model:
             self.export_model()
 
-    def dev_step(self, x, y):
+    def valid_step(self, x, y):
         '''
         evaluation step function
         :param x:
@@ -178,8 +178,6 @@ class Model(object):
     def export_model(self):
         '''
         save the model to .pb file for prediction
-        :return:
         '''
-
         tf.saved_model.save(self.model, self.params['saved_model_dir'])
         print("pb_model save in {}".format(self.params['saved_model_dir']))

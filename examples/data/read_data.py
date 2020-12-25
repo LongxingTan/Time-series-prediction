@@ -146,7 +146,7 @@ class PassengerData(DataSet):
         return x, y
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     # data_dir = '../../data/international-airline-passengers.csv'
     #
     # prepare_data = PassengerData(params={'input_seq_length':15,'output_seq_length':5})

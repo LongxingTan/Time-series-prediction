@@ -2,7 +2,6 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 
-
 import numpy as np
 import tensorflow as tf
 
@@ -20,8 +19,8 @@ class DenseEinsum(tf.keras.layers.Layer):
                  kernel_constraint=None,
                  bias_constraint=None,
                  ):
-        self._output_shape=output_shape
-        self._num_summed_dimentions=num_summed_dimensions
+        self._output_shape = output_shape
+        self._num_summed_dimensions = num_summed_dimensions
         self._activation = tf.keras.activations.get(activation)
         self._use_bias = use_bias
         self._kernel_initializer = tf.keras.initializers.get(kernel_initializer)
@@ -58,14 +57,14 @@ class DenseEinsum(tf.keras.layers.Layer):
 
         return input_str + "," + kernel_str + "->" + output_str
 
-    def build(self,input_shape):
+    def build(self, input_shape):
         input_shape = tf.TensorShape(input_shape)
         input_rank = input_shape.rank
-        self._einsum_string=self._build_einsum_string(input_rank-self._num_summed_dimentions,
-                                                      self._num_summed_dimentions,
-                                                      len(self._output_shape))  # "BTF,FCD->BTCD"
+        self._einsum_string = self._build_einsum_string(input_rank-self._num_summed_dimensions,
+                                                        self._num_summed_dimensions,
+                                                        len(self._output_shape))  # "BTF,FCD->BTCD"
 
-        self._kernel_shape = (input_shape[input_rank-self._num_summed_dimentions:].concatenate(self._output_shape))
+        self._kernel_shape = (input_shape[input_rank-self._num_summed_dimensions:].concatenate(self._output_shape))
         self._kernel = self.add_weight("kernel",
                                        shape=self._kernel_shape,
                                        initializer=self._kernel_initializer,
@@ -86,8 +85,8 @@ class DenseEinsum(tf.keras.layers.Layer):
 
         super(DenseEinsum, self).build(input_shape)
 
-    def call(self,inputs):
-        ret=tf.einsum(self._einsum_string,inputs,self._kernel)
+    def call(self, inputs):
+        ret = tf.einsum(self._einsum_string, inputs, self._kernel)
         if self._use_bias:
             ret += self._bias
         if self._activation is not None:
@@ -97,26 +96,26 @@ class DenseEinsum(tf.keras.layers.Layer):
 
 class Attention(tf.keras.layers.Layer):
     def __init__(self, hidden_size, num_heads, attention_dropout):
-        if hidden_size%num_heads:
+        if hidden_size % num_heads:
             raise ValueError("Hidden size ({}) must be divisible by the number of heads ({})."
                              .format(hidden_size, num_heads))
 
-        super(Attention,self).__init__()
-        self.hidden_size=hidden_size
-        self.num_heads=num_heads
-        self.attention_dropout=attention_dropout
+        super(Attention, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_heads = num_heads
+        self.attention_dropout = attention_dropout
 
-    def build(self,input_shape):
-        self.query_dense_layer = DenseEinsum([self.num_heads,self.hidden_size//self.num_heads])
-        self.key_dense_layer = DenseEinsum([self.num_heads,self.hidden_size//self.num_heads])
-        self.value_dense_layer = DenseEinsum([self.num_heads,self.hidden_size//self.num_heads])
-        self.output_dense_layer = DenseEinsum([self.hidden_size,],num_summed_dimensions=2)
+    def build(self, input_shape):
+        self.query_dense_layer = DenseEinsum([self.num_heads, self.hidden_size//self.num_heads])
+        self.key_dense_layer = DenseEinsum([self.num_heads, self.hidden_size//self.num_heads])
+        self.value_dense_layer = DenseEinsum([self.num_heads, self.hidden_size//self.num_heads])
+        self.output_dense_layer = DenseEinsum([self.hidden_size], num_summed_dimensions=2)
         super(Attention, self).build(input_shape)
 
-    def forward(self,query_input,source_input,attention_mask,training,cache):
-        query=self.query_dense_layer(query_input)
-        key=self.key_dense_layer(source_input)
-        value=self.value_dense_layer(source_input)
+    def forward(self, query_input, source_input, attention_mask, training, cache):
+        query = self.query_dense_layer(query_input)
+        key = self.key_dense_layer(source_input)
+        value = self.value_dense_layer(source_input)
 
         if cache is not None:
             key = tf.concat([tf.cast(cache["k"], key.dtype), key], axis=1)
@@ -131,7 +130,7 @@ class Attention(tf.keras.layers.Layer):
         logits = tf.einsum("BTNH,BFNH->BNFT", key, query)
 
         if attention_mask is not None:
-            logits+=attention_mask
+            logits += attention_mask
 
         weights = tf.nn.softmax(logits, name="attention_weights")
         if training:
@@ -139,28 +138,26 @@ class Attention(tf.keras.layers.Layer):
         attention_output = tf.einsum("BNFT,BTNH->BFNH", weights, value)
 
         attention_output = self.output_dense_layer(attention_output)
-        #print('*'*10,attention_output.shape)
         return attention_output
 
     def call(self, query_input, source_input, bias=None, training=False, cache=None):
-        return self.forward(query_input,source_input,bias,training,cache)
+        return self.forward(query_input, source_input, bias, training, cache)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
-    def __init__(self,hidden_size,filter_size,relu_dropout):
-        super(FeedForwardNetwork,self).__init__()
-        self.hidden_size=hidden_size
-        self.filter_size=filter_size
-        self.relu_dropout=relu_dropout
-        self.filter_dense_layer = tf.keras.layers.Dense(
-                                                        self.filter_size,
+    def __init__(self, hidden_size, filter_size, relu_dropout):
+        super(FeedForwardNetwork, self).__init__()
+        self.hidden_size = hidden_size
+        self.filter_size = filter_size
+        self.relu_dropout = relu_dropout
+        self.filter_dense_layer = tf.keras.layers.Dense(self.filter_size,
                                                         use_bias=True,
                                                         activation=tf.nn.relu,
                                                         name="filter_layer")
         self.output_dense_layer = tf.keras.layers.Dense(
             self.hidden_size, use_bias=True, name="output_layer")
 
-    def forward(self,x,training):
+    def forward(self, x, training):
         output = self.filter_dense_layer(x)
         if training:
             output = tf.nn.dropout(output, rate=self.relu_dropout)
@@ -174,48 +171,48 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
             "relu_dropout": self.relu_dropout,
         }
 
-    def call(self,x,training):
-        return self.forward(x,training)
+    def call(self, x, training):
+        return self.forward(x, training)
 
 
 class EmbeddingLayer(tf.keras.layers.Layer):
-    def __init__(self,embedding_size):
-        super(EmbeddingLayer,self).__init__()
-        self.embedding_size=embedding_size
+    def __init__(self, embedding_size):
+        super(EmbeddingLayer, self).__init__()
+        self.embedding_size = embedding_size
 
-    def build(self,input_shape):
+    def build(self, input_shape):
         with tf.name_scope('embedding'):
-            self.shared_weights=self.add_weight(name='weights',
-                                                shape=[input_shape[-1],self.embedding_size],
-                                                initializer=tf.random_normal_initializer(mean=0.,
-                                                                                         stddev=self.embedding_size ** -0.5))
-        super(EmbeddingLayer,self).build(input_shape)
+            self.shared_weights = self.add_weight(name='weights',
+                                                  shape=[input_shape[-1], self.embedding_size],
+                                                  initializer=tf.random_normal_initializer(mean=0.,
+                                                                                           stddev=self.embedding_size ** -0.5))
+        super(EmbeddingLayer, self).build(input_shape)
 
     def get_config(self):
         return {
             #'vocab_size':self.vocab_size,
-            'embedding_size':self.embedding_size
+            'embedding_size': self.embedding_size
         }
 
-    def call(self,x):
-        y=tf.einsum('bsf,fk->bsk',x,self.shared_weights)
+    def call(self, x):
+        y = tf.einsum('bsf,fk->bsk', x, self.shared_weights)
         return y
 
 
 class PositionEncoding(tf.keras.layers.Layer):
-    def __init__(self,max_len):
+    def __init__(self, max_len):
         super(PositionEncoding, self).__init__()
-        self.max_len=max_len
+        self.max_len = max_len
 
-    def build(self,input_shape):
-        super(PositionEncoding,self).build(input_shape)
+    def build(self, input_shape):
+        super(PositionEncoding, self).build(input_shape)
 
     def get_config(self):
         return {
             'max_len': self.max_len
         }
 
-    def call(self,x,masking=True):
+    def call(self, x, masking=True):
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
         with tf.name_scope('position_encode'):
@@ -230,28 +227,27 @@ class PositionEncoding(tf.keras.layers.Layer):
             outputs = tf.nn.embedding_lookup(position_enc, position_ind)
             if masking:
                 outputs = tf.where(tf.equal(x, 0), x, outputs)
-        return tf.cast(outputs,tf.float32)
+        return tf.cast(outputs, tf.float32)
 
 
 class SublayerConnection(tf.keras.layers.Layer):
-    def __init__(self,sublayer,params):
-        super(SublayerConnection,self).__init__()
-        self.sublayer=sublayer
-        self.params=params
-        self.layer_postprocess_dropout=params['layer_postprocess_dropout']
+    def __init__(self, sublayer, params):
+        super(SublayerConnection, self).__init__()
+        self.sublayer = sublayer
+        self.params = params
+        self.layer_postprocess_dropout = params['layer_postprocess_dropout']
 
-    def build(self,input_shape):
-        self.layer_norm=tf.keras.layers.LayerNormalization(epsilon=1e-6, dtype="float32")
-        super(SublayerConnection,self).build(input_shape)
+    def build(self, input_shape):
+        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=1e-6, dtype="float32")
+        super(SublayerConnection, self).build(input_shape)
 
     def get_config(self):
         return {
-            'params':self.params
+            'params': self.params
         }
 
-    def call(self,x,*args,**kwargs):
-        y=self.sublayer(self.layer_norm(x),*args,**kwargs)
+    def call(self, x, *args, **kwargs):
+        y = self.sublayer(self.layer_norm(x), *args, **kwargs)
         if kwargs['training']:
-            y=tf.nn.dropout(y,rate=self.layer_postprocess_dropout)
+            y = tf.nn.dropout(y, rate=self.layer_postprocess_dropout)
         return x+y
-
