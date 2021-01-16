@@ -114,26 +114,25 @@ It's welcomed to contribute if you have any better idea, just create a PR. If an
 ## Usage
 1. Install the required library
 ```bash
-pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 2. Download the data, if necessary
 ```bash
-bash ./data/download_passenger.sh
+$ bash ./data/download_passenger.sh
 ```
 3. Train the model <br>
 set `custom_model_params` if you want (refer to params in `./deepts/models/*.py`), and pay attention to feature engineering.
 
 ```bash
-cd examples
-python run_train.py --use_model seq2seq
-cd ..
-tensorboard --logdir=./data/logs
-
+$ cd examples
+$ python run_train.py --use_model seq2seq
+$ cd ..
+$ tensorboard --logdir=./data/logs
 ```
 4. Predict new data
 ```bash
-cd examples
-python run_test.py
+$ cd examples
+$ python run_test.py
 ```
 
 ## Further reading
@@ -141,5 +140,3 @@ python run_test.py
 - https://github.com/Azure/DeepLearningForTimeSeriesForecasting
 - https://github.com/microsoft/forecasting
 
-## Contributor
-- [LongxingTan](https://longxingtan.github.io/)

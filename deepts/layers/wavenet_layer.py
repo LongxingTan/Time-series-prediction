@@ -74,7 +74,7 @@ class ConvTime(tf.keras.layers.Layer):
         self.causal = causal
         self.kernel_initializer = initializers.get(kernel_initializer)
 
-    def build(self, input_shape):
+    def build(self, input_shape):  # # Create the weights
         self.conv = tf.keras.layers.Conv1D(kernel_size=self.kernel_size,
                                            kernel_initializer=self.kernel_initializer,
                                            filters=self.filters,

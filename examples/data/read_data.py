@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 # import modin.pandas as pd   # faster Pandas by Berkeley
 import matplotlib.pyplot as plt
-from examples.feature.prepare_feature import transform2_lagged_feature,multi_step_y
-from examples.feature.norm_feature import FeatureNorm
+from .prepare_feature import transform2_lagged_feature,multi_step_y
+from .norm_feature import FeatureNorm
 
 
 class DataSet(object):

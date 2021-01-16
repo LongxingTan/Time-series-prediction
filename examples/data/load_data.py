@@ -3,15 +3,10 @@
 # @date: 2020-01
 # This script is a general example to load data into the model, next step is run_train.py
 
-import sys
-import os
-filePath = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(os.path.split(filePath)[0])
-
 import functools
 import tensorflow as tf
-from data.read_data import PassengerData, SineData
-from data.read_web_data import WebDataReader
+from .read_data import PassengerData, SineData
+from .read_web_data import WebDataReader
 
 
 class DataLoader(object):
