@@ -74,11 +74,11 @@ class ConvTime(tf.keras.layers.Layer):
         self.causal = causal
         self.kernel_initializer = initializers.get(kernel_initializer)
 
-    def build(self, input_shape):  # # Create the weights
+    def build(self, input_shape):  # Create the weights
         self.conv = tf.keras.layers.Conv1D(kernel_size=self.kernel_size,
                                            kernel_initializer=self.kernel_initializer,
                                            filters=self.filters,
-                                           padding='SAME',
+                                           padding='VALID',
                                            dilation_rate=self.dilation_rate,
                                            activation=tf.nn.relu)
         super(ConvTime, self).build(input_shape)
@@ -89,5 +89,4 @@ class ConvTime(tf.keras.layers.Layer):
             input = tf.pad(input, [[0, 0], [padding_size, 0], [0, 0]])
 
         score = self.conv(input)
-        score = score[:, :-padding_size, :] if self.causal else score
         return score
