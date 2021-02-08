@@ -19,7 +19,7 @@ params = {
 
 class WaveNet(object):
     '''
-    Temporal convolutional network
+    Wavenet network
     '''
     def __init__(self, custom_model_params={}):
         params.update(custom_model_params)
@@ -139,7 +139,7 @@ class Decoder(object):
             skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
             h = self.dense_5(skip_outputs)
             y_hat = self.dense_6(h)
-            decoder_output_ta.write(time, y_hat)
+            decoder_output_ta = decoder_output_ta.write(time, y_hat)
             return time + 1, y_hat, decoder_output_ta
 
         loop_init = [tf.constant(0, dtype=tf.int32),
