@@ -8,7 +8,7 @@
 #                        https://github.com/IvanBongiorni/GAN-RNN_Timeseries-imputation
 
 import tensorflow as tf
-from tensorflow.keras.layers import (Input,Dense,Conv2D, Conv2DTranspose, BatchNormalization)
+from tensorflow.keras.layers import Input, Dense, Conv2D, Conv2DTranspose, BatchNormalization
 
 
 params = {
@@ -21,9 +21,6 @@ params = {
 
 class GAN(object):
     def __init__(self, custom_model_params):
-        '''
-
-        '''
         self.generator = Generator()
         self.discriminator = Discriminator()
 

@@ -8,7 +8,7 @@ filePath = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.split(filePath)[0])
 
 from data.load_data import DataLoader
-from deepts.model import Model
+from tfts.model import Model
 from config import params
 
 
@@ -21,8 +21,7 @@ def main():
     model = Model(params=params, use_model=params['use_model'], use_loss='mse', use_optimizer='adam', custom_model_params={})
 
     # mode: eager or fit
-    model.train(train_dataset, n_epochs=params['n_epochs'], mode='eager')
-    model.eval(valid_dataset, export_model=True)
+    model.train(train_dataset, valid_dataset, n_epochs=params['n_epochs'], mode='eager')
 
 
 if __name__ == '__main__':

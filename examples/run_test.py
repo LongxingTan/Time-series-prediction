@@ -11,7 +11,7 @@ sys.path.append(os.path.split(filePath)[0])
 import numpy as np
 import matplotlib.pyplot as plt
 from data.read_data import PassengerData
-from deepts.model import Model
+from tfts.model import Model
 from config import params
 
 
@@ -19,11 +19,11 @@ def main(plot=False):
     x, y = PassengerData(params).get_examples(data_dir='../data/international-airline-passengers.csv', sample=0.2)
     print(x.shape, y.shape)
 
-    model = Model(params=params, use_model=params['use_model'])
+    model = Model(params=params, use_model='pb')
     try:
         y_pred = model.predict(x.astype(np.float32), model_dir=params['saved_model_dir'])
     except:
-        y_pred = model.predict((x.astype(np.float32), np.ones_like(y)), model_dir=params['saved_model_dir'])
+        y_pred = model.predict(tuple([x.astype(np.float32), np.zeros_like(y, dtype=np.float32)]), model_dir=params['saved_model_dir'])
 
     print(y_pred)
 

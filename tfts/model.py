@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
@@ -5,45 +6,24 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping,  ModelCheckpoint, TensorBoard
-from deepts.models.seq2seq import Seq2seq
-from deepts.models.wavenet import WaveNet
-from deepts.models.transformer import Transformer
-from deepts.models.unet import Unet
-from deepts.models.nbeats import NBeatsNet
-from deepts.models.gan import GAN
-assert tf.__version__ > "2.0.0", "what about considering to use TensorFlow 2?"
-
-
-class Loss(object):
-    def __init__(self, use_loss):
-        self.use_loss = use_loss
-
-    def __call__(self,):
-        if self.use_loss == 'mse':
-            return tf.keras.losses.MeanSquaredError()
-        elif self.use_loss == 'rmse':
-            return tf.math.sqrt(tf.keras.losses.MeanSquaredError())
-        elif self.use_loss == 'huber':
-            return tf.keras.losses.Huber(delta=1.0)
-        else:
-            raise ValueError("Not supported use_loss: {}".format(self.use_loss))
-
-
-class Optimizer(object):
-    def __init__(self, use_optimizer):
-        self.use_optimizer = use_optimizer
-
-    def __call__(self, learning_rate):
-        if self.use_optimizer == 'adam':
-            return tf.keras.optimizers.Adam(lr=learning_rate)
-        elif self.use_optimizer == 'sgd':
-            return tf.keras.optimizers.SGD(lr=learning_rate)
-        else:
-            raise ValueError("Not supported use_optimizer: {}".format(self.use_optimizer))
+from .models import Seq2seq, WaveNet, Transformer, Unet, NBeatsNet
+from .loss import Loss
+from .optimizer import Optimizer
 
 
 class Model(object):
+    """
+    Trainer class
+    """
     def __init__(self, params, use_model, use_loss='mse', use_optimizer='adam', custom_model_params={}):
+        """
+
+        :param params:
+        :param use_model:
+        :param use_loss:
+        :param use_optimizer:
+        :param custom_model_params:
+        """
         self.params = params
         self.use_model = use_model
         self.use_loss = use_loss
@@ -53,6 +33,11 @@ class Model(object):
         self.output_seq_length = params['output_seq_length']
 
     def build_model(self, training):
+        """
+        build the model instance, with loss and optimizer
+        Args:
+            training: if it's training, bool
+        """
         if self.use_model == 'seq2seq':
             Model = Seq2seq(self.custom_model_params)
             inputs = Input([self.input_seq_length, 1])
@@ -80,7 +65,15 @@ class Model(object):
         self.loss_fn = Loss(self.use_loss)()
         self.optimizer_fn = Optimizer(self.use_optimizer)(learning_rate=self.params['learning_rate'])
 
-    def train(self, dataset, n_epochs, valid_dataset=None, mode='eager'):
+    def train(self, dataset, valid_dataset=None, n_epochs=10, mode='eager'):
+        """
+        train function
+        :param dataset: train data loader to feed model
+        :param valid_dataset: valid data loaded to feed model for evaluation
+        :param n_epochs: number of epochs
+        :param mode: training mode, `eager` or `fit`
+        :return:
+        """
         print("-" * 35)
         print("Start to train {}, in {} mode".format(self.use_model, mode))
         print("-" * 35)
@@ -104,7 +97,10 @@ class Model(object):
                 with self.log_writer.as_default():
                     tf.summary.scalar('epoch_loss_train', tf.reduce_mean(epoch_loss_train), step=epoch)
 
-            self.model.save_weights(self.params['model_dir'])
+                if valid_dataset is not None:
+                    self.eval(valid_dataset)
+
+            self.export_model()
 
         elif mode == 'fit':
             self.model.compile(loss=self.loss_fn, optimizer=self.optimizer_fn)
@@ -131,23 +127,23 @@ class Model(object):
         self.global_steps.assign_add(1)
         return loss
 
-    def eval(self, valid_dataset, export_model=False):
-        self.build_model(training=False)
-        self.model.load_weights(self.params['model_dir'])
+    def eval(self, valid_dataset, eval_metrics=()):
+        # self.build_model(training=False)
+        # self.model.load_weights(self.params['model_dir'])
 
         for step, (x, y) in enumerate(valid_dataset.take(-1)):
             metrics = self.valid_step(x, y)
             print("=> STEP %4d Metrics: %4.2f" % (step, metrics))
 
-        if export_model:
+        if eval_metrics:
             self.export_model()
 
     def valid_step(self, x, y):
-        '''
+        """
         evaluation step function
         :param x:
         :param y:
-        '''
+        """
         x = tf.cast(x, tf.float32)
         y = tf.cast(y, tf.float32)
         try:
@@ -158,13 +154,13 @@ class Model(object):
         return metrics
 
     def predict(self, x_test, model_dir, use_model='pb'):
-        '''
+        """
         predict function, it doesn't use self.model here, but saved checkpoint or pb
         :param x_test:
         :param model_dir:
         :param use_model:
         :return:
-        '''
+        """
         if use_model == 'pb':
             print('Load saved pb model ...')
             model = tf.saved_model.load(model_dir)
@@ -172,12 +168,15 @@ class Model(object):
             print('Load checkpoint model ...')
             model = self.model.load_weights(model_dir)
 
-        y_pred = model(x_test, True, None)  # To be clarified, not sure why additional args are necessary here
+        y_pred = model(x_test)  # True, None, if x_test has more elements, it should use tuple
         return y_pred
 
-    def export_model(self):
-        '''
+    def export_model(self, only_pb=True):
+        """
         save the model to .pb file for prediction
-        '''
+        """
+        if not only_pb:
+            self.model.save_weights(self.params['model_dir'])
+            print("weights save in {}".format(self.params['model_dir']))
         tf.saved_model.save(self.model, self.params['saved_model_dir'])
         print("pb_model save in {}".format(self.params['saved_model_dir']))

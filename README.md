@@ -5,111 +5,20 @@ It's welcomed to contribute if you have any better idea, just create a PR. If an
 
 #### Ongoing project, I will continue to improve this, so you might want to watch/star this repo to revisit.
 
-<table style="width:100%" align="center">  
-  <tr>
-    <th>
-      <p align="center">
-      RNN                  
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/rnn.md" name="introduction">intro</a>      
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./deepts/models/seq2seq.py" name="code">code</a>     
-      </p>
-    </th>
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      wavenet                 
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/wavenet.md" name="introduction">intro</a>      
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./deepts/models/wavenet.py" name="code">code</a>     
-      </p>
-    </th>
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      transformer           
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/transformer.md" name="introduction">intro</a>              
-      </p>   
-    </th>
-    <th> 
-      <p align="center">
-           <a href="./deepts/models/transformer.py" name="code">code</a>     
-      </p>      
-    </th>
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      U-Net                  
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/unet.md" name="introduction">intro</a>     
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./deepts/models/unet.py" name="code">code</a>     
-      </p>      
-    </th>
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      n-beats                  
-      </p>
-    </th>
-    <th>
-      <p align="center">
-            <a href="./docs/nbeats.md" name="introduction">intro</a>     
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./deepts/models/nbeats.py" name="code">code</a>     
-      </p>      
-    </th>
-  </tr>
-  <tr>
-    <th>
-      <p align="center">
-      GAN                   
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./docs/gan.md" name="introduction">intro</a>      
-      </p>
-    </th>
-    <th>
-      <p align="center">
-           <a href="./deepts/models/gan.py" name="code">code</a>     
-      </p>      
-    </th>
-  </tr>
-</table>
-
+<!--
+| Model | [Web Traffic<sup>mape</sup>]() | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sub>75</sub><sup>val</sup> |
+| :-- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| [seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
+| [deepar]() | 672 | 47.7% |52.6% | 61.4% | 
+| [wavenet]() | 672 | 47.7% |52.6% | 61.4% | 
+| [tcn]() | 672 | 47.7% |52.6% | 61.4% | 
+| [transformer]() | 672 | 47.7% |52.6% | 61.4% | 
+| [transformer]() | 672 | 47.7% |52.6% | 61.4% | 
+| [n-beats]() | 672 | 47.7% |52.6% | 61.4% | 
+| [u-net]() | 672 | 47.7% |52.6% | 61.4% |
+|  |  |  |  |  |
+Please Note that: the performance above is only representing this repo's current implementation performance.
+-->
 
 ## Usage
 1. Install the required library
@@ -139,4 +48,5 @@ $ python run_test.py
 - https://github.com/awslabs/gluon-ts/
 - https://github.com/Azure/DeepLearningForTimeSeriesForecasting
 - https://github.com/microsoft/forecasting
-
+- https://github.com/jdb78/pytorch-forecasting
+- https://github.com/timeseriesAI/tsai

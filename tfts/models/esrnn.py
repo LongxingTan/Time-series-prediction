@@ -3,6 +3,7 @@
 # @date: 2020-03
 # paper: https://www.sciencedirect.com/science/article/pii/S0169207019301153?via%3Dihub
 # other implementations: https://github.com/damitkwr/ESRNN-GPU
+#                        https://github.com/kdgutier/esrnn_torch
 
 
 import tensorflow as tf

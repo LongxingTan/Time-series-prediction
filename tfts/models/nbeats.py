@@ -7,8 +7,7 @@
 
 from collections import defaultdict
 import tensorflow as tf
-from deepts.layers.nbeats_layer import *
-tf.config.experimental_run_functions_eagerly(True)
+from ..layers.nbeats_layer import *
 
 
 params = defaultdict(stack_types=['trend_block', 'seasonality_block'],

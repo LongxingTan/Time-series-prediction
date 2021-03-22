@@ -3,7 +3,7 @@
 # @date: 2020-03
 
 import tensorflow as tf
-from tensorflow.keras.layers import (Conv1D, BatchNormalization, Activation, Dense, GlobalAveragePooling1D, Add, Multiply)
+from tensorflow.keras.layers import Conv1D, BatchNormalization, Activation, Dense, GlobalAveragePooling1D, Add, Multiply
 
 
 class ConvbrLayer(tf.keras.layers.Layer):

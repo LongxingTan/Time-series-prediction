@@ -3,22 +3,28 @@
 # @date: 2020-01
 # paper:
 # other implementations: https://github.com/Arturus/kaggle-web-traffic
+#                        https://github.com/pytorch/fairseq
+#                        https://github.com/LenzDu/Kaggle-Competition-Favorita/blob/master/seq2seq.py
+#                        https://github.com/JEddy92/TimeSeries_Seq2Seq/blob/master/notebooks/TS_Seq2Seq_Intro.ipynb
+# Enhancement:
+# Residual LSTM:Design of a Deep Recurrent Architecture for Distant Speech Recognition. https://arxiv.org/abs/1701.03360
+# A Dual-Stage Attention-Based recurrent neural network for time series prediction. https://arxiv.org/abs/1704.02971
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN
-from deepts.layers.attention_layer import Attention
+from ..layers.attention_layer import Attention
 
 
 params = {
     'rnn_size': 64,
     'dense_size': 16,
     'num_stacked_layers': 1,
-    'use_attention': False,
+    'use_attention': True,
 }
 
 
 class Seq2seq(object):
-    def __init__(self, custom_model_params):
+    def __init__(self, custom_model_params, dynamic_decoding=True):
         params.update(custom_model_params)
         self.encoder = Encoder(params)
         self.decoder = Decoder(params)

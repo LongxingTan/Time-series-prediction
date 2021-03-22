@@ -4,6 +4,7 @@
 
 import tensorflow as tf
 from tensorflow.python.keras import initializers, activations, constraints, regularizers
+from .attention_layer import SelfAttention
 
 
 class Dense3D(tf.keras.layers.Layer):
@@ -12,7 +13,7 @@ class Dense3D(tf.keras.layers.Layer):
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
                  kernel_constraint=None,
-                 use_bias=False,
+                 use_bias=True,
                  bias_initializer="zeros",
                  trainable=True,
                  name=None):
@@ -43,32 +44,32 @@ class Dense3D(tf.keras.layers.Layer):
         super(Dense3D, self).build(input_shape)
 
     def call(self, inputs):
-        score = tf.einsum('ijk,kl->ijl', inputs, self.kernel)
+        output = tf.einsum('ijk,kl->ijl', inputs, self.kernel)
 
         if self.use_bias:
-            score += self.bias
+            output += self.bias
 
         if self.activation is not None:
-            score = self.activation(score)
-        return score
+            output = self.activation(output)
+        return output
 
 
-class ConvTime(tf.keras.layers.Layer):
+class TemporalConv(tf.keras.layers.Layer):
+    """ Temporal convolutional layer
+
+    """
     def __init__(self, filters,
                  kernel_size,
                  strides=1,
-                 padding='valid',
                  dilation_rate=1,
                  activation=None,
                  causal=True,
                  kernel_initializer='glorot_uniform',
-                 trainable=True,
                  name=None):
-        super(ConvTime, self).__init__(trainable=trainable, name=name)
+        super(TemporalConv, self).__init__(name=name)
         self.filters = filters
         self.kernel_size = kernel_size
         self.strides = strides
-        self.padding = padding
         self.dilation_rate = dilation_rate
         self.activation = activations.get(activation)
         self.causal = causal
@@ -78,15 +79,33 @@ class ConvTime(tf.keras.layers.Layer):
         self.conv = tf.keras.layers.Conv1D(kernel_size=self.kernel_size,
                                            kernel_initializer=self.kernel_initializer,
                                            filters=self.filters,
-                                           padding='VALID',
+                                           padding='valid',
                                            dilation_rate=self.dilation_rate,
-                                           activation=tf.nn.relu)
-        super(ConvTime, self).build(input_shape)
+                                           activation=self.activation)
+        super(TemporalConv, self).build(input_shape)
 
     def call(self, input):
         if self.causal:
             padding_size = (self.kernel_size - 1) * self.dilation_rate
+            # padding: 1st dim is batch, so [0,0]; 2nd dim is time, so [padding_size, 0]; 3rd dim is feature [0,0]
             input = tf.pad(input, [[0, 0], [padding_size, 0], [0, 0]])
 
-        score = self.conv(input)
-        return score
+        output = self.conv(input)
+        return output
+
+
+class TemporalConvAtt(tf.keras.layers.Layer):
+    """  Temporal convolutional attention layer
+
+    """
+    def __init__(self):
+        super(TemporalConvAtt, self).__init__()
+        self.temporal_conv = TemporalConv()
+        self.att = SelfAttention()
+
+    def call(self, inputs):
+        x = inputs
+        x = self.temporal_conv(x)
+        x = self.att(x)
+        return x
+

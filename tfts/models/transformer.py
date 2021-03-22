@@ -1,21 +1,25 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 # paper: https://arxiv.org/pdf/1706.03762.pdf
-# other implementations: https://github.com/maxjcohen/transformer#
+# other implementations: https://github.com/maxjcohen/transformer
 #                        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_tf_bert.py
 #                        https://github.com/facebookresearch/detr
+#                        https://github.com/zhouhaoyi/Informer2020
+
 
 import tensorflow as tf
-from deepts.layers.attention_layer import *
+from ..layers.attention_layer import *
 
 
 params = {
-    'n_layers': 6,
-    'attention_hidden_size': 64*8,
-    'num_heads': 8,
-    'ffn_hidden_size': 64*8,
-    'ffn_filter_size': 64*8,
+    'n_encoder_layers': 3,
+    'n_decoder_layers': 2,
+    'attention_hidden_size': 32*4,
+    'num_heads': 4,
+    'ffn_hidden_size': 32*4,
+    'ffn_filter_size': 32*4,
     'attention_dropout': 0.1,
     'relu_dropout': 0.1,
     'layer_postprocess_dropout': 0.1,
@@ -23,13 +27,14 @@ params = {
 
 
 class Transformer(object):
-    def __init__(self, custom_model_params):
+    def __init__(self, custom_model_params, dynamic_decoding=True):
         params.update(custom_model_params)
         self.params = params
-        self.embedding_layer = EmbeddingLayer(embedding_size=self.params['attention_hidden_size'])
+        self.encoder_embedding = DataEmbedding(d_model=params['attention_hidden_size'])
+        self.decoder_embedding = DataEmbedding(d_model=params['attention_hidden_size'])
         self.encoder_stack = EncoderStack(self.params)
         self.decoder_stack = DecoderStack(self.params)
-        self.projection = tf.keras.layers.Dense(units=1)
+        self.projection = tf.keras.layers.Dense(units=1, name='final_proj')
 
     def get_config(self):
         return {
@@ -46,12 +51,7 @@ class Transformer(object):
             encoder_feature = x = inputs
             decoder_feature = None
 
-        self.position_encoding_layer = PositionEncoding(max_len=encoder_feature.get_shape().as_list()[1])
-        self.position_encoding_layer_2 = PositionEncoding(max_len=predict_seq_length)
-
-        src_mask = self.get_src_mask(encoder_feature)  # => batch_size * sequence_length
-        src_mask = self.get_src_mask_bias(src_mask)  # => batch_size * 1 * 1 * input_sequence_length
-        memory = self.encoder(encoder_inputs=encoder_feature, mask=src_mask, training=training)
+        memory = self.encoder(encoder_feature, mask=None, training=training)
 
         if training:
             if teacher is not None:
@@ -61,7 +61,7 @@ class Transformer(object):
             if decoder_feature is not None:
                 decoder_inputs = tf.concat([decoder_inputs, decoder_feature], axis=-1)
 
-            decoder_output = self.decoder(decoder_inputs, memory, src_mask, training=training, predict_seq_length=predict_seq_length)
+            decoder_output = self.decoder(decoder_inputs, memory, src_mask=None, training=training, predict_seq_length=predict_seq_length)
             outputs = self.projection(decoder_output)
             return outputs
         else:
@@ -70,41 +70,25 @@ class Transformer(object):
             for i in range(predict_seq_length):
                 if decoder_feature is not None:
                     decoder_inputs_update = tf.concat([decoder_inputs_update, decoder_feature[:, :i+1, :]], axis=-1)
-                decoder_inputs_update = self.decoder(decoder_inputs_update, memory, src_mask, training, predict_seq_length=1)
+                decoder_inputs_update = self.decoder(decoder_inputs_update, memory, src_mask=None, training=False, predict_seq_length=1)
                 decoder_inputs_update = self.projection(decoder_inputs_update)
                 decoder_inputs_update = tf.concat([decoder_inputs, decoder_inputs_update], axis=1)
             return decoder_inputs_update[:, 1:, :]
 
-    def encoder(self,encoder_inputs, mask, training):
-        '''
-
+    def encoder(self, encoder_inputs, mask, training):
+        """
         :param inputs: sequence_inputs, batch_size * sequence_length * feature_dim
         :param training:
         :return:
-        '''
-        with tf.name_scope("encoder"):
-            src = self.embedding_layer(encoder_inputs)  # batch_size * sequence_length * embedding_size
-            src += self.position_encoding_layer(src)
-
-            if training:
-                src = tf.nn.dropout(src, rate=0.01)  # batch_size * sequence_length * attention_hidden_size
-
-            return self.encoder_stack(src, mask, training)
+        """
+        encoder_embedding = self.encoder_embedding(encoder_inputs)  # batch * seq * embedding_size
+        return self.encoder_stack(encoder_embedding, mask, training)
 
     def decoder(self, decoder_inputs, memory, src_mask, training, predict_seq_length):
+        decoder_embedding = self.decoder_embedding(decoder_inputs)
         with tf.name_scope("shift_targets"):
             tgt_mask = self.get_tgt_mask_bias(predict_seq_length)
-            tgt = self.embedding_layer(decoder_inputs)
-
-        with tf.name_scope("add_pos_encoding"):
-            pos_encoding = self.position_encoding_layer_2(tgt)
-            tgt += pos_encoding
-
-        if training:
-            tgt = tf.nn.dropout(tgt, rate=self.params["layer_postprocess_dropout"])
-
-        with tf.name_scope('decoder'):
-            logits = self.decoder_stack(tgt, memory, src_mask, tgt_mask, training)  # Todo：mask
+        logits = self.decoder_stack(decoder_embedding, memory, src_mask, tgt_mask, training)  # Todo：mask
         return logits
 
     def get_src_mask(self, x, pad=0):
@@ -131,17 +115,17 @@ class EncoderStack(tf.keras.layers.Layer):
         self.layers = []
 
     def build(self, input_shape):
-        for _ in range(self.params['n_layers']):
-            attention_layer = Attention(self.params['attention_hidden_size'],
-                                        self.params['num_heads'],
-                                        self.params['attention_dropout'])
+        for _ in range(self.params['n_encoder_layers']):
+            attention_layer = SelfAttention(self.params['attention_hidden_size'],
+                                            self.params['num_heads'],
+                                            self.params['attention_dropout'])
             feed_forward_layer = FeedForwardNetwork(self.params['ffn_hidden_size'],
                                                     self.params['ffn_filter_size'],
                                                     self.params['relu_dropout'])
-            post_attention_layer = SublayerConnection(attention_layer, self.params)
-            post_feed_forward_layer = SublayerConnection(feed_forward_layer, self.params)
-            self.layers.append([post_attention_layer, post_feed_forward_layer])
-        self.output_norm = tf.keras.layers.LayerNormalization(epsilon=1e-6, dtype="float32")
+            ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
+            ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
+
+            self.layers.append([attention_layer, feed_forward_layer, ln_layer1, ln_layer2])
         super(EncoderStack, self).build(input_shape)
 
     def get_config(self):
@@ -149,18 +133,18 @@ class EncoderStack(tf.keras.layers.Layer):
             'params': self.params
         }
 
-    def call(self, encoder_inputs, src_mask, training):
+    def call(self, encoder_inputs, training, src_mask=None):
+        x = encoder_inputs
         for n, layer in enumerate(self.layers):
-            attention_layer = layer[0]
-            ffn_layer = layer[1]
-
-            with tf.name_scope('layer_{}'.format(n)):
-                with tf.name_scope('self_attention'):
-                    encoder_inputs = attention_layer(encoder_inputs, encoder_inputs, src_mask, training=training)
-                with tf.name_scope('ffn'):
-                    encoder_inputs = ffn_layer(encoder_inputs, training=training)
-
-        return self.output_norm(encoder_inputs)
+            attention_layer, ffn_layer, ln_layer1, ln_layer2 = layer
+            x0 = x
+            x1 = attention_layer(x0)
+            x1 += x0
+            x1 = ln_layer1(x1)
+            x2 = ffn_layer(x1, training=training)
+            x2 += x1
+            x = ln_layer2(x2)
+        return x
 
 
 class DecoderStack(tf.keras.layers.Layer):
@@ -170,21 +154,21 @@ class DecoderStack(tf.keras.layers.Layer):
         self.layers = []
 
     def build(self, input_shape):
-        for _ in range(self.params['n_layers']):
-            self_attention_layer = Attention(self.params['attention_hidden_size'],
-                                             self.params['num_heads'],
-                                             self.params['attention_dropout'])
+        for _ in range(self.params['n_decoder_layers']):
+            self_attention_layer = SelfAttention(self.params['attention_hidden_size'],
+                                                 self.params['num_heads'],
+                                                 self.params['attention_dropout'])
             enc_dec_attention_layer = Attention(self.params['attention_hidden_size'],
                                                 self.params['num_heads'],
                                                 self.params['attention_dropout'])
             feed_forward_layer = FeedForwardNetwork(self.params['ffn_hidden_size'],
                                                     self.params['ffn_filter_size'],
                                                     self.params['relu_dropout'])
-            post_self_attention_layer = SublayerConnection(self_attention_layer, self.params)
-            post_enc_dec_attention_layer = SublayerConnection(enc_dec_attention_layer, self.params)
-            post_feed_forward_layer = SublayerConnection(feed_forward_layer, self.params)
-            self.layers.append([post_self_attention_layer, post_enc_dec_attention_layer, post_feed_forward_layer])
-        self.output_norm = tf.keras.layers.LayerNormalization(epsilon=1e-6, dtype="float32")
+            ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
+            ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
+            ln_layer3 = LayerNormalization(epsilon=1e-6, dtype="float32")
+
+            self.layers.append([self_attention_layer, enc_dec_attention_layer, feed_forward_layer, ln_layer1, ln_layer2, ln_layer3])
         super(DecoderStack, self).build(input_shape)
 
     def get_config(self):
@@ -193,17 +177,18 @@ class DecoderStack(tf.keras.layers.Layer):
         }
 
     def call(self, decoder_inputs, encoder_outputs, src_mask, tgt_mask, training, cache=None):
-        for n, layer in enumerate(self.layers):
-            self_attention_layer = layer[0]
-            enc_dec_attention_layer = layer[1]
-            ffn_layer = layer[2]
+        x = decoder_inputs
 
-            #layer_cache = cache[layer_name] if cache is not None else None
-            with tf.name_scope("dec_layer_{}".format(n)):
-                with tf.name_scope('self_attention'):
-                    decoder_inputs = self_attention_layer(decoder_inputs, decoder_inputs, tgt_mask, training=training)
-                with tf.name_scope('enc_dec_attention'):
-                    decoder_inputs = enc_dec_attention_layer(decoder_inputs, encoder_outputs, src_mask, training=training)  # Todo: mask??
-                with tf.name_scope('ffn'):
-                    decoder_inputs = ffn_layer(decoder_inputs, training=training)
-        return self.output_norm(decoder_inputs)
+        for n, layer in enumerate(self.layers):
+            self_attention_layer, enc_dec_attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 = layer
+            x0 = x
+            x1 = self_attention_layer(x0)
+            x1 += x0
+            x1 = ln_layer1(x1)
+            x2 = enc_dec_attention_layer(x1, encoder_outputs, encoder_outputs)
+            x2 += x1
+            x2 = ln_layer2(x2)
+            x3 = ffn_layer(x2, training=training)
+            x3 += x2
+            x = ln_layer3(x3)
+        return x
