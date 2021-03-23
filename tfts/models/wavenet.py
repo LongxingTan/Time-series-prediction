@@ -86,6 +86,9 @@ class Encoder(object):
 
 
 class Decoder(object):
+    """ Decoder need avoid future data leaks
+
+    """
     def __init__(self, params):
         self.params = params
         self.dense_1 = Dense(self.params['filters'], activation='tanh', name='decoder_dense_1')
@@ -167,7 +170,7 @@ class Decoder2(object):
             if teacher is None:
                 this_input = tf.concat([this_output, decoder_feature[:, i, :]], axis=-1)  # batch * 2
             else:
-                this_input = tf.concat([teacher[:, i:i+1], decoder_feature[:, i%12:i%12+1]], axis=-1)
+                this_input = tf.concat([teacher[:, i:i+1], decoder_feature[:, i]], axis=-1)
 
             x = self.dense1(this_input)
             skip_outputs = []

@@ -30,7 +30,7 @@ $ pip install -r requirements.txt
 $ bash ./data/download_passenger.sh
 ```
 3. Train the model <br>
-set `custom_model_params` if you want (refer to params in `./deepts/models/*.py`), and pay attention to feature engineering.
+set `custom_model_params` if you want (refer to params in `./tfts/models/*.py`), and pay attention to feature engineering.
 
 ```bash
 $ cd examples

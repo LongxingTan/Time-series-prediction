@@ -92,6 +92,8 @@ class Transformer(object):
         return logits
 
     def get_src_mask(self, x, pad=0):
+        # src_mask is used to indicate the padding token
+        # for time series issue, normally we don't have padding
         src_mask = tf.reduce_all(tf.math.equal(x, pad), axis=-1)
         return src_mask
 
@@ -103,7 +105,7 @@ class Transformer(object):
 
     def get_tgt_mask_bias(self, length):
         valid_locs = tf.linalg.band_part(tf.ones([length, length], dtype=tf.float32), -1, 0)
-        valid_locs = tf.reshape(valid_locs, [1, 1, length, length])
+        valid_locs = tf.reshape(valid_locs, [1, length, length])
         decoder_bias = -1e9 * (1.0 - valid_locs)
         return decoder_bias
 
@@ -182,7 +184,7 @@ class DecoderStack(tf.keras.layers.Layer):
         for n, layer in enumerate(self.layers):
             self_attention_layer, enc_dec_attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 = layer
             x0 = x
-            x1 = self_attention_layer(x0)
+            x1 = self_attention_layer(x0, mask=tgt_mask)
             x1 += x0
             x1 = ln_layer1(x1)
             x2 = enc_dec_attention_layer(x1, encoder_outputs, encoder_outputs)

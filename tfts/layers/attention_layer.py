@@ -34,6 +34,7 @@ class Attention(tf.keras.layers.Layer):
             Query: batch * seq_q * fea
             Key: batch * seq_k * fea
             Value: batch * seq_v * fea
+            mask: important to avoid the leaks
         Returns:
             output: batch * key_sequence * (units * num_heads)
         """
@@ -48,7 +49,7 @@ class Attention(tf.keras.layers.Layer):
         score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch*heads) * seq_q * seq_k
         score /= tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
 
-        if mask:
+        if mask is not None:
             score = score * tf.cast(mask, tf.float32)
 
         score = tf.nn.softmax(score)
