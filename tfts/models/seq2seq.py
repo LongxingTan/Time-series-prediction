@@ -2,13 +2,14 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 # paper:
-# other implementations: https://github.com/Arturus/kaggle-web-traffic
-#                        https://github.com/pytorch/fairseq
-#                        https://github.com/LenzDu/Kaggle-Competition-Favorita/blob/master/seq2seq.py
-#                        https://github.com/JEddy92/TimeSeries_Seq2Seq/blob/master/notebooks/TS_Seq2Seq_Intro.ipynb
+# other implementations:
+#   https://github.com/Arturus/kaggle-web-traffic
+#   https://github.com/pytorch/fairseq
+#   https://github.com/LenzDu/Kaggle-Competition-Favorita/blob/master/seq2seq.py
+#   https://github.com/JEddy92/TimeSeries_Seq2Seq/blob/master/notebooks/TS_Seq2Seq_Intro.ipynb
 # Enhancement:
-# Residual LSTM:Design of a Deep Recurrent Architecture for Distant Speech Recognition. https://arxiv.org/abs/1701.03360
-# A Dual-Stage Attention-Based recurrent neural network for time series prediction. https://arxiv.org/abs/1704.02971
+#   Residual LSTM:Design of a Deep Recurrent Architecture for Distant Speech... https://arxiv.org/abs/1701.03360
+#   A Dual-Stage Attention-Based recurrent neural network for time series prediction. https://arxiv.org/abs/1704.02971
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN
@@ -20,6 +21,8 @@ params = {
     'dense_size': 16,
     'num_stacked_layers': 1,
     'use_attention': True,
+    'teacher_forcing': True,
+    'scheduler_sampling': False
 }
 
 
@@ -39,7 +42,10 @@ class Seq2seq(object):
             decoder_feature = None
 
         encoder_output, encoder_state = self.encoder(encoder_feature)
-        decoder_output = self.decoder(decoder_feature, encoder_state, x,
+
+        decoder_init_input = x[:, -1, 0:1]
+        init_state = encoder_state
+        decoder_output = self.decoder(decoder_feature, init_state, decoder_init_input,
                                       encoder_output=encoder_output,
                                       predict_seq_length=predict_seq_length,
                                       teacher=teacher,
@@ -57,7 +63,7 @@ class Encoder(object):
     def __call__(self, inputs, training=None, mask=None):
         # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         outputs, state = self.rnn(inputs)
-        #encoder_hidden_state=tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
+        #encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
         outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
 
@@ -66,7 +72,6 @@ class Decoder(object):
     def __init__(self, params):
         self.params = params
         self.rnn_cell = GRUCell(self.params['rnn_size'])
-        self.rnn = RNN(self.rnn_cell, return_state=True, return_sequences=True)
         self.dense = Dense(units=1)
         self.attention = Attention(hidden_size=32, num_heads=2, attention_dropout=0.8)
 
@@ -104,21 +109,45 @@ class Decoder(object):
 
         decoder_outputs = decoder_outputs_ta.stack()
         decoder_outputs = tf.transpose(decoder_outputs, [1, 0, 2])
-        #decoder_outputs=decoder_outputs
         return decoder_outputs
 
-    def __call__(self, decoder_feature, encoder_state, x, encoder_output,
+    def __call__(self, decoder_feature, init_state, decoder_init_input, encoder_output,
                  predict_seq_length=1, teacher=None, use_attention=False):
 
-        #context_vector=self.attention(x)
-        #x=tf.concat([tf.expand_dims(context_vector,1),x],axis=-1)
-        #output,state=self.rnn(x)
-        #x=self.dense(output)
         return self.forward(decoder_feature=decoder_feature,
-                            init_state=[encoder_state],  # for tf2
-                            decoder_init_value=x[:, -1, :],
+                            init_state=[init_state],  # for tf2
+                            decoder_init_value=decoder_init_input,  # Note that the lag target is in first dimension
                             encoder_output=encoder_output,
                             predict_seq_length=predict_seq_length,
                             teacher=teacher,
                             use_attention=use_attention)
 
+
+class Decoder2(object):
+    def __init__(self, params):
+        self.params = params
+        self.rnn_cell = GRUCell(self.params['rnn_size'])
+        self.dense = Dense(units=1)
+        self.attention = Attention(hidden_size=32, num_heads=2, attention_dropout=0.8)
+
+    def __call__(self, decoder_inputs, encoder_inputs, encoder_state, encoder_output):
+        decoder_outputs = []
+        prev_output = encoder_inputs[:, -1, :1]  # Note that the target lag should be in first dim
+        prev_state = encoder_state
+
+        for i in range(self.predict_window_sizes):
+            if teacher is None:
+                this_input = tf.concat([prev_output, decoder_inputs[:, i]], axis=-1)
+            else:
+                this_input = tf.concat([teacher[:, i: i + 1], decoder_inputs[:, i]])
+            if use_attention:
+                att = self.attention((prev_state, encoder_output, encoder_output))
+                this_input = tf.concat([this_input, att], axis=-1)
+
+            this_output, this_state = self.rnn_cell1(this_input, prev_state)
+            prev_state = this_state
+            prev_output = self.dense2(this_output)
+            decoder_outputs.append(prev_output)
+
+        decoder_outputs = tf.concat(decoder_outputs, axis=-1)
+        return decoder_outputs

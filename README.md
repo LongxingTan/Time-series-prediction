@@ -27,7 +27,7 @@ $ pip install -r requirements.txt
 ```
 2. Download the data, if necessary
 ```bash
-$ bash ./data/download_passenger.sh
+$ sh ./data/download_passenger.sh
 ```
 3. Train the model <br>
 set `custom_model_params` if you want (refer to params in `./tfts/models/*.py`), and pay attention to feature engineering.

@@ -2,8 +2,7 @@
 import os
 import joblib
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 class FeatureNorm(object):
