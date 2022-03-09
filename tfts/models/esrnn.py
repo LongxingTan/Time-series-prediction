@@ -4,6 +4,7 @@
 # paper: https://www.sciencedirect.com/science/article/pii/S0169207019301153?via%3Dihub
 # other implementations: https://github.com/damitkwr/ESRNN-GPU
 #                        https://github.com/kdgutier/esrnn_torch
+# DA-RNN: https://github.com/Zhenye-Na/DA-RNN/blob/master/src/model.py
 
 
 import tensorflow as tf

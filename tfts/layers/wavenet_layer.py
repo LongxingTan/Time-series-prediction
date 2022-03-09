@@ -53,6 +53,9 @@ class Dense3D(tf.keras.layers.Layer):
             output = self.activation(output)
         return output
 
+    def get_config(self):
+        return
+
 
 class TemporalConv(tf.keras.layers.Layer):
     """ Temporal convolutional layer
@@ -93,6 +96,9 @@ class TemporalConv(tf.keras.layers.Layer):
         output = self.conv(input)
         return output
 
+    def get_config(self):
+        return
+
 
 class TemporalConvAtt(tf.keras.layers.Layer):
     """  Temporal convolutional attention layer
@@ -103,9 +109,14 @@ class TemporalConvAtt(tf.keras.layers.Layer):
         self.temporal_conv = TemporalConv()
         self.att = SelfAttention()
 
+    def build(self, input_shape):
+        super(TemporalConvAtt, self).build(input_shape)
+
     def call(self, inputs):
         x = inputs
         x = self.temporal_conv(x)
         x = self.att(x)
         return x
 
+    def get_config(self):
+        return

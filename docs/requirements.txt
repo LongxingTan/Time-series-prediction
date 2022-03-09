@@ -5,3 +5,7 @@ scikit-learn==0.20.3
 scipy==1.2.1
 tensorflow>=2.2.1
 recommonmark>=0.7.1
+sphinx>3.2
+nbsphinx
+sphinx_markdown_tables
+pydata_sphinx_theme

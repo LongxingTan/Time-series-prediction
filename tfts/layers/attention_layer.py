@@ -21,11 +21,11 @@ class Attention(tf.keras.layers.Layer):
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
-        super(Attention, self).build(input_shape)
         self.dense_q = Dense(self.units, use_bias=False)
         self.dense_k = Dense(self.units, use_bias=False)
         self.dense_v = Dense(self.units, use_bias=False)
         self.dropout = Dropout(rate=self.attention_dropout)
+        super(Attention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
         """
@@ -59,14 +59,23 @@ class Attention(tf.keras.layers.Layer):
         outputs = tf.concat(tf.split(outputs, self.num_heads, axis=0), axis=2)
         return outputs
 
+    def get_config(self):
+        return
+
 
 class SelfAttention(tf.keras.layers.Layer):
     def __init__(self, hidden_size, num_heads, attention_dropout=0.):
         super(SelfAttention, self).__init__()
         self.attention = Attention(hidden_size, num_heads, attention_dropout=attention_dropout)
 
+    def build(self, input_shape):
+        super(SelfAttention, self).build(input_shape)
+
     def call(self, x, mask=None):
         return self.attention(x, x, x, mask)
+
+    def get_config(self):
+        return
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
@@ -77,6 +86,9 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.relu_dropout = relu_dropout
         self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation='relu')
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
+
+    def build(self, input_shape):
+        super(FeedForwardNetwork, self).build(input_shape)
 
     def forward(self, x, training):
         output = self.filter_dense_layer(x)
@@ -108,14 +120,14 @@ class TokenEmbedding(tf.keras.layers.Layer):
                                                                                       stddev=self.embedding_size ** -0.5))
         super(TokenEmbedding, self).build(input_shape)
 
+    def call(self, x):
+        y = tf.einsum('bsf,fk->bsk', x, self.token_weights)
+        return y
+
     def get_config(self):
         return {
             'embedding_size': self.embedding_size
         }
-
-    def call(self, x):
-        y = tf.einsum('bsf,fk->bsk', x, self.token_weights)
-        return y
 
 
 class PositionEmbedding(tf.keras.layers.Layer):
@@ -187,6 +199,12 @@ class DataEmbedding(tf.keras.layers.Layer):
         self.position_embedding = PositionEmbedding(d_model)
         self.dropout = Dropout(0.0)
 
+    def build(self, input_shape):
+        super(DataEmbedding, self).build(input_shape)
+
     def call(self, x):
         x = self.value_embedding(x) + self.position_embedding(x)
         return self.dropout(x)
+
+    def get_config(self):
+        return

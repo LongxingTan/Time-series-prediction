@@ -24,6 +24,9 @@ class NBeatsLayer(tf.keras.layers.Layer):
         self.theta_b_fn = Dense(units=self.thetas_dim, activation='relu', use_bias=False)
         self.theta_f_fn = Dense(units=self.thetas_dim, activation='relu', use_bias=False)
 
+    def build(self, input_shape):
+        super(NBeatsLayer, self).build(input_shape)
+
     def call(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
@@ -36,6 +39,9 @@ class NBeatsLayer(tf.keras.layers.Layer):
         b_ls = lin_space[:backcast_length]
         f_ls = lin_space[backcast_length:]
         return b_ls, f_ls
+
+    def get_config(self):
+        return
 
 
 class GenericBlock(NBeatsLayer):

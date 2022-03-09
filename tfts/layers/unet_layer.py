@@ -30,6 +30,9 @@ class ConvbrLayer(tf.keras.layers.Layer):
         x = self.relu(x)
         return x
 
+    def get_config(self):
+        return
+
 
 class SeBlock(tf.keras.layers.Layer):
     '''
@@ -52,6 +55,9 @@ class SeBlock(tf.keras.layers.Layer):
         x = self.fc2(x)
         x_out = Multiply()([input, x])
         return x_out
+
+    def get_config(self):
+        return
 
 
 class ReBlock(tf.keras.layers.Layer):
@@ -77,6 +83,9 @@ class ReBlock(tf.keras.layers.Layer):
             x_re = self.se_block(x_re)
             x_re = Add()([x, x_re])
         return x_re
+
+    def get_config(self):
+        return
 
 
 def conv_br(x, units, kernel_size, strides, dilation):
