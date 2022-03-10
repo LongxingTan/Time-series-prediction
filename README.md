@@ -2,7 +2,7 @@
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)<br>
 
-**[Documentation](https://Time-series-prediction.readthedocs.io)** | **[Tutorials](https://Time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://Time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文]()**
+**[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文]()**
 
 TFTS (TensorFlow Time Series) is a python package for time series prediction, supporting the common deep learning methods in TensorFlow. 
 
