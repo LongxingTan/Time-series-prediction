@@ -9,7 +9,6 @@ from tensorflow.keras.layers import Conv1D, Dropout, Dense, LayerNormalization
 
 class Attention(tf.keras.layers.Layer):
     """ Multi-head attention layer
-
     """
     def __init__(self, hidden_size, num_heads, attention_dropout=0.):
         if hidden_size % num_heads:
@@ -21,11 +20,11 @@ class Attention(tf.keras.layers.Layer):
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
-        super(Attention, self).build(input_shape)
         self.dense_q = Dense(self.units, use_bias=False)
         self.dense_k = Dense(self.units, use_bias=False)
         self.dense_v = Dense(self.units, use_bias=False)
         self.dropout = Dropout(rate=self.attention_dropout)
+        super(Attention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
         """
@@ -59,14 +58,30 @@ class Attention(tf.keras.layers.Layer):
         outputs = tf.concat(tf.split(outputs, self.num_heads, axis=0), axis=2)
         return outputs
 
+    def get_config(self):
+        config = {
+            'units': self.units,
+            'num_heads': self.num_heads,
+            'attention_dropout': self.attention_dropout
+        }
+        base_config = super(Attention, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class SelfAttention(tf.keras.layers.Layer):
     def __init__(self, hidden_size, num_heads, attention_dropout=0.):
         super(SelfAttention, self).__init__()
         self.attention = Attention(hidden_size, num_heads, attention_dropout=attention_dropout)
 
+    def build(self, input_shape):
+        super(SelfAttention, self).build(input_shape)
+
     def call(self, x, mask=None):
         return self.attention(x, x, x, mask)
+
+    def get_config(self):
+        base_config = super(SelfAttention, self).get_config()
+        return base_config
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
@@ -78,6 +93,9 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation='relu')
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
 
+    def build(self, input_shape):
+        super(FeedForwardNetwork, self).build(input_shape)
+
     def forward(self, x, training):
         output = self.filter_dense_layer(x)
         if training:
@@ -85,15 +103,17 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         output = self.output_dense_layer(output)
         return output
 
+    def call(self, x, training):
+        return self.forward(x, training)
+
     def get_config(self):
-        return {
+        config = {
             "hidden_size": self.hidden_size,
             "filter_size": self.filter_size,
             "relu_dropout": self.relu_dropout,
         }
-
-    def call(self, x, training):
-        return self.forward(x, training)
+        base_config = super(FeedForwardNetwork, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
@@ -108,14 +128,16 @@ class TokenEmbedding(tf.keras.layers.Layer):
                                                                                       stddev=self.embedding_size ** -0.5))
         super(TokenEmbedding, self).build(input_shape)
 
-    def get_config(self):
-        return {
-            'embedding_size': self.embedding_size
-        }
-
     def call(self, x):
         y = tf.einsum('bsf,fk->bsk', x, self.token_weights)
         return y
+
+    def get_config(self):
+        config = {
+            'embedding_size': self.embedding_size
+        }
+        base_config = super(TokenEmbedding, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class PositionEmbedding(tf.keras.layers.Layer):
@@ -125,11 +147,6 @@ class PositionEmbedding(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         super(PositionEmbedding, self).build(input_shape)
-
-    def get_config(self):
-        return {
-            'max_len': self.max_len
-        }
 
     def call(self, x, masking=True):
         E = x.get_shape().as_list()[-1]  # static
@@ -148,6 +165,13 @@ class PositionEmbedding(tf.keras.layers.Layer):
             outputs = tf.where(tf.equal(x, 0), x, outputs)
         return tf.cast(outputs, tf.float32)
 
+    def get_config(self):
+        config = {
+            'max_len': self.max_len
+        }
+        base_config = super(PositionEmbedding, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class PositionEncoding(tf.keras.layers.Layer):
     def __init__(self, max_len):
@@ -156,11 +180,6 @@ class PositionEncoding(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         super(PositionEncoding, self).build(input_shape)
-
-    def get_config(self):
-        return {
-            'max_len': self.max_len
-        }
 
     def call(self, x, masking=True):
         E = x.get_shape().as_list()[-1]  # static
@@ -179,6 +198,13 @@ class PositionEncoding(tf.keras.layers.Layer):
                 outputs = tf.where(tf.equal(x, 0), x, outputs)
         return tf.cast(outputs, tf.float32)
 
+    def get_config(self):
+        config = {
+            'max_len': self.max_len
+        }
+        base_config = super(PositionEncoding, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class DataEmbedding(tf.keras.layers.Layer):
     def __init__(self, d_model):
@@ -187,6 +213,13 @@ class DataEmbedding(tf.keras.layers.Layer):
         self.position_embedding = PositionEmbedding(d_model)
         self.dropout = Dropout(0.0)
 
+    def build(self, input_shape):
+        super(DataEmbedding, self).build(input_shape)
+
     def call(self, x):
         x = self.value_embedding(x) + self.position_embedding(x)
         return self.dropout(x)
+
+    def get_config(self):
+        base_config = super(DataEmbedding, self).get_config()
+        return base_config

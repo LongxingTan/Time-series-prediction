@@ -25,6 +25,7 @@ class TCN(object):
     """ Temporal convolutional network
     """
     def __init__(self, custom_model_params={}):
+        params.update(custom_model_params)
         self.params = params
         self.conv_times = []
         for i, (dilation, kernel_size) in enumerate(zip(self.params['dilation_rates'], self.params['kernel_sizes'])):
@@ -40,7 +41,7 @@ class TCN(object):
     def __call__(self, inputs):
         x = self.dense_time1(inputs)
         for conv_time in self.conv_times:
-            x = conv_time[x]
+            x = conv_time(x)
 
         x = self.dense_time2(x)
         x = self.dense_time3(x)

@@ -53,6 +53,13 @@ class Dense3D(tf.keras.layers.Layer):
             output = self.activation(output)
         return output
 
+    def get_config(self):
+        config = {
+            'units': self.units,
+        }
+        base_config = super(Dense3D, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class TemporalConv(tf.keras.layers.Layer):
     """ Temporal convolutional layer
@@ -93,6 +100,17 @@ class TemporalConv(tf.keras.layers.Layer):
         output = self.conv(input)
         return output
 
+    def get_config(self):
+        config = {
+            'filters': self.filters,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
+            'dilation_rate': self.dilation_rate,
+            'casual': self.causal,
+        }
+        base_config = super(TemporalConv, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class TemporalConvAtt(tf.keras.layers.Layer):
     """  Temporal convolutional attention layer
@@ -103,9 +121,19 @@ class TemporalConvAtt(tf.keras.layers.Layer):
         self.temporal_conv = TemporalConv()
         self.att = SelfAttention()
 
+    def build(self, input_shape):
+        super(TemporalConvAtt, self).build(input_shape)
+
     def call(self, inputs):
         x = inputs
         x = self.temporal_conv(x)
         x = self.att(x)
         return x
+
+    def get_config(self):
+        config = {
+            'units': self.units,
+        }
+        base_config = super(TemporalConvAtt, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 

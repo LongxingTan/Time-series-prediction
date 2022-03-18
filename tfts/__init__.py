@@ -4,7 +4,6 @@ tfts package for time series prediction with TensorFlow.
 """
 
 from .model import *
-# from .dataset import *
 
 
 __all__ = [

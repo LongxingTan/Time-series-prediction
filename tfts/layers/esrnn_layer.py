@@ -17,6 +17,9 @@ class DRNN(tf.keras.layers.Layer):
     def call(self, x):
         return
 
+    def get_config(self):
+        return
+
 
 class ResidualDRNN(tf.keras.layers.Layer):
     def __init__(self):
@@ -26,4 +29,7 @@ class ResidualDRNN(tf.keras.layers.Layer):
         super()
 
     def call(self, x):
+        return
+
+    def get_config(self):
         return

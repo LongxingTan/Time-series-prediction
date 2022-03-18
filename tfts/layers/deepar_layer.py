@@ -33,3 +33,6 @@ class GaussianLayer(tf.keras.layers.Layer):
         sig = tf.matmul(x, self.weight2) + self.bias2
         sig_pos = tf.math.log1p(tf.math.exp(sig)) + 1e-7
         return mu, sig_pos
+
+    def get_config(self):
+        return

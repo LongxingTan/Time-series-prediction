@@ -11,13 +11,16 @@ from .loss import Loss
 from .optimizer import Optimizer
 
 
+def build_tfts_model(use_model='seq2seq', dynamic_decoding=True):
+    return
+
+
 class Model(object):
     """
     Trainer class
     """
     def __init__(self, params, use_model, use_loss='mse', use_optimizer='adam', custom_model_params={}):
         """
-
         :param params:
         :param use_model:
         :param use_loss:
