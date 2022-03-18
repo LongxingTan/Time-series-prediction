@@ -54,7 +54,11 @@ class Dense3D(tf.keras.layers.Layer):
         return output
 
     def get_config(self):
-        return
+        config = {
+            'units': self.units,
+        }
+        base_config = super(Dense3D, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class TemporalConv(tf.keras.layers.Layer):
@@ -97,7 +101,15 @@ class TemporalConv(tf.keras.layers.Layer):
         return output
 
     def get_config(self):
-        return
+        config = {
+            'filters': self.filters,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
+            'dilation_rate': self.dilation_rate,
+            'casual': self.causal,
+        }
+        base_config = super(TemporalConv, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class TemporalConvAtt(tf.keras.layers.Layer):
@@ -119,4 +131,9 @@ class TemporalConvAtt(tf.keras.layers.Layer):
         return x
 
     def get_config(self):
-        return
+        config = {
+            'units': self.units,
+        }
+        base_config = super(TemporalConvAtt, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+

@@ -10,9 +10,8 @@ Welcome to tfts's documentation!
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
 TFTS(TensorFlow Time Series) aims to ease state-of-the-art
-timeseries forecasting with neural networks for both real-world cases and
-research alike. The goal is to provide a high-level API with maximum flexibility for
-professionals and reasonable defaults for beginners.
+timeseries forecasting with deep learning for both business cases and
+data competitions. It's similar to the `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_ and `gluon-ts <https://github.com/awslabs/gluon-ts/>`_, but with `TensorFlow <https://www.tensorflow.org/>`_. 
 Specifically, the package provides
 
 * A timeseries dataset class which abstracts handling variable transformations, missing values,
@@ -42,7 +41,6 @@ or to install via conda
 Vist :ref:`Getting started <getting-started>` to learn more about the package and detailled installation instruction.
 The :ref:`Tutorials <tutorials>` section provides guidance on how to use models and implement new ones.
 
-Many thanks to `Pytorch Forecasting <https://github.com/jdb78/pytorch-forecasting>`_
 
 .. toctree::
    :titlesonly:
