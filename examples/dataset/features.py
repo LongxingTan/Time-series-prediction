@@ -2,8 +2,11 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
 
-import pandas as pd
+import os
+import joblib
 import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 def transform2_lagged_feature(x, window_sizes):
@@ -39,3 +42,30 @@ def multi_step_y(y, predict_window, predict_gap=1):
 
 def simple_moving_average(x):
     pass
+
+
+
+
+class FeatureNorm(object):
+    def __init__(self, type='minmax'):
+        self.type = type
+
+    def __call__(self, x, mode='train', model_dir='../weights', name='scaler'):
+        assert len(x.shape) == 2, "Input rank for FeatureNorm should be 2"
+        if self.type == 'standard':
+            scaler = StandardScaler()
+        elif self.type == 'minmax':
+            scaler = MinMaxScaler()
+        else:
+            raise ValueError("Unsupported norm type yet: {}".format(self.type))
+
+        if mode == 'train':
+            scaler.fit(x)
+            joblib.dump(scaler, os.path.join(model_dir, name+'.pkl'))
+        else:
+            scaler = joblib.load(os.path.join(model_dir, name+'.pkl'))
+        output = scaler.transform(x)
+        try:
+            return pd.DataFrame(output, index=x.index, columns=x.columns)
+        except:
+            return output

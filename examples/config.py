@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--use_model', type=str, default='wavenet', help='model for train, seq2seq, wavenet, transformer')
+parser.add_argument('--use_model', type=str, default='seq2seq', help='model for train, seq2seq, wavenet, transformer')
 parser.add_argument('--data_dir', type=str, default='../data/international-airline-passengers.csv', help='data directory')
 parser.add_argument('--model_dir', type=str, default='../weights/checkpoint', help='saved checkpoint directory')
 parser.add_argument('--saved_model_dir', type=str, default='../weights', help='saved pb directory')

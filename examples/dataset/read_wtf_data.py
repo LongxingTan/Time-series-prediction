@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
-# This script will show an example using Kaggle data: https://www.kaggle.com/c/web-traffic-time-series-forecasting
+
+"""
+Data example of Kaggle WTF data
+https://www.kaggle.com/c/web-traffic-time-series-forecasting
+"""
+
 
 import os
 import numpy as np

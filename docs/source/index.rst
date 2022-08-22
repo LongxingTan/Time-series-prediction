@@ -24,7 +24,7 @@ Specifically, the package provides
 * Ranger optimizer for faster model training
 
 
-If you do not have pytorch already installed, follow the :ref:`detailed installation instructions<install>`.
+If you do not have tensorflow already installed, follow the :ref:`detailed installation instructions<install>`.
 
 Otherwise, proceed to install the package by executing
 
@@ -36,7 +36,7 @@ or to install via conda
 
 .. code-block::
 
-   conda install tfts -c pytorch -c conda-forge
+   conda install tfts -c conda-forge
 
 Vist :ref:`Getting started <getting-started>` to learn more about the package and detailled installation instruction.
 The :ref:`Tutorials <tutorials>` section provides guidance on how to use models and implement new ones.

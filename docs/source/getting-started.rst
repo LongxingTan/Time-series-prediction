@@ -9,31 +9,20 @@ Installation
 
 .. _install:
 
-If you are working windows, you need to first install PyTorch with
+If you are working windows, you need to first install TensorFlow with
 
-``pip install torch -f https://download.pytorch.org/whl/torch_stable.html``.
+``pip install tensorflow``.
 
 Otherwise, you can proceed with
 
 ``pip install tfts``
 
 
-Alternatively, to installl the package via conda:
-
-``conda install tfts -c pytorch -c conda-forge``
-
-PyTorch Forecasting is now installed from the conda-forge channel while PyTorch is install from the pytorch channel.
-
 
 Usage
 -------------
 
-.. currentmodule:: pytorch_forecasting
-
-The library builds strongly upon `PyTorch Lightning <https://pytorch-lightning.readthedocs.io/>`_ which allows to train models with ease,
-spot bugs quickly and train on multiple GPUs out-of-the-box.
-
-Further, we rely on `Tensorboard <https://pytorch.org/docs/stable/tensorboard.html>`_ for logging training progress.
+.. currentmodule:: tfts
 
 The general setup for training and testing a model is
 
@@ -48,7 +37,6 @@ The general setup for training and testing a model is
 #. Train the model with early stopping on the training dataset and use the tensorboard logs
    to understand if it has converged with acceptable accuracy.
 #. Tune the hyperparameters of the model with your
-   `favourite package <https://pytorch-lightning.readthedocs.io/en/latest/hyperparameters.html#hyperparameter-optimization>`_.
 #. Train the model with the same learning rate schedule on the entire dataset.
 #. Load the model from the model checkpoint and apply it to new data.
 
@@ -62,10 +50,8 @@ Example
 
 .. code-block:: python
 
-    import pytorch_lightning as pl
-    from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
-
-    from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer
+    import tensorflow as tf
+    from tfts import Trainer, build_tfts_model
 
     # load data
     data = ...

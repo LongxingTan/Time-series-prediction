@@ -1,63 +1,80 @@
-![Time series prediction](./docs/source/_static/logo.svg)
+<h1 align="center">
+<img src="./docs/source/_static/logo.svg" width="500" align=center/>
+</h1><br>
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
-[build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-TFTS (TensorFlow Time Series) is a python package for time series prediction, supporting the common deep learning methods in TensorFlow. 
+**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods on TensorFlow.
+- Flexible and powerful design for time series task
+- [Advanced deep learning models](./examples)
+- [Detailed documentation with tutorials](https://time-series-prediction.readthedocs.io)
 
 
-## Usage
-
-1. Install the required library
-```bash
-$ pip install -r requirements.txt
-```
-2. Download the data, if necessary
-```bash
-$ sh ./data/download_passenger.sh
-```
-3. Train the model <br>
-set `custom_model_params` if you want (refer to params in `./tfts/models/*.py`), and pay attention to feature engineering.
-
-```bash
-$ cd examples
-$ python run_train.py --use_model seq2seq
-$ cd ..
-$ tensorboard --logdir=./data/logs
-```
-4. Predict new data
-```bash
-$ cd examples
-$ python run_test.py
+### Install
+``` bash
+pip install tensorflow>=2.0.0
+pip install tfts
 ```
 
-## Documentation
-Visit [https]() to read the documentation with detailed tutorials
+
+### Tutorial
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC)
+
+``` python
+import tensorflow as tf
+import tfts
+
+data = tfts.load('passenger')
+x_train, y_train
+model = AutoModel('seq2seq')
+# train the model
+model.train(data)
+# predict new data
+model.predict(data)
+
+```
+
 
 ## Examples
-- I use the seq2seq model from this lib to win 4th/2849 in Tianchi ENSO prediction, code is [here](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction)
+- [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) win the 3rd place in [KDD Cup 2022 Baidu-wind power forecasting](https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction)
+- [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) win the 4th place in [Alibaba Tianchi-ENSO prediction 2021](https://tianchi.aliyun.com/competition/entrance/531871/introduction)
 
-<!--
-| Model | [Web Traffic<sup>mape</sup>]() | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sub>75</sub><sup>val</sup> |
-| :-- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| [seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
-| [deepar]() | 672 | 47.7% |52.6% | 61.4% | 
-| [wavenet]() | 672 | 47.7% |52.6% | 61.4% | 
-| [tcn]() | 672 | 47.7% |52.6% | 61.4% | 
-| [transformer]() | 672 | 47.7% |52.6% | 61.4% | 
-| [transformer]() | 672 | 47.7% |52.6% | 61.4% | 
-| [n-beats]() | 672 | 47.7% |52.6% | 61.4% | 
-| [u-net]() | 672 | 47.7% |52.6% | 61.4% |
-|  |  |  |  |  |
-Please Note that: the performance above is only representing this repo's current implementation performance.
--->
+More models 
+- [RNN](./examples/run_rnn.py) 
+- [DeepAR](./examples/run_deepar.py) 
+- [ESRNN](./examples/run_esrnn.py) 
+- [Seq2seq](./examples/run_seq2seq.py)
+- [TCN](./examples/run_tcn.py)
+- [Wavenet](./examples/run_wavenet.py)
+- [Bert](./examples/run_bert.py)
+- [Transformer](./examples/run_transformer.py)
+- [Temporal-fusion-transformer](./examples/run_temporal_fusion_transformer.py)
+- [Informer](./examples/run_informer.py)
+- [AutoFormer](./examples/run_autoformer.py)
+- [U-Net](./examples/run_unet.py)
+- [Nbeats](./examples/run_nbeats.py)
+- [GAN](./examples/run_gan.py)
 
-## Further reading
-- https://github.com/awslabs/gluon-ts/
-- https://github.com/Azure/DeepLearningForTimeSeriesForecasting
-- https://github.com/microsoft/forecasting
-- https://github.com/jdb78/pytorch-forecasting
-- https://github.com/timeseriesAI/tsai
-- https://github.com/facebookresearch/Kats
+More demos 
+- [Time series classification](./examples/run_classification.py)
+- [Anomaly detection](./examples/run_anomaly.py)
+- [Uncertainty prediction](./examples/run_uncertrainty.py)
+- [Parameters tuning with optuna](./examples/run_optuna.py)
+
+
+## Citation
+
+Please use the following reference to cite our tfts library 
+```
+@misc{tfts2020,
+  author = {Longxing Tan},
+  title = {Time series prediction},
+  year = {2020},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/longxingtan/time-series-prediction}},
+}
+```
