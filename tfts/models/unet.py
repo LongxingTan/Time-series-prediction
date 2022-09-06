@@ -7,7 +7,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import (Input, AveragePooling1D, Add, UpSampling1D, Concatenate, Lambda)
-from ..layers.unet_layer import *
+from tfts.layers.unet_layer import *
 
 
 params = {}

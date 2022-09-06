@@ -10,7 +10,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization, Dense
-from ..layers.transformer_layer import Attention, SelfAttention, DataEmbedding, FeedForwardNetwork
+from tfts.layers.transformer_layer import Attention, SelfAttention, DataEmbedding, FeedForwardNetwork
 
 params = {
     'n_encoder_layers': 1,

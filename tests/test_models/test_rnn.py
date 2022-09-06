@@ -4,9 +4,10 @@ import os
 filePath = os.path.abspath(os.path.dirname(''))
 sys.path.append(os.path.split(filePath)[0])
 
-import pytest
+import os
+import unittest
 import tensorflow as tf
-from deepts.models.rnn import RNN
+from tfts import BertConfig
 
 
 if __name__ == '__main__':

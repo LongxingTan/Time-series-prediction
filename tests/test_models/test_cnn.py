@@ -1,12 +1,8 @@
-import sys
-import os
-filePath = os.path.abspath(os.path.dirname(''))
-sys.path.append(os.path.split(filePath)[0])
 
-import pytest
-from deepts.models.cnn import CNN
-from examples.data.load_data import DataLoader
+import os
+import unittest
 import tensorflow as tf
+from tfts import BertConfig
 
 
 def test_cnn_shape():

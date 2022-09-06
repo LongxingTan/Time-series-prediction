@@ -6,7 +6,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Activation
-from ..layers.deepar_layer import GaussianLayer
+from tfts.layers.deepar_layer import GaussianLayer
 
 params = {
     'rnn_size': 64,

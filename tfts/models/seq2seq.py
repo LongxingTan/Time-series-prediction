@@ -14,7 +14,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN, GRU, LSTM
-from ..layers.attention_layer import FullAttention
+from tfts.layers.attention_layer import FullAttention
 
 
 params = {

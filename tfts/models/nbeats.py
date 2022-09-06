@@ -7,7 +7,7 @@
 
 from collections import defaultdict
 import tensorflow as tf
-from ..layers.nbeats_layer import *
+from tfts.layers.nbeats_layer import *
 
 
 params = defaultdict(stack_types=['trend_block', 'seasonality_block'],

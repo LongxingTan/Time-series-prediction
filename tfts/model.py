@@ -11,16 +11,16 @@ from .loss import Loss
 from .optimizer import Optimizer
 
 
-# def build_tfts_model(use_model, predict_sequence_length, custom_model_params=None):
-#     if use_model.lower() == 'seq2seq':
-#         Model = Seq2seq(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
-#     elif use_model.lower() == 'wavenet':
-#         Model = WaveNet(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
-#     elif use_model.lower() == 'transformer':
-#         Model = Transformer(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
-#     else:
-#         raise ValueError("unsupported use_model of {} yet".format(use_model))
-#     return Model
+def build_tfts_model(use_model, predict_sequence_length, custom_model_params=None):
+    if use_model.lower() == 'seq2seq':
+        Model = Seq2seq(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+    elif use_model.lower() == 'wavenet':
+        Model = WaveNet(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+    elif use_model.lower() == 'transformer':
+        Model = Transformer(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+    else:
+        raise ValueError("unsupported use_model of {} yet".format(use_model))
+    return Model
 
 
 class AutoModel(object):
@@ -42,9 +42,4 @@ class AutoModel(object):
 
     def __call__(self, x):
         return self.model(x)
-
-
-class AutoConfig(object):
-    def __init__(self):
-        pass
 

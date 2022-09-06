@@ -5,8 +5,8 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from ..layers.wavenet_layer import Dense3D, ConvTemporal
-from ..layers.transformer_layer import Attention
+from tfts.layers.wavenet_layer import Dense3D, ConvTemporal
+from tfts.layers.transformer_layer import Attention
 
 params = {
     'dilation_rates': [2 ** i for i in range(3)],
@@ -22,7 +22,6 @@ params = {
 class WaveNet(object):
     """Wavenet network for time series
     """
-
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
         if custom_model_params:
             params.update(custom_model_params)

@@ -17,7 +17,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN, GRU, LSTM, BatchNormalization, TimeDistributed, \
     Bidirectional, AveragePooling1D, Dropout
-from ..layers.transformer_layer import CustomAttention
+from tfts.layers.transformer_layer import CustomAttention
 
 params = {
     'rnn_type': 'gru',

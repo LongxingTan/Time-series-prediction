@@ -2,9 +2,7 @@
 
 import unittest
 import tensorflow as tf
-from deepts.layers.attention_layer import *
-
-
+from tfts.layers.attention_layer import *
 
 
 class TransformerLayerTest(tf.test.TestCase):
@@ -29,7 +27,3 @@ class TransformerLayerTest(tf.test.TestCase):
         hidden_szie = 64
         filter_size = 32
         relu_dropout = 0.5
-
-if __name__ == '__main__':
-    tf.test.main()
-

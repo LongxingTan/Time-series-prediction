@@ -39,8 +39,9 @@ model.predict(data)
 
 
 ## Examples
-- [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) win the 3rd place in [KDD Cup 2022 Baidu-wind power forecasting](https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction)
-- [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) win the 4th place in [Alibaba Tianchi-ENSO prediction 2021](https://tianchi.aliyun.com/competition/entrance/531871/introduction)
+Highlights
+- [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the 3rd place in KDD Cup 2022 Baidu-wind power forecasting
+- [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the 4th place in Alibaba Tianchi-ENSO prediction 2021
 
 More models 
 - [RNN](./examples/run_rnn.py) 
@@ -63,6 +64,7 @@ More demos
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
 - [Parameters tuning with optuna](./examples/run_optuna.py)
+- [tf-serving](./examples/)
 
 
 ## Citation

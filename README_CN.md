@@ -7,10 +7,11 @@
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
 
-**东流TFTS** (TensorFlow Time Series) 是一个时间序列开源工具，采用TensorFlow框架，支持多种深度学习SOTA模型。 中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
+**东流TFTS** (TensorFlow Time Series) 是一个时间序列的开源工具，采用TensorFlow框架，已支持多种深度学习SOTA模型。中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 - 结构灵活给力，适配多种时间序列任务
-- 提供多套久经考验的深度学习模型
-- [文档齐全](https://time-series-prediction.readthedocs.io)
+- [提供多套久经考验的深度学习模型](./examples)
+- [文档齐全，快速入门](https://time-series-prediction.readthedocs.io)
+
 
 ## 安装
 ``` bash
@@ -54,7 +55,7 @@ model.predict(data)
 - [Nbeats](./examples/run_nbeats.py)
 - [GAN](./examples/run_gan.py)
 
-更多例子
+更多应用
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
