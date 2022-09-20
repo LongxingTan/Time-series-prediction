@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
+# @author: Longxing Tan
 
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dropout, Dense, LayerNormalization

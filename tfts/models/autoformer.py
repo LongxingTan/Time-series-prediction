@@ -7,7 +7,8 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization, Dense, Conv1D, Dropout
-from tfts.layers.transformer_layer import CustomAttention, SelfAttention, FeedForwardNetwork
+from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.autoformer_layer import SeriesDecomp
 

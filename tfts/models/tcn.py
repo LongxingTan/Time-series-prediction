@@ -10,14 +10,15 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
-from tfts.layers.wavenet_layer import Dense3D, ConvTime
+from tfts.layers.wavenet_layer import ConvTime
+from tfts.layers.dense_layer import Dense3D
 
 
 params = {
     'dilation_rates': [2 ** i for i in range(4)],
     'kernel_sizes': [2 for i in range(4)],
     'filters': 128,
-    'dense_hidden_size': 64
+    'dense_hidden_size': 64,
     'skip_connect': False,
 }
 

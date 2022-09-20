@@ -5,25 +5,44 @@ import tensorflow as tf
 from tfts.layers.attention_layer import *
 
 
-class TransformerLayerTest(tf.test.TestCase):
-    def test_attention_layer(self):
+class AttentionLayerTest(unittest.TestCase):
+    def test_full_attention_layer(self):
         hidden_size = 64
         num_heads = 4
-        dropout = 0.5
+        attention_dropout = 0.1
         dim_per_head = hidden_size // num_heads
 
-        layer = Attention()
+        layer = FullAttention(hidden_size, num_heads, attention_dropout)
         self.assertDictEqual(layer.get_config(), {
             'hidden_size': hidden_size,
             'num_heads': num_heads,
             'attention_dropout': dropout,
         })
 
-        length = 2
-        x = tf.ones([1, length, hidden_size])
-        bias = tf.ones([1])
+        x = tf.random.normal([2, 128, 16])
+        cache = {
+            'k': tf.zeros([2, 0, num_heads, dim_per_head]),
+            'v': tf.zeros([2, 0, num_heads, dim_per_head])
+        }
+        y = layer(x, training=True, cache=cache)
+        self.assertEqual(y.shape, (2, 128, hidden_size))
+        self.assertEqual(cache['k'].shaoe, (2, 128, num_heads, dim_per_head))
 
-    def test_ffn_layer(self):
-        hidden_szie = 64
-        filter_size = 32
-        relu_dropout = 0.5
+    def test_self_attention_layer(self):
+        hidden_size = 64
+        num_heads = 4
+        attention_dropout = 0.1
+        dim_per_head = hidden_size // num_heads
+
+    def test_sparse_attention_layer(self):
+        hidden_size = 64
+
+    def test_prob_attention_layer(self):
+        pass
+
+    def test_fast_attention_layer(self):
+        pass
+
+
+if __name__ == "__main__":
+    unittest.main()

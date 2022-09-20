@@ -8,7 +8,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization, Dense, Dropout, SpatialDropout1D, BatchNormalization, \
     AveragePooling1D, GRU
-from tfts.layers.transformer_layer import CustomAttention, SelfAttention, FeedForwardNetwork
+from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 

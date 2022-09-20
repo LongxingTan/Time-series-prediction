@@ -1,18 +1,26 @@
 
-import sys
-import os
-filePath = os.path.abspath(os.path.dirname(''))
-sys.path.append(os.path.split(filePath)[0])
-
-import os
 import unittest
 import tensorflow as tf
-from tfts import BertConfig
+from tfts.models.rnn import RNN
+
+
+class RNNTest(unittest.TestCase):
+    def test_model(self):
+        custom_model_params = {}
+        model = RNN(custom_model_params)
+
+        x = tf.random.normal([2, ])
+        y = model(x)
+        self.assertEqual(y.shape, (2, ), 'incorrect output shape')
+
+    def test_train(self):
+        train_data, valid_data = tfts.load_data('passenger', split=0.2)
+        model = RNN(custom_model_params)
+        trainer = Trainer(model)
+        trainer.train(train_data, valid_data)
+        valid_pred = trainer.predict(valid_data)
+        self.assertEqual(valid_pred.shape, ())
 
 
 if __name__ == '__main__':
-    import numpy as np
-    fake_data = np.random.rand(16, 160, 35)
-    rnn = RNN(custom_model_params={})
-    y = rnn(tf.convert_to_tensor(fake_data, tf.float32))
-    print(y.shape)
+    unittest.main()

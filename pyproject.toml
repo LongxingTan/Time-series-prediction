@@ -1,0 +1,108 @@
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | docs/build/
+  | node_modules/
+  | venve/
+  | .venv/
+)
+'''
+
+[tool.nbqa.mutate]
+isort = 1
+black = 1
+
+[tool.poetry]
+name = "tfts"
+readme = "README.md"  # Markdown files are supported
+version = "0.0.2"  # is being replaced automatically
+
+authors = ["Longxing Tan"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License"]
+description = "Deep learning time series with TensorFlow"
+repository = "https://github.com/LongxingTan/Time-series-prediction"
+documentation = "https://time-series-prediction.readthedocs.io"
+homepage = "https://time-series-prediction.readthedocs.io"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.11"
+
+tensorflow = ">=2.0"
+
+
+pytest-github-actions-annotate-failures = {version = "*", optional = true}
+networkx = {version = "^2.7.1", optional = true}
+# cpflows = {git = "https://github.com/KelvinKan/CP-Flow.git", branch = "package-specific-version", rev = "4ab5f50", optional = true}
+
+[tool.poetry.dev-dependencies]
+# checks and make tools
+pre-commit = "^2.20.0"
+
+invoke = "*"
+flake8 = "*"
+mypy = "*"
+pylint = "*"
+isort = "*"
+
+# pytest
+pytest = "*"
+pytest-xdist = "*"
+pytest-cov = "*"
+pytest-sugar = "*"
+coverage = "*"
+pyarrow = "*"
+
+# jupyter notebook
+ipykernel = "*"
+black = { version = "*", allow-prereleases = true, extras = ["jupyter"] }
+
+# documentatation
+sphinx = "*"
+pydata-sphinx-theme = "*"
+nbsphinx = "*"
+pandoc = "*"
+recommonmark = "*"
+ipywidgets = "^8.0.1"
+
+
+[tool.poetry.extras]  # extras
+github-actions = ["pytest-github-actions-annotate-failures"]
+graph = ["networkx"]
+# mqf2 = ["cpflows"]
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+dirty = false
+style = "semver"  # semantic versioning
+
+[build-system]  # make the package pip installable
+requires = ["poetry-core>=1.0.7", "poetry-dynamic-versioning>=0.13.1"]
+build-backend = "poetry.core.masonry.api"

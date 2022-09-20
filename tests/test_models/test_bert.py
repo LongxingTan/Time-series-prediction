@@ -1,8 +1,8 @@
 # coding=utf-8
 
-import os
 import unittest
-from tfts import BertConfig
+import tensorflow as tf
+from tfts.models.bert import Bert
 
 
 class BertModelTester:
@@ -45,3 +45,4 @@ class BertModelTest(unittest.TestCase):
 
 class BertModelIntegrationTest(unittest.TestCase):
     def test_inference(self):
+        pass

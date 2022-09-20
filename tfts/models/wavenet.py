@@ -6,7 +6,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from tfts.layers.wavenet_layer import Dense3D, ConvTemporal
-from tfts.layers.transformer_layer import Attention
+from tfts.layers.attention_layer import FullAttention
 
 params = {
     'dilation_rates': [2 ** i for i in range(3)],

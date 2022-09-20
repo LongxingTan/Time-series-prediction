@@ -5,6 +5,9 @@
 # other implementations:
 
 
+import tensorflow as tf
+
+
 class TemporalFusionTransformer(object):
     def __init__(self):
         pass

@@ -16,7 +16,7 @@ https://github.com/manjimnav/Informer-Tensorflow
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, BatchNormalization, LayerNormalization, Dropout, Activation, \
     MaxPool1D
-from tfts.layers.transformer_layer import CustomAttention, SelfAttention
+from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
 params = {
