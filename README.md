@@ -27,8 +27,8 @@ usage
 import tensorflow as tf
 import tfts
 
-data = tfts.load('passenger')
-x_train, y_train
+train, valid = tfts.load('sine')
+
 model = AutoModel('seq2seq')
 # train the model
 model.train(data)

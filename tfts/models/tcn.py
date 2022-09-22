@@ -10,7 +10,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
-from tfts.layers.wavenet_layer import ConvTime
+from tfts.layers.cnn_layer import ConvTemporal
 from tfts.layers.dense_layer import Dense3D
 
 

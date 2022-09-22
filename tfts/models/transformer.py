@@ -9,10 +9,10 @@
 #                        https://github.com/zhouhaoyi/Informer2020
 
 import tensorflow as tf
-from tensorflow.keras.layers import LayerNormalization, Dense
+from tensorflow.keras.layers import LayerNormalization, Dense, Dropout, TimeDistributed
 from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
-from tfts.layers.embed_layer import DataEmbedding
+from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
 params = {
     'n_encoder_layers': 1,
@@ -211,8 +211,7 @@ class DecoderLayer(tf.keras.layers.Layer):
     def build(self, input_shape):
         for _ in range(self.n_decoder_layers):
             self_attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            enc_dec_attention_layer = CustomAttention(self.attention_hidden_sizes, self.num_heads,
-                                                      self.attention_dropout)
+            enc_dec_attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
             feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -305,8 +304,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
     def build(self, input_shape):
         for _ in range(self.n_decoder_layers):
             self_attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            enc_dec_attention_layer = CustomAttention(self.attention_hidden_sizes, self.num_heads,
-                                                      self.attention_dropout)
+            enc_dec_attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
             feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")

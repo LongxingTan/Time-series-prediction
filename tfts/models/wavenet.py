@@ -3,9 +3,11 @@
 # @date: 2020-01
 # other implementations: https://github.com/sjvasquez/web-traffic-forecasting
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from tfts.layers.wavenet_layer import Dense3D, ConvTemporal
+from tfts.layers.cnn_layer import ConvTemporal
+from tfts.layers.dense_layer import Dense3D
 from tfts.layers.attention_layer import FullAttention
 
 params = {

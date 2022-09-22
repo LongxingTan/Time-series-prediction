@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 # import modin.pandas as pd   # faster Pandas by Berkeley
 import matplotlib.pyplot as plt
-from .features import transform2_lagged_feature,multi_step_y
+from .features import transform2_lagged_feature, multi_step_y
 from .norm_feature import FeatureNorm
 
 

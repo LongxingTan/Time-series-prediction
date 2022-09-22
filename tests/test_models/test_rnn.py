@@ -1,6 +1,7 @@
 
 import unittest
 import tensorflow as tf
+import tfts
 from tfts.models.rnn import RNN
 
 

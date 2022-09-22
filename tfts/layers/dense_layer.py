@@ -3,6 +3,7 @@
 
 import tensorflow as tf
 from tensorflow.keras import initializers, activations, constraints, regularizers
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout
 
 
 class Dense3D(tf.keras.layers.Layer):

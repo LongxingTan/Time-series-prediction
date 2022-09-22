@@ -12,6 +12,7 @@
 #   A Dual-Stage Attention-Based recurrent neural network for time series prediction. https://arxiv.org/abs/1704.02971
 
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN, GRU, LSTM
 from tfts.layers.attention_layer import FullAttention
@@ -21,11 +22,14 @@ params = {
     'rnn_type': 'gru',
     'bi_direction': False,
     'rnn_size': 64,
-    'dense_size': 16,
+    'dense_size': 64,
     'num_stacked_layers': 1,
     'scheduler_sampling': 0,
-    'use_attention': True,
     'skip_connect': False,
+    'use_attention': False,
+    'attention_sizes': 64,
+    'attention_heads': 2,
+    'attention_dropout': 0,
 }
 
 
@@ -43,7 +47,7 @@ class Seq2seq(object):
             rnn_size=params['rnn_size'],
             predict_sequence_length=predict_sequence_length,
             use_attention=params['use_attention'],
-            attention_size=params['attention_sizes'],
+            attention_sizes=params['attention_sizes'],
             attention_heads=params['attention_heads'],
             attention_dropout=params['attention_dropout']
         )
@@ -69,7 +73,7 @@ class Seq2seq(object):
 
         decoder_outputs = self.decoder(
             decoder_features,
-            decoder_init_input=x[:, -1],
+            decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
             scheduler_sampling=self.params['scheduler_sampling'],
@@ -102,7 +106,7 @@ class Encoder(tf.keras.layers.Layer):
 class Decoder1(tf.keras.layers.Layer):
     def __init__(self, rnn_type, rnn_size, predict_sequence_length=3,
                  use_attention=False,
-                 attention_size=32,
+                 attention_sizes=32,
                  attention_heads=1,
                  attention_dropout=0.0):
 
@@ -111,7 +115,7 @@ class Decoder1(tf.keras.layers.Layer):
         self.use_attention = use_attention
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
-        self.attention_sizev = attention_size
+        self.attention_sizes = attention_sizes
         self.attention_heads = attention_heads
         self.attention_dropout = attention_dropout
 
@@ -122,8 +126,8 @@ class Decoder1(tf.keras.layers.Layer):
             self.rnn = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
-            self.attention = CustomAttention(
-                hidden_size=self.attention_size,
+            self.attention = FullAttention(
+                hidden_size=self.attention_sizes,
                 num_heads=self.attention_heads,
                 attention_dropout=self.attention_dropout)
 
@@ -189,7 +193,7 @@ class Decoder2(tf.keras.layers.Layer):
         self.params = params
         self.rnn_cell = GRUCell(self.params['rnn_size'])
         self.dense = Dense(units=1)
-        self.attention = CustomAttention(hidden_size=32, num_heads=2, attention_dropout=0.0)
+        self.attention = FullAttention(hidden_size=32, num_heads=2, attention_dropout=0.0)
 
     def forward(self, decoder_feature, init_state, decoder_init_value,
                 encoder_output, predict_seq_length, teacher, use_attention):

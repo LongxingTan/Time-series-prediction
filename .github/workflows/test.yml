@@ -25,14 +25,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup macOS
-        if: runner.os == 'macOS'
-        run: |
-          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
-      - name: Setup macOS
-        if: runner.os == 'windows'
-        run: |
-          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
+#      - name: Setup macOS
+#        if: runner.os == 'macOS'
+#        run: |
+#          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
+#      - name: Setup macOS
+#        if: runner.os == 'windows'
+#        run: |
+#          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
       - name: Get full Python version
         id: full-python-version
         shell: bash
@@ -71,7 +71,7 @@ jobs:
 
       - name: Run unittest
         shell: bash
-        run: python -m unittest discover -s ./test  -p 'test_*.py'
+        run: python -m unittest discover -s ./tests  -p 'test_*.py'
 
       - name: Statistics
         if: success()
@@ -98,7 +98,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements_docs.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install dependencies
