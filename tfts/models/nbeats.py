@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-03
 # paper: https://arxiv.org/abs/1905.10437
-# other implementations: https://github.com/philipperemy/n-beats
-#                      : https://github.com/ElementAI/N-BEATS
 
 from collections import defaultdict
 import tensorflow as tf
 from tfts.layers.nbeats_layer import *
 
 
-params = defaultdict(stack_types=['trend_block', 'seasonality_block'],
-                     nb_blocks_per_stack=3,
-                     hidden_layer_units=256,
-                     thetas_dims=(4, 8),
-                     share_weights_in_stack=False,
-                     )
+params = defaultdict(
+    stack_types=['trend_block', 'seasonality_block'],
+    nb_blocks_per_stack=3,
+    hidden_layer_units=256,
+    thetas_dims=(4, 8),
+    share_weights_in_stack=False,
+)
 
 
-class NBeatsNet(object):
+class NBeats(object):
     def __init__(self, custom_model_params):
         params.update(custom_model_params)
         self.stack_types = params['stack_types']

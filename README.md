@@ -6,35 +6,32 @@
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods on TensorFlow.
+**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods in TensorFlow.
 - Flexible and powerful design for time series task
 - Advanced deep learning models supported
 - tfts documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 
-### Tutorial
+## Tutorial
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC) 
 
-install
+**install**
 ``` bash
 $ pip install tensorflow>=2.0.0
 $ pip install tfts
 ```
 
-usage
+**usage**
 ``` python
 import tensorflow as tf
 import tfts
 
 train, valid = tfts.load('sine')
-
 model = AutoModel('seq2seq')
-# train the model
-model.train(data)
-# predict new data
-model.predict(data)
 
+model.train(train, valid)
+model.predict(valid)
 ```
 
 

@@ -98,5 +98,5 @@ class SeasonalityBlock(NBeatsLayer):
         s1 = tf.cast(s1, tf.float32)
         s2 = tf.stack([tf.math.sin(2*math.pi*i*t) for i in range(p2)], axis=0)
         s2 = tf.cast(s2, tf.float32)
-        S = tf.concat([s1, s2], axis=0)
-        return tf.linalg.matmul(thetas, S, transpose_b=True)
+        s = tf.concat([s1, s2], axis=0)
+        return tf.linalg.matmul(thetas, s, transpose_b=True)

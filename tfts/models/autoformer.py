@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2021-03
 # paper: https://arxiv.org/pdf/2106.13008.pdf
 
 import numpy as np

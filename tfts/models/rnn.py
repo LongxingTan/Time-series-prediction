@@ -1,22 +1,9 @@
-"""
-- https://www.kaggle.com/code/konradb/ts-6-deep-learning-for-ts-rnn-and-friends#section-one
-
-- 不同单元 RNN/GRU/LSTM
-- 不同层数 1/2/。。。
-- 双向 bidirectional
-- 前置层 NA/BN/CNN
-- 后置层 bn/dropout/多加层数/激活函数
-- 增加不同特征
-- hidden参数
-- ESRNN
-
-- scheduler sampling: even mixed
-
-"""
+# -*- coding: utf-8 -*-
+# @author: Longxing Tan, tanlongxing888@163.com
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, GRUCell, LSTMCell, RNN, GRU, LSTM, BatchNormalization, TimeDistributed, \
-    Bidirectional, AveragePooling1D, Dropout
+from tensorflow.keras.layers import GRUCell, LSTMCell, GRU, LSTM, TimeDistributed, Bidirectional
+from tensorflow.keras.layers import Dense, BatchNormalization, AveragePooling1D, Dropout
 from tfts.layers.attention_layer import FullAttention
 
 params = {

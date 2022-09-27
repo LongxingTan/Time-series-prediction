@@ -13,14 +13,14 @@ class FullAttention(tf.keras.layers.Layer):
             raise ValueError("Hidden size ({}) must be divisible by the number of heads ({})."
                              .format(hidden_size, num_heads))
         super(FullAttention, self).__init__()
-        self.units = hidden_size
+        self.hidden_size = hidden_size
         self.num_heads = num_heads
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
-        self.dense_q = Dense(self.units, use_bias=False)
-        self.dense_k = Dense(self.units, use_bias=False)
-        self.dense_v = Dense(self.units, use_bias=False)
+        self.dense_q = Dense(self.hidden_size, use_bias=False)
+        self.dense_k = Dense(self.hidden_size, use_bias=False)
+        self.dense_v = Dense(self.hidden_size, use_bias=False)
         self.dropout = Dropout(rate=self.attention_dropout)
         super(FullAttention, self).build(input_shape)
 
@@ -62,7 +62,7 @@ class FullAttention(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'units': self.units,
+            'hidden_size': self.hidden_size,
             'num_heads': self.num_heads,
             'attention_dropout': self.attention_dropout
         }
@@ -90,9 +90,18 @@ class SparseAttention(tf.keras.layers.Layer):
     def __init__(self) -> None:
         super().__init__()
 
+    def build(self, input_shape):
+        super().build(input_shape)
+
+    def call(self, x):
+        return
+
+    def get_config(self):
+        base_config = super().get_config()
+        return base_config
+
 
 class ProbAttention(tf.keras.layers.Layer):
-    # https://github.com/manjimnav/Informer-Tensorflow/blob/main/models/attn.py
     def __init__(self) -> None:
         super().__init__()
 
@@ -102,7 +111,21 @@ class ProbAttention(tf.keras.layers.Layer):
     def call(self, x, x_mask=None):
         return
 
+    def get_config(self):
+        base_config = super().get_config()
+        return base_config
+
 
 class FastAttention(tf.keras.layers.Layer):
     def __init__(self):
         super().__init__()
+
+    def build(self, input_shape):
+        super().build(input_shape)
+
+    def call(self, x, x_mask=None):
+        return
+
+    def get_config(self):
+        base_config = super().get_config()
+        return base_config

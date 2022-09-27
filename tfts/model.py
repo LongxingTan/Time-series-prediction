@@ -1,14 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
 
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping,  ModelCheckpoint, TensorBoard
-from .models import Seq2seq, WaveNet, Transformer, Unet, NBeatsNet
-from .loss import Loss
-from .optimizer import Optimizer
+from tfts.models import Seq2seq, WaveNet, Transformer, Unet, NBeats
+from tfts.loss import Loss
+from tfts.optimizer import Optimizer
 
 
 def build_tfts_model(use_model, predict_sequence_length, custom_model_params=None):

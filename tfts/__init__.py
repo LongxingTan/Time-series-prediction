@@ -11,11 +11,11 @@ from tfts.data import load
 
 __all__ = [
     "AutoModel",
-    "build_tfts_model",
     "AutoConfig"
+    "build_tfts_model",
     "Trainer",
     "KerasTrainer",
-    "load"
+    "load",
 ]
 
 __version__ = "0.0.2"

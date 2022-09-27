@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 
-
-from warnings import filters
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import LayerNormalization, Dense, Dropout, SpatialDropout1D, BatchNormalization, \
-    AveragePooling1D, GRU
+from tensorflow.keras.layers import LayerNormalization, BatchNormalization, AveragePooling1D
+from tensorflow.keras.layers import Dense, Dropout, SpatialDropout1D, GRU
 from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding

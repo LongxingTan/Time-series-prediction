@@ -8,9 +8,9 @@
 
 
 **东流TFTS** (TensorFlow Time Series) 是一个时间序列的开源工具，采用TensorFlow框架，已支持多种深度学习SOTA模型。中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
-- 结构灵活给力，适配多种时间序列任务
-- [提供多套久经考验的深度学习模型](./examples)
-- [文档齐全，快速入门](https://time-series-prediction.readthedocs.io)
+- 结构灵活，适配多种时间序列任务
+- [多套久经考验的深度学习模型](./examples)
+- [快速入门](https://time-series-prediction.readthedocs.io)
 
 
 ## 安装

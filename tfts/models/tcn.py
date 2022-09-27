@@ -2,16 +2,11 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
-# paper:
-# other implementations: https://github.com/philipperemy/keras-tcn
-#                        https://github.com/locuslab/TCN
-#                        https://github.com/emreaksan/stcn
-
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
-from tfts.layers.cnn_layer import ConvTemporal
-from tfts.layers.dense_layer import Dense3D
+from tfts.layers.cnn_layer import ConvTemp
+from tfts.layers.dense_layer import DenseTemp
 
 
 params = {
@@ -30,8 +25,11 @@ class TCN(object):
         print(params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = Encoder(params['kernel_sizes'], params['dilation_rates'], params['filters'],
-                               params['dense_hidden_size'])
+        self.encoder = Encoder(
+            params['kernel_sizes'],
+            params['dilation_rates'],
+            params['filters'],
+            params['dense_hidden_size'])
         # self.dense2 = Dense(1)
         # self.dense3 = TimeDistributed(Dense(1))
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
@@ -89,14 +87,15 @@ class Encoder(object):
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
-            self.conv_times.append(ConvTemporal(filters=2 * filters,
-                                                kernel_size=kernel_size,
-                                                causal=True,
-                                                dilation_rate=dilation))
-        self.dense_time1 = Dense3D(units=filters, activation='tanh', name='encoder_dense_time1')
-        self.dense_time2 = Dense3D(units=filters + filters, name='encoder_dense_time2')
-        self.dense_time3 = Dense3D(units=dense_hidden_size, activation='relu', name='encoder_dense_time3')
-        self.dense_time4 = Dense3D(units=1, name='encoder_dense_time_4')
+            self.conv_times.append(ConvTemp(
+                filters=2 * filters,
+                kernel_size=kernel_size,
+                causal=True,
+                dilation_rate=dilation))
+        self.dense_time1 = DenseTemp(units=filters, activation='tanh', name='encoder_dense_time1')
+        self.dense_time2 = DenseTemp(units=filters + filters, name='encoder_dense_time2')
+        self.dense_time3 = DenseTemp(units=dense_hidden_size, activation='relu', name='encoder_dense_time3')
+        self.dense_time4 = DenseTemp(units=1, name='encoder_dense_time_4')
 
     def forward(self, x):
         """

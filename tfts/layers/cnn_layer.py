@@ -5,9 +5,8 @@ import tensorflow as tf
 from tensorflow.keras import initializers, activations, constraints, regularizers
 
 
-class ConvTemporal(tf.keras.layers.Layer):
+class ConvTemp(tf.keras.layers.Layer):
     """ Temporal convolutional layer
-
     """
     def __init__(
         self,
@@ -19,7 +18,8 @@ class ConvTemporal(tf.keras.layers.Layer):
         causal=True,
         kernel_initializer='glorot_uniform',
         name=None):
-        super(ConvTemporal, self).__init__(name=name)
+
+        super(ConvTemp, self).__init__(name=name)
         self.filters = filters
         self.kernel_size = kernel_size
         self.strides = strides
@@ -36,12 +36,12 @@ class ConvTemporal(tf.keras.layers.Layer):
             padding='valid',
             dilation_rate=self.dilation_rate,
             activation=self.activation)
-        super(ConvTemporal, self).build(input_shape)
+        super(ConvTemp, self).build(input_shape)
 
     def call(self, input):
         if self.causal:
             padding_size = (self.kernel_size - 1) * self.dilation_rate
-            # padding: 1st dim is batch, so [0,0]; 2nd dim is time, so [padding_size, 0]; 3rd dim is feature [0,0]
+            # padding: 1st dim is batch, [0,0]; 2nd dim is time, [padding_size, 0]; 3rd dim is feature [0,0]
             input = tf.pad(input, [[0, 0], [padding_size, 0], [0, 0]])
 
         output = self.conv(input)
@@ -55,16 +55,16 @@ class ConvTemporal(tf.keras.layers.Layer):
             'dilation_rate': self.dilation_rate,
             'casual': self.causal,
         }
-        base_config = super(ConvTemporal, self).get_config()
+        base_config = super(ConvTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
-class TemporalConvAtt(tf.keras.layers.Layer):
+class ConvAttTemp(tf.keras.layers.Layer):
     """  Temporal convolutional attention layer
 
     """
     def __init__(self):
-        super(TemporalConvAtt, self).__init__()
+        super(ConvAttTemp, self).__init__()
         self.temporal_conv = ConvTemporal()
         self.att = SelfAttention()
 
@@ -81,5 +81,5 @@ class TemporalConvAtt(tf.keras.layers.Layer):
         config = {
             'units': self.units,
         }
-        base_config = super(TemporalConvAtt, self).get_config()
+        base_config = super(ConvAttTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

@@ -2,16 +2,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 
-"""
-https://arxiv.org/pdf/2012.07436.pdf
-https://github.com/zhouhaoyi/Informer2020
-https://github.com/manjimnav/Informer-Tensorflow
-
-- static decoding
-- prob mask attention to accelerate
-- latest history for decoder feature, fill zero for predicted value
-- positional + token + temparal embedding
-"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv1D, BatchNormalization, LayerNormalization, Dropout, Activation, \

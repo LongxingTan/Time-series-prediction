@@ -89,7 +89,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, max_len):
+    def __init__(self, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.max_len = max_len
 
@@ -100,7 +100,8 @@ class PositionalEncoding(tf.keras.layers.Layer):
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
         with tf.name_scope('position_encode'):
-            position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])  # => batch_size * seq_length
+            # # => batch_size * seq_length
+            position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])
             position_enc = np.array(
                 [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)])
 
@@ -135,7 +136,7 @@ class TemporalEmbedding(tf.keras.layers.Layer):
         super().__init__()
         minite_size = 6  # every 10 minutes
         hour_size = 24  #
-        self.minite_embed = Embedding(minite_size, 3)
+        self.minute_embed = Embedding(minute_size, 3)
         self.hour_embed = Embedding(hour_size, 6)
 
     def call(self, x, **kwargs):
@@ -143,10 +144,10 @@ class TemporalEmbedding(tf.keras.layers.Layer):
 
 
 class DataEmbedding(tf.keras.layers.Layer):
-    def __init__(self, embed_size, dropout=0.1):
+    def __init__(self, embed_size, dropout=0):
         super(DataEmbedding, self).__init__()
         self.value_embedding = TokenEmbedding(embed_size)
-        self.positional_embedding = PositionalEncoding(embed_size)
+        self.positional_embedding = PositionalEncoding()
         self.dropout = Dropout(dropout)
 
     def build(self, input_shape):

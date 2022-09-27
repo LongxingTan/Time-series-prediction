@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-03
 
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, BatchNormalization, Activation, Dense, GlobalAveragePooling1D, Add, Multiply

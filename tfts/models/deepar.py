@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-05
-# paper:
-# Other implementation: https://github.com/arrigonialberto86/deepar
+
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Activation

@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
-# paper:
-# other implementations:
-#   https://github.com/Arturus/kaggle-web-traffic
-#   https://github.com/pytorch/fairseq
-#   https://github.com/LenzDu/Kaggle-Competition-Favorita/blob/master/seq2seq.py
-#   https://github.com/JEddy92/TimeSeries_Seq2Seq/blob/master/notebooks/TS_Seq2Seq_Intro.ipynb
-# Enhancement:
-#   Residual LSTM:Design of a Deep Recurrent Architecture for Distant Speech... https://arxiv.org/abs/1701.03360
-#   A Dual-Stage Attention-Based recurrent neural network for time series prediction. https://arxiv.org/abs/1704.02971
-
 
 import numpy as np
 import tensorflow as tf

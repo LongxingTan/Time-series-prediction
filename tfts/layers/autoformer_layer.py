@@ -94,5 +94,3 @@ class AutoCorrelation(tf.keras.layers.Layer):
         concat_delays_agg = tf.reshape(delays_agg, (batch_size, -1, self.d_model))
         output = self.dense(concat_delays_agg)
         return output
-
-

@@ -1,12 +1,7 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
 # paper: https://arxiv.org/pdf/1706.03762.pdf
-# other implementations: https://github.com/maxjcohen/transformer
-#                        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_tf_bert.py
-#                        https://github.com/facebookresearch/detr
-#                        https://github.com/zhouhaoyi/Informer2020
+
 
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization, Dense, Dropout, TimeDistributed
@@ -41,6 +36,7 @@ class Transformer(object):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
+        self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
 
         self.encoder = Encoder(
@@ -85,7 +81,8 @@ class Transformer(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:
             encoder_features = x = inputs
-            decoder_features = None
+            decoder_features = tf.cast(
+                tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32)
 
         encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
         memory = self.encoder(encoder_features, src_mask=None)

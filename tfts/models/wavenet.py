@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 # @date: 2020-01
-# other implementations: https://github.com/sjvasquez/web-traffic-forecasting
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from tfts.layers.cnn_layer import ConvTemporal
-from tfts.layers.dense_layer import Dense3D
+from tfts.layers.cnn_layer import ConvTemp
+from tfts.layers.dense_layer import DenseTemp
 from tfts.layers.attention_layer import FullAttention
 
 params = {
@@ -28,11 +27,16 @@ class WaveNet(object):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
-        self.encoder = Encoder(kernel_sizes=params['kernel_sizes'], dilation_rates=params['dilation_rates'],
-                               filters=params['filters'], dense_hidden_size=params['dense_hidden_size'])
-        self.decoder = Decoder1(filters=params['filters'], dilation_rates=params['dilation_rates'],
-                                dense_hidden_size=params['dense_hidden_size'],
-                                predict_sequence_length=predict_sequence_length)
+        self.encoder = Encoder(
+            kernel_sizes=params['kernel_sizes'],
+            dilation_rates=params['dilation_rates'],
+            filters=params['filters'],
+            dense_hidden_size=params['dense_hidden_size'])
+        self.decoder = Decoder1(
+            filters=params['filters'],
+            dilation_rates=params['dilation_rates'],
+            dense_hidden_size=params['dense_hidden_size'],
+            predict_sequence_length=predict_sequence_length)
 
     def __call__(self, inputs, teacher=None):
         if isinstance(inputs, (list, tuple)):
@@ -60,14 +64,15 @@ class Encoder(object):
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
-            self.conv_times.append(ConvTemporal(filters=2 * filters,
-                                                kernel_size=kernel_size,
-                                                causal=True,
-                                                dilation_rate=dilation))
-        self.dense_time1 = Dense3D(units=filters, activation='tanh', name='encoder_dense_time1')
-        self.dense_time2 = Dense3D(units=filters + filters, name='encoder_dense_time2')
-        self.dense_time3 = Dense3D(units=dense_hidden_size, activation='relu', name='encoder_dense_time3')
-        self.dense_time4 = Dense3D(units=1, name='encoder_dense_time_4')
+            self.conv_times.append(ConvTemp(
+                filters=2 * filters,
+                kernel_size=kernel_size,
+                causal=True,
+                dilation_rate=dilation))
+        self.dense_time1 = DenseTemp(units=filters, activation='tanh', name='encoder_dense_time1')
+        self.dense_time2 = DenseTemp(units=filters + filters, name='encoder_dense_time2')
+        self.dense_time3 = DenseTemp(units=dense_hidden_size, activation='relu', name='encoder_dense_time3')
+        self.dense_time4 = DenseTemp(units=1, name='encoder_dense_time_4')
 
     def forward(self, x):
         """

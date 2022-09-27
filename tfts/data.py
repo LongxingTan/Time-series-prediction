@@ -16,7 +16,6 @@ def load(name="sine", split=0.1):
     assert (split >= 0) & (split <= 1), "split is the ratio of valid dataset"
     if name == "sine":
         return load_sine(split=split)
-
     return
 
 
