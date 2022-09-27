@@ -14,16 +14,13 @@ class TCNTest(unittest.TestCase):
         self.assertEqual(y.shape, (16, ), 'incorrect output shape')
 
     def test_train(self):
-        data_loader = DataLoader('sine')
-        dataset = data_loader(params={}, data_dir=None, batch_size=8, training=True)
-        print(dataset.take(1))
-
-        inputs = tf.keras.layers.Input([30, 2])
-        cnn_model = CNN()
-        model = tf.keras.Model(inputs, cnn_model(inputs))
-
-        model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=3e-4))
-        model.fit(dataset, epochs=5)
+        train, valid = tfts.load_data('sine', test_size=0.1)
+        backbone = AutoModel('tcn', predict_sequence_length=8)
+        model = functools.partial(backbone.build_model, input_shape=[24, 2])
+        trainer = Trainer(model)
+        trainer.train(train, valid)
+        y_test = trainer.predict(valid[0])
+        self.assertEqual(y_test.shape, valid[1].shape)
 
 
 if __name__ == '__main__':

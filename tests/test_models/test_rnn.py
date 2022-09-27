@@ -15,12 +15,13 @@ class RNNTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, ), 'incorrect output shape')
 
     def test_train(self):
-        train_data, valid_data = tfts.load_data('passenger', split=0.2)
-        model = RNN(custom_model_params)
+        train, valid = tfts.load_data('sine', test_size=0.1)
+        backbone = AutoModel('rnn', predict_sequence_length=8)
+        model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = Trainer(model)
-        trainer.train(train_data, valid_data)
-        valid_pred = trainer.predict(valid_data)
-        self.assertEqual(valid_pred.shape, ())
+        trainer.train(train, valid)
+        y_test = trainer.predict(valid[0])
+        self.assertEqual(y_test.shape, valid[1].shape)
 
 
 if __name__ == '__main__':

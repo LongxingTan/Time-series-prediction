@@ -9,4 +9,11 @@ class TransformerTest(unittest.TestCase):
         custom_model_params = {}
         model = Transformer(custom_model_params)
 
-
+    def test_train(self):
+        train, valid = tfts.load_data('sine', test_size=0.1)
+        backbone = AutoModel('rnn', predict_sequence_length=8)
+        model = functools.partial(backbone.build_model, input_shape=[24, 2])
+        trainer = Trainer(model)
+        trainer.train(train, valid)
+        y_test = trainer.predict(valid[0])
+        self.assertEqual(y_test.shape, valid[1].shape)

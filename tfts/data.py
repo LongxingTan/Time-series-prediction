@@ -12,14 +12,14 @@ import numpy as np
 # )
 
 
-def load(name="sine", split=0.1):
-    assert (split >= 0) & (split <= 1), "split is the ratio of valid dataset"
+def load_data(name="sine", test_size=0.1):
+    assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
-        return load_sine(split=split)
+        return load_sine(test_size=test_size)
     return
 
 
-def load_sine(split):
+def load_sine(test_size):
     n_examples = 100
     sequence_length = 24
     predict_sequence_length = 8
@@ -46,8 +46,8 @@ def load_sine(split):
     y = np.array(y)[:, :, 0:1]
     print(x.shape, y.shape)
 
-    if split > 0:
-        slice = int(n_examples * (1 - split))
+    if test_size > 0:
+        slice = int(n_examples * (1 - test_size))
         x_train = x[: slice]
         y_train = y[: slice]
         x_valid = x[slice:]

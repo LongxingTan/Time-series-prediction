@@ -5,9 +5,49 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping,  ModelCheckpoint, TensorBoard
-from tfts.models import Seq2seq, WaveNet, Transformer, Unet, NBeats
+from tfts.models import RNN, Seq2seq, TCN, WaveNet, Bert, Transformer, Unet, NBeats
 from tfts.loss import Loss
 from tfts.optimizer import Optimizer
+
+
+class AutoModel(object):
+    def __init__(self, use_model, predict_sequence_length, custom_model_params=None, custom_model_head=None):
+        if use_model.lower() == 'seq2seq':
+            self.model = Seq2seq(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+        elif use_model.lower() == 'rnn':
+            self.model = RNN(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+
+        elif use_model.lower() == 'wavenet':
+            self.model = WaveNet(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+        elif use_model.lower() == 'tcn':
+            self.model = TCN(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+
+        elif use_model.lower() == 'transformer':
+            self.model = Transformer(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+        elif use_model.lower() == 'bert':
+            self.model = Bert(
+                predict_sequence_length=predict_sequence_length,
+                custom_model_params=custom_model_params)
+        else:
+            raise ValueError("unsupported model of {} yet".format(use_model))
+
+    def __call__(self, x):
+        return self.model(x)
+
+    def build_model(self, input_shape):
+        inputs = Input(input_shape)
+        outputs = self.model(inputs)
+        return tf.keras.Model(inputs, outputs)
 
 
 def build_tfts_model(use_model, predict_sequence_length, custom_model_params=None):
@@ -20,25 +60,3 @@ def build_tfts_model(use_model, predict_sequence_length, custom_model_params=Non
     else:
         raise ValueError("unsupported use_model of {} yet".format(use_model))
     return Model
-
-
-class AutoModel(object):
-    def __init__(self, use_model, predict_sequence_length, custom_model_params=None, custom_model_head=None):
-        if use_model.lower() == 'seq2seq':
-            self.model = Seq2seq(
-                predict_sequence_length=predict_sequence_length,
-                custom_model_params=custom_model_params)
-        elif use_model.lower() == 'wavenet':
-            self.model = WaveNet(
-                predict_sequence_length=predict_sequence_length,
-                custom_model_params=custom_model_params)
-        elif use_model.lower() == 'transformer':
-            self.model = Transformer(
-                predict_sequence_length=predict_sequence_length,
-                custom_model_params=custom_model_params)
-        else:
-            raise ValueError("unsupported use_model of {} yet".format(use_model))
-
-    def __call__(self, x):
-        return self.model(x)
-
