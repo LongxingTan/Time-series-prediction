@@ -6,12 +6,13 @@
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
+**东流TFTS** (TensorFlow Time Series) 是采用TensorFlow的时间序列开源工具，支持多种深度学习SOTA模型。
 
-**东流TFTS** (TensorFlow Time Series) 是一个时间序列的开源工具，采用TensorFlow框架，已支持多种深度学习SOTA模型。中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 - 结构灵活，适配多种时间序列任务
 - [多套久经考验的深度学习模型](./examples)
 - [快速入门](https://time-series-prediction.readthedocs.io)
 
+中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 
 ## 安装
 ``` bash
@@ -24,14 +25,15 @@ pip install tfts
 ``` python
 import tensorflow as tf
 import tfts
+from tfts import AutoModel, KerasTrainer
 
-data = tfts.load('passenger')
-x_train, y_train
-model = AutoModel('seq2seq')
-# train the model
-model.train(data)
-# predict new data
-model.predict(data)
+train, valid = tfts.load_data('sine')
+backbone = AutoModel('seq2seq')
+model = functools.partial(backbone.build_model, input_shape=[24, 2])
+
+trainer = KerasTrainer(model)
+trainer.train(train, valid)
+trainer.predict(valid[0])
 ```
 
 

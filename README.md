@@ -38,7 +38,6 @@ trainer.predict(valid[0])
 ```
 
 
-
 ## Examples
 
 - [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
@@ -65,7 +64,24 @@ More demos
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
 - [Parameters tuning by optuna](./examples/run_optuna.py)
-- [Serving by tf-serving](./examples/)
+- [Serving by tf-serving](./examples)
+
+## Comparison
+The performance is evaluated by this repo's implementation, not officially.
+
+
+| Model | [Web Traffic<sup>mape</sup>]() | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sub>75</sub><sup>val</sup> |
+| :-- | :-: | :-: | :-: | :-: | 
+| [RNN]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
+| [TCN]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Wavenet]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Bert]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Transformer]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Informer]() | 672 | 47.7% |52.6% | 61.4% | 
+| [Autoformer]() | 672 | 47.7% |52.6% | 61.4% | 
+| [n-beats]() | 672 | 47.7% |52.6% | 61.4% | 
+| [U-net]() | 672 | 47.7% |52.6% | 61.4% |
 
 
 ## Citation

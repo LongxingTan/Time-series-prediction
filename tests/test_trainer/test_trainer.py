@@ -1,13 +1,23 @@
 
 import unittest
-from tfts.trainer import Trainer
+from absl import flags
+from tfts.trainer import Trainer, KerasTrainer
+
+FLAGS = flags.FLAGS
 
 
 class TrainerTest(unittest.TestCase):
     def setUp(self):
-        batch_size = 128
+        FLAGS.n_epochs = 10
+        batch_size = 32
+        learning_rate = 0.0003
+        model_dir = ''
 
     def tearDown(self):
+        pass
+
+    def test_trainer_basic(self):
+        # 1gpu, no dist, no
         pass
 
     def test_trainer_no_dist_strategy(self):
@@ -37,4 +47,7 @@ class TrainerTest(unittest.TestCase):
 
 class KerasTrainerTest(unittest.TestCase):
     def setUp(self):
+        pass
+
+    def tearDown(self):
         pass

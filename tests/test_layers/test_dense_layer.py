@@ -5,7 +5,7 @@ from tfts.layers.dense_layer import *
 
 
 class DenseLayerTest(unittest.TestCase):
-    def test_densetemp(self):
+    def test_dense_temp(self):
         pass
 
     def test_ffn(self):

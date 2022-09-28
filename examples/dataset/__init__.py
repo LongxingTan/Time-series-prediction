@@ -8,4 +8,3 @@ class AutoData(object):
         pass
 
 
-
