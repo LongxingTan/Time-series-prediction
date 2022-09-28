@@ -1,6 +1,6 @@
 
 import unittest
-from examples.dataset import read_wtf_data
+from examples.dataset import read_web_traffic
 
 
 class WebTrafficTest(unittest.TestCase):

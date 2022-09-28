@@ -153,6 +153,6 @@ if __name__ == '__main__':
     # x,y=prepare_data.get_examples(data_dir,sample=0.8,plot=True,model_dir='../../models')
     # print(x.shape,y.shape)
 
-    data_reader=SineData(params={})
+    data_reader = SineData(params={})
     x, y = data_reader.get_examples(sample=1, plot=True)
     print(x.shape, y.shape)

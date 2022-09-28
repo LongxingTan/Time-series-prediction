@@ -75,7 +75,7 @@ The performance is evaluated by this repo's implementation, not officially.
 | [RNN]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
 | [TCN]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Wavenet]() | 672 | 47.7% |52.6% | 61.4% | 
+| [WaveNet]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Bert]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Transformer]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Informer]() | 672 | 47.7% |52.6% | 61.4% | 

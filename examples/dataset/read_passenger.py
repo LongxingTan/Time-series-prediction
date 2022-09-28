@@ -5,8 +5,8 @@
 
 import functools
 import tensorflow as tf
-from .read_sin_data import PassengerData, SineData
-from .read_wtf_data import WebDataReader
+from .read_sine import PassengerData, SineData
+from .read_web_traffic import WebDataReader
 
 
 class DataLoader(object):
