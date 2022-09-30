@@ -6,4 +6,6 @@ nbsphinx==0.8.8
 sphinx_markdown_tables
 pydata_sphinx_theme==0.8.0
 docutils
-pandoc 
+pandoc
+sphinx-autobuild
+

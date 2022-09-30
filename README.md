@@ -66,11 +66,10 @@ More demos
 - [Parameters tuning by optuna](./examples/run_optuna.py)
 - [Serving by tf-serving](./examples)
 
-## Comparison
-The performance is evaluated by this repo's implementation, not officially.
+## Performance
+The performance is evaluated by this lib's implementation, not official
 
-
-| Model | [Web Traffic<sup>mape</sup>]() | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sub>75</sub><sup>val</sup> |
+| Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>nwrmsle</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sub>50</sub><sup>val</sup>]() | [ventilator<sub>75</sub><sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: | 
 | [RNN]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
@@ -81,7 +80,7 @@ The performance is evaluated by this repo's implementation, not officially.
 | [Informer]() | 672 | 47.7% |52.6% | 61.4% | 
 | [Autoformer]() | 672 | 47.7% |52.6% | 61.4% | 
 | [n-beats]() | 672 | 47.7% |52.6% | 61.4% | 
-| [U-net]() | 672 | 47.7% |52.6% | 61.4% |
+| [U-Net]() | 672 | 47.7% |52.6% | 61.4% |
 
 
 ## Citation

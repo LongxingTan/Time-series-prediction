@@ -3,43 +3,45 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to tfts's documentation!
+TFTS Documentation
 ==================================================
 .. raw:: html
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-TFTS(TensorFlow Time Series) aims to ease state-of-the-art
-timeseries forecasting with deep learning for both business cases and
-data competitions. It's similar to the `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_ and `gluon-ts <https://github.com/awslabs/gluon-ts/>`_, but with `TensorFlow <https://www.tensorflow.org/>`_. 
-Specifically, the package provides
+TFTS (TensorFlow Time Series) supports state-of-the-art deep learning
+time series models for both business cases and data competitions. The package provides
 
-* A timeseries dataset class which abstracts handling variable transformations, missing values,
-  randomized subsampling, multiple history lengths, etc.
-* A base model class which provides basic training of timeseries models along with logging in tensorboard
-  and generic visualizations such actual vs predictions and dependency plots
-* Multiple neural network architectures for timeseries forecasting that have been enhanced
-  for real-world deployment and come with in-built interpretation capabilities
-* Multi-horizon timeseries metrics
-* Ranger optimizer for faster model training
+* Flexible and powerful design for time series task
+* Advanced SOTA deep learning models supported
+* tfts documentation lives at :ref:`time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`
 
+Quick Start
+--------------------
+Visit :ref:`Quick start <quick-start>` to learn more about the package and :ref:`detailed installation instructions<install>`.
 
-If you do not have tensorflow already installed, follow the :ref:`detailed installation instructions<install>`.
+.. code-block:: python
 
-Otherwise, proceed to install the package by executing
-
-.. code-block::
-
+   pip install tensorflow
    pip install tfts
 
-or to install via conda
 
-.. code-block::
+Models
+---------
+The tfts library supports the SOTA deep learning models for time series.
 
-   conda install tfts -c conda-forge
+- `The TFTS BERT model <https://github.com/LongxingTan/KDDCup2022-Baidu>`_ wins the 3rd place in `Baidu KDD Cup 2022 <https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction>`_
+- `The TFTS Seq2Seq mode <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_ wins the 4th place of `Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_
 
-Vist :ref:`Getting started <getting-started>` to learn more about the package and detailled installation instruction.
-The :ref:`Tutorials <tutorials>` section provides guidance on how to use models and implement new ones.
+
+Examples
+--------
+
+
+
+
+
+The :ref:`Tutorial <tutorial>` section provides guidance on how to use models and implement new ones.
 
 
 .. toctree::
@@ -47,15 +49,10 @@ The :ref:`Tutorials <tutorials>` section provides guidance on how to use models 
    :hidden:
    :maxdepth: 6
 
-   getting-started
-   tutorials
-   data
+   quick-start
+   tutorial
    models
-   metrics
-   faq
-   contribute
-   api
-   competition
+   examples
    CHANGELOG
    GitHub <https://github.com/LongxingTan/Time-series-prediction>
 

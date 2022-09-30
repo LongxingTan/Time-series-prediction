@@ -9,7 +9,7 @@ from tfts.data import load_data
 
 __all__ = [
     "AutoModel",
-    "AutoConfig"
+    "AutoConfig",
     "build_tfts_model",
     "Trainer",
     "KerasTrainer",

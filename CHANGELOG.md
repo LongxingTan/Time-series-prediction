@@ -1,12 +1,20 @@
 # Release Notes
 
-## v0.1.0 Initial release (15/05/2022)
+## v0.0.1 Initial release (15/05/2022)
 
 ### Added
 - model support
     - rnn
     - tcn
-
+    - bert
+    - seq2seq
+    - wavenet
+    - transformer
+    - unet
+- train
+    - trainer
+    - kerastrainer    
+    
 ### Modified
 
 

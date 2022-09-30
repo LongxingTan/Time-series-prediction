@@ -7,7 +7,7 @@
    :members:
    :show-inheritance:
    :exclude-members: __init__
-   {% set allow_inherited = "zero_grad" not in inherited_members %}  {# no inheritance for torch.nn.Modules #}
+   {% set allow_inherited = "zero_grad" not in inherited_members %}
    {%if allow_inherited %}
    :inherited-members:
    {% endif %}

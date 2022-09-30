@@ -1,7 +1,7 @@
-Getting started
+Quick start
 ===============
 
-.. _getting-started:
+.. _quick-start:
 
 
 Installation
@@ -13,7 +13,7 @@ If you are working windows, you need to first install TensorFlow with
 
 ``pip install tensorflow``.
 
-Otherwise, you can proceed with
+Then, you can proceed with
 
 ``pip install tfts``
 
@@ -26,7 +26,7 @@ Usage
 
 The general setup for training and testing a model is
 
-#. Create training dataset using :py:class:`~data.timeseries.TimeSeriesDataSet`.
+#. Build training dataset using :py:class:`~data.timeseries.TimeSeriesDataSet`.
 #. Using the training dataset, create a validation dataset with :py:meth:`~data.timeseries.TimeSeriesDataSet.from_dataset`.
    Similarly, a test dataset or later a dataset for inference can be created. You can store the dataset parameters
    directly if you do not wish to load the entire training dataset at inference time.
@@ -41,7 +41,7 @@ The general setup for training and testing a model is
 #. Load the model from the model checkpoint and apply it to new data.
 
 
-The :ref:`Tutorials <tutorials>` section provides detailled guidance and examples on how to use models and implement new ones.
+The :ref:`Tutorials <tutorials>` section provides detailed guidance and examples on how to use models and implement new ones.
 
 
 Example
