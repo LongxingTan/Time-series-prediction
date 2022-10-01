@@ -14,16 +14,21 @@ time series models for both business cases and data competitions. The package pr
 
 * Flexible and powerful design for time series task
 * Advanced SOTA deep learning models supported
-* tfts documentation lives at :ref:`time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`
+* tfts documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
 
 Quick Start
 --------------------
 Visit :ref:`Quick start <quick-start>` to learn more about the package and :ref:`detailed installation instructions<install>`.
 
-.. code-block:: python
+.. code-block:: shell
 
-   pip install tensorflow
-   pip install tfts
+   $ pip install tensorflow
+   $ pip install tfts
+
+
+Tutorials
+----------
+The :ref:`Tutorials <tutorials>` section provides guidance on how to use models and implement new ones.
 
 
 Models
@@ -32,16 +37,13 @@ The tfts library supports the SOTA deep learning models for time series.
 
 - `The TFTS BERT model <https://github.com/LongxingTan/KDDCup2022-Baidu>`_ wins the 3rd place in `Baidu KDD Cup 2022 <https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction>`_
 - `The TFTS Seq2Seq mode <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_ wins the 4th place of `Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_
+- :ref:`Learn more models <models>`
 
 
-Examples
---------
+Tricks
+------
+Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the prediction performance.
 
-
-
-
-
-The :ref:`Tutorial <tutorial>` section provides guidance on how to use models and implement new ones.
 
 
 .. toctree::
@@ -50,9 +52,8 @@ The :ref:`Tutorial <tutorial>` section provides guidance on how to use models an
    :maxdepth: 6
 
    quick-start
-   tutorial
+   tutorials
    models
-   examples
+   tricks
    CHANGELOG
    GitHub <https://github.com/LongxingTan/Time-series-prediction>
-

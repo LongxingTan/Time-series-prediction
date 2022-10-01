@@ -1,4 +1,4 @@
-# Release Notes
+# Release notes
 
 ## v0.0.1 Initial release (15/05/2022)
 
@@ -13,7 +13,7 @@
     - unet
 - train
     - trainer
-    - kerastrainer    
+    - keras_trainer    
     
 ### Modified
 
