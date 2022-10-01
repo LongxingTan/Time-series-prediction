@@ -2,22 +2,23 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 
 import math
+
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, AveragePooling1D, Dropout
+from tensorflow.keras.layers import AveragePooling1D, Conv1D, Dense, Dropout
 
 
 class SeriesDecomp(tf.keras.layers.Layer):
     def __init__(self, kernel_size) -> None:
         super().__init__()
         self.kernel_size = kernel_size
-        self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding='same')
+        self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
 
     def call(self, x):
         x_ma = self.moving_avg(x)
         return x - x_ma, x_ma
 
 
-""" 
+"""
 TODO: v not used in process
 """
 
@@ -31,11 +32,11 @@ class AutoCorrelation(tf.keras.layers.Layer):
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
-        self.wq = Dense(self.d_model, name='q')
-        self.wk = Dense(self.d_model, name='k')
-        self.wv = Dense(self.d_model, name='v')
+        self.wq = Dense(self.d_model, name="q")
+        self.wk = Dense(self.d_model, name="k")
+        self.wv = Dense(self.d_model, name="v")
         self.drop = Dropout(self.attention_dropout)
-        self.dense = Dense(self.d_model, name='project')
+        self.dense = Dense(self.d_model, name="project")
 
     def time_delay_agg(self, q, k, v):
         batch_size = tf.shape(q)[0]
@@ -82,7 +83,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         S = tf.shape(v)[2]
 
         if tf.math.greater(L, S):
-            zeros = tf.zeros_like(q[:, :, :(L - S), :])
+            zeros = tf.zeros_like(q[:, :, : (L - S), :])
             v = tf.concat([v, zeros], axis=2)
             k = tf.concat([k, zeros], axis=2)
         else:

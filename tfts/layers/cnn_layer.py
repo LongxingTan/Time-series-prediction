@@ -2,12 +2,14 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 
 import tensorflow as tf
-from tensorflow.keras import initializers, activations, constraints, regularizers
+from tensorflow.keras import activations, constraints, initializers, regularizers
+
+from tfts.layers.attention_layer import FullAttention, SelfAttention
 
 
 class ConvTemp(tf.keras.layers.Layer):
-    """ Temporal convolutional layer
-    """
+    """Temporal convolutional layer"""
+
     def __init__(
         self,
         filters,
@@ -16,8 +18,9 @@ class ConvTemp(tf.keras.layers.Layer):
         dilation_rate=1,
         activation=None,
         causal=True,
-        kernel_initializer='glorot_uniform',
-        name=None):
+        kernel_initializer="glorot_uniform",
+        name=None,
+    ):
 
         super(ConvTemp, self).__init__(name=name)
         self.filters = filters
@@ -33,9 +36,10 @@ class ConvTemp(tf.keras.layers.Layer):
             kernel_size=self.kernel_size,
             kernel_initializer=self.kernel_initializer,
             filters=self.filters,
-            padding='valid',
+            padding="valid",
             dilation_rate=self.dilation_rate,
-            activation=self.activation)
+            activation=self.activation,
+        )
         super(ConvTemp, self).build(input_shape)
 
     def call(self, input):
@@ -49,27 +53,26 @@ class ConvTemp(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'filters': self.filters,
-            'kernel_size': self.kernel_size,
-            'strides': self.strides,
-            'dilation_rate': self.dilation_rate,
-            'casual': self.causal,
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "strides": self.strides,
+            "dilation_rate": self.dilation_rate,
+            "casual": self.causal,
         }
         base_config = super(ConvTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class ConvAttTemp(tf.keras.layers.Layer):
-    """  Temporal convolutional attention layer
+    """Temp convolutional attention layer"""
 
-    """
     def __init__(self):
         super(ConvAttTemp, self).__init__()
-        self.temporal_conv = ConvTemporal()
+        self.temporal_conv = ConvTemp()
         self.att = SelfAttention()
 
     def build(self, input_shape):
-        super(TemporalConvAtt, self).build(input_shape)
+        super(ConvAttTemp, self).build(input_shape)
 
     def call(self, inputs):
         x = inputs
@@ -79,7 +82,7 @@ class ConvAttTemp(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'units': self.units,
+            "units": self.units,
         }
         base_config = super(ConvAttTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

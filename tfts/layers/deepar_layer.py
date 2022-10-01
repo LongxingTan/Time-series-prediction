@@ -3,7 +3,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dropout, Dense
+from tensorflow.keras.layers import Conv1D, Dense, Dropout
 
 
 class GaussianLayer(tf.keras.layers.Layer):
@@ -13,18 +13,14 @@ class GaussianLayer(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         in_channels = input_shape[2]
-        self.weight1 = self.add_weight(name='gauss_w1',
-                                       shape=(in_channels, self.units),
-                                       initializer=tf.keras.initializers.GlorotNormal())
-        self.weight2 = self.add_weight(name='gauss_w2',
-                                       shape=(in_channels, self.units),
-                                       initializer=tf.keras.initializers.GlorotNormal())
-        self.bias1 = self.add_weight(name='gauss_b1',
-                                     shape=(self.units,),
-                                     initializer=tf.keras.initializers.Zeros())
-        self.bias2 = self.add_weight(name='gauss_b2',
-                                     shape=(self.units,),
-                                     initializer=tf.keras.initializers.Zeros())
+        self.weight1 = self.add_weight(
+            name="gauss_w1", shape=(in_channels, self.units), initializer=tf.keras.initializers.GlorotNormal()
+        )
+        self.weight2 = self.add_weight(
+            name="gauss_w2", shape=(in_channels, self.units), initializer=tf.keras.initializers.GlorotNormal()
+        )
+        self.bias1 = self.add_weight(name="gauss_b1", shape=(self.units,), initializer=tf.keras.initializers.Zeros())
+        self.bias2 = self.add_weight(name="gauss_b2", shape=(self.units,), initializer=tf.keras.initializers.Zeros())
         super(GaussianLayer, self).build(input_shape)
 
     def call(self, x):

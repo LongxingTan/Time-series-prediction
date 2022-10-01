@@ -1,6 +1,8 @@
-
 import unittest
+
 import tensorflow as tf
+
+from tfts import AutoModel, Trainer
 from tfts.models.wavenet import WaveNet
 
 

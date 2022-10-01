@@ -2,20 +2,23 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 
 import tensorflow as tf
-from tensorflow.keras import initializers, activations, constraints, regularizers
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout
+from tensorflow.keras import activations, constraints, initializers, regularizers
+from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
 
 
 class DenseTemp(tf.keras.layers.Layer):
-    def __init__(self, units,
-                 activation=None,
-                 kernel_initializer='glorot_uniform',
-                 kernel_regularizer=None,
-                 kernel_constraint=None,
-                 use_bias=True,
-                 bias_initializer="zeros",
-                 trainable=True,
-                 name=None):
+    def __init__(
+        self,
+        units,
+        activation=None,
+        kernel_initializer="glorot_uniform",
+        kernel_regularizer=None,
+        kernel_constraint=None,
+        use_bias=True,
+        bias_initializer="zeros",
+        trainable=True,
+        name=None,
+    ):
         super(DenseTemp, self).__init__(trainable=trainable, name=name)
         self.units = units
         self.activation = activations.get(activation)
@@ -28,24 +31,22 @@ class DenseTemp(tf.keras.layers.Layer):
     def build(self, input_shape):
         inputs_units = int(input_shape[-1])  # input.get_shape().as_list()[-1]
         self.kernel = self.add_weight(
-            'kernel',
+            "kernel",
             shape=[inputs_units, self.units],
             initializer=self.kernel_initializer,
             regularizer=self.kernel_regularizer,
             constraint=self.kernel_constraint,
             dtype=tf.float32,
-            trainable=True)
+            trainable=True,
+        )
         if self.use_bias:
             self.bias = self.add_weight(
-                "bias",
-                shape=[self.units],
-                initializer=self.bias_initializer,
-                dtype=self.dtype,
-                trainable=True)
+                "bias", shape=[self.units], initializer=self.bias_initializer, dtype=self.dtype, trainable=True
+            )
         super(DenseTemp, self).build(input_shape)
 
     def call(self, inputs):
-        output = tf.einsum('ijk,kl->ijl', inputs, self.kernel)
+        output = tf.einsum("ijk,kl->ijl", inputs, self.kernel)
 
         if self.use_bias:
             output += self.bias
@@ -56,7 +57,7 @@ class DenseTemp(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'units': self.units,
+            "units": self.units,
         }
         base_config = super(DenseTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -70,7 +71,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.relu_dropout = relu_dropout
 
     def build(self, input_shape):
-        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation='relu')
+        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
         self.drop = Dropout(self.relu_dropout)
         super(FeedForwardNetwork, self).build(input_shape)

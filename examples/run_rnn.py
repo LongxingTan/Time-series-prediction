@@ -1,10 +1,10 @@
-
+from config import parse_args
+from dataset import AutoData
 import numpy as np
 import tensorflow as tf
-from tfts import AutoModel, AutoConfig, KerasTrainer
-from dataset import AutoData
-from config import parse_args
 from utils import set_seed
+
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 
 def build_data():
@@ -19,8 +19,7 @@ def run_train(args):
     return
 
 
-if __name__ == '__main__':
-    args = parse_args()
-    set_seed(args.seed)
-    run_train(args)
-
+# if __name__ == "__main__":
+#     args = parse_args()
+#     set_seed(args.seed)
+#     run_train(args)

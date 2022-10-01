@@ -2,16 +2,17 @@
 # @author: Longxing Tan
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dropout, Dense, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
 
 class FullAttention(tf.keras.layers.Layer):
-    """ Multi-head attention layer
-    """
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.):
+    """Multi-head attention layer"""
+
+    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
         if hidden_size % num_heads:
-            raise ValueError("Hidden size ({}) must be divisible by the number of heads ({})."
-                             .format(hidden_size, num_heads))
+            raise ValueError(
+                "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
+            )
         super(FullAttention, self).__init__()
         self.hidden_size = hidden_size
         self.num_heads = num_heads
@@ -62,16 +63,16 @@ class FullAttention(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'hidden_size': self.hidden_size,
-            'num_heads': self.num_heads,
-            'attention_dropout': self.attention_dropout
+            "hidden_size": self.hidden_size,
+            "num_heads": self.num_heads,
+            "attention_dropout": self.attention_dropout,
         }
         base_config = super(FullAttention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class SelfAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.):
+    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
         super(SelfAttention, self).__init__()
         self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 

@@ -4,7 +4,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dropout, Dense, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
 
 class DRNN(tf.keras.layers.Layer):

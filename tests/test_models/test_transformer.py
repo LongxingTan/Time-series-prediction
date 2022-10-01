@@ -1,6 +1,10 @@
-
+import functools
 import unittest
+
 import tensorflow as tf
+
+import tfts
+from tfts import AutoModel, Trainer
 from tfts.models.transformer import Transformer
 
 
@@ -8,10 +12,13 @@ class TransformerTest(unittest.TestCase):
     def test_model(self):
         custom_model_params = {}
         model = Transformer(custom_model_params)
+        x = tf.random.normal([16, 160, 36])
+        y = model(x)
+        self.assertEqual(y.shape, (16,), "incorrect output shape")
 
     def test_train(self):
-        train, valid = tfts.load_data('sine', test_size=0.1)
-        backbone = AutoModel('rnn', predict_sequence_length=8)
+        train, valid = tfts.load_data("sine", test_size=0.1)
+        backbone = AutoModel("rnn", predict_sequence_length=8)
         model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = Trainer(model)
         trainer.train(train, valid)

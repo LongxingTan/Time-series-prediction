@@ -1,11 +1,13 @@
-
 import unittest
-from tfts.layers.embed_layer import *
+
+import tensorflow as tf
+
+from tfts.layers.embed_layer import DataEmbedding, PositionalEmbedding, PositionalEncoding, TokenEmbedding
 
 
 class EmbedLayerTest(unittest.TestCase):
     def test_token_embedding(self):
-        vocab_size = 50
+        # vocab_size = 50
         hidden_size = 64
         layer = TokenEmbedding(hidden_size)
 
@@ -32,4 +34,3 @@ class EmbedLayerTest(unittest.TestCase):
         x = tf.ones([2, 128, 10])
         y = layer(x)
         self.assertEqual(y.shape, (2, 128, embed_size))
-

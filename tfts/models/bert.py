@@ -4,26 +4,33 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import LayerNormalization, BatchNormalization, AveragePooling1D
-from tensorflow.keras.layers import Dense, Dropout, SpatialDropout1D, GRU
+from tensorflow.keras.layers import (
+    GRU,
+    AveragePooling1D,
+    BatchNormalization,
+    Dense,
+    Dropout,
+    LayerNormalization,
+    SpatialDropout1D,
+)
+
 from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
-
 params = {
-    'n_encoder_layers': 1,
-    'use_token_embedding': False,
-    'attention_hidden_sizes': 32 * 1,
-    'num_heads': 2,
-    'attention_dropout': 0.,
-    'ffn_hidden_sizes': 32 * 1,
-    'ffn_filter_sizes': 32 * 1,
-    'ffn_dropout': 0.,
-    'layer_postprocess_dropout': 0.,
-    'scheduler_sampling': 1,  # 0 means teacher forcing, 1 means use last prediction
-    'skip_connect': False
+    "n_encoder_layers": 1,
+    "use_token_embedding": False,
+    "attention_hidden_sizes": 32 * 1,
+    "num_heads": 2,
+    "attention_dropout": 0.0,
+    "ffn_hidden_sizes": 32 * 1,
+    "ffn_filter_sizes": 32 * 1,
+    "ffn_dropout": 0.0,
+    "layer_postprocess_dropout": 0.0,
+    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
+    "skip_connect": False,
 }
 
 
@@ -36,28 +43,30 @@ class Bert(object):
         print(params)
 
         self.encoder_embedding = TokenEmbedding(
-            params['attention_hidden_sizes'])  # DataEmbedding(params['attention_hidden_sizes'])
+            params["attention_hidden_sizes"]
+        )  # DataEmbedding(params['attention_hidden_sizes'])
         # self.spatial_drop = SpatialDropout1D(0.1)
         # self.tcn = ConvTemporal(kernel_size=2, filters=32, dilation_rate=6)
         self.encoder = Encoder(
-            params['n_encoder_layers'],
-            params['attention_hidden_sizes'],
-            params['num_heads'],
-            params['attention_dropout'],
-            params['ffn_hidden_sizes'],
-            params['ffn_filter_sizes'],
-            params['ffn_dropout'])
+            params["n_encoder_layers"],
+            params["attention_hidden_sizes"],
+            params["num_heads"],
+            params["attention_dropout"],
+            params["ffn_hidden_sizes"],
+            params["ffn_filter_sizes"],
+            params["ffn_dropout"],
+        )
 
         self.project1 = Dense(predict_sequence_length, activation=None)
         # self.project1 = Dense(48, activation=None)
 
         # self.bn1 = BatchNormalization()
         self.drop1 = Dropout(0.25)
-        self.dense1 = Dense(512, activation='relu')
+        self.dense1 = Dense(512, activation="relu")
 
         # self.bn2 = BatchNormalization()
         self.drop2 = Dropout(0.25)
-        self.dense2 = Dense(1024, activation='relu')
+        self.dense2 = Dense(1024, activation="relu")
 
         # self.forecasting = Forecasting(predict_sequence_length, self.params)
         # self.pool1 = AveragePooling1D(pool_size=6)
@@ -72,8 +81,8 @@ class Bert(object):
     def __call__(self, inputs, teacher=None):
         # inputs:
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            # encoder_features = tf.concat([x, encoder_features], axis=-1)
+            x, encoder_features, _ = inputs
+            encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
             decoder_features = None
@@ -124,15 +133,16 @@ class Forecasting(tf.keras.layers.Layer):
     def __init__(self, predict_sequence_length, params) -> None:
         super().__init__()
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
+        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
         self.encoder = Encoder(
-            params['n_encoder_layers'],
-            params['attention_hidden_sizes'],
-            params['num_heads'],
-            params['attention_dropout'],
-            params['ffn_hidden_sizes'],
-            params['ffn_filter_sizes'],
-            params['ffn_dropout'])
+            params["n_encoder_layers"],
+            params["attention_hidden_sizes"],
+            params["num_heads"],
+            params["attention_dropout"],
+            params["ffn_hidden_sizes"],
+            params["ffn_filter_sizes"],
+            params["ffn_dropout"],
+        )
         self.dense = Dense(1)
 
     def call(self, src, teacher=None, training=None):
@@ -145,8 +155,8 @@ class Forecasting(tf.keras.layers.Layer):
             out = self.dense(out)
             outputs.append(out)
             if training:
-                p = np.random.uniform(low=0, high=1, size=1)[0]
-                src = tf.concat([src[:, 1:], teacher[:, i: i + 1]], axis=1)
+                # p = np.random.uniform(low=0, high=1, size=1)[0]
+                src = tf.concat([src[:, 1:], teacher[:, i : i + 1]], axis=1)
             else:
                 src = tf.concat([src[:, 1:], out], axis=1)
 

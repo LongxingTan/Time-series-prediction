@@ -1,7 +1,8 @@
-
 import unittest
+
 import tensorflow as tf
-from tfts.layers.attention_layer import *
+
+from tfts.layers.attention_layer import FullAttention, SelfAttention
 
 
 class AttentionLayerTest(unittest.TestCase):

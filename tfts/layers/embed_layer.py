@@ -3,7 +3,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, LayerNormalization, Embedding, Dropout, SpatialDropout1D, LSTM, GRU
+from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding, LayerNormalization, SpatialDropout1D
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
@@ -11,25 +11,25 @@ class TokenEmbedding(tf.keras.layers.Layer):
     x: batch * time * feature
     outout: batch * time * new_attention_size）
     """
+
     def __init__(self, embed_size):
         super(TokenEmbedding, self).__init__()
         self.embed_size = embed_size
 
     def build(self, input_shape):
         self.token_weights = self.add_weight(
-            name='token_weights',
+            name="token_weights",
             shape=[input_shape[-1], self.embed_size],
-            initializer=tf.random_normal_initializer(mean=0., stddev=self.embed_size ** -0.5))
+            initializer=tf.random_normal_initializer(mean=0.0, stddev=self.embed_size**-0.5),
+        )
         super(TokenEmbedding, self).build(input_shape)
 
     def call(self, x):
-        y = tf.einsum('bsf,fk->bsk', x, self.token_weights)
+        y = tf.einsum("bsf,fk->bsk", x, self.token_weights)
         return y
 
     def get_config(self):
-        config = {
-            'embed_size': self.embed_size
-        }
+        config = {"embed_size": self.embed_size}
         base_config = super(TokenEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
@@ -48,9 +48,7 @@ class TokenRnnEmbedding(tf.keras.layers.Layer):
         return y
 
     def get_config(self):
-        config = {
-            'embed_size': self.embed_size
-        }
+        config = {"embed_size": self.embed_size}
         base_config = super(TokenRnnEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
@@ -69,7 +67,8 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
         position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])  # => batch_size * seq_length
         position_enc = np.array(
-            [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)])
+            [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)]
+        )
 
         position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
         position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
@@ -81,9 +80,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
         return tf.cast(outputs, tf.float32)
 
     def get_config(self):
-        config = {
-            'max_len': self.max_len
-        }
+        config = {"max_len": self.max_len}
         base_config = super(PositionalEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
@@ -99,11 +96,12 @@ class PositionalEncoding(tf.keras.layers.Layer):
     def call(self, x, masking=True):
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
-        with tf.name_scope('position_encode'):
+        with tf.name_scope("position_encode"):
             # # => batch_size * seq_length
             position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])
             position_enc = np.array(
-                [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)])
+                [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)]
+            )
 
             position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
             position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
@@ -115,9 +113,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         return tf.cast(outputs, tf.float32)
 
     def get_config(self):
-        config = {
-            'max_len': self.max_len
-        }
+        config = {"max_len": self.max_len}
         base_config = super(PositionalEncoding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
@@ -132,9 +128,9 @@ class FixedEmbedding(tf.keras.layers.Layer):
 
 class TemporalEmbedding(tf.keras.layers.Layer):
     # minute, hour, weekday, day, month
-    def __init__(self, embed_size, embed_type='fixed') -> None:
+    def __init__(self, embed_size, embed_type="fixed") -> None:
         super().__init__()
-        minite_size = 6  # every 10 minutes
+        minute_size = 6  # every 10 minutes
         hour_size = 24  #
         self.minute_embed = Embedding(minute_size, 3)
         self.hour_embed = Embedding(hour_size, 6)

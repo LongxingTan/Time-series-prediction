@@ -1,6 +1,10 @@
-
+import functools
 import unittest
+
 import tensorflow as tf
+
+import tfts
+from tfts import AutoModel, Trainer
 from tfts.models.seq2seq import Seq2seq
 
 

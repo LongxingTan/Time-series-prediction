@@ -5,11 +5,14 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import LayerNormalization, Dense, Conv1D, Dropout
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
+
 from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
-from tfts.layers.autoformer_layer import SeriesDecomp
+
+params = {}
 
 
 class AutoFormer(object):
@@ -20,32 +23,34 @@ class AutoFormer(object):
         self.predict_sequence_length = predict_sequence_length
 
         # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])  #DataEmbedding(params['attention_hidden_sizes'])
-        self.series_decomp = SeriesDecomp(params['kernel_size'])
+        self.series_decomp = SeriesDecomp(params["kernel_size"])
         self.encoder = [
             EncoderLayer(
-                params['kernel_size'],
-                params['attention_hidden_sizes'],
-                params['num_heads'],
-                params['attention_dropout']
-            ) for _ in range(params['n_encoder_layers'])
+                params["kernel_size"],
+                params["attention_hidden_sizes"],
+                params["num_heads"],
+                params["attention_dropout"],
+            )
+            for _ in range(params["n_encoder_layers"])
         ]
 
         self.decoder = [
             DecoderLayer(
-                params['kernel_size'],
-                params['attention_hidden_sizes'],
-                params['num_heads'],
-                params['attention_dropout']
-            ) for _ in range(params['n_decoder_layers'])
+                params["kernel_size"],
+                params["attention_hidden_sizes"],
+                params["num_heads"],
+                params["attention_dropout"],
+            )
+            for _ in range(params["n_decoder_layers"])
         ]
 
-        self.project = Conv1D(1, kernel_size=3, strides=1, padding='same', use_bias=False)
+        self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)
 
         self.project1 = Dense(predict_sequence_length, activation=None)
         self.drop1 = Dropout(0.25)
-        self.dense1 = Dense(512, activation='relu')
+        self.dense1 = Dense(512, activation="relu")
         self.drop2 = Dropout(0.25)
-        self.dense2 = Dense(1024, activation='relu')
+        self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None, **kwargs):
         # inputs:
@@ -56,14 +61,26 @@ class AutoFormer(object):
             encoder_features = x = inputs
             decoder_features = None
 
+        print(decoder_features)
+
         batch_size, _, n_feature = tf.shape(encoder_features)
         # decomp
         seasonal_init, trend_init = self.series_decomp(encoder_features)
         # decoder input
-        seasonal_init = tf.concat([seasonal_init, tf.zeros([batch_size, self.predict_sequence_length, n_feature])],
-                                  axis=1)
-        trend_init = tf.concat([trend_init, tf.repeat(tf.reduce_mean(encoder_features, axis=1)[:, tf.newaxis, :],
-                                                      repeats=self.predict_sequence_length, axis=1)], axis=1)
+        seasonal_init = tf.concat(
+            [seasonal_init, tf.zeros([batch_size, self.predict_sequence_length, n_feature])], axis=1
+        )
+        trend_init = tf.concat(
+            [
+                trend_init,
+                tf.repeat(
+                    tf.reduce_mean(encoder_features, axis=1)[:, tf.newaxis, :],
+                    repeats=self.predict_sequence_length,
+                    axis=1,
+                ),
+            ],
+            axis=1,
+        )
 
         # ecnoder
         for layer in self.encoder:
@@ -122,11 +139,11 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.autocorrelation2 = AutoCorrelation(d_model, num_heads)
 
     def build(self, input_shape):
-        self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding='same')
-        self.project = Conv1D(1, kernel_size=3, strides=1, padding='same')
+        self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding="same")
+        self.project = Conv1D(1, kernel_size=3, strides=1, padding="same")
         self.drop = Dropout(self.drop_rate)
         self.dense1 = Dense(input_shape[-1])
-        self.conv2 = Conv1D(input_shape[-1], kernel_size=3, strides=1, padding='same')
+        self.conv2 = Conv1D(input_shape[-1], kernel_size=3, strides=1, padding="same")
         self.activation = tf.keras.activations.gelu
 
     def call(self, x, cross, init_trend):

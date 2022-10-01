@@ -3,12 +3,11 @@
 
 
 import tensorflow as tf
-from tensorflow.keras.layers import (Input, AveragePooling1D, Add, UpSampling1D, Concatenate, Lambda)
-from tfts.layers.unet_layer import *
+from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatenate, Conv1D, Input, Lambda, UpSampling1D
 
-params = {
+from tfts.layers.unet_layer import conv_br, re_block
 
-}
+params = {}
 
 
 class Unet(object):
@@ -42,7 +41,7 @@ class Encoder(object):
 
         x = conv_br(x, units * 2, kernel_size, 2, 1)
         for i in range(depth):
-            x = re_block(x, units * 2, kernel_size, 1,1)
+            x = re_block(x, units * 2, kernel_size, 1, 1)
         out_1 = x  # => batch_size * sequence/2 * units*2
 
         x = Concatenate()([x, pool1])
@@ -80,7 +79,6 @@ class Decoder(object):
         x = Conv1D(1, kernel_size=kernel_size, strides=1, padding="same")(x)
         out = Activation("sigmoid")(x)
         out = Lambda(lambda x: 12 * x)(out)
-        out = AveragePooling1D(strides=4)(out)  # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way
-
+        # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way
+        out = AveragePooling1D(strides=4)(out)
         return out
-

@@ -2,7 +2,7 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, BatchNormalization, Activation, Dense, GlobalAveragePooling1D, Add, Multiply
+from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Multiply
 
 
 class ConvbrLayer(tf.keras.layers.Layer):
@@ -14,13 +14,11 @@ class ConvbrLayer(tf.keras.layers.Layer):
         self.dilation = dilation
 
     def build(self, input_shape):
-        self.conv1 = Conv1D(self.units,
-                            kernel_size=self.kernel_size,
-                            strides=self.strides,
-                            dilation_rate=self.dilation,
-                            padding="same")
+        self.conv1 = Conv1D(
+            self.units, kernel_size=self.kernel_size, strides=self.strides, dilation_rate=self.dilation, padding="same"
+        )
         self.bn = BatchNormalization()
-        self.relu = Activation('relu')
+        self.relu = Activation("relu")
         super(ConvbrLayer, self).build(input_shape)
 
     def call(self, x):
@@ -34,16 +32,17 @@ class ConvbrLayer(tf.keras.layers.Layer):
 
 
 class SeBlock(tf.keras.layers.Layer):
-    '''
+    """
     Squeeze-and-Excitation Networks
-    '''
+    """
+
     def __init__(self, units):
         super(SeBlock, self).__init__()
         self.units = units
 
     def build(self, input_shape):
         self.pool = GlobalAveragePooling1D()
-        self.fc1 = Dense(self.units//8, activation="relu")
+        self.fc1 = Dense(self.units // 8, activation="relu")
         self.fc2 = Dense(self.units, activation="sigmoid")
         super(SeBlock, self).build(input_shape)
 
@@ -89,10 +88,7 @@ class ReBlock(tf.keras.layers.Layer):
 
 def conv_br(x, units, kernel_size, strides, dilation):
     # a function is easier to reuse
-    convbr = ConvbrLayer(units=units,
-                         kernel_size=kernel_size,
-                         strides=strides,
-                         dilation=dilation)
+    convbr = ConvbrLayer(units=units, kernel_size=kernel_size, strides=strides, dilation=dilation)
     out = convbr(x)
     return out
 

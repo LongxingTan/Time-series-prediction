@@ -4,17 +4,17 @@
 # @date: 2020-01
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Conv1D, Dropout, Flatten
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten
+
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-
 params = {
-    'dilation_rates': [2 ** i for i in range(4)],
-    'kernel_sizes': [2 for i in range(4)],
-    'filters': 128,
-    'dense_hidden_size': 64,
-    'skip_connect': False,
+    "dilation_rates": [2**i for i in range(4)],
+    "kernel_sizes": [2 for i in range(4)],
+    "filters": 128,
+    "dense_hidden_size": 64,
+    "skip_connect": False,
 }
 
 
@@ -26,10 +26,8 @@ class TCN(object):
         self.params = params
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            params['kernel_sizes'],
-            params['dilation_rates'],
-            params['filters'],
-            params['dense_hidden_size'])
+            params["kernel_sizes"], params["dilation_rates"], params["filters"], params["dense_hidden_size"]
+        )
         # self.dense2 = Dense(1)
         # self.dense3 = TimeDistributed(Dense(1))
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
@@ -39,20 +37,20 @@ class TCN(object):
 
         # self.bn1 = BatchNormalization()
         self.drop1 = Dropout(0.25)
-        self.dense1 = Dense(512, activation='relu')
+        self.dense1 = Dense(512, activation="relu")
 
         # self.bn2 = BatchNormalization()
         self.drop2 = Dropout(0.25)
-        self.dense2 = Dense(1024, activation='relu')
+        self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None):
         # inputs:
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
+            x, encoder_features, _ = inputs
             # encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-            decoder_features = None
+            # decoder_features = None
 
         # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
 
@@ -75,7 +73,7 @@ class TCN(object):
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
         # outputs = self.dense3(encoder_outputs)
 
-        if self.params['skip_connect']:
+        if self.params["skip_connect"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             # x_mean = tf.tile(x, (1, 1, 1))  # 2 is predict_window/train_window
             outputs = outputs + x_mean
@@ -87,15 +85,13 @@ class Encoder(object):
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
-            self.conv_times.append(ConvTemp(
-                filters=2 * filters,
-                kernel_size=kernel_size,
-                causal=True,
-                dilation_rate=dilation))
-        self.dense_time1 = DenseTemp(units=filters, activation='tanh', name='encoder_dense_time1')
-        self.dense_time2 = DenseTemp(units=filters + filters, name='encoder_dense_time2')
-        self.dense_time3 = DenseTemp(units=dense_hidden_size, activation='relu', name='encoder_dense_time3')
-        self.dense_time4 = DenseTemp(units=1, name='encoder_dense_time_4')
+            self.conv_times.append(
+                ConvTemp(filters=2 * filters, kernel_size=kernel_size, causal=True, dilation_rate=dilation)
+            )
+        self.dense_time1 = DenseTemp(units=filters, activation="tanh", name="encoder_dense_time1")
+        self.dense_time2 = DenseTemp(units=filters + filters, name="encoder_dense_time2")
+        self.dense_time3 = DenseTemp(units=dense_hidden_size, activation="relu", name="encoder_dense_time3")
+        self.dense_time4 = DenseTemp(units=1, name="encoder_dense_time_4")
 
     def forward(self, x):
         """

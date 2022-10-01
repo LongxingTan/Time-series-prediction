@@ -3,21 +3,29 @@
 
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Conv1D, BatchNormalization, LayerNormalization, Dropout, Activation, \
-    MaxPool1D
+from tensorflow.keras.layers import (
+    Activation,
+    BatchNormalization,
+    Conv1D,
+    Dense,
+    Dropout,
+    LayerNormalization,
+    MaxPool1D,
+)
+
 from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
 params = {
-    'n_encoder_layers': 1,
-    'n_decoder_layers': 1,
-    'attention_hidden_sizes': 32 * 1,
-    'num_heads': 1,
-    'attention_dropout': 0.,
-    'ffn_hidden_sizes': 32 * 1,
-    'ffn_filter_sizes': 32 * 1,
-    'ffn_dropout': 0.,
-    'skip_connect': False
+    "n_encoder_layers": 1,
+    "n_decoder_layers": 1,
+    "attention_hidden_sizes": 32 * 1,
+    "num_heads": 1,
+    "attention_dropout": 0.0,
+    "ffn_hidden_sizes": 32 * 1,
+    "ffn_filter_sizes": 32 * 1,
+    "ffn_dropout": 0.0,
+    "skip_connect": False,
 }
 
 
@@ -33,17 +41,18 @@ class Informer(object):
             params.update(custom_model_params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
-        self.decoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
+        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
+        self.decoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
         self.encoder = Encoder(
             layers=[
                 EncoderLayer(
-                    attention_hidden_sizes=params['attention_hidden_sizes'],
-                    num_heads=params['num_heads'],
-                    attention_dropout=params['attention_dropout'],
-                    ffn_dropout=params['ffn_dropout'],
-                    ffn_hidden_sizes=params['ffn_hidden_sizes']
-                ) for _ in range(params['n_encoder_layers'])
+                    attention_hidden_sizes=params["attention_hidden_sizes"],
+                    num_heads=params["num_heads"],
+                    attention_dropout=params["attention_dropout"],
+                    ffn_dropout=params["ffn_dropout"],
+                    ffn_hidden_sizes=params["ffn_hidden_sizes"],
+                )
+                for _ in range(params["n_encoder_layers"])
             ],
             # conv_layers = [
             #     CustomConv(
@@ -55,12 +64,13 @@ class Informer(object):
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(
-                    attention_hidden_sizes=params['attention_hidden_sizes'],
-                    num_heads=params['num_heads'],
-                    attention_dropout=params['attention_dropout'],
-                    ffn_dropout=params['ffn_dropout'],
-                    ffn_hidden_sizes=params['ffn_hidden_sizes']
-                ) for _ in range(params['n_decoder_layers'])
+                    attention_hidden_sizes=params["attention_hidden_sizes"],
+                    num_heads=params["num_heads"],
+                    attention_dropout=params["attention_dropout"],
+                    ffn_dropout=params["ffn_dropout"],
+                    ffn_hidden_sizes=params["ffn_hidden_sizes"],
+                )
+                for _ in range(params["n_decoder_layers"])
             ]
         )
         self.projection = Dense(1)
@@ -82,7 +92,7 @@ class Informer(object):
         decoder_outputs = self.projection(decoder_outputs)
         # decoder_outputs = decoder_outputs[:, -self.predict_sequence_length:, :]
 
-        if self.params['skip_connect']:
+        if self.params["skip_connect"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
@@ -146,11 +156,11 @@ class EncoderLayer(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'attention_hidden_sizes': self.attention_hidden_sizes,
-            'num_heads': self.num_heads,
-            'attention_dropout': self.attention_dropout,
-            'ffn_hidden_sizes': self.ffn_hidden_sizes,
-            'ffn_dropout': self.ffn_dropout
+            "attention_hidden_sizes": self.attention_hidden_sizes,
+            "num_heads": self.num_heads,
+            "attention_dropout": self.attention_dropout,
+            "ffn_hidden_sizes": self.ffn_hidden_sizes,
+            "ffn_dropout": self.ffn_dropout,
         }
         base_config = super(EncoderLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -162,10 +172,10 @@ class CustomConv(tf.keras.layers.Layer):
         self.filters = filters
 
     def build(self, input_shape):
-        self.conv = Conv1D(filters=self.filters, kernel_size=3, padding='same')
+        self.conv = Conv1D(filters=self.filters, kernel_size=3, padding="same")
         self.norm = BatchNormalization()
-        self.activation = Activation('elu')
-        self.pool = MaxPool1D(pool_size=3, strides=2, padding='same')
+        self.activation = Activation("elu")
+        self.pool = MaxPool1D(pool_size=3, strides=2, padding="same")
         super(CustomConv, self).build(input_shape)
 
     def call(self, x):
@@ -202,14 +212,14 @@ class DecoderLayer(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         self.attn1 = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-        self.attn2 = CustomAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
+        self.attn2 = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
         self.conv1 = Conv1D(filters=self.ffn_hidden_sizes, kernel_size=1)
         self.conv2 = Conv1D(filters=self.attention_hidden_sizes, kernel_size=1)
         self.drop = Dropout(self.ffn_dropout)
         self.norm1 = LayerNormalization()
         self.norm2 = LayerNormalization()
         self.norm3 = LayerNormalization()
-        self.activation = Activation('relu')
+        self.activation = Activation("relu")
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
@@ -235,11 +245,11 @@ class DecoderLayer(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'attention_hidden_sizes': self.attention_hidden_sizes,
-            'num_heads': self.num_heads,
-            'attention_dropout': self.attention_dropout,
-            'ffn_hidden_sizes': self.ffn_hidden_sizes,
-            'ffn_dropout': self.ffn_dropout
+            "attention_hidden_sizes": self.attention_hidden_sizes,
+            "num_heads": self.num_heads,
+            "attention_dropout": self.attention_dropout,
+            "ffn_hidden_sizes": self.ffn_hidden_sizes,
+            "ffn_dropout": self.ffn_dropout,
         }
         base_config = super(DecoderLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

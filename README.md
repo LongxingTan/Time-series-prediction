@@ -26,7 +26,7 @@
 
 ## Tutorial
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC) 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC)
 
 **install**
 ``` bash
@@ -55,10 +55,10 @@ trainer.predict(valid[0])
 - [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
 - [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
 
-More models 
-- [RNN](./examples/run_rnn.py) 
-- [DeepAR](./examples/run_deepar.py) 
-- [ESRNN](./examples/run_esrnn.py) 
+More models
+- [RNN](./examples/run_rnn.py)
+- [DeepAR](./examples/run_deepar.py)
+- [ESRNN](./examples/run_esrnn.py)
 - [Seq2seq](./examples/run_seq2seq.py)
 - [TCN](./examples/run_tcn.py)
 - [Wavenet](./examples/run_wavenet.py)
@@ -71,7 +71,7 @@ More models
 - [Nbeats](./examples/run_nbeats.py)
 - [GAN](./examples/run_gan.py)
 
-More demos 
+More demos
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
@@ -82,22 +82,22 @@ More demos
 The performance is evaluated by this lib's implementation, not official
 
 | Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>nwrmsle</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sub>50</sub><sup>val</sup>]() | [ventilator<sub>75</sub><sup>val</sup>]() |
-| :-- | :-: | :-: | :-: | :-: | 
-| [RNN]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Seq2seq]() | 672 | 47.7% |52.6% | 61.4% | 
-| [TCN]() | 672 | 47.7% |52.6% | 61.4% | 
-| [WaveNet]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Bert]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Transformer]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Informer]() | 672 | 47.7% |52.6% | 61.4% | 
-| [Autoformer]() | 672 | 47.7% |52.6% | 61.4% | 
-| [n-beats]() | 672 | 47.7% |52.6% | 61.4% | 
+| :-- | :-: | :-: | :-: | :-: |
+| [RNN]() | 672 | 47.7% |52.6% | 61.4% |
+| [Seq2seq]() | 672 | 47.7% |52.6% | 61.4% |
+| [TCN]() | 672 | 47.7% |52.6% | 61.4% |
+| [WaveNet]() | 672 | 47.7% |52.6% | 61.4% |
+| [Bert]() | 672 | 47.7% |52.6% | 61.4% |
+| [Transformer]() | 672 | 47.7% |52.6% | 61.4% |
+| [Informer]() | 672 | 47.7% |52.6% | 61.4% |
+| [Autoformer]() | 672 | 47.7% |52.6% | 61.4% |
+| [n-beats]() | 672 | 47.7% |52.6% | 61.4% |
 | [U-Net]() | 672 | 47.7% |52.6% | 61.4% |
 
 
 ## Citation
 
-Please use the following reference to cite our tfts library 
+Please use the following reference to cite our tfts library
 ```
 @misc{tfts2020,
   author = {Longxing Tan},

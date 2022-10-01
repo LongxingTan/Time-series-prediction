@@ -21,6 +21,12 @@ Then, proceed with
 
     $ pip install tfts
 
+You can also run it in docker
+
+.. code-block:: shell
+
+    $ docker run
+
 
 Usage
 -------------

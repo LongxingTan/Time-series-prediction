@@ -4,8 +4,8 @@ Get the example data script
 
 import os
 import random
-import numpy as np
 
+import numpy as np
 
 # os.run(
 #     "wget https://www.kaggle.com/andreazzini/international-airline-passengers/download -O data/international-airline-passengers.zip"
@@ -26,8 +26,8 @@ def load_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2
     y = []
     for _ in range(n_examples):
         rand = random.random() * 2 * np.pi
-        sig1 = np.sin(np.linspace(rand, 3. * np.pi + rand, train_sequence_length + predict_sequence_length))
-        sig2 = np.cos(np.linspace(rand, 3. * np.pi + rand, train_sequence_length + predict_sequence_length))
+        sig1 = np.sin(np.linspace(rand, 3.0 * np.pi + rand, train_sequence_length + predict_sequence_length))
+        sig2 = np.cos(np.linspace(rand, 3.0 * np.pi + rand, train_sequence_length + predict_sequence_length))
 
         x1 = sig1[:train_sequence_length]
         y1 = sig1[train_sequence_length:]
@@ -46,8 +46,8 @@ def load_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2
 
     if test_size > 0:
         slice = int(n_examples * (1 - test_size))
-        x_train = x[: slice]
-        y_train = y[: slice]
+        x_train = x[:slice]
+        y_train = y[:slice]
         x_valid = x[slice:]
         y_valid = y[slice:]
         return (x_train, y_train), (x_valid, y_valid)

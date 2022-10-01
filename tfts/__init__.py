@@ -2,10 +2,9 @@
 # tfts package for time series prediction with TensorFlow.
 
 from tfts.config import AutoConfig
-from tfts.model import AutoModel, build_tfts_model
-from tfts.trainer import Trainer, KerasTrainer
 from tfts.data import load_data
-
+from tfts.model import AutoModel, build_tfts_model
+from tfts.trainer import KerasTrainer, Trainer
 
 __all__ = [
     "AutoModel",

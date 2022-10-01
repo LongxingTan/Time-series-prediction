@@ -1,6 +1,10 @@
-
+import functools
 import unittest
+
 import tensorflow as tf
+
+import tfts
+from tfts import AutoModel, Trainer
 from tfts.models.tcn import TCN
 
 
@@ -11,11 +15,11 @@ class TCNTest(unittest.TestCase):
 
         x = tf.random.normal([16, 160, 36])
         y = model(x)
-        self.assertEqual(y.shape, (16, ), 'incorrect output shape')
+        self.assertEqual(y.shape, (16,), "incorrect output shape")
 
     def test_train(self):
-        train, valid = tfts.load_data('sine', test_size=0.1)
-        backbone = AutoModel('tcn', predict_sequence_length=8)
+        train, valid = tfts.load_data("sine", test_size=0.1)
+        backbone = AutoModel("tcn", predict_sequence_length=8)
         model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = Trainer(model)
         trainer.train(train, valid)
@@ -23,5 +27,5 @@ class TCNTest(unittest.TestCase):
         self.assertEqual(y_test.shape, valid[1].shape)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,8 @@
-
 import unittest
+
 import tensorflow as tf
-from tfts.layers.dense_layer import *
+
+from tfts.layers.dense_layer import DenseTemp, FeedForwardNetwork
 
 
 class DenseLayerTest(unittest.TestCase):
@@ -17,4 +18,3 @@ class DenseLayerTest(unittest.TestCase):
         x = tf.random.normal([2, 128, hidden_size])
         y = layer(x, training=True)
         self.assertEqual(y.shape, (2, 128, hidden_size))
-

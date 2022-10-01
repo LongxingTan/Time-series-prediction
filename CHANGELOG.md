@@ -13,8 +13,6 @@
     - unet
 - train
     - trainer
-    - keras_trainer    
-    
+    - keras_trainer
+
 ### Modified
-
-
