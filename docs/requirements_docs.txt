@@ -9,3 +9,4 @@ docutils
 pandoc
 sphinx-autobuild
 
+tensorflow==2.3.1
