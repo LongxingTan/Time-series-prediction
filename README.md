@@ -2,7 +2,19 @@
 <img src="./docs/source/_static/logo.svg" width="500" align=center/>
 </h1><br>
 
-[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
+[license-image]: https://img.shields.io/badge/license-Anti%20996-blue.svg
+[license-url]: https://github.com/996icu/996.ICU/blob/master/LICENSE
+[pypi-image]: https://badge.fury.io/py/tfts.svg
+[pypi-url]: https://pypi.python.org/pypi/tfts
+[build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
+[build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
+[docs-image]: https://readthedocs.org/projects/time-series-prediction/badge/?version=latest
+[docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
+
+[![LICENSE][license-image]][license-url]
+[![PyPI Version][pypi-image]][pypi-url]
+[![Build Status][build-image]][build-url]
+[![Docs Status][docs-image]][docs-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
