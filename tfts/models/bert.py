@@ -123,7 +123,7 @@ class Bert(object):
         # outputs = self.forecasting(encoder_features, teacher)
         # outputs = tf.math.cumsum(outputs, axis=1)
 
-        ## grafting
+        # grafting
         base = decoder_features[:, :, -1:]
         outputs += base
         return outputs

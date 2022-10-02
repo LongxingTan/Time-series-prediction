@@ -22,7 +22,8 @@ class AutoFormer(object):
         self.params = params
         self.predict_sequence_length = predict_sequence_length
 
-        # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])  #DataEmbedding(params['attention_hidden_sizes'])
+        # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
+        # DataEmbedding(params['attention_hidden_sizes'])
         self.series_decomp = SeriesDecomp(params["kernel_size"])
         self.encoder = [
             EncoderLayer(

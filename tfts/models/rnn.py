@@ -60,7 +60,7 @@ class RNN(object):
 
         encoder_outputs, encoder_state = self.encoder(encoder_features)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
-        # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]  # if train_sequence > predict_sequence
+        # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
         if self.params["rnn_type"] == "lstm":
             encoder_output = tf.concat(encoder_state, axis=-1)
         else:

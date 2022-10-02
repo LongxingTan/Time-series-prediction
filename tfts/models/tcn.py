@@ -56,7 +56,7 @@ class TCN(object):
 
         encoder_outputs, encoder_state = self.encoder(encoder_features)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
-        # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]  # if train_sequence > predict_sequence
+        # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
         # print(len(encoder_outputs), encoder_outputs[0].shape, encoder_state.shape)
 
         memory = encoder_state[:, -1]

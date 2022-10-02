@@ -91,7 +91,7 @@ class Transformer(object):
         encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
         memory = self.encoder(encoder_features, src_mask=None)
 
-        # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher, scheduler_sampling=self.params['scheduler_sampling'])
+        # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
         decoder_outputs = self.decoder(decoder_features, memory)
         decoder_outputs = self.project(decoder_outputs)
 

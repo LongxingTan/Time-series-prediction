@@ -7,10 +7,6 @@ import random
 
 import numpy as np
 
-# os.run(
-#     "wget https://www.kaggle.com/andreazzini/international-airline-passengers/download -O data/international-airline-passengers.zip"
-# )
-
 
 def load_data(name="sine", train_sequence_length=24, predict_sequence_length=8, test_size=0.1):
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
