@@ -71,15 +71,7 @@ jobs:
 
       - name: Run unittest
         shell: bash
-        run: python -m unittest discover -s ./tests  -p 'test_*.py'
-
-      - name: Statistics
-        if: success()
-        run: |
-          pip install coverage
-          coverage report
-          coverage xml
-
+        run: poetry run python -m unittest discover -s ./tests  -p 'test_*.py'
 
   docs:
     name: Test docs build
