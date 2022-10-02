@@ -2,7 +2,7 @@
 # coding=utf-8
 # @Author: Longxing Tan, tanlongxing888@163.com
 
-from examples.dataset.read_passenger import *
+from examples.dataset.read_web_traffic import WebDataReader
 
 
 class AutoData(object):

@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts import AutoModel, Trainer
+from tfts import AutoModel, KerasTrainer, Trainer
 from tfts.models.bert import Bert
 
 # class BertModelTester:

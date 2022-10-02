@@ -6,7 +6,6 @@ Data example of Kaggle WTF data
 https://www.kaggle.com/c/web-traffic-time-series-forecasting
 """
 
-
 import os
 
 import numpy as np
@@ -69,7 +68,7 @@ class WebDataReader(object):
             yield self[i]
 
     def preprocess(self, x):
-        # process the saved numpy to features, it's remommended for newbie like me to write the prepeocess here with numpy
+        # process the saved numpy to features
         # otherwise, you can also write it in Tensorflow graph mode while tf.data.Dataset.map
         """
         output: encoder_feature: [sequence_length, n_feature]
