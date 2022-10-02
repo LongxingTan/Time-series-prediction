@@ -67,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: poetry install -E "github-actions graph mqf2"
+        run: poetry install --no-interaction --no-root
 
       - name: Run unittest
         shell: bash
