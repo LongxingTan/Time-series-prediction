@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.layers.mask_layer import *
+from tfts.layers.mask_layer import MaskLayer
 
 
 class MaskLayerTest(unittest.TestCase):

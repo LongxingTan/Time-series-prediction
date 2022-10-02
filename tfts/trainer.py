@@ -1,4 +1,3 @@
-
 import numpy as np
 import tensorflow as tf
 
@@ -13,9 +12,21 @@ class Trainer(object):
         self.lr_scheduler = lr_scheduler
         self.metrics = metrics
 
-    def train(self, train_loader, valid_loader, n_epochs=10, batch_size=8, learning_rate=3e-4, verbose=1,
-              eval_metric=(), model_dir=None, use_ema=False, stop_no_improve_epochs=None, transform=None):
-        """ train function
+    def train(
+        self,
+        train_loader,
+        valid_loader,
+        n_epochs=10,
+        batch_size=8,
+        learning_rate=3e-4,
+        verbose=1,
+        eval_metric=(),
+        model_dir=None,
+        use_ema=False,
+        stop_no_improve_epochs=None,
+        transform=None,
+    ):
+        """train function
         :param train_loader: tf.data.Dataset instance
         :param valid_loader: valid_dataset: None or tf.data.Dataset instance
         :param n_epochs:
@@ -36,7 +47,7 @@ class Trainer(object):
             self.ema = tf.train.ExponentialMovingAverage(0.9).apply(self.model.trainable_variables)
 
         if model_dir is None:
-            model_dir = '../weights'
+            model_dir = "../weights"
 
         if stop_no_improve_epochs is not None:
             no_improve_epochs = 0
@@ -50,10 +61,8 @@ class Trainer(object):
                 valid_loss = 999
                 valid_scores = [999]
 
-            log_str = 'Epoch: {}, Train Loss: {:.4f}, Valid Loss: {:.4f}'.format(
-                epoch + 1, train_loss, valid_loss
-            )
-            log_str + ','.join([' Valid Metrics{}: {:.4f}'.format(i, me) for i, me in enumerate(valid_scores)])
+            log_str = "Epoch: {}, Train Loss: {:.4f}, Valid Loss: {:.4f}".format(epoch + 1, train_loss, valid_loss)
+            log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
             print(log_str)
 
             if stop_no_improve_epochs is not None:
@@ -63,13 +72,13 @@ class Trainer(object):
                 else:
                     no_improve_epochs += 1
                 if no_improve_epochs >= stop_no_improve_epochs and epoch >= 4:
-                    print('I have tried my best, no improved and stop training!')
+                    print("I have tried my best, no improved and stop training!")
                     break
 
         self.export_model(model_dir, only_pb=True)  # save the model
 
     def train_loop(self, train_loader):
-        train_loss = 0.
+        train_loss = 0.0
         y_trues, y_preds = [], []
 
         for step, (x_train, y_train) in enumerate(train_loader):
@@ -85,7 +94,7 @@ class Trainer(object):
 
             for metric in self.eval_metric:
                 scores.append(metric(y_trues, y_preds))
-        return train_loss/(step+1), scores
+        return train_loss / (step + 1), scores
 
     def train_step(self, x_train, y_train):
         with tf.GradientTape() as tape:
@@ -94,7 +103,7 @@ class Trainer(object):
 
         gradients = tape.gradient(loss, self.model.trainable_variables)
         gradients = [(tf.clip_by_value(grad, -5.0, 5.0)) for grad in gradients]
-        opt = self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        _ = self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.global_step)
@@ -106,7 +115,7 @@ class Trainer(object):
         return y_pred, loss
 
     def valid_loop(self, valid_loader):
-        valid_loss = 0.
+        valid_loss = 0.0
         y_valid_trues, y_valid_preds = [], []
 
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
@@ -153,12 +162,12 @@ class Trainer(object):
 
 class KerasTrainer(object):
     def __init__(
-            self,
-            build_model,
-            loss_fn=tf.keras.losses.MeanSquaredError(),
-            optimizer=tf.keras.optimizers.Adam(0.003),
-            lr_scheduler=None,
-            strategy=None
+        self,
+        build_model,
+        loss_fn=tf.keras.losses.MeanSquaredError(),
+        optimizer=tf.keras.optimizers.Adam(0.003),
+        lr_scheduler=None,
+        strategy=None,
     ):
         """
         model: a tf.keras.Model instance
@@ -172,18 +181,19 @@ class KerasTrainer(object):
         self.strategy = strategy
 
     def train(
-            self,
-            train_dataset,
-            valid_dataset=None,
-            n_epochs=10,
-            batch_size=32,
-            steps_per_epoch=None,
-            callback_eval_metrics=None,
-            transform=None,
-            early_stopping=None,
-            checkpoint=None,
-            verbose=2,
-            **kwargs):
+        self,
+        train_dataset,
+        valid_dataset=None,
+        n_epochs=10,
+        batch_size=32,
+        steps_per_epoch=None,
+        callback_eval_metrics=None,
+        transform=None,
+        early_stopping=None,
+        checkpoint=None,
+        verbose=2,
+        **kwargs
+    ):
         """
         train_dataset: tf.data.Dataset instance, or [x_train, y_train]
         valid_dataset: None or tf.data.Dataset instance, or [x_valid, y_valid]
@@ -194,9 +204,9 @@ class KerasTrainer(object):
             callbacks.append(early_stopping)
         if checkpoint is not None:
             callbacks.append(checkpoint)
-        if 'callbacks' in kwargs:
-            callbacks += kwargs.get('callbacks')
-            print('callback', callbacks)
+        if "callbacks" in kwargs:
+            callbacks += kwargs.get("callbacks")
+            print("callback", callbacks)
 
         # if self.strategy is None:
         #     self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
@@ -220,7 +230,8 @@ class KerasTrainer(object):
                 epochs=n_epochs,
                 batch_size=batch_size,
                 verbose=verbose,
-                callbacks=callbacks)
+                callbacks=callbacks,
+            )
         else:
             self.history = self.model.fit(
                 train_dataset,
@@ -229,7 +240,8 @@ class KerasTrainer(object):
                 epochs=n_epochs,
                 batch_size=batch_size,
                 verbose=verbose,
-                callbacks=callbacks)
+                callbacks=callbacks,
+            )
         return self.history
 
     def predict(self, x_test, method=None, batch_size=1):
@@ -242,10 +254,10 @@ class KerasTrainer(object):
     def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
         # save the model
         if checkpoint_dir is not None:
-            print('check', checkpoint_dir)
+            print("check", checkpoint_dir)
             self.model.load_weights(checkpoint_dir)
         else:
-            print('nocheck')
+            print("nocheck")
 
         self.model.save(model_dir)
         print("protobuf model successfully saved in {}".format(model_dir))

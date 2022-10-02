@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.layers.rnn_layer import *
+from tfts.layers.rnn_layer import DRNN, ResidualDRNN
 
 
 class RnnLayerTest(unittest.TestCase):

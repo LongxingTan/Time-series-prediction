@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.layers.nbeats_layer import *
+from tfts.layers.nbeats_layer import GenericBlock, NBeatsLayer, SeasonalityBlock, TrendBlock
 
 
 class NBeatsLayerTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.layers.deepar_layer import *
+from tfts.layers.deepar_layer import GaussianLayer
 
 
 class DeepARLayerTest(unittest.TestCase):
