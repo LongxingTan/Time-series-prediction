@@ -8,9 +8,3 @@ The following tutorials can be also found as `notebooks on GitHub <https://githu
 .. toctree::
    :titlesonly:
    :maxdepth: 2
-
-   tutorials/stallion
-   tutorials/ar
-   tutorials/building
-   tutorials/deepar
-   tutorials/nhits

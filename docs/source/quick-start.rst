@@ -78,9 +78,3 @@ Main API
 ---------
 
 .. currentmodule:: tfts
-.. moduleautosummary::
-   :toctree: api
-   :template: custom-module-template.rst
-   :recursive:
-
-   tfts

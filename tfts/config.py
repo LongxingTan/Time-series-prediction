@@ -4,5 +4,18 @@
 
 
 class AutoConfig(object):
-    def __init__(self):
-        pass
+    """
+    AutoConfig for model
+
+     Methods
+        -------
+        __call__:
+           call
+    """
+
+    def __call__(self):
+        """
+        Auto config
+        :return:
+        """
+        return 1

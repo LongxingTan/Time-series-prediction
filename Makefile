@@ -10,7 +10,14 @@ style:
 # run tests for the library
 
 test:
-	python -m unittest -v ./tests/
+	python -m unittest
+
+
+# run tests for the docs
+
+testdoc:
+	python -m unittest
+
 
 # release
 
