@@ -13,8 +13,8 @@ TFTS (TensorFlow Time Series) supports state-of-the-art deep learning
 time series models for both business cases and data competitions. The package provides
 
 * Flexible and powerful design for time series task
-* Advanced SOTA deep learning models supported
-* tfts documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
+* Advanced SOTA deep learning models
+* TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
 
 Quick Start
 --------------------

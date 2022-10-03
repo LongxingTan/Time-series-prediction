@@ -1,4 +1,4 @@
-.PHONY: style test pre-release
+.PHONY: style test docs pre-release
 
 # run checks on all files and potentially modifies some of them
 
@@ -15,9 +15,9 @@ test:
 
 # run tests for the docs
 
-testdoc:
-	python -m unittest
-
+docs:
+	make -C docs clean M=$(shell pwd)
+	make -C docs html M=$(shell pwd)
 
 # release
 

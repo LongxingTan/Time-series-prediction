@@ -1,6 +1,6 @@
 # TFTS examples
 
-## Run examples
+## run examples
 
 
 ## prediction

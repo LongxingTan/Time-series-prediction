@@ -14,7 +14,7 @@ from tfts import AutoModel, KerasTrainer as Trainer
 
 class DemoTest(unittest.TestCase):
     def test_demo(self):
-        train, valid = tfts.load_data("sine", test_size=0.1)
+        train, valid = tfts.load_data("sine")
         print(train[0].shape, train[1].shape)
 
         backbone = AutoModel("transformer", predict_sequence_length=8)

@@ -20,7 +20,7 @@
 
 **TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods in TensorFlow.
 - Flexible and powerful design for time series task
-- Advanced deep learning models supported
+- Advanced deep learning models
 - tfts documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 
@@ -90,7 +90,7 @@ The performance is evaluated by this lib's implementation, not official
 | [Bert]() | 672 | 47.7% |52.6% | 61.4% |
 | [Transformer]() | 672 | 47.7% |52.6% | 61.4% |
 | [Informer]() | 672 | 47.7% |52.6% | 61.4% |
-| [Autoformer]() | 672 | 47.7% |52.6% | 61.4% |
+| [AutoFormer]() | 672 | 47.7% |52.6% | 61.4% |
 | [n-beats]() | 672 | 47.7% |52.6% | 61.4% |
 | [U-Net]() | 672 | 47.7% |52.6% | 61.4% |
 
