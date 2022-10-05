@@ -1,7 +1,3 @@
-<h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="500" align=center/>
-</h1><br>
-
 [license-image]: https://img.shields.io/badge/license-Anti%20996-blue.svg
 [license-url]: https://github.com/996icu/996.ICU/blob/master/LICENSE
 [pypi-image]: https://badge.fury.io/py/tfts.svg
@@ -15,6 +11,10 @@
 [![PyPI Version][pypi-image]][pypi-url]
 [![Build Status][build-image]][build-url]
 [![Docs Status][docs-image]][docs-url]
+
+<h1 align="center">
+<img src="./docs/source/_static/logo.svg" width="490" align=center/>
+</h1><br>
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
@@ -56,7 +56,7 @@ trainer.predict(valid[0])
 - [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
 
 More models
-- [RNN](./examples/run_rnn.py)
+- [RNN](examples/run_prediction.py)
 - [DeepAR](./examples/run_deepar.py)
 - [ESRNN](./examples/run_esrnn.py)
 - [Seq2seq](./examples/run_seq2seq.py)
@@ -75,7 +75,7 @@ More demos
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
-- [Parameters tuning by optuna](./examples/run_optuna.py)
+- [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples)
 
 ## Performance

@@ -5,7 +5,12 @@
 
 import tensorflow as tf
 
+params = {}
+
 
 class TemporalFusionTransformer(object):
-    def __init__(self):
+    def __init__(self, predict_sequence_length=3, custom_model_params=None):
         pass
+
+    def __call__(self, x):
+        return

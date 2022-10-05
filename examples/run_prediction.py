@@ -3,11 +3,18 @@ This is an example of time series prediction by tfts
 - multi-step prediction task
 """
 
+from config import parse_args
 from dataset import AutoData
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Input
+from utils import set_seed
 
-from tfts import AutoConfig, AutoModel
+from tfts import AutoConfig, AutoModel, KerasTrainer
+
+
+def build_data():
+    return
 
 
 def build_model(use_model):
@@ -32,5 +39,7 @@ def run_train():
     model.fit(train_loader, valid_loader)
 
 
-if __name__ == "__main__":
-    run_train()
+# if __name__ == "__main__":
+#     args = parse_args()
+#     set_seed(args.seed)
+#     run_train(args)
