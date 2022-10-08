@@ -21,7 +21,6 @@ class ConvTemp(tf.keras.layers.Layer):
         kernel_initializer="glorot_uniform",
         name=None,
     ):
-
         super(ConvTemp, self).__init__(name=name)
         self.filters = filters
         self.kernel_size = kernel_size

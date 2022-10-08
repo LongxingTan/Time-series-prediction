@@ -53,9 +53,9 @@ class AutoCorrelation(tf.keras.layers.Layer):
         weights, indices = tf.math.top_k(R_qk, top_k)
 
         tmp_corr = tf.nn.softmax(weights, axis=-1)
-        tmp_corr = tf.reshape(tmp_corr, (batch_size, 1, 32, -1))
+        # tmp_corr = tf.reshape(tmp_corr, (batch_size, 1, 32, -1))
 
-        tmp_values = tf.tile(tf.transpose(q, perm=[0, 1, 3, 2]), tf.constant([1, 1, 1, 1]))
+        tmp_values = tf.tile(tf.transpose(q, perm=[0, 1, 3, 2]), tf.constant([1, 1, 1, 2]))
         delays_agg = tf.zeros_like(tf.transpose(q, perm=[0, 1, 3, 2]))
 
         for i in range(top_k):

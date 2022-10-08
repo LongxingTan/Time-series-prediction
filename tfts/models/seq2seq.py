@@ -111,7 +111,6 @@ class Decoder1(tf.keras.layers.Layer):
         attention_heads=1,
         attention_dropout=0.0,
     ):
-
         super(Decoder1, self).__init__()
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention

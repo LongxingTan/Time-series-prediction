@@ -1,5 +1,5 @@
-[license-image]: https://img.shields.io/badge/license-Anti%20996-blue.svg
-[license-url]: https://github.com/996icu/996.ICU/blob/master/LICENSE
+[license-image]: https://img.shields.io/badge/License-MIT-blue.svg
+[license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
@@ -53,23 +53,8 @@ trainer.predict(valid[0])
 - [东流Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
 - [东流Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
 
-更多模型
-- [RNN](examples/run_prediction.py)
-- [DeepAR](./examples/run_deepar.py)
-- [ESRNN](./examples/run_esrnn.py)
-- [Seq2seq](./examples/run_seq2seq.py)
-- [TCN](./examples/run_tcn.py)
-- [WaveNet](./examples/run_wavenet.py)
-- [Bert](./examples/run_bert.py)
-- [Transformer](./examples/run_transformer.py)
-- [Temporal-fusion-transformer](./examples/run_temporal_fusion_transformer.py)
-- [Informer](./examples/run_informer.py)
-- [AutoFormer](./examples/run_autoformer.py)
-- [U-Net](./examples/run_unet.py)
-- [NBeats](./examples/run_nbeats.py)
-- [GAN](./examples/run_gan.py)
-
 更多应用
+- [Time_series_prediction](./examples/run_prediction.py)
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)

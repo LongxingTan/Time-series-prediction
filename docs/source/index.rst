@@ -55,5 +55,5 @@ Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the pred
    tutorials
    models
    tricks
+   api
    CHANGELOG
-   GitHub <https://github.com/LongxingTan/Time-series-prediction>

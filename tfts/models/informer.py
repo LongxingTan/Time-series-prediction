@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+# official: https://github.com/zhouhaoyi/Informer2020
 
 
 import tensorflow as tf
@@ -82,7 +83,9 @@ class Informer(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:
             encoder_features = x = inputs
-            decoder_features = None
+            decoder_features = tf.cast(
+                tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
+            )
 
         encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
         memory = self.encoder(encoder_features, mask=None)
@@ -122,13 +125,13 @@ class Encoder(tf.keras.layers.Layer):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attention_hidden_sizes, num_heads, attention_dropout, ffn_dropout, ffn_hidden_sizes) -> None:
+    def __init__(self, attention_hidden_sizes, num_heads, attention_dropout, ffn_hidden_sizes, ffn_dropout) -> None:
         super().__init__()
         self.attention_hidden_sizes = attention_hidden_sizes
         self.num_heads = num_heads
         self.attention_dropout = attention_dropout
-        self.ffn_dropout = ffn_dropout
         self.ffn_hidden_sizes = ffn_hidden_sizes
+        self.ffn_dropout = ffn_dropout
 
     def build(self, input_shape):
         self.attn_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
@@ -202,13 +205,13 @@ class Decoder(tf.keras.layers.Layer):
 
 
 class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attention_hidden_sizes, num_heads, attention_dropout, ffn_dropout, ffn_hidden_sizes) -> None:
+    def __init__(self, attention_hidden_sizes, num_heads, attention_dropout, ffn_hidden_sizes, ffn_dropout) -> None:
         super().__init__()
         self.attention_hidden_sizes = attention_hidden_sizes
         self.num_heads = num_heads
         self.attention_dropout = attention_dropout
-        self.ffn_dropout = ffn_dropout
         self.ffn_hidden_sizes = ffn_hidden_sizes
+        self.ffn_dropout = ffn_dropout
 
     def build(self, input_shape):
         self.attn1 = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
