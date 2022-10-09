@@ -64,12 +64,12 @@ matplotlib = "*"
 [tool.poetry.dev-dependencies]
 # checks and make tools
 pre-commit = "^2.20.0"
-
 invoke = "*"
 flake8 = "*"
 mypy = "*"
 pylint = "*"
 isort = "*"
+coverage = "*"
 
 # jupyter notebook
 ipykernel = "*"

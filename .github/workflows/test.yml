@@ -63,14 +63,13 @@ jobs:
 
       - name: Run unittest
         shell: bash
-        run: poetry run python -m unittest discover -s ./tests  -p 'test_*.py'
+        run: poetry run coverage run python -m unittest discover -s ./tests  -p 'test_*.py'
 
       - name: Statistics
         if: success()
         run: |
-          pip install coverage
-          coverage report
-          coverage xml
+          poetry run coverage report
+          poetry run coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
