@@ -17,7 +17,7 @@ class DemoTest(unittest.TestCase):
         train, valid = tfts.load_data("sine")
         print(train[0].shape, train[1].shape)
 
-        backbone = AutoModel("transformer", predict_sequence_length=8)
+        backbone = AutoModel("seq2seq", predict_sequence_length=8)
         model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = Trainer(model)
         trainer.train(train, valid)

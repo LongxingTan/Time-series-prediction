@@ -68,8 +68,8 @@ jobs:
       - name: Statistics
         if: success()
         run: |
-          poetry run coverage report
-          poetry run coverage xml
+          poetry run coverage report -i
+          poetry run coverage xml -i
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
