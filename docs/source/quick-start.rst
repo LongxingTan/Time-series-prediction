@@ -3,7 +3,6 @@ Quick start
 
 .. _quick-start:
 
-
 .. _install:
 
 Installation

@@ -65,6 +65,24 @@ jobs:
         shell: bash
         run: poetry run python -m unittest discover -s ./tests  -p 'test_*.py'
 
+      - name: Statistics
+        if: success()
+        run: |
+          pip install coverage
+          coverage report
+          coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        if: always()
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: coverage.xml
+          flags: cpu, unittest
+          name: CPU-coverage
+          fail_ci_if_error: false
+
   docs:
     name: Test docs build
     runs-on: ubuntu-latest

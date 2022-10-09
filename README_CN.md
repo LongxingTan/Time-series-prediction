@@ -4,21 +4,26 @@
 [pypi-url]: https://pypi.python.org/pypi/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
+[lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg
+[lint-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml
 [docs-image]: https://readthedocs.org/projects/time-series-prediction/badge/?version=latest
 [docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
-
-[![LICENSE][license-image]][license-url]
-[![PyPI Version][pypi-image]][pypi-url]
-[![Build Status][build-image]][build-url]
-[![Docs Status][docs-image]][docs-url]
 
 <h1 align="center">
 <img src="./docs/source/_static/logo.svg" width="500" align=center/>
 </h1><br>
 
+--------------------------------------------------------------------------------
+
+[![LICENSE][license-image]][license-url]
+[![PyPI Version][pypi-image]][pypi-url]
+[![Build Status][build-image]][build-url]
+[![Lint Status][lint-image]][lint-url]
+[![Docs Status][docs-image]][docs-url]
+
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是基于TensorFlow时间序列开源工具，支持多深度学习模型
+**东流TFTS** (TensorFlow Time Series) 是基于TensorFlow时间序列开源工具，支持多种深度学习模型
 
 - 结构灵活，适配多种时间序列任务
 - [多套久经考验的深度学习模型](./examples)
@@ -27,13 +32,14 @@
 中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 
 ## 安装
+
 ``` bash
 pip install tensorflow>=2.0.0
 pip install tfts
 ```
 
-
 ## 快速使用
+
 ``` python
 import tensorflow as tf
 import tfts
@@ -48,18 +54,19 @@ trainer.train(train, valid)
 trainer.predict(valid[0])
 ```
 
-
 ## 示例
+
 - [东流Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
 - [东流Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
 
-更多应用
-- [Time_series_prediction](./examples/run_prediction.py)
-- [Time series classification](./examples/run_classification.py)
-- [Anomaly detection](./examples/run_anomaly.py)
-- [Uncertainty prediction](./examples/run_uncertrainty.py)
-- [Parameters tuning with optuna](examples/run_optuna_tune.py)
+### 更多应用
 
+- [时序预测](./examples/run_prediction.py)
+- [时序分类](./examples/run_classification.py)
+- [异常检测](./examples/run_anomaly.py)
+- [Uncertainty prediction](./examples/run_uncertrainty.py)
+- [optuna调参](./examples/run_optuna_tune.py)
+- [tf-serving部署](./examples)
 
 ## 引用
 
