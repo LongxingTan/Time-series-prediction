@@ -17,7 +17,7 @@ time series models for both business cases and data competitions. The package pr
 * TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
 
 Quick Start
---------------------
+-------------
 Visit :ref:`Quick start <quick-start>` to learn more about the package and :ref:`detailed installation instructions<install>`.
 
 .. code-block:: shell

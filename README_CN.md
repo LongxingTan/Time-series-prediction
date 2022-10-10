@@ -8,28 +8,29 @@
 [lint-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml
 [docs-image]: https://readthedocs.org/projects/time-series-prediction/badge/?version=latest
 [docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
+[coverage-image]: https://codecov.io/gh/longxingtan/Time-series-prediction/branch/master/graph/badge.svg
+[coverage-url]: https://codecov.io/github/longxingtan/Time-series-prediction?branch=master
 
 <h1 align="center">
 <img src="./docs/source/_static/logo.svg" width="500" align=center/>
 </h1><br>
-
---------------------------------------------------------------------------------
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
+[![Code Coverage][coverage-image]][coverage-url]
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是基于TensorFlow时间序列开源工具，支持多种深度学习模型
+**东流TFTS** (TensorFlow Time Series) 是基于TensorFlow的时间序列开源工具，支持多种深度学习模型
 
 - 结构灵活，适配多种时间序列任务
 - [多套久经考验的深度学习模型](./examples)
 - [查阅文档，快速入门](https://time-series-prediction.readthedocs.io)
 
-中文名“东流”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
+中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 
 ## 安装
 

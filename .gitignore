@@ -85,6 +85,7 @@ coverage.xml
 # yuetan
 **/nohup.out
 /reference/*
+/examples/data/*
 /backup/*
 **/temp.py
 /data/logs/*

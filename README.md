@@ -4,18 +4,18 @@
 [pypi-url]: https://pypi.python.org/pypi/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
-[lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg
-[lint-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml
+[lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg?branch=master
+[lint-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml?query=branch%3Amaster
 [docs-image]: https://readthedocs.org/projects/time-series-prediction/badge/?version=latest
 [docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
-[coverage-image]: https://codecov.io/gh/longxingtan/Time-series-prediction/branch/dev/graph/badge.svg
-[coverage-url]: https://codecov.io/github/longxingtan/Time-series-prediction?branch=dev
+[coverage-image]: https://codecov.io/gh/longxingtan/Time-series-prediction/branch/master/graph/badge.svg
+[coverage-url]: https://codecov.io/github/longxingtan/Time-series-prediction?branch=master
+[codeql-image]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml/badge.svg
+[codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
 <img src="./docs/source/_static/logo.svg" width="490" align=center/>
 </h1><br>
-
---------------------------------------------------------------------------------
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
@@ -23,6 +23,7 @@
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
+[![CodeQL Status][codeql-image]][codeql-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 

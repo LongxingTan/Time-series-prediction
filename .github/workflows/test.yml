@@ -72,7 +72,7 @@ jobs:
           poetry run coverage xml -i
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         if: always()
         continue-on-error: true
         with:
@@ -102,6 +102,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements_docs.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y pandoc
@@ -114,6 +115,7 @@ jobs:
           cd docs
           make clean
           make html --debug --jobs 2 SPHINXOPTS="-W"
+
       - name: Upload built docs
         uses: actions/upload-artifact@v2
         with:
