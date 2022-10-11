@@ -39,7 +39,7 @@
 
 **Install**
 ``` bash
-$ pip install tensorflow>=2.0.0
+$ pip install tensorflow>2.0.0
 $ pip install tfts
 ```
 

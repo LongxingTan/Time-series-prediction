@@ -22,6 +22,6 @@ class TransformerTest(unittest.TestCase):
         backbone = AutoModel("rnn", predict_sequence_length=8)
         model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = KerasTrainer(model)
-        trainer.train(train, valid)
+        trainer.train(train, valid, n_epochs=3)
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)

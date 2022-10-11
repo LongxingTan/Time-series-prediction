@@ -4,12 +4,8 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [master, main]
-  pull_request:
-    branches: [master, main]
   schedule:
-    - cron: '0 0 1 * *'  # Runs at 00:00 UTC on the 1st of every month
+    - cron: '0 0 7 * *'  # Runs at 00:00 UTC on the 7th of every month
 
 jobs:
   analyze:

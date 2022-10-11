@@ -160,12 +160,12 @@ html_theme_options = {"navbar_end": ["navbar-icon-links.html", "search-field.htm
 
 html_sidebars = {
     "index": [],
-    # "getting-started": [],
-    # "data": [],
-    # "models": [],
-    # "metrics": [],
-    "faq": [],
-    "contribute": [],
+    "quick-start": [],
+    "tutorials": [],
+    "models": [],
+    "tricks": [],
+    # "faq": [],
+    # "contribute": [],
     "CHANGELOG": [],
 }
 

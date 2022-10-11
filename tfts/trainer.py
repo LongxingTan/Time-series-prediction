@@ -184,7 +184,7 @@ class KerasTrainer(object):
         self,
         train_dataset,
         valid_dataset=None,
-        n_epochs=10,
+        n_epochs=5,
         batch_size=32,
         steps_per_epoch=None,
         callback_eval_metrics=None,

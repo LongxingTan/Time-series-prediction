@@ -8,24 +8,23 @@ Quick start
 Installation
 --------------
 
-Before you start, you need to first install `TensorFlow2 <https://www.tensorflow.org/install>`_ with
+Install `tfts <https://github.com/LongxingTan/Time-series-prediction>`_ for time series, follow the installation instructions first
 
-.. code-block:: shell
+* Python 3.7+
+* `TensorFlow 2.0 <https://www.tensorflow.org/install/pip>`_ installation instructions
 
-    $ pip install tensorflow
-
-Then, proceed with
+Now you are ready, proceed with
 
 .. code-block:: shell
 
     $ pip install tfts
+
 
 You can also run it in docker
 
 .. code-block:: shell
 
     $ docker run
-
 
 Usage
 -------------
