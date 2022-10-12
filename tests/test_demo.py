@@ -2,10 +2,7 @@
 python -m unittest -v tests/test_demo.py
 """
 
-import functools
 import unittest
-
-import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer as Trainer

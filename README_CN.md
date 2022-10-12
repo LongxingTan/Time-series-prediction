@@ -44,12 +44,14 @@ $ pip install tfts
 ## 快速使用
 
 ``` python
-import tensorflow as tf
 import tfts
 from tfts import AutoModel, KerasTrainer
 
-train, valid = tfts.get_data('sine')
-model = AutoModel('seq2seq')
+train_length = 24
+predict_length = 8
+
+train, valid = tfts.get_data('sine', train_length, predict_length)
+model = AutoModel('seq2seq', predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)

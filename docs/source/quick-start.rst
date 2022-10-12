@@ -46,19 +46,17 @@ Example
 
 .. code-block:: python
 
-    import functools
     import tensorflow as tf
     import tfts
     from tfts import AutoModel, KerasTrainer
 
     # load data
-    train_sequence_length = 36
-    predict_sequence_length = 12
-    train, valid = tfts.load_data('sine', train_sequence_length, predict_sequence_length)
+    train_length = 36
+    predict_length = 12
+    train, valid = tfts.load_data('sine', train_length, predict_length)
 
     # build model
-    backbone = AutoModel('seq2seq')
-    model = functools.partial(backbone.build_model, input_shape=[train_sequence_length, 2])
+    model = AutoModel('seq2seq', predict_length=predict_length)
 
     # train
     epochs = 10
@@ -66,7 +64,7 @@ Example
     opt = tf.keras.optimizers.Adam(0.003)
     loss_fn = tf.keras.losses.MeanSquaredError()
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-    trainer.train(train, valid)
+    trainer.train(train, valid, n_epochs=epochs, batch_size=batch_size)
 
     # test
     trainer.predict(valid[0])

@@ -48,7 +48,6 @@ $ pip install tfts
 **Usage**
 
 ``` python
-import tensorflow as tf
 import tfts
 from tfts import AutoModel, KerasTrainer
 
