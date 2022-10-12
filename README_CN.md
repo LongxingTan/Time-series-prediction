@@ -49,8 +49,7 @@ import tfts
 from tfts import AutoModel, KerasTrainer
 
 train, valid = tfts.get_data('sine')
-backbone = AutoModel('seq2seq')
-model = functools.partial(backbone.build_model, input_shape=[24, 2])
+model = AutoModel('seq2seq')
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)

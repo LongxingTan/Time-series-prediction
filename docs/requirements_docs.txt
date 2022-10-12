@@ -9,4 +9,5 @@ pydata_sphinx_theme==0.8.0
 docutils
 sphinx-autobuild
 
+pandas == 1.1.5
 tensorflow==2.7.1

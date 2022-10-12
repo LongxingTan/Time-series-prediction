@@ -163,7 +163,7 @@ class Trainer(object):
 class KerasTrainer(object):
     def __init__(
         self,
-        build_model,
+        model,
         loss_fn=tf.keras.losses.MeanSquaredError(),
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
@@ -174,7 +174,7 @@ class KerasTrainer(object):
         loss: a loss function
         optimizer: tf.keras.Optimizer instance
         """
-        self.build_model = build_model
+        self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -188,7 +188,6 @@ class KerasTrainer(object):
         batch_size=32,
         steps_per_epoch=None,
         callback_eval_metrics=None,
-        transform=None,
         early_stopping=None,
         checkpoint=None,
         verbose=2,
@@ -216,7 +215,11 @@ class KerasTrainer(object):
         #         valid_dataset = self.strategy.experimental_distribute_dataset(valid_dataset)
 
         # with self.strategy.scope():
-        self.model = self.build_model()
+        if not isinstance(self.model, tf.keras.Model):
+            print("build_model" in dir(self.model))
+            input_shape = train_dataset[0].shape[1:]
+            self.model = self.model.build_model(input_shape=input_shape)
+
         print(self.model.summary())
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
         if isinstance(train_dataset, (list, tuple)):

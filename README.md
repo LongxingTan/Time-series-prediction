@@ -56,8 +56,7 @@ train_length = 24
 predict_length = 8
 
 train, valid = tfts.get_data('sine', train_length, predict_length)
-backbone = AutoModel('seq2seq', predict_length)
-model = functools.partial(backbone.build_model, input_shape=[train_length, 2])
+model = AutoModel('seq2seq', predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)
