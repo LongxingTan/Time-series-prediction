@@ -30,28 +30,34 @@
 **TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods in [TensorFlow](https://www.tensorflow.org/).
 - Flexible and powerful design for time series task
 - Advanced deep learning models
-- tfts documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
-
+- Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 ## Tutorial
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC)
 
-**Install**
+**Installation**
+
+- python >= 3.7
+- tensorflow >= 2.1
+
 ``` bash
-$ pip install tensorflow>2.0.0
 $ pip install tfts
 ```
 
 **Usage**
+
 ``` python
 import tensorflow as tf
 import tfts
 from tfts import AutoModel, KerasTrainer
 
-train, valid = tfts.load_data('sine')
-backbone = AutoModel('seq2seq')
-model = functools.partial(backbone.build_model, input_shape=[24, 2])
+train_length = 24
+predict_length = 8
+
+train, valid = tfts.get_data('sine', train_length, predict_length)
+backbone = AutoModel('seq2seq', predict_length)
+model = functools.partial(backbone.build_model, input_shape=[train_length, 2])
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)

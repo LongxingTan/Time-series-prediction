@@ -19,8 +19,8 @@ class RNNTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
     def test_train(self):
-        train, valid = tfts.load_data("sine", test_size=0.1)
-        backbone = AutoModel("rnn", predict_sequence_length=8)
+        train, valid = tfts.get_data("sine", test_size=0.1)
+        backbone = AutoModel("rnn", predict_length=8)
         model = functools.partial(backbone.build_model, input_shape=[24, 2])
         trainer = KerasTrainer(model)
         trainer.train(train, valid, n_epochs=3)

@@ -24,7 +24,7 @@
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是基于TensorFlow的时间序列开源工具，支持多种深度学习模型
+**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow，支持多种深度学习模型
 
 - 结构灵活，适配多种时间序列任务
 - [多套久经考验的深度学习模型](./examples)
@@ -34,9 +34,11 @@
 
 ## 安装
 
+- python >= 3.7
+- tensorflow >= 2.1
+
 ``` bash
-pip install tensorflow>=2.0.0
-pip install tfts
+$ pip install tfts
 ```
 
 ## 快速使用
@@ -46,7 +48,7 @@ import tensorflow as tf
 import tfts
 from tfts import AutoModel, KerasTrainer
 
-train, valid = tfts.load_data('sine')
+train, valid = tfts.get_data('sine')
 backbone = AutoModel('seq2seq')
 model = functools.partial(backbone.build_model, input_shape=[24, 2])
 
@@ -67,6 +69,7 @@ trainer.predict(valid[0])
 - [异常检测](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)
 - [optuna调参](./examples/run_optuna_tune.py)
+- [多gpu与tpu加速训练](./examples)
 - [tf-serving部署](./examples)
 
 ## 引用

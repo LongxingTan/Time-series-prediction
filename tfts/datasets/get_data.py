@@ -6,18 +6,24 @@ import os
 import random
 
 import numpy as np
+import pandas as pd
+
+air_passenger_url = (
+    "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
+)
 
 
-def load_data(name="sine", train_sequence_length=24, predict_sequence_length=8, test_size=0.1):
+def get_data(name="sine", train_length=24, predict_length=8, test_size=0.1):
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
-        return load_sine(train_sequence_length, predict_sequence_length, test_size=test_size)
+        return get_sine(train_length, predict_length, test_size=test_size)
+
+    if name == "airpassengers":
+        return get_air_passengers(train_length, predict_length, test_size=test_size)
     return
 
 
-def load_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2):
-    n_examples = 100
-
+def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2, n_examples=100):
     x = []
     y = []
     for _ in range(n_examples):
@@ -38,7 +44,7 @@ def load_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2
 
     x = np.array(x)
     y = np.array(y)[:, :, 0:1]
-    print(x.shape, y.shape)
+    print("Load sine data", x.shape, y.shape)
 
     if test_size > 0:
         slice = int(n_examples * (1 - test_size))
@@ -48,3 +54,9 @@ def load_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2
         y_valid = y[slice:]
         return (x_train, y_train), (x_valid, y_valid)
     return x, y
+
+
+def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test_size=0.2):
+    df = pd.read_csv(air_passenger_url)
+    print(df.shape)
+    return
