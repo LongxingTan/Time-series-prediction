@@ -48,18 +48,20 @@ $ pip install tfts
 **Usage**
 
 ``` python
+import matplotlib.pyplot as plt
 import tfts
 from tfts import AutoModel, KerasTrainer
 
 train_length = 24
 predict_length = 8
 
-train, valid = tfts.get_data('sine', train_length, predict_length)
+train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
 model = AutoModel('seq2seq', predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)
-trainer.predict(valid[0])
+pred = trainer.predict(valid[0])
+trainer.plot(valid[0], valid[1], pred)
 ```
 
 ## Examples
@@ -67,20 +69,11 @@ trainer.predict(valid[0])
 - [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
 - [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
 
-### More demos
-
-- [Time_series_prediction](./examples/run_prediction.py)
-- [Time series classification](./examples/run_classification.py)
-- [Anomaly detection](./examples/run_anomaly.py)
-- [Uncertainty prediction](./examples/run_uncertrainty.py)
-- [Parameters tuning by optuna](examples/run_optuna_tune.py)
-- [Serving by tf-serving](./examples)
-
 ### Performance
 
 The performance is evaluated by tfts implementation, not official
 
-| Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>nwrmsle</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sub>50</sub><sup>val</sup>]() | [ventilator<sub>75</sub><sup>val</sup>]() |
+| Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>rmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: |
 | [RNN]() | 672 | 47.7% |52.6% | 61.4% |
 | [DeepAR]() | 672 | 47.7% |52.6% | 61.4% |
@@ -94,6 +87,15 @@ The performance is evaluated by tfts implementation, not official
 | [AutoFormer]() | 672 | 47.7% |52.6% | 61.4% |
 | [N-beats]() | 672 | 47.7% |52.6% | 61.4% |
 | [U-Net]() | 672 | 47.7% |52.6% | 61.4% |
+
+### More demos
+
+- [Time series prediction](./examples/run_prediction.py)
+- [Time series classification](./examples/run_classification.py)
+- [Anomaly detection](./examples/run_anomaly.py)
+- [Uncertainty prediction](./examples/run_uncertrainty.py)
+- [Parameters tuning by optuna](examples/run_optuna_tune.py)
+- [Serving by tf-serving](./examples)
 
 ## Citation
 

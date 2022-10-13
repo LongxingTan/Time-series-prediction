@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import tensorflow as tf
 
@@ -63,7 +65,7 @@ class Trainer(object):
 
             log_str = "Epoch: {}, Train Loss: {:.4f}, Valid Loss: {:.4f}".format(epoch + 1, train_loss, valid_loss)
             log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
-            print(log_str)
+            logging.info(log_str)
 
             if stop_no_improve_epochs is not None:
                 if valid_scores[0] >= best_metric:
@@ -72,7 +74,7 @@ class Trainer(object):
                 else:
                     no_improve_epochs += 1
                 if no_improve_epochs >= stop_no_improve_epochs and epoch >= 4:
-                    print("I have tried my best, no improved and stop training!")
+                    logging.info("Tried the best, no improved and stop training")
                     break
 
         self.export_model(model_dir, only_pb=True)  # save the model
@@ -111,7 +113,7 @@ class Trainer(object):
             lr = self.learning_rate
         self.optimizer.lr.assign(lr)
         self.global_step.assign_add(1)
-        # print('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
+        # logging.info('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
         return y_pred, loss
 
     def valid_loop(self, valid_loader):
@@ -153,11 +155,11 @@ class Trainer(object):
     def export_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
-        print("protobuf model successfully saved in {}".format(model_dir))
+        logging.info("protobuf model successfully saved in {}".format(model_dir))
 
         if not only_pb:
             self.model.save_weights("{}.ckpt".format(model_dir))
-            print("model weights successfully saved in {}.ckpt".format(model_dir))
+            logging.info("model weights successfully saved in {}.ckpt".format(model_dir))
 
 
 class KerasTrainer(object):
@@ -170,8 +172,8 @@ class KerasTrainer(object):
         strategy=None,
     ):
         """
-        model: a tf.keras.Model instance
-        loss: a loss function
+        model: tf.keras.Model instance
+        loss: loss function
         optimizer: tf.keras.Optimizer instance
         """
         self.model = model
@@ -205,7 +207,7 @@ class KerasTrainer(object):
             callbacks.append(checkpoint)
         if "callbacks" in kwargs:
             callbacks += kwargs.get("callbacks")
-            print("callback", callbacks)
+            logging.info("callback", callbacks)
 
         # if self.strategy is None:
         #     self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
@@ -216,11 +218,12 @@ class KerasTrainer(object):
 
         # with self.strategy.scope():
         if not isinstance(self.model, tf.keras.Model):
-            print("build_model" in dir(self.model))
+            if "build_model" not in dir(self.model):
+                raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
             input_shape = train_dataset[0].shape[1:]
             self.model = self.model.build_model(input_shape=input_shape)
 
-        print(self.model.summary())
+        # print(self.model.summary())
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
@@ -257,15 +260,18 @@ class KerasTrainer(object):
     def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
         # save the model
         if checkpoint_dir is not None:
-            print("check", checkpoint_dir)
+            logging.info("checkpoint Loaded", checkpoint_dir)
             self.model.load_weights(checkpoint_dir)
         else:
-            print("nocheck")
+            logging.info("No checkpoint Loaded")
 
         self.model.save(model_dir)
-        print("protobuf model successfully saved in {}".format(model_dir))
+        logging.info("protobuf model successfully saved in {}".format(model_dir))
 
         if not only_pb:
             self.model.save_weights("{}.ckpt".format(model_dir))
-            print("model weights successfully saved in {}.ckpt".format(model_dir))
+            logging.info("model weights successfully saved in {}.ckpt".format(model_dir))
         return
+
+    def plot(self, history, true, pred):
+        pass

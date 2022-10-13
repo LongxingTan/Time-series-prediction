@@ -15,3 +15,10 @@ DeepAR       False        True           False      False
 Seq2seq      True         True           False      False
 TCN          True         True           False      False
 ===========  ===========  =============  ========  ==========
+
+Models supported
+------------------
+
+* RNN
+* DeepAR
+* Seq2seq

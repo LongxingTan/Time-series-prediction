@@ -2,6 +2,7 @@
 Get the example data script
 """
 
+import logging
 import os
 import random
 
@@ -44,7 +45,7 @@ def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2,
 
     x = np.array(x)
     y = np.array(y)[:, :, 0:1]
-    print("Load sine data", x.shape, y.shape)
+    logging.info("Load sine data", x.shape, y.shape)
 
     if test_size > 0:
         slice = int(n_examples * (1 - test_size))

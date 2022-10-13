@@ -10,10 +10,11 @@ from tfts import AutoModel, KerasTrainer as Trainer
 
 class DemoTest(unittest.TestCase):
     def test_demo(self):
-        train, valid = tfts.get_data("sine")
-        print(train[0].shape, train[1].shape)
+        train_length = 24
+        predict_length = 8
 
-        model = AutoModel("seq2seq", predict_length=8)
+        train, valid = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
+        model = AutoModel("seq2seq", predict_length=predict_length)
 
         trainer = Trainer(model)
         trainer.train(train, valid, n_epochs=3)

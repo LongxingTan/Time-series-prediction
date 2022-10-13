@@ -34,6 +34,8 @@
 
 ## 安装
 
+环境要求
+
 - python >= 3.7
 - tensorflow >= 2.1
 
@@ -60,8 +62,17 @@ trainer.predict(valid[0])
 
 ## 示例
 
-- [东流Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
-- [东流Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
+东流tfts专注业界领先的深度模型
+
+- [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
+- [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
+- [RNN]()
+- [DeepAR]()
+- [TCN]()
+- [WaveNet]()
+- [Transformer]()
+- [Informer]()
+- [AutoFormer]()
 
 ### 更多应用
 

@@ -21,7 +21,7 @@ Train the models
 	loss_fn = tf.keras.losses.MeanSquaredError()
 	optimizer = tf.keras.optimizers.Adam(0.003)
 	lr_scheduler=None
-	model = AutoModel('seq2seq', loss_fn=loss_fn, optimizer=optimizer, lr)
+	model = AutoModel('seq2seq', loss_fn=loss_fn, optimizer=optimizer, lr_scheduler=lf_scheduler)
 
 
 Custom-defined configuration
