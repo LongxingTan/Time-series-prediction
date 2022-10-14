@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.deepar`"""
 
 import numpy as np
 import tensorflow as tf
@@ -24,6 +25,18 @@ class GaussianLayer(tf.keras.layers.Layer):
         super(GaussianLayer, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         mu = tf.matmul(x, self.weight1) + self.bias1
         sig = tf.matmul(x, self.weight2) + self.bias2
         sig_pos = tf.math.log1p(tf.math.exp(sig)) + 1e-7

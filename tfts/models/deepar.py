@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-
+"""
+`DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
+<https://arxiv.org/abs/1704.04110>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropout
@@ -16,7 +17,7 @@ params = {
 class DeepAR(object):
     def __init__(self, custom_model_params={}):
         """DeepAR Network
-        reference paper: `DeepAR: Probabilistic forecasting with autoregressive recurrent networks`
+
         :param custom_model_params:
         """
         self.params = params
@@ -27,6 +28,18 @@ class DeepAR(object):
         self.gauss = GaussianLayer(units=1)
 
     def __call__(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x, _ = self.rnn(x)
         x = self.dense(x)
         loc, scale = self.gauss(x)

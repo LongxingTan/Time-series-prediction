@@ -1,7 +1,7 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# paper: https://arxiv.org/pdf/2106.13008.pdf
+"""
+`Autoformer: Decomposition Transformers with Auto-Correlation for Long-Term Series Forecasting
+<https://arxiv.org/abs/2106.13008>`_
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -67,7 +67,20 @@ class AutoFormer(object):
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None, **kwargs):
-        # inputs:
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """  # inputs:
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, decoder_features = inputs
             # encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -137,6 +150,18 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x, _ = self.series_decomp1(self.autocorrelation(x, x, x) + x)
         x, _ = self.series_decomp2(self.drop(self.dense(x)) + x)
         return x
@@ -162,6 +187,22 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.activation = tf.keras.activations.gelu
 
     def call(self, x, cross, init_trend):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        cross : _type_
+            _description_
+        init_trend : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x, trend1 = self.series_decomp1(self.drop(self.autocorrelation1(x, x, x)) + x)
         x, trend2 = self.series_decomp2(self.drop(self.autocorrelation2(x, cross, cross)) + x)
         x = self.conv2(self.drop(self.activation(self.conv1(x))))

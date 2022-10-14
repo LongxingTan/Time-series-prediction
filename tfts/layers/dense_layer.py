@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
@@ -46,6 +47,18 @@ class DenseTemp(tf.keras.layers.Layer):
         super(DenseTemp, self).build(input_shape)
 
     def call(self, inputs):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         output = tf.einsum("ijk,kl->ijl", inputs, self.kernel)
 
         if self.use_bias:
@@ -77,6 +90,18 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         super(FeedForwardNetwork, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         output = self.filter_dense_layer(x)
         output = self.drop(output)
         output = self.output_dense_layer(output)

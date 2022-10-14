@@ -1,6 +1,7 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
+"""
+`BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
+<https://arxiv.org/abs/1810.04805>`_
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -79,6 +80,20 @@ class Bert(object):
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         # inputs:
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
@@ -146,6 +161,22 @@ class Forecasting(tf.keras.layers.Layer):
         self.dense = Dense(1)
 
     def call(self, src, teacher=None, training=None):
+        """_summary_
+
+        Parameters
+        ----------
+        src : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        training : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         outputs = []
         for i in range(self.predict_sequence_length):
             # batch * seq * fea => batch * seq * fea

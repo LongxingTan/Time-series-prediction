@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-
+"""
+`U-Net: Convolutional Networks for Biomedical Image Segmentation
+<https://arxiv.org/abs/1505.04597>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatenate, Conv1D, Input, Lambda, UpSampling1D
@@ -11,6 +12,8 @@ params = {}
 
 
 class Unet(object):
+    """Unet model"""
+
     def __init__(self, custom_model_params):
         self.params = params.update(custom_model_params)
         self.AvgPool1D1 = AveragePooling1D(pool_size=2)
@@ -19,6 +22,22 @@ class Unet(object):
         self.decoder = Decoder()
 
     def __call__(self, x, predict_seq_length, training=True):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        predict_seq_length : _type_
+            _description_
+        training : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         pool1 = self.AvgPool1D1(x)
         pool2 = self.AvgPool1D2(x)
 
@@ -32,6 +51,24 @@ class Encoder(object):
         pass
 
     def __call__(self, input_tensor, units=64, kernel_size=2, depth=2):
+        """_summary_
+
+        Parameters
+        ----------
+        input_tensor : _type_
+            _description_
+        units : int, optional
+            _description_, by default 64
+        kernel_size : int, optional
+            _description_, by default 2
+        depth : int, optional
+            _description_, by default 2
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x, pool1, pool2 = input_tensor
 
         x = conv_br(x, units, kernel_size, 1, 1)  # => batch_size * sequence_length * units
@@ -62,6 +99,24 @@ class Decoder(object):
         pass
 
     def __call__(self, input_tensor, units=64, kernel_size=2, predict_seq_length=1):
+        """_summary_
+
+        Parameters
+        ----------
+        input_tensor : _type_
+            _description_
+        units : int, optional
+            _description_, by default 64
+        kernel_size : int, optional
+            _description_, by default 2
+        predict_seq_length : int, optional
+            _description_, by default 1
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         out_0, out_1, out_2, x = input_tensor
         x = UpSampling1D(4)(x)
         x = Concatenate()([x, out_2])

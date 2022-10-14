@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.unet`"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Multiply
@@ -22,6 +23,18 @@ class ConvbrLayer(tf.keras.layers.Layer):
         super(ConvbrLayer, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = self.conv1(x)
         x = self.bn(x)
         x = self.relu(x)
@@ -32,9 +45,7 @@ class ConvbrLayer(tf.keras.layers.Layer):
 
 
 class SeBlock(tf.keras.layers.Layer):
-    """
-    Squeeze-and-Excitation Networks
-    """
+    """Squeeze-and-Excitation Networks"""
 
     def __init__(self, units):
         super(SeBlock, self).__init__()
@@ -47,6 +58,18 @@ class SeBlock(tf.keras.layers.Layer):
         super(SeBlock, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         input = x
         x = self.pool(x)
         x = self.fc1(x)
@@ -75,6 +98,18 @@ class ReBlock(tf.keras.layers.Layer):
         super(ReBlock, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x_re = self.conv_br1(x)
         x_re = self.conv_br2(x_re)
         if self.use_se:

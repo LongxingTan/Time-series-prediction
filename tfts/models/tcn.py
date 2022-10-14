@@ -1,7 +1,7 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
+"""
+`WaveNet: A Generative Model for Raw Audio
+<https://arxiv.org/abs/1609.03499>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten
@@ -19,6 +19,8 @@ params = {
 
 
 class TCN(object):
+    """Temporal convolutional network"""
+
     def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
         if custom_model_params:
             params.update(custom_model_params)
@@ -44,7 +46,20 @@ class TCN(object):
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None):
-        # inputs:
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
             # encoder_features = tf.concat([x, encoder_features], axis=-1)

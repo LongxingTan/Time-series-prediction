@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# official: https://github.com/zhouhaoyi/Informer2020
-
+"""
+`Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting
+<https://arxiv.org/abs/2012.07436>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -31,8 +31,11 @@ params = {
 
 
 class Informer(object):
+    """Informer model for time series"""
+
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
-        """Transformer for time series
+        """
+
         :param custom_model_params: _description_
         :type custom_model_params: _type_
         :param dynamic_decoding: _description_, defaults to True
@@ -78,6 +81,20 @@ class Informer(object):
         # self.projection = Dense(predict_sequence_length, activation=None)
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, decoder_features = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -109,6 +126,20 @@ class Encoder(tf.keras.layers.Layer):
         self.norm_layer = norm_layer
 
     def call(self, x, mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
                 x = attn_layer(x, mask)
@@ -143,6 +174,20 @@ class EncoderLayer(tf.keras.layers.Layer):
         super(EncoderLayer, self).build(input_shape)
 
     def call(self, x, mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         input = x
         x = self.attn_layer(x, mask)
         x = self.drop(x)
@@ -182,6 +227,18 @@ class CustomConv(tf.keras.layers.Layer):
         super(CustomConv, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = self.conv(x)
         x = self.norm(x)
         x = self.activation(x)
@@ -196,6 +253,24 @@ class Decoder(tf.keras.layers.Layer):
         self.norm = norm_layer
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        memory : _type_, optional
+            _description_, by default None
+        x_mask : _type_, optional
+            _description_, by default None
+        memory_mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         for layer in self.layers:
             x = layer(x, memory, x_mask, memory_mask)
 
@@ -226,6 +301,24 @@ class DecoderLayer(tf.keras.layers.Layer):
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        memory : _type_, optional
+            _description_, by default None
+        x_mask : _type_, optional
+            _description_, by default None
+        memory_mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x0 = x
         x = self.attn1(x, x_mask)
         x = self.drop(x)

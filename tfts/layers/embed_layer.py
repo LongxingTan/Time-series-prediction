@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.transformer`"""
 
 import numpy as np
 import tensorflow as tf
@@ -25,6 +26,18 @@ class TokenEmbedding(tf.keras.layers.Layer):
         super(TokenEmbedding, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         y = tf.einsum("bsf,fk->bsk", x, self.token_weights)
         return y
 
@@ -44,6 +57,18 @@ class TokenRnnEmbedding(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         y, _ = self.rnn(x)
         return y
 
@@ -62,6 +87,20 @@ class PositionalEmbedding(tf.keras.layers.Layer):
         super(PositionalEmbedding, self).build(input_shape)
 
     def call(self, x, masking=True):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        masking : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
 
@@ -94,6 +133,20 @@ class PositionalEncoding(tf.keras.layers.Layer):
         super(PositionalEncoding, self).build(input_shape)
 
     def call(self, x, masking=True):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        masking : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
         with tf.name_scope("position_encode"):
@@ -123,6 +176,18 @@ class FixedEmbedding(tf.keras.layers.Layer):
         super().__init__()
 
     def call(self, x, **kwargs):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return self.embed(x)
 
 
@@ -136,6 +201,13 @@ class TemporalEmbedding(tf.keras.layers.Layer):
         self.hour_embed = Embedding(hour_size, 6)
 
     def call(self, x, **kwargs):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        """
         return
 
 
@@ -150,6 +222,18 @@ class DataEmbedding(tf.keras.layers.Layer):
         super(DataEmbedding, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         ve = self.value_embedding(x)
         pe = self.positional_embedding(ve)
         return self.dropout(ve + pe)

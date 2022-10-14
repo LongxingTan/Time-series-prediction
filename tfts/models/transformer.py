@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# paper: https://arxiv.org/pdf/1706.03762.pdf
-
+"""
+`Attention Is All You Need
+<https://arxiv.org/abs/1706.03762>`_
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -28,8 +28,11 @@ params = {
 
 
 class Transformer(object):
+    """Transformer model"""
+
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
         """Transformer for time series
+
         :param custom_model_params: _description_
         :type custom_model_params: _type_
         :param dynamic_decoding: _description_, defaults to True
@@ -79,6 +82,20 @@ class Transformer(object):
         self.project = Dense(1, activation=None)
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, decoder_features = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -132,6 +149,20 @@ class Encoder(tf.keras.layers.Layer):
         super(Encoder, self).build(input_shape)
 
     def call(self, encoder_inputs, src_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        encoder_inputs : _type_
+            _description_
+        src_mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = encoder_inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
@@ -185,6 +216,28 @@ class Decoder(tf.keras.layers.Layer):
     def call(
         self, decoder_features, init_input, encoder_memory, teacher=None, scheduler_sampling=0, training=None, **kwargs
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_features : _type_
+            _description_
+        init_input : _type_
+            _description_
+        encoder_memory : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        scheduler_sampling : int, optional
+            _description_, by default 0
+        training : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         this_input = init_input
 
         for i in range(self.predict_sequence_length):
@@ -257,6 +310,24 @@ class DecoderLayer(tf.keras.layers.Layer):
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_inputs : _type_
+            _description_
+        encoder_memory : _type_
+            _description_
+        tgt_mask : _type_, optional
+            _description_, by default None
+        cross_mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = decoder_inputs
 
         for _, layer in enumerate(self.layers):
@@ -307,6 +378,26 @@ class Decoder2(tf.keras.layers.Layer):
         return x
 
     def call(self, x, cross, x_mask=None, cross_mask=None, training=True):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        cross : _type_
+            _description_
+        x_mask : _type_, optional
+            _description_, by default None
+        cross_mask : _type_, optional
+            _description_, by default None
+        training : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = self.decode(x, cross, x_mask, cross_mask)
         x = self.drop(x)
         x = self.dense2(x)
@@ -360,6 +451,24 @@ class DecoderLayer2(tf.keras.layers.Layer):
         super(DecoderLayer2, self).build(input_shape)
 
     def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_inputs : _type_
+            _description_
+        encoder_memory : _type_
+            _description_
+        tgt_mask : _type_, optional
+            _description_, by default None
+        cross_mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = decoder_inputs
 
         for _, layer in enumerate(self.layers):

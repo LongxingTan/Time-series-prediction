@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-
+"""
+`Generative Adversarial Networks
+<https://arxiv.org/abs/1406.2661>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Conv2D, Conv2DTranspose, Dense, Input
@@ -14,6 +15,8 @@ params = {
 
 
 class GAN(object):
+    """GAN model"""
+
     def __init__(self, custom_model_params):
         self.generator = Generator()
         self.discriminator = Discriminator()
@@ -38,6 +41,20 @@ class Generator(tf.keras.Model):
         self.bn3 = BatchNormalization()
 
     def call(self, z, training=True):
+        """_summary_
+
+        Parameters
+        ----------
+        z : _type_
+            _description_
+        training : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         ln1 = tf.nn.relu(self.bn1(self.fc1(z)))
         ln2 = tf.nn.relu(self.bn2(self.fc2(ln1)))
         ln2 = tf.reshape(ln2, [-1, 4, 1, 128])
@@ -63,6 +80,20 @@ class Discriminator(tf.keras.Model):
         self.bn2 = BatchNormalization()
 
     def call(self, x, training=True):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        training : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = tf.convert_to_tensor(x)  # class Tensor has dtype of float64_ref and class Variable has dtype of float64
         conv1 = tf.nn.leaky_relu(self.conv1(x))
         conv2 = tf.nn.leaky_relu(self.bn1((conv1)))

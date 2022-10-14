@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# paper: https://arxiv.org/abs/1905.10437
+"""
+`N-BEATS: Neural basis expansion analysis for interpretable time series forecasting
+<https://arxiv.org/abs/1905.10437>`_
+"""
 
 from collections import defaultdict
 
@@ -18,6 +19,8 @@ params = defaultdict(
 
 
 class NBeats(object):
+    """NBeats model"""
+
     def __init__(self, custom_model_params):
         params.update(custom_model_params)
         self.stack_types = params["stack_types"]

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan
+"""Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
@@ -28,18 +29,22 @@ class FullAttention(tf.keras.layers.Layer):
     def call(self, q, k, v, mask=None):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
 
-        :param q: Query with shape batch * seq_q * fea
-        :type q: _type_
-        :param k: Key with shape batch * seq_k * fea
-        :type k: _type_
-        :param v: value with shape batch * seq_v * fea
-        :type v: _type_
-        :param mask: important to avoid the leaks, defaults to None
-        :type mask: _type_, optional
-        :return: tensor with shape batch * key_sequence * (units * num_heads)
-        :rtype: _type_
-        """
+        Parameters
+        ----------
+        q : _type_
+            Query with shape batch * seq_q * fea
+        k : _type_
+            Key with shape batch * seq_k * fea
+        v : _type_
+            value with shape batch * seq_v * fea
+        mask : _type_, optional
+            important to avoid the leaks, defaults to None, by default None
 
+        Returns
+        -------
+        _type_
+            tensor with shape batch * key_sequence * (units * num_heads)
+        """
         q = self.dense_q(q)  # project the query/key/value to num_heads * units
         k = self.dense_k(k)
         v = self.dense_v(v)
@@ -80,6 +85,20 @@ class SelfAttention(tf.keras.layers.Layer):
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x, mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return self.attention(x, x, x, mask)
 
     def get_config(self):
@@ -95,6 +114,13 @@ class SparseAttention(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        """
         return
 
     def get_config(self):
@@ -110,6 +136,15 @@ class ProbAttention(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, x, x_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        x_mask : _type_, optional
+            _description_, by default None
+        """
         return
 
     def get_config(self):
@@ -125,6 +160,15 @@ class FastAttention(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, x, x_mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        x_mask : _type_, optional
+            _description_, by default None
+        """
         return
 
     def get_config(self):

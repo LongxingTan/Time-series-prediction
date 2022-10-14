@@ -1,5 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
+"""
+`Sequence to Sequence Learning with Neural Networks
+<https://arxiv.org/abs/1409.3215>`_
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -23,6 +25,8 @@ params = {
 
 
 class Seq2seq(object):
+    """Seq2seq model"""
+
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
         if custom_model_params:
             params.update(custom_model_params)
@@ -92,6 +96,18 @@ class Encoder(tf.keras.layers.Layer):
         self.dense = Dense(units=dense_size, activation="tanh")
 
     def call(self, inputs):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         outputs, state = self.rnn(inputs)
         state = self.dense(state)
@@ -260,6 +276,30 @@ class Decoder2(tf.keras.layers.Layer):
         teacher=None,
         use_attention=False,
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_feature : _type_
+            _description_
+        init_state : _type_
+            _description_
+        decoder_init_input : _type_
+            _description_
+        encoder_output : _type_
+            _description_
+        predict_seq_length : int, optional
+            _description_, by default 1
+        teacher : _type_, optional
+            _description_, by default None
+        use_attention : bool, optional
+            _description_, by default False
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return self.forward(
             decoder_feature=decoder_feature,
             init_state=[init_state],  # for tf2
@@ -300,6 +340,28 @@ class Decoder3(tf.keras.layers.Layer):
         training=None,
         **kwargs
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_features : _type_
+            _description_
+        decoder_init_input : _type_
+            _description_
+        init_state : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        scheduler_sampling : int, optional
+            _description_, by default 0
+        training : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = self.rnn(decoder_features, initial_state=init_state)
         # x = self.drop(x)
         x = self.dense(x)

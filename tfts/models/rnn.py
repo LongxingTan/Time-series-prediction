@@ -1,5 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
+"""
+`Long short term memory
+<http://www.bioinf.jku.at/publications/older/2604.pdf>`_
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -30,6 +32,8 @@ params = {
 
 
 class RNN(object):
+    """RNN model"""
+
     def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
         if custom_model_params:
             params.update(custom_model_params)
@@ -48,7 +52,20 @@ class RNN(object):
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
 
     def __call__(self, inputs, teacher=None):
-        # inputs:
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """  # inputs:
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
             # encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -122,6 +139,18 @@ class Encoder(tf.keras.layers.Layer):
         super(Encoder, self).build(input_shape)
 
     def call(self, inputs):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         # inputs = self.bn(inputs)
         if self.rnn_type.lower() == "gru":
@@ -157,6 +186,20 @@ class RNNBaseline(object):
         self.dense2 = Dense(1)
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -184,6 +227,15 @@ class RNNDay(object):
         self.dense1 = Dense(predict_sequence_length)
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -195,7 +247,5 @@ class RNNDay(object):
 
 
 class ESRNN(object):
-    """ """
-
     def __init__(self) -> None:
         pass

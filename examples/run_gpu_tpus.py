@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 
-from tfts.model import AutoModel
+from tfts.models.auto_model import AutoModel
 from tfts.trainer import KerasTrainer
 
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.nbeats`"""
 
 import math
 
@@ -28,6 +29,18 @@ class NBeatsLayer(tf.keras.layers.Layer):
         super(NBeatsLayer, self).build(input_shape)
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.fc3(x)
@@ -51,6 +64,18 @@ class GenericBlock(NBeatsLayer):
         self.forecast_fn = Dense(units=forecast_length)
 
     def __call__(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = super(GenericBlock, self).call(x)
         theta_b = self.theta_b_fn(x)
         theta_f = self.theta_f_fn(x)
@@ -65,6 +90,18 @@ class TrendBlock(NBeatsLayer):
         self.backcast_linspace, self.forecast_linspace = self.linspace(backcast_length, forecast_length)
 
     def __call__(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = super(TrendBlock, self).call(x)
         theta_b = self.theta_b_fn(x)
         theta_f = self.theta_f_fn(x)
@@ -85,6 +122,18 @@ class SeasonalityBlock(NBeatsLayer):
         self.backcast_linspace, self.forecast_linspace = self.linspace(backcast_length, forecast_length)
 
     def __call__(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x = super(SeasonalityBlock, self).call(x)
         theta_b = self.theta_b_fn(x)
         theta_f = self.theta_f_fn(x)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""Layer for :py:class:`~tfts.models.autoformer`"""
 
 import math
 
@@ -14,16 +15,25 @@ class SeriesDecomp(tf.keras.layers.Layer):
         self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         x_ma = self.moving_avg(x)
         return x - x_ma, x_ma
 
 
-"""
-TODO: v not used in process
-"""
-
-
 class AutoCorrelation(tf.keras.layers.Layer):
+    """Auto"""
+
     def __init__(self, d_model, num_heads, attention_dropout=0.1) -> None:
         super().__init__()
         self.d_model = d_model
@@ -38,7 +48,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         self.drop = Dropout(self.attention_dropout)
         self.dense = Dense(self.d_model, name="project")
 
-    def time_delay_agg(self, q, k, v):
+    def time_delay_agg(self, q, k, v):  # TODO: v not used in process
         batch_size = tf.shape(q)[0]
         time_steps = tf.shape(q)[2]
         q_fft = tf.signal.rfft(tf.transpose(q, perm=[0, 1, 3, 2]))
@@ -69,6 +79,24 @@ class AutoCorrelation(tf.keras.layers.Layer):
         return tf.transpose(x, perm=[0, 2, 1, 3])  # (batch_size, num_heads, timesteps, depth)
 
     def call(self, q, k, v, dynamic=True):
+        """_summary_
+
+        Parameters
+        ----------
+        q : _type_
+            _description_
+        k : _type_
+            _description_
+        v : _type_
+            _description_
+        dynamic : bool, optional
+            _description_, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         batch_size = tf.shape(q)[0]
 
         q = self.drop(self.wq(q))

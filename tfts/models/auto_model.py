@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
+"""AutoModel to choose different models"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Input
@@ -19,6 +20,8 @@ from tfts.models.wavenet import WaveNet
 
 
 class AutoModel(object):
+    """AutoModel"""
+
     def __init__(self, use_model, predict_length, custom_model_params=None, custom_model_head=None):
         if use_model.lower() == "seq2seq":
             self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
@@ -36,6 +39,18 @@ class AutoModel(object):
             raise ValueError("unsupported model of {} yet".format(use_model))
 
     def __call__(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return self.model(x)
 
     def build_model(self, input_shape):

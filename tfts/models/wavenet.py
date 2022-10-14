@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
+"""
+`WaveNet: A Generative Model for Raw Audio
+<https://arxiv.org/abs/1609.03499>`_
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -22,7 +23,7 @@ params = {
 
 
 class WaveNet(object):
-    """Wavenet network for time series"""
+    """WaveNet model for time series"""
 
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
         if custom_model_params:
@@ -42,6 +43,20 @@ class WaveNet(object):
         )
 
     def __call__(self, inputs, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        inputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, decoder_features = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)
@@ -76,12 +91,9 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(units=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(units=1, name="encoder_dense_time_4")
 
-    def forward(self, x):
-        """
-        :param x:
-        :return: conv_inputs [batch_size, time_sequence_length, filters] * time_sequence_length
-        """
-        inputs = self.dense_time1(inputs=x)  # batch_size * time_sequence_length * filters
+    def __call__(self, x):
+        # batch_size * time_sequence_length * filters
+        inputs = self.dense_time1(inputs=x)
 
         skip_outputs = []
         conv_inputs = [inputs]
@@ -97,11 +109,9 @@ class Encoder(object):
 
         skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
         h = self.dense_time3(skip_outputs)
+        # [batch_size, time_sequence_length, filters] * time_sequence_length
         y_hat = self.dense_time4(h)
         return y_hat, conv_inputs[:-1]
-
-    def __call__(self, x):
-        return self.forward(x)
 
 
 class Decoder1(object):
@@ -125,6 +135,28 @@ class Decoder1(object):
         training=None,
         **kwargs
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_features : _type_
+            _description_
+        decoder_init_input : _type_
+            _description_
+        encoder_outputs : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        scheduler_sampling : int, optional
+            _description_, by default 0
+        training : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         decoder_outputs = []
         prev_output = decoder_init_input  # the initial input for decoder
 
@@ -146,7 +178,7 @@ class Decoder1(object):
 
             for i, dilation in enumerate(self.dilation_rates):
                 state = encoder_outputs[i][:, -dilation, :]
-                # use 2 dense layer to calculate a kernel=2 convlution
+                # use 2 dense layer to calculate a kernel=2 convolution
                 dilated_conv = self.dense2(state) + self.dense3(x)
                 conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
                 dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
@@ -179,6 +211,26 @@ class Decoder2(object):
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
     def __call__(self, x, decoder_feature, encoder_states, predict_seq_length, teacher=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        decoder_feature : _type_
+            _description_
+        encoder_states : _type_
+            _description_
+        predict_seq_length : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         decoder_init_value = x[:, -1, :]
 
         def cond_fn(time, prev_output, decoder_output_ta):
@@ -227,10 +279,10 @@ class Decoder2(object):
 
 
 class Decoder3(tf.keras.layers.Layer):
-    # multi-steps static decoding
+    """Multi-steps static decoding"""
+
     def __init__(self, kernel_sizes, dilation_rates, filters, dense_size, **kwargs) -> None:
         super(Decoder3, self).__init__()
-
         self.dense = Dense(units=dense_size, activation=None)
 
     def call(
@@ -243,6 +295,29 @@ class Decoder3(tf.keras.layers.Layer):
         training=None,
         **kwargs
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        decoder_features : _type_
+            _description_
+        decoder_init_input : _type_
+            _description_
+        init_state : _type_
+            _description_
+        teacher : _type_, optional
+            _description_, by default None
+        scheduler_sampling : int, optional
+            _description_, by default 0
+        training : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
+
         x = self.rnn(decoder_features, initial_state=init_state)
         x = self.dense(x)
         return x

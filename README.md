@@ -60,6 +60,7 @@ model = AutoModel('seq2seq', predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)
+
 pred = trainer.predict(valid[0])
 trainer.plot(valid[0], valid[1], pred)
 ```

@@ -7,6 +7,8 @@ __all__ = ["Trainer", "KerasTrainer"]
 
 
 class Trainer(object):
+    """General trainer from tensorflow custom train"""
+
     def __init__(self, model, loss_fn, optimizer, lr_scheduler=None, metrics=None):
         self.model = model
         self.loss_fn = loss_fn
@@ -29,15 +31,31 @@ class Trainer(object):
         transform=None,
     ):
         """train function
-        :param train_loader: tf.data.Dataset instance
-        :param valid_loader: valid_dataset: None or tf.data.Dataset instance
-        :param n_epochs:
-        :param learning_rate:
-        :param verbose:
-        :param eval_metric:
-        :param model_dir:
-        :param stop_no_improve_epochs: if None, no early stop; otherwise, training will stop after no_improve_epochs
-        based on the 1st eval_metric score
+
+        Parameters
+        ----------
+        train_loader : _type_
+            tf.data.Dataset instance
+        valid_loader : _type_
+            tf.data.Dataset instance
+        n_epochs : int, optional
+            _description_, by default 10
+        batch_size : int, optional
+            _description_, by default 8
+        learning_rate : _type_, optional
+            _description_, by default 3e-4
+        verbose : int, optional
+            _description_, by default 1
+        eval_metric : tuple, optional
+            _description_, by default ()
+        model_dir : _type_, optional
+            _description_, by default None
+        use_ema : bool, optional
+            _description_, by default False
+        stop_no_improve_epochs : _type_, optional
+            if None, no early stop; otherwise, training will stop after no_improve_epochs, by default None
+        transform : _type_, optional
+            _description_, by default None
         """
         self.learning_rate = learning_rate
         self.eval_metric = eval_metric
@@ -163,6 +181,8 @@ class Trainer(object):
 
 
 class KerasTrainer(object):
+    """General trainer from tf.keras"""
+
     def __init__(
         self,
         model,

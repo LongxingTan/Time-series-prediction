@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-
+"""Layer for :py:class:`~tfts.models.rnn`"""
 
 import numpy as np
 import tensorflow as tf
@@ -15,6 +15,13 @@ class DRNN(tf.keras.layers.Layer):
         super()
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        """
         return
 
     def get_config(self):
@@ -29,6 +36,13 @@ class ResidualDRNN(tf.keras.layers.Layer):
         super()
 
     def call(self, x):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        """
         return
 
     def get_config(self):
