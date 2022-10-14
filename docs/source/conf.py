@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 import sys
 
+from recommonmark.parser import CommonMarkParser
 from sphinx.application import Sphinx
 from sphinx.ext.autosummary import Autosummary
 from sphinx.pycode import ModuleAnalyzer
@@ -29,7 +30,7 @@ import tfts
 # -- Project information -----------------------------------------------------
 
 project = "Time-series-prediction"
-copyright = "2022, Longxing Tan"
+copyright = "2020, Longxing Tan"
 author = "Longxing Tan"
 
 # The full version, including alpha/beta/rc tags
@@ -164,8 +165,6 @@ html_sidebars = {
     "tutorials": [],
     "models": [],
     "tricks": [],
-    # "faq": [],
-    # "contribute": [],
     "CHANGELOG": [],
 }
 

@@ -5,18 +5,14 @@
 
 
 class AutoConfig(object):
-    """
-    AutoConfig for model
-
-     Methods
-        -------
-        __call__:
-           call
-    """
+    """AutoConfig for model"""
 
     def __call__(self):
-        """
-        Auto config
-        :return:
+        """Auto config
+
+        Returns
+        -------
+        _type_
+            _description_
         """
         return 1

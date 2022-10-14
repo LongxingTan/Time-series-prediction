@@ -1,11 +1,11 @@
 recommonmark>=0.7.1
 nbconvert>=6.3.0
-pandoc>=1.0
-ipython
 sphinx>3.2
-nbsphinx==0.8.8
-sphinx_markdown_tables==0.0.17
-pydata_sphinx_theme==0.8.0
+pandoc
+ipython
+nbsphinx
+sphinx_markdown_tables
+pydata_sphinx_theme
 docutils
 sphinx-autobuild
 

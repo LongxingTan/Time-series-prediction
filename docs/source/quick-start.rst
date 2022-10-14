@@ -47,6 +47,7 @@ Example
 .. code-block:: python
 
     import tensorflow as tf
+    import matplotlib.pyplot as plt
     import tfts
     from tfts import AutoModel, KerasTrainer
 
@@ -59,18 +60,13 @@ Example
     model = AutoModel('seq2seq', predict_length=predict_length)
 
     # train
-    epochs = 10
-    batch_size = 32
     opt = tf.keras.optimizers.Adam(0.003)
     loss_fn = tf.keras.losses.MeanSquaredError()
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-    trainer.train(train, valid, n_epochs=epochs, batch_size=batch_size)
+    trainer.train(train, valid, n_epochs=10, batch_size=32)
 
     # test
     trainer.predict(valid[0])
 
-
-Main API
----------
 
 .. currentmodule:: tfts
