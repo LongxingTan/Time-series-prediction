@@ -71,7 +71,6 @@ class RNN(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-            # decoder_features = None
 
         # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
 
@@ -139,7 +138,7 @@ class Encoder(tf.keras.layers.Layer):
         super(Encoder, self).build(input_shape)
 
     def call(self, inputs):
-        """_summary_
+        """RNN encoder call
 
         Parameters
         ----------
@@ -208,10 +207,9 @@ class RNN2(object):
         future = tf.zeros([encoder_shape[0], self.predict_sequence_length, encoder_shape[2]])
         encoder_features = tf.concat([encoder_features, future], axis=1)
         output, state = self.rnn(encoder_features)
-        output = self.drop1(output)
         output = self.dense2(output)
 
-        return output[:, -self.predict_sequence_length :, 0]
+        return output[:, -self.predict_sequence_length :]
 
 
 class ESRNN(object):

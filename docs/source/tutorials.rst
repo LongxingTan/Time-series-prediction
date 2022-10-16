@@ -80,6 +80,12 @@ Auto-tuned configuration
 	tuner.run(config)
 
 
+Custom head for classification or anomaly task
+-------------------------------------------------
+
+Deployment in tf-serving
+--------------------------
+
 .. toctree::
    :titlesonly:
    :maxdepth: 2

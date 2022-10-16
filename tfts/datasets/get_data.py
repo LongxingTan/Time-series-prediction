@@ -1,4 +1,4 @@
-"""Get the example data script"""
+"""Generate the example data script"""
 
 import logging
 import os

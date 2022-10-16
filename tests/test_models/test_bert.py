@@ -2,45 +2,17 @@ import unittest
 
 import tensorflow as tf
 
+import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
 from tfts.models.bert import Bert
 
-# class BertModelTester:
-#     def __init__(self):
-#         pass
-#
-#     def prepare_config_and_inputs(self):
-#         return
-#
-#     def prepare_config_and_inputs_for_decoder(self):
-#         return
-#
-#     def create_and_check_model(self):
-#         return
-#
-#     def create_and_check_model_as_decoder(self):
-#         return
-#
-#
-# class BertModelTest(unittest.TestCase):
-#     all_model_classes = ()
-#
-#     def setup(self):
-#         self.model_tester = BertModelTester()
-#         self.config_tester = ConfigTester()
-#
-#     def test_config(self):
-#         self.config_tester.run_common_tests()
-#
-#     def test_model(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         self.model_tester.create_and_check_model(*config_and_inputs)
-#
-#     def test_model_as_decoder(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_decoder()
-#         self.model_tester.create_and_check_model_as_decoder(*config_and_inputs)
-#
-#
-# class BertModelIntegrationTest(unittest.TestCase):
-#     def test_inference(self):
-#         pass
+
+class AutoFormerTest(unittest.TestCase):
+    def test_model(self):
+        predict_sequence_length = 8
+        custom_model_params = {"attention_hidden_sizes": 32}
+        model = Bert(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+
+        x = tf.random.normal([2, 16, 32])
+        y = model(x)
+        self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")

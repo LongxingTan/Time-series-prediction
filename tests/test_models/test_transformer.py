@@ -9,6 +9,15 @@ from tfts.models.transformer import Transformer
 
 
 class TransformerTest(unittest.TestCase):
+    def test_encoder(self):
+        pass
+
+    def test_decoder(self):
+        pass
+
+    def test_decoder2(self):
+        pass
+
     def test_model(self):
         predict_sequence_length = 8
         custom_model_params = {}
