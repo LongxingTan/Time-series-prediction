@@ -43,9 +43,8 @@ class Bert(object):
         self.predict_sequence_length = predict_sequence_length
         print(params)
 
-        self.encoder_embedding = TokenEmbedding(
-            params["attention_hidden_sizes"]
-        )  # DataEmbedding(params['attention_hidden_sizes'])
+        # DataEmbedding(params['attention_hidden_sizes'])
+        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
         # self.spatial_drop = SpatialDropout1D(0.1)
         # self.tcn = ConvTemporal(kernel_size=2, filters=32, dilation_rate=6)
         self.encoder = Encoder(
@@ -100,7 +99,6 @@ class Bert(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-            decoder_features = None
 
         encoder_features = self.encoder_embedding(encoder_features)
         # encoder_features = self.spatial_drop(encoder_features)
@@ -139,8 +137,8 @@ class Bert(object):
         # outputs = tf.math.cumsum(outputs, axis=1)
 
         # grafting
-        base = decoder_features[:, :, -1:]
-        outputs += base
+        # base = decoder_features[:, :, -1:]
+        # outputs += base
         return outputs
 
 

@@ -1,3 +1,4 @@
+"""Trainer for tfts"""
 import logging
 
 import numpy as np

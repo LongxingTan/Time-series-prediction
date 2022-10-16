@@ -65,10 +65,10 @@ class RNN(object):
         -------
         _type_
             _description_
-        """  # inputs:
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
-            # encoder_features = tf.concat([x, encoder_features], axis=-1)
+            encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
             # decoder_features = None
@@ -149,9 +149,8 @@ class Encoder(tf.keras.layers.Layer):
         Returns
         -------
         _type_
-            _description_
+            output of encoder, batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         """
-        # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         # inputs = self.bn(inputs)
         if self.rnn_type.lower() == "gru":
             output, state = self.rnn(inputs)  # state is equal to outputs[:, -1]
@@ -174,8 +173,7 @@ class Encoder(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-class RNNBaseline(object):
-    # 仿照 官方base1: https://github.com/PaddlePaddle/PaddleSpatial/blob/main/apps/wpf_baseline_gru/model.py
+class RNN2(object):
     def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
         if custom_model_params:
             params.update(custom_model_params)
@@ -205,7 +203,6 @@ class RNNBaseline(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-            # decoder_features = None
 
         encoder_shape = tf.shape(encoder_features)
         future = tf.zeros([encoder_shape[0], self.predict_sequence_length, encoder_shape[2]])
@@ -215,35 +212,6 @@ class RNNBaseline(object):
         output = self.dense2(output)
 
         return output[:, -self.predict_sequence_length :, 0]
-
-
-class RNNDay(object):
-    def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
-        self.predict_sequence_length = predict_sequence_length
-        self.rnn = GRU(units=params["rnn_size"], activation="tanh", return_state=True, return_sequences=True, dropout=0)
-        self.dense1 = Dense(predict_sequence_length)
-
-    def __call__(self, inputs, teacher=None):
-        """_summary_
-
-        Parameters
-        ----------
-        inputs : _type_
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
-        """
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_features, _ = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
-            # decoder_features = None
-
-        # 计算按天的，采用avg_pool
 
 
 class ESRNN(object):

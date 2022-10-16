@@ -3,7 +3,7 @@ Quick start
 
 .. _quick-start:
 
-.. _install:
+.. _installation:
 
 Installation
 --------------
@@ -25,6 +25,8 @@ You can also run it in docker
 .. code-block:: shell
 
     $ docker run
+
+.. _usage:
 
 Usage
 -------------

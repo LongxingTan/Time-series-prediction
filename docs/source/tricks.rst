@@ -13,3 +13,7 @@ If you want a better performance, you can import tfts source code to modify the 
 
 General Tricks in models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+target transformation
+
+different temporal scale

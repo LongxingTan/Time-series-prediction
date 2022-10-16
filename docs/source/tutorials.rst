@@ -9,6 +9,28 @@ Tutorials
 
 The following tutorials can be also found as `notebooks on GitHub <https://github.com/longxingtan/time-series-prediction/tree/master/notebooks>`_.
 
+.. _prepare_data:
+
+Prepare the model inputs
+--------------------------
+
+- single-value single-step prediction
+
+- single-value multi-steps prediction
+
+- multi-value single-step prediction
+
+- multi-value multi-steps prediction
+
+what's more, while the data is feed into the model
+
+- dict
+
+- list or tuple
+
+
+.. _train_models:
+
 Train the models
 -----------------
 
@@ -32,6 +54,30 @@ Custom-defined configuration
 	import tensorflow as tf
 	import tfts
 	from tfts import AutoModel, AutoConfig
+
+	config = AutoConfig('rnn')
+	print(config)
+
+	custom_model_params = {
+	}
+
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+
+Auto-tuned configuration
+----------------------------------------
+
+.. code-block:: python
+
+	import tensorflow as tf
+	import tfts
+	from tfts import AutoModel, AutoConfig, AutoTune
+
+	config = AutoConfig('rnn')
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+	tuner = AutoTune('rnn')
+	tuner.run(config)
 
 
 .. toctree::

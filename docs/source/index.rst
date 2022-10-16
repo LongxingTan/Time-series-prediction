@@ -17,18 +17,19 @@ time series models for both business cases and data competitions. The package pr
 * TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
 
 Quick Start
--------------
-Visit :ref:`Quick start <quick-start>` to learn more about the package and :ref:`detailed installation instructions<install>`.
+---------------
+Visit :ref:`Quick start <quick-start>` to learn more about the package and .
 
-.. code-block:: shell
-
-   $ pip install tensorflow
-   $ pip install tfts
+- :ref:`detailed installation instructions<installation>`
+- :ref:`how to use it<usage>`
 
 
 Tutorials
 ----------
-The :ref:`Tutorials <tutorials>` section provides guidance on how to use models and implement new ones.
+The :ref:`Tutorials <tutorials>` section provides guidance on
+
+- how to :ref:`prepare datasets<prepare_data>` for single-value, multi-value, single-step, and multi-steps prediction
+- how to :ref:`use models<train_models>` and implement new ones.
 
 
 Models

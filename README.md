@@ -27,7 +27,7 @@
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common deep learning methods in [TensorFlow](https://www.tensorflow.org/).
+**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common and SOTA deep learning methods in [TensorFlow](https://www.tensorflow.org/).
 - Flexible and powerful design for time series task
 - Advanced deep learning models
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
@@ -72,7 +72,7 @@ trainer.plot(valid[0], valid[1], pred)
 
 ### Performance
 
-The performance is evaluated by tfts implementation, not official
+[Time series prediction](./examples/run_prediction.py) performance is evaluated by tfts implementation, not official
 
 | Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>rmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: |
@@ -91,7 +91,6 @@ The performance is evaluated by tfts implementation, not official
 
 ### More demos
 
-- [Time series prediction](./examples/run_prediction.py)
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](./examples/run_uncertrainty.py)

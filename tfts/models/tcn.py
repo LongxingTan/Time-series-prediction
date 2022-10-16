@@ -65,10 +65,8 @@ class TCN(object):
             # encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-            # decoder_features = None
 
         # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
-
         encoder_outputs, encoder_state = self.encoder(encoder_features)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
@@ -108,11 +106,7 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(units=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(units=1, name="encoder_dense_time_4")
 
-    def forward(self, x):
-        """
-        :param x:
-        :return: conv_inputs [batch_size, time_sequence_length, filters] * time_sequence_length
-        """
+    def __call__(self, x):
         inputs = self.dense_time1(inputs=x)  # batch_size * time_sequence_length * filters
 
         skip_outputs = []
@@ -131,6 +125,3 @@ class Encoder(object):
         h = self.dense_time3(skip_outputs)
         # y_hat = self.dense_time4(h)
         return conv_inputs[:-1], h
-
-    def __call__(self, x):
-        return self.forward(x)

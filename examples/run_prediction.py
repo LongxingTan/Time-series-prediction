@@ -11,6 +11,7 @@ from tensorflow.keras.layers import Input
 
 from examples.dataset import AutoData
 from examples.utils import set_seed
+import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
 
@@ -25,8 +26,8 @@ def parse_args():
     parser.add_argument("--model_dir", type=str, default="../weights/checkpoint", help="saved checkpoint directory")
     parser.add_argument("--saved_model_dir", type=str, default="../weights", help="saved pb directory")
     parser.add_argument("--log_dir", type=str, default="../data/logs", help="saved pb directory")
-    parser.add_argument("--input_seq_length", type=int, default=20, help="sequence length for input")
-    parser.add_argument("--output_seq_length", type=int, default=5, help="sequence length for output")
+    parser.add_argument("--train_length", type=int, default=20, help="sequence length for input")
+    parser.add_argument("--predict_length", type=int, default=5, help="sequence length for output")
     parser.add_argument("--n_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=3e-4, help="learning rate for training")
@@ -55,10 +56,10 @@ def build_model(use_model):
     return model
 
 
-def run_train():
-    train_loader, valid_loader = AutoData("passenger")
+def run_train(args):
+    train, valid = tfts.get_data("sine", args.train_length, args.predict_length, test_size=0.2)
     model = build_model("wavenet")
-    model.fit(train_loader, valid_loader)
+    model.fit(train, valid)
 
 
 # if __name__ == "__main__":
