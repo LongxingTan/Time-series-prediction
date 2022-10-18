@@ -21,8 +21,12 @@ params = defaultdict(
 class NBeats(object):
     """NBeats model"""
 
-    def __init__(self, custom_model_params):
-        params.update(custom_model_params)
+    def __init__(self, predict_sequence_length, custom_model_params=None):
+        if custom_model_params:
+            params.update(custom_model_params)
+        self.params = params
+        self.predict_sequence_length = predict_sequence_length
+
         self.stack_types = params["stack_types"]
         self.nb_blocks_per_stack = params["nb_blocks_per_stack"]
         self.hidden_layer_units = params["hidden_layer_units"]

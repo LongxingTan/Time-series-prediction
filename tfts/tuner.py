@@ -1,4 +1,4 @@
-"""Auto tuner for tfts"""
+"""tfts auto tuner"""
 
 import numpy as np
 import optuna

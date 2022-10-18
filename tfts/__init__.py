@@ -1,5 +1,4 @@
-# encoding=utf-8
-# tfts package for time series prediction with TensorFlow.
+"""tfts package for time series prediction with TensorFlow"""
 
 from tfts.datasets.get_data import get_data
 from tfts.models.auto_config import AutoConfig

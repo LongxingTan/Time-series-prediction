@@ -8,11 +8,14 @@ import tensorflow as tf
 params = {}
 
 
-class TemporalFusionTransformer(object):
+class TFTransformer(object):
     """Temporal fusion transformer model"""
 
     def __init__(self, predict_sequence_length=3, custom_model_params=None):
-        pass
+        if custom_model_params:
+            params.update(custom_model_params)
+        self.params = params
+        self.predict_sequence_length = predict_sequence_length
 
     def __call__(self, x):
         """_summary_

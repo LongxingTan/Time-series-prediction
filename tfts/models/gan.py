@@ -17,7 +17,12 @@ params = {
 class GAN(object):
     """GAN model"""
 
-    def __init__(self, custom_model_params):
+    def __init__(self, predict_sequence_length, custom_model_params=None):
+        if custom_model_params:
+            params.update(custom_model_params)
+        self.params = params
+        self.predict_sequence_length = predict_sequence_length
+
         self.generator = Generator()
         self.discriminator = Discriminator()
 

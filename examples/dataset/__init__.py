@@ -6,5 +6,5 @@ from examples.dataset.read_web_traffic import WebDataReader
 
 
 class AutoData(object):
-    def __init__(self, data_name, predict_sequence_length):
+    def __init__(self, data_name, train_length, predict_length):
         pass

@@ -14,6 +14,7 @@ from tfts.models.nbeats import NBeats
 from tfts.models.rnn import RNN
 from tfts.models.seq2seq import Seq2seq
 from tfts.models.tcn import TCN
+from tfts.models.tft import TFTransformer
 from tfts.models.transformer import Transformer
 from tfts.models.unet import Unet
 from tfts.models.wavenet import WaveNet
@@ -35,6 +36,18 @@ class AutoModel(object):
             self.model = Transformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "bert":
             self.model = Bert(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "informer":
+            self.model = Informer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "autoformer":
+            self.model = AutoFormer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "tft":
+            self.model = TFTransformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "unet":
+            self.model = Unet(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "nbeats":
+            self.model = NBeats(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        elif use_model.lower() == "gan":
+            self.model = GAN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 

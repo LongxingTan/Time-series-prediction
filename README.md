@@ -62,7 +62,7 @@ trainer = KerasTrainer(model)
 trainer.train(train, valid)
 
 pred = trainer.predict(valid[0])
-trainer.plot(valid[0], valid[1], pred)
+trainer.plot(history=valid[0], true=valid[1], pred=pred)
 ```
 
 ## Examples

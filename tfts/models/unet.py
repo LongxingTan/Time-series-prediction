@@ -14,8 +14,12 @@ params = {}
 class Unet(object):
     """Unet model"""
 
-    def __init__(self, custom_model_params):
-        self.params = params.update(custom_model_params)
+    def __init__(self, predict_sequence_length, custom_model_params=None):
+        if custom_model_params:
+            params.update(custom_model_params)
+        self.params = params
+        self.predict_sequence_length = predict_sequence_length
+
         self.AvgPool1D1 = AveragePooling1D(pool_size=2)
         self.AvgPool1D2 = AveragePooling1D(pool_size=4)
         self.encoder = Encoder()
