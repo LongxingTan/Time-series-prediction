@@ -1,7 +1,7 @@
 From tensorflow/tensorflow:2.8.3-gpu
 
 RUN apt-get update
-RUN apt-get install -y libgl1-mesa-dev wget vim python3.7
+RUN apt-get install -y libgl1-mesa-dev wget vim python3.8
 
 ADD ../tfts/ /tfts/
 ADD ../examples /examples/
@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 WORKDIR examples
 
 ENTRYPOINT ["python"]
-CMD ["run_rnn.py"]
+CMD ["run_prediction.py"]

@@ -7,7 +7,12 @@ from tfts.layers.dense_layer import DenseTemp, FeedForwardNetwork
 
 class DenseLayerTest(unittest.TestCase):
     def test_dense_temp(self):
-        pass
+        hidden_size = 32
+
+        layer = DenseTemp(hidden_size)
+        x = tf.random.normal([2, 10, 3])
+        y = layer(x)
+        self.assertEqual(y.shape, (2, 10, hidden_size))
 
     def test_ffn(self):
         hidden_size = 64

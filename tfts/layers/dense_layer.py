@@ -10,7 +10,7 @@ from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
 class DenseTemp(tf.keras.layers.Layer):
     def __init__(
         self,
-        units,
+        hidden_size,
         activation=None,
         kernel_initializer="glorot_uniform",
         kernel_regularizer=None,
@@ -21,7 +21,7 @@ class DenseTemp(tf.keras.layers.Layer):
         name=None,
     ):
         super(DenseTemp, self).__init__(trainable=trainable, name=name)
-        self.units = units
+        self.hidden_size = hidden_size
         self.activation = activations.get(activation)
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
@@ -33,7 +33,7 @@ class DenseTemp(tf.keras.layers.Layer):
         inputs_units = int(input_shape[-1])  # input.get_shape().as_list()[-1]
         self.kernel = self.add_weight(
             "kernel",
-            shape=[inputs_units, self.units],
+            shape=[inputs_units, self.hidden_size],
             initializer=self.kernel_initializer,
             regularizer=self.kernel_regularizer,
             constraint=self.kernel_constraint,
@@ -42,7 +42,7 @@ class DenseTemp(tf.keras.layers.Layer):
         )
         if self.use_bias:
             self.bias = self.add_weight(
-                "bias", shape=[self.units], initializer=self.bias_initializer, dtype=self.dtype, trainable=True
+                "bias", shape=[self.hidden_size], initializer=self.bias_initializer, dtype=self.dtype, trainable=True
             )
         super(DenseTemp, self).build(input_shape)
 
@@ -70,7 +70,7 @@ class DenseTemp(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            "units": self.units,
+            "hidden_size": self.hidden_size,
         }
         base_config = super(DenseTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

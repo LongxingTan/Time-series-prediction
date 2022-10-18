@@ -58,4 +58,4 @@ def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2,
 def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test_size=0.2):
     df = pd.read_csv(air_passenger_url)
     print(df.shape)
-    return
+    return df
