@@ -11,12 +11,20 @@ __all__ = ["Trainer", "KerasTrainer"]
 class Trainer(object):
     """General trainer from tensorflow custom train"""
 
-    def __init__(self, model, loss_fn, optimizer, lr_scheduler=None, metrics=None):
+    def __init__(
+        self,
+        model,
+        loss_fn=tf.keras.losses.MeanSquaredError(),
+        optimizer=tf.keras.optimizers.Adam(0.003),
+        lr_scheduler=None,
+        strategy=None,
+    ):
         self.model = model
+
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
-        self.metrics = metrics
+        self.strategy = strategy
 
     def train(
         self,
@@ -75,13 +83,15 @@ class Trainer(object):
             no_improve_epochs = 0
             best_metric = -np.inf
 
+        if not isinstance(self.model, tf.keras.Model):
+            if "build_model" not in dir(self.model):
+                raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
+            input_shape = list(train_loader.take(1).as_numpy_iterator())[0][0].shape[1:]
+            self.model = self.model.build_model(input_shape=input_shape)
+
         for epoch in range(n_epochs):
             train_loss, train_scores = self.train_loop(train_loader)
-            if valid_loader is not None:
-                valid_loss, valid_scores = self.valid_loop(valid_loader)
-            else:
-                valid_loss = 999
-                valid_scores = [999]
+            valid_loss, valid_scores = self.valid_loop(valid_loader)
 
             log_str = "Epoch: {}, Train Loss: {:.4f}, Valid Loss: {:.4f}".format(epoch + 1, train_loss, valid_loss)
             log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
@@ -207,7 +217,7 @@ class KerasTrainer(object):
     def train(
         self,
         train_dataset,
-        valid_dataset=None,
+        valid_dataset,
         n_epochs=5,
         batch_size=32,
         steps_per_epoch=None,
@@ -242,7 +252,10 @@ class KerasTrainer(object):
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
-            input_shape = train_dataset[0].shape[1:]
+            if isinstance(train_dataset, tf.data.Dataset):
+                input_shape = list(train_dataset.take(1).as_numpy_iterator())[0][0].shape[1:]
+            else:
+                input_shape = train_dataset[0].shape[1:]
             self.model = self.model.build_model(input_shape=input_shape)
 
         # print(self.model.summary())
