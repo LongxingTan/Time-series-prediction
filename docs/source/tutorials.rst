@@ -22,7 +22,7 @@ Prepare the model inputs
 
 - multi-value multi-steps prediction
 
-what's more, while the data is feed into the model
+what's more, the input data feed into the model could be
 
 - dict
 
@@ -82,6 +82,19 @@ Auto-tuned configuration
 
 Custom head for classification or anomaly task
 -------------------------------------------------
+
+.. code-block:: python
+
+	import tensorflow as tf
+	import tfts
+	from tfts import AutoModel, AutoConfig, AutoTune
+
+	config = AutoConfig('rnn')
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+	tuner = AutoTune('rnn')
+	tuner.run(config)
+
 
 Deployment in tf-serving
 --------------------------

@@ -9,7 +9,7 @@ __all__ = ["Trainer", "KerasTrainer"]
 
 
 class Trainer(object):
-    """General trainer from tensorflow custom train"""
+    """Custom trainer in tensorflow"""
 
     def __init__(
         self,
@@ -193,7 +193,7 @@ class Trainer(object):
 
 
 class KerasTrainer(object):
-    """General trainer from tf.keras"""
+    """Keras trainer from tf.keras"""
 
     def __init__(
         self,
@@ -285,7 +285,7 @@ class KerasTrainer(object):
             )
         return self.history
 
-    def predict(self, x_test, method=None, batch_size=1):
+    def predict(self, x_test, batch_size=1):
         y_test_pred = self.model.predict(x_test, batch_size=batch_size)
         return y_test_pred
 

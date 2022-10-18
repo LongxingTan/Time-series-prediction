@@ -14,7 +14,7 @@ from tfts.models.nbeats import NBeats
 from tfts.models.rnn import RNN
 from tfts.models.seq2seq import Seq2seq
 from tfts.models.tcn import TCN
-from tfts.models.tft import TFTransformer
+from tfts.models.temporal_fusion_transformer import TFTransformer
 from tfts.models.transformer import Transformer
 from tfts.models.unet import Unet
 from tfts.models.wavenet import WaveNet

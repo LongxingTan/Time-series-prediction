@@ -101,10 +101,10 @@ class Encoder(object):
             self.conv_times.append(
                 ConvTemp(filters=2 * filters, kernel_size=kernel_size, causal=True, dilation_rate=dilation)
             )
-        self.dense_time1 = DenseTemp(units=filters, activation="tanh", name="encoder_dense_time1")
-        self.dense_time2 = DenseTemp(units=filters + filters, name="encoder_dense_time2")
-        self.dense_time3 = DenseTemp(units=dense_hidden_size, activation="relu", name="encoder_dense_time3")
-        self.dense_time4 = DenseTemp(units=1, name="encoder_dense_time_4")
+        self.dense_time1 = DenseTemp(hidden_size=filters, activation="tanh", name="encoder_dense_time1")
+        self.dense_time2 = DenseTemp(hidden_size=filters + filters, name="encoder_dense_time2")
+        self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
+        self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
     def __call__(self, x):
         inputs = self.dense_time1(inputs=x)  # batch_size * time_sequence_length * filters

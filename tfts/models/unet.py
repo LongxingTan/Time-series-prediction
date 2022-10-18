@@ -25,7 +25,7 @@ class Unet(object):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def __call__(self, x, predict_seq_length, training=True):
+    def __call__(self, x, training=True):
         """_summary_
 
         Parameters
@@ -46,7 +46,7 @@ class Unet(object):
         pool2 = self.AvgPool1D2(x)
 
         encoder_output = self.encoder([x, pool1, pool2])
-        decoder_output = self.decoder(encoder_output, predict_seq_length=predict_seq_length)
+        decoder_output = self.decoder(encoder_output, predict_seq_length=self.predict_sequence_length)
         return decoder_output
 
 

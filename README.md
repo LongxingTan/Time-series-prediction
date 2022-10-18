@@ -55,6 +55,7 @@ from tfts import AutoModel, KerasTrainer
 train_length = 24
 predict_length = 8
 
+# train is a tuple of (x_train, y_train), valid is (x_valid, y_valid)
 train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
 model = AutoModel('seq2seq', predict_length)
 
@@ -93,7 +94,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
-- [Uncertainty prediction](./examples/run_uncertrainty.py)
+- [Uncertainty prediction](examples/run_uncertainty.py)
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples)
 
