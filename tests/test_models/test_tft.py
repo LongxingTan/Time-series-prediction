@@ -6,4 +6,4 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.tft import TemporalFusionTransformer
+from tfts.models.tft import TFTransformer
