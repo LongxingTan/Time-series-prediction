@@ -64,6 +64,7 @@ trainer.train(train, valid)
 
 pred = trainer.predict(valid[0])
 trainer.plot(history=valid[0], true=valid[1], pred=pred)
+plt.show()
 ```
 
 ## Examples
@@ -98,7 +99,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples)
 
-if you prefer to use [PyTorch](https://pytorch.org/), you can use [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
+if you prefer to use [PyTorch](https://pytorch.org/), please try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
 
 ## Citation
 

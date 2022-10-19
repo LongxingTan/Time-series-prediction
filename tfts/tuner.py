@@ -4,7 +4,7 @@ import numpy as np
 import optuna
 
 
-class AutoTune(object):
+class AutoTuner(object):
     """Auto tune parameters by optuna"""
 
     def __init__(self):

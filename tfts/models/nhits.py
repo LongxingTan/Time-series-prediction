@@ -4,3 +4,5 @@
 """
 
 import tensorflow as tf
+
+params = {}

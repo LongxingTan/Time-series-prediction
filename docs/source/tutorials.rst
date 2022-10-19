@@ -97,6 +97,25 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 	tuner = AutoTune('rnn')
 	tuner.run(config)
 
+Custom-defined trainer
+----------------------------------------
+
+If you are already used to your own trainer, and just want to use tfts models.
+
+.. code-block:: python
+
+	import tensorflow as tf
+	import tfts
+	from tfts import AutoModel, AutoConfig
+
+	config = AutoConfig('rnn')
+	print(config)
+
+	custom_model_params = {
+	}
+
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
 
 Deployment in tf-serving
 --------------------------

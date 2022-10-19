@@ -1,4 +1,5 @@
 """tfts Trainer"""
+
 import logging
 
 import matplotlib.pyplot as plt
@@ -317,4 +318,3 @@ class KerasTrainer(object):
         plt.plot(range(train_length, train_length + pred_length), true[example, :, 0], label="true")
         plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="pred")
         plt.legend()
-        plt.show()
