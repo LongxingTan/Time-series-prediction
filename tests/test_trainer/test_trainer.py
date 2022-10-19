@@ -81,6 +81,8 @@ class KerasTrainerTest(unittest.TestCase):
 
         trainer = KerasTrainer(model)
         trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), **self.fit_params)
+        y_valid_pred = trainer.predict(x_valid)
+        self.assertEqual(y_valid_pred.shape, (1, 2, 1))
 
     def test_trainer_basic_tfdata(self):
         x_train = np.random.random((2, 10, 1))

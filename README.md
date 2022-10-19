@@ -27,7 +27,7 @@
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the common and SOTA deep learning methods in [TensorFlow](https://www.tensorflow.org/).
+**TFTS** (TensorFlow Time Series) is a python package for time series task, supporting the classical and SOTA deep learning methods in [TensorFlow](https://www.tensorflow.org/).
 - Flexible and powerful design for time series task
 - Advanced deep learning models
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
@@ -50,7 +50,7 @@ $ pip install tfts
 ``` python
 import matplotlib.pyplot as plt
 import tfts
-from tfts import AutoModel, KerasTrainer
+from tfts import AutoModel, KerasTrainer, Trainer
 
 train_length = 24
 predict_length = 8
@@ -97,6 +97,8 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 - [Uncertainty prediction](examples/run_uncertainty.py)
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples)
+
+if you prefer to use [PyTorch](https://pytorch.org/), you can use [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
 
 ## Citation
 

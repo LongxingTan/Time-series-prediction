@@ -10,6 +10,8 @@
 [docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
 [coverage-image]: https://codecov.io/gh/longxingtan/Time-series-prediction/branch/master/graph/badge.svg
 [coverage-url]: https://codecov.io/github/longxingtan/Time-series-prediction?branch=master
+[codeql-image]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml/badge.svg
+[codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
 <img src="./docs/source/_static/logo.svg" width="500" align=center/>
@@ -21,6 +23,7 @@
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
+[![CodeQL Status][codeql-image]][codeql-url]
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
@@ -46,18 +49,22 @@ $ pip install tfts
 ## 快速使用
 
 ``` python
+import matplotlib.pyplot as plt
 import tfts
-from tfts import AutoModel, KerasTrainer
+from tfts import AutoModel, KerasTrainer, Trainer
 
 train_length = 24
 predict_length = 8
 
-train, valid = tfts.get_data('sine', train_length, predict_length)
+# 其中，train是包含(x_train, y_train)的tuple, valid包含(x_valid, y_valid)
+train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
 model = AutoModel('seq2seq', predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)
-trainer.predict(valid[0])
+
+pred = trainer.predict(valid[0])
+trainer.plot(history=valid[0], true=valid[1], pred=pred)
 ```
 
 ## 示例

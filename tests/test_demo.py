@@ -18,12 +18,14 @@ class DemoTest(unittest.TestCase):
 
         trainer = Trainer(model)
         trainer.train(train, valid, n_epochs=3)
-        trainer.predict(valid[0])
+
+        pred = trainer.predict(valid[0])
+        trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
     @unittest.skip
     def test_train(self):
         for m in ["seq2seq", "wavenet", "transformer"]:
-            train, valid = tfts.load_data("sine", test_size=0.1)
+            train, valid = tfts.get_data("sine", test_size=0.1)
             model = AutoModel(m, predict_length=8)
             trainer = Trainer(model)
             trainer.train(train, valid, n_epochs=3)

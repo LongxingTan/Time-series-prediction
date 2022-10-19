@@ -6,7 +6,7 @@ from tfts.layers.dense_layer import DenseTemp, FeedForwardNetwork
 
 
 class DenseLayerTest(unittest.TestCase):
-    def test_dense_temp(self):
+    def test_dense_temp_layer(self):
         hidden_size = 32
 
         layer = DenseTemp(hidden_size)

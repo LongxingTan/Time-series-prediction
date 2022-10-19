@@ -83,6 +83,8 @@ Auto-tuned configuration
 Custom head for classification or anomaly task
 -------------------------------------------------
 
+Set up the custom-defined head layer to do the classification task or anomaly detection task
+
 .. code-block:: python
 
 	import tensorflow as tf
@@ -98,6 +100,36 @@ Custom head for classification or anomaly task
 
 Deployment in tf-serving
 --------------------------
+
+save the model
+
+.. code-block:: python
+
+	import tensorflow as tf
+	import tfts
+	from tfts import AutoModel, AutoConfig, AutoTune
+
+	config = AutoConfig('rnn')
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+	tuner = AutoTune('rnn')
+	tuner.run(config)
+
+
+serve the model in docker
+
+.. code-block:: shell
+
+	import tensorflow as tf
+	import tfts
+	from tfts import AutoModel, AutoConfig, AutoTune
+
+	config = AutoConfig('rnn')
+	model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+	tuner = AutoTune('rnn')
+	tuner.run(config)
+
 
 .. toctree::
    :titlesonly:

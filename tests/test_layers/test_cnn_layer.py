@@ -6,7 +6,7 @@ from tfts.layers.cnn_layer import ConvAttTemp, ConvTemp
 
 
 class CNNLayerTest(unittest.TestCase):
-    def test_conv_layer(self):
+    def test_conv_temp_layer(self):
         train_length = 10
         filters = 64
         kernel_size = 2
@@ -15,3 +15,6 @@ class CNNLayerTest(unittest.TestCase):
         x = tf.random.normal([2, train_length, 1])
         y = layer(x)
         self.assertEqual(y.shape, (2, train_length, filters))
+
+    def test_conv_att_temp_layer(self):
+        pass
