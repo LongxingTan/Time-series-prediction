@@ -214,6 +214,7 @@ class TemporalEmbedding(tf.keras.layers.Layer):
 class DataEmbedding(tf.keras.layers.Layer):
     def __init__(self, embed_size, dropout=0):
         super(DataEmbedding, self).__init__()
+        self.embed_size = embed_size
         self.value_embedding = TokenEmbedding(embed_size)
         self.positional_embedding = PositionalEncoding()
         self.dropout = Dropout(dropout)
@@ -239,5 +240,6 @@ class DataEmbedding(tf.keras.layers.Layer):
         return self.dropout(ve + pe)
 
     def get_config(self):
+        config = {"embed_size": self.embed_size}
         base_config = super(DataEmbedding, self).get_config()
-        return base_config
+        return dict(list(base_config.items()) + list(config.items()))

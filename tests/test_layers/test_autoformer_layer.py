@@ -15,6 +15,9 @@ class AutoFormerLayerTest(unittest.TestCase):
         self.assertEqual(y1.shape, (2, 100, 1))
         self.assertEqual(y2.shape, (2, 100, 1))
 
+        config = layer.get_config()
+        self.assertEqual(config["kernel_size"], kernel_size)
+
     def test_auto_correlation(self):
         d_model = 64
         num_heads = 4

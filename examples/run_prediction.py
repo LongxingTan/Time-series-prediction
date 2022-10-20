@@ -25,23 +25,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=3e-4, help="learning rate for training")
 
-    args = parser.parse_args()
-    return args
-
-
-def build_model(use_model):
-    inputs = Input()
-    config = AutoConfig(use_model)
-
-    backbone = AutoModel(use_model, config)
-    outputs = backbone(inputs)
-    model = tf.keras.Model(inputs, outputs=outputs)
-
-    optimizer = tf.keras.optimizers.Adam(0.003)
-    loss_fn = tf.keras.losses.MeanSquaredError()
-
-    model.compile(optimizer, loss_fn)
-    return model
+    return parser.parse_args()
 
 
 def run_train(args):

@@ -16,5 +16,9 @@ class CNNLayerTest(unittest.TestCase):
         y = layer(x)
         self.assertEqual(y.shape, (2, train_length, filters))
 
+        config = layer.get_config()
+        self.assertEqual(config["filters"], filters)
+        self.assertEqual(config["kernel_size"], kernel_size)
+
     def test_conv_att_temp_layer(self):
         pass

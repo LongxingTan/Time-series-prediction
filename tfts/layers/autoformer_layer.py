@@ -30,6 +30,13 @@ class SeriesDecomp(tf.keras.layers.Layer):
         x_ma = self.moving_avg(x)
         return x - x_ma, x_ma
 
+    def get_config(self):
+        config = {
+            "kernel_size": self.kernel_size,
+        }
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 class AutoCorrelation(tf.keras.layers.Layer):
     """Auto"""

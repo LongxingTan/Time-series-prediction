@@ -14,6 +14,9 @@ class DenseLayerTest(unittest.TestCase):
         y = layer(x)
         self.assertEqual(y.shape, (2, 10, hidden_size))
 
+        config = layer.get_config()
+        self.assertEqual(config["hidden_size"], hidden_size)
+
     def test_ffn(self):
         hidden_size = 64
         filter_size = 32
@@ -23,3 +26,7 @@ class DenseLayerTest(unittest.TestCase):
         x = tf.random.normal([2, 128, hidden_size])
         y = layer(x, training=True)
         self.assertEqual(y.shape, (2, 128, hidden_size))
+
+        config = layer.get_config()
+        self.assertEqual(config["hidden_size"], hidden_size)
+        self.assertEqual(config["filter_size"], filter_size)
