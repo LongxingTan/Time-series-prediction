@@ -49,6 +49,8 @@ Train the models
 Custom-defined configuration
 ----------------------------------------
 
+Change the model parameters, and if you want more parameters in model params, please raise an issue in github.
+
 .. code-block:: python
 
 	import tensorflow as tf

@@ -27,5 +27,11 @@ class GetDataTest(unittest.TestCase):
         self.assertEqual(valid[1].shape, (int(n_examples * test_size), predict_length, 1))
 
     def test_get_air_passenger_data(self):
-        df = get_air_passengers()
-        print(df.shape)
+        train_length = 10
+        predict_length = 4
+        test_size = 0.2
+        train, valid = get_air_passengers(train_length, predict_length, test_size)
+        self.assertEqual(train[0].shape[1:], (train_length, 1))
+        self.assertEqual(train[1].shape[1:], (predict_length, 1))
+        self.assertEqual(valid[0].shape[1:], (train_length, 1))
+        self.assertEqual(valid[1].shape[1:], (predict_length, 1))

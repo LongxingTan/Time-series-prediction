@@ -92,7 +92,7 @@ plt.show()
 | [U-Net]() | 672 | 47.7% |52.6% | 61.4% |
 
 ### More demos
-
+- [More complex prediction task](./notebooks)
 - [Time series classification](./examples/run_classification.py)
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](examples/run_uncertainty.py)
