@@ -1,4 +1,4 @@
-# this script provides an example to use multi-gpus or tpu to train the model
+"""Demo of using multi-gpus or tpu to train the models"""
 
 import tensorflow as tf
 

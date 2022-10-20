@@ -12,3 +12,4 @@ sphinx-autobuild
 pandas == 1.1.5
 tensorflow==2.7.1
 matplotlib
+optuna

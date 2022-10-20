@@ -1,7 +1,6 @@
 """Generate the example data script"""
 
 import logging
-import os
 import random
 
 import numpy as np
@@ -17,9 +16,11 @@ def get_data(name="sine", train_length=24, predict_length=8, test_size=0.1):
     if name == "sine":
         return get_sine(train_length, predict_length, test_size=test_size)
 
-    if name == "airpassengers":
+    elif name == "airpassengers":
         return get_air_passengers(train_length, predict_length, test_size=test_size)
-    return
+
+    else:
+        raise ValueError("unsupported data of {} yet, try 'sine', 'airpassengers'".format(name))
 
 
 def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2, n_examples=100):
@@ -56,6 +57,30 @@ def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2,
 
 
 def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test_size=0.2):
-    df = pd.read_csv(air_passenger_url)
-    print(df.shape)
-    return df
+    """Air passengers data, just use divide 500 to normalize it"""
+    # air_passenger_url = "../examples/data/international-airline-passengers.csv"
+    df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)
+    v = df.iloc[:, 1:2].values
+
+    x, y = [], []
+    for seq in range(1, train_sequence_length + 1):
+        x_roll = np.roll(v, seq, axis=0)
+        x.append(x_roll)
+    x = np.stack(x, axis=1)
+    x = x[train_sequence_length:-predict_sequence_length, ::-1, :] / 500
+
+    for seq in range(predict_sequence_length):
+        y_roll = np.roll(v, -seq)
+        y.append(y_roll)
+    y = np.stack(y, axis=1)
+    y = y[train_sequence_length:-predict_sequence_length] / 500
+    logging.info("Load air passenger data", x.shape, y.shape)
+
+    if test_size > 0:
+        slice = int(len(x) * (1 - test_size))
+        x_train = x[:slice]
+        y_train = y[:slice]
+        x_valid = x[slice:]
+        y_valid = y[slice:]
+        return (x_train, y_train), (x_valid, y_valid)
+    return x, y

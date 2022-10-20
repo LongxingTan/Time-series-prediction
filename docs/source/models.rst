@@ -19,6 +19,8 @@ TCN          True         True           False      False
 Models supported
 ------------------
 
+you can you below models in ``AutoModel()``
+
 * RNN
 * DeepAR
 * Seq2seq

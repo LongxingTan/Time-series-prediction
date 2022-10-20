@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
-
 """
 Data example of Kaggle WTF data
 https://www.kaggle.com/c/web-traffic-time-series-forecasting

@@ -1,3 +1,4 @@
+"""Demo of time series classification"""
 import argparse
 
 import numpy as np
