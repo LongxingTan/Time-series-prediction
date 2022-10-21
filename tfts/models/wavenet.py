@@ -84,7 +84,7 @@ class WaveNet(object):
 
 
 class Encoder(object):
-    def __init__(self, kernel_sizes, dilation_rates, filters, dense_hidden_size):
+    def __init__(self, kernel_sizes, filters, dilation_rates, dense_hidden_size):
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -205,16 +205,18 @@ class Decoder1(object):
 class Decoder2(object):
     """Decoder need avoid future data leaks"""
 
-    def __init__(self, params):
-        self.params = params
-        self.dense_1 = Dense(self.params["filters"], activation="tanh", name="decoder_dense_1")
-        self.dense_2 = Dense(2 * self.params["filters"], name="decoder_dense_2")
-        self.dense_3 = Dense(2 * self.params["filters"], use_bias=False, name="decoder_dense_3")
-        self.dense_4 = Dense(2 * self.params["filters"], name="decoder_dense_4")
-        self.dense_5 = Dense(self.params["dense_hidden_size"], activation="relu", name="decoder_dense_5")
+    def __init__(self, filters, dilation_rates, dense_hidden_size, predict_sequence_length=24):
+        self.filters = filters
+        self.dilation_rates = dilation_rates
+        self.predict_sequence_length = predict_sequence_length
+        self.dense_1 = Dense(filters, activation="tanh", name="decoder_dense_1")
+        self.dense_2 = Dense(2 * filters, name="decoder_dense_2")
+        self.dense_3 = Dense(2 * filters, use_bias=False, name="decoder_dense_3")
+        self.dense_4 = Dense(2 * filters, name="decoder_dense_4")
+        self.dense_5 = Dense(dense_hidden_size, activation="relu", name="decoder_dense_5")
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
-    def __call__(self, x, decoder_feature, encoder_states, predict_seq_length, teacher=None):
+    def __call__(self, decoder_features, decoder_init_input, encoder_states, teacher=None):
         """_summary_
 
         Parameters
@@ -235,10 +237,9 @@ class Decoder2(object):
         _type_
             _description_
         """
-        decoder_init_value = x[:, -1, :]
 
         def cond_fn(time, prev_output, decoder_output_ta):
-            return time < predict_seq_length
+            return time < self.predict_sequence_length
 
         def body(time, prev_output, decoder_output_ta):
             if time == 0 or teacher is None:
@@ -246,21 +247,21 @@ class Decoder2(object):
             else:
                 current_input = teacher[:, time - 1, :]
 
-            if decoder_feature is not None:
-                current_feature = decoder_feature[:, time, :]
+            if decoder_features is not None:
+                current_feature = decoder_features[:, time, :]
                 current_input = tf.concat([current_input, current_feature], axis=1)
 
             inputs = self.dense_1(current_input)
 
             skip_outputs = []
-            for i, dilation in enumerate(self.params["dilation_rates"]):
+            for i, dilation in enumerate(self.dilation_rates):
                 state = encoder_states[i][:, -dilation, :]
 
                 dilated_conv = self.dense_2(state) + self.dense_3(inputs)
                 conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
                 dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
                 outputs = self.dense_4(dilated_conv)
-                skips, residuals = tf.split(outputs, [self.params["filters"], self.params["filters"]], axis=1)
+                skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=1)
                 inputs += residuals
                 encoder_states[i] = tf.concat([encoder_states[i], tf.expand_dims(inputs, 1)], axis=1)
                 skip_outputs.append(skips)
@@ -273,8 +274,8 @@ class Decoder2(object):
 
         loop_init = [
             tf.constant(0, dtype=tf.int32),
-            decoder_init_value,
-            tf.TensorArray(dtype=tf.float32, size=predict_seq_length),
+            decoder_init_input,
+            tf.TensorArray(dtype=tf.float32, size=self.predict_sequence_length),
         ]
         _, _, decoder_outputs_ta = tf.while_loop(cond=cond_fn, body=body, loop_vars=loop_init)
         decoder_outputs = decoder_outputs_ta.stack()

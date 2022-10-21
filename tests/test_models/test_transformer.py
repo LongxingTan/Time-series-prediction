@@ -5,15 +5,59 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.transformer import Transformer
+from tfts.models.transformer import Decoder, Decoder2, Encoder, Transformer
 
 
 class TransformerTest(unittest.TestCase):
     def test_encoder(self):
-        pass
+        n_encoder_layers = 2
+        attention_hidden_sizes = 32
+        num_heads = 2
+        attention_dropout = 0.0
+        ffn_hidden_sizes = 32
+        ffn_filter_sizes = 32
+        ffn_dropout = 0.0
+        layer = Encoder(
+            n_encoder_layers,
+            attention_hidden_sizes,
+            num_heads,
+            attention_dropout,
+            ffn_hidden_sizes,
+            ffn_filter_sizes,
+            ffn_dropout,
+        )
+        x = tf.random.normal([2, 16, attention_hidden_sizes])
+        y = layer(x)
+        self.assertEqual(y.shape, (2, 16, attention_hidden_sizes))
+
+        config = layer.get_config()
+        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
 
     def test_decoder(self):
-        pass
+        predict_sequence_length = 2
+        n_decoder_layers = 2
+        attention_hidden_sizes = 32
+        num_heads = 1
+        attention_dropout = 0
+        ffn_hidden_sizes = 32
+        ffn_filter_sizes = 32
+        ffn_dropout = 0
+        layer = Decoder(
+            predict_sequence_length,
+            n_decoder_layers,
+            attention_hidden_sizes,
+            num_heads,
+            attention_dropout,
+            ffn_hidden_sizes,
+            ffn_filter_sizes,
+            ffn_dropout,
+        )
+
+        x = tf.random.normal([2, 16, attention_hidden_sizes])
+        init = tf.random.normal([2, 1, 1])
+        memory = tf.random.normal([2, 16, attention_hidden_sizes])
+        y = layer(x, init, memory)
+        self.assertEqual(y.shape, (2, predict_sequence_length, 1))
 
     def test_decoder2(self):
         pass

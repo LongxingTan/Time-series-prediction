@@ -124,8 +124,8 @@ class Encoder(tf.keras.layers.Layer):
 class Decoder1(tf.keras.layers.Layer):
     def __init__(
         self,
-        rnn_type,
-        rnn_size,
+        rnn_type="gru",
+        rnn_size=32,
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
@@ -218,25 +218,50 @@ class Decoder1(tf.keras.layers.Layer):
 
 
 class Decoder2(tf.keras.layers.Layer):
-    def __init__(self, params):
+    def __init__(
+        self,
+        rnn_type="gru",
+        rnn_size=32,
+        predict_sequence_length=3,
+        use_attention=False,
+        attention_sizes=32,
+        attention_heads=1,
+        attention_dropout=0.0,
+    ):
         super(Decoder2, self).__init__()
-        self.params = params
-        self.rnn_cell = GRUCell(self.params["rnn_size"])
+        self.rnn_type = rnn_type
+        self.rnn_size = rnn_size
+        self.predict_sequence_length = predict_sequence_length
+        self.use_attention = use_attention
+        self.attention_sizes = attention_sizes
+        self.attention_heads = attention_heads
+        self.attention_dropout = attention_dropout
+
+    def build(self, input_shape):
+        if self.rnn_type.lower() == "gru":
+            self.rnn_cell = GRUCell(self.rnn_size)
+        elif self.rnn_type.lower() == "lstm":
+            self.rnn = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1)
-        self.attention = FullAttention(hidden_size=32, num_heads=2, attention_dropout=0.0)
+        if self.use_attention:
+            self.attention = FullAttention(
+                hidden_size=self.attention_sizes,
+                num_heads=self.attention_heads,
+                attention_dropout=self.attention_dropout,
+            )
 
     def forward(
         self,
         decoder_feature,
-        init_state,
         decoder_init_value,
-        encoder_output,
-        predict_seq_length,
-        teacher,
-        use_attention,
+        init_state,
+        teacher=None,
+        scheduler_sampling=0,
+        training=None,
+        **kwargs
     ):
         def cond_fn(time, prev_output, prev_state, decoder_output_ta):
-            return time < predict_seq_length
+            return time < self.predict_sequence_length
 
         def body(time, prev_output, prev_state, decoder_output_ta):
             if time == 0 or teacher is None:
@@ -249,8 +274,10 @@ class Decoder2(tf.keras.layers.Layer):
                 this_feature = decoder_feature[:, time, :]
                 this_input = tf.concat([this_input, this_feature], axis=1)
 
-            if use_attention:
-                attention_feature = self.attention(tf.expand_dims(prev_state[-1], 1), encoder_output, encoder_output)
+            if self.use_attention:
+                attention_feature = self.attention(
+                    tf.expand_dims(prev_state[-1], 1), k=kwargs["encoder_output"], v=kwargs["encoder_output"]
+                )
                 attention_feature = tf.squeeze(attention_feature, 1)
                 this_input = tf.concat([this_input, attention_feature], axis=-1)
 
@@ -263,7 +290,7 @@ class Decoder2(tf.keras.layers.Layer):
             tf.constant(0, dtype=tf.int32),  # steps
             decoder_init_value,  # decoder each step
             init_state,  # state
-            tf.TensorArray(dtype=tf.float32, size=predict_seq_length),
+            tf.TensorArray(dtype=tf.float32, size=self.predict_sequence_length),
         ]
         _, _, _, decoder_outputs_ta = tf.while_loop(cond_fn, body, loop_init)
 
@@ -274,12 +301,12 @@ class Decoder2(tf.keras.layers.Layer):
     def call(
         self,
         decoder_feature,
-        init_state,
         decoder_init_input,
-        encoder_output,
-        predict_seq_length=1,
+        init_state,
         teacher=None,
-        use_attention=False,
+        scheduler_sampling=0,
+        training=None,
+        **kwargs
     ):
         """_summary_
 
@@ -293,12 +320,8 @@ class Decoder2(tf.keras.layers.Layer):
             _description_
         encoder_output : _type_
             _description_
-        predict_seq_length : int, optional
-            _description_, by default 1
         teacher : _type_, optional
             _description_, by default None
-        use_attention : bool, optional
-            _description_, by default False
 
         Returns
         -------
@@ -307,12 +330,9 @@ class Decoder2(tf.keras.layers.Layer):
         """
         return self.forward(
             decoder_feature=decoder_feature,
-            init_state=[init_state],  # for tf2
             decoder_init_value=decoder_init_input,
-            encoder_output=encoder_output,
-            predict_seq_length=predict_seq_length,
+            init_state=[init_state],  # for tf2
             teacher=teacher,
-            use_attention=use_attention,
         )
 
 
