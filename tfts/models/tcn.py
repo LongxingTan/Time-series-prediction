@@ -14,7 +14,8 @@ params = {
     "kernel_sizes": [2 for i in range(4)],
     "filters": 128,
     "dense_hidden_size": 64,
-    "skip_connect": False,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 
@@ -86,9 +87,11 @@ class TCN(object):
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
         # outputs = self.dense3(encoder_outputs)
 
-        if self.params["skip_connect"]:
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, :]
+            outputs = outputs + x_mean
+        if self.params["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            # x_mean = tf.tile(x, (1, 1, 1))  # 2 is predict_window/train_window
             outputs = outputs + x_mean
         return outputs
 

@@ -16,11 +16,12 @@ params = {
     "dense_size": 64,
     "num_stacked_layers": 1,
     "scheduler_sampling": 0,
-    "skip_connect": False,
     "use_attention": False,
     "attention_sizes": 64,
     "attention_heads": 2,
     "attention_dropout": 0,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 
@@ -31,6 +32,7 @@ class Seq2seq(object):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
+        self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             rnn_type=params["rnn_type"], rnn_size=params["rnn_size"], dense_size=params["dense_size"]
         )
@@ -72,7 +74,10 @@ class Seq2seq(object):
             encoder_output=encoder_outputs,
         )
 
-        if self.params["skip_connect"]:
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, :]
+            decoder_outputs = decoder_outputs + x_mean
+        if self.params["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs

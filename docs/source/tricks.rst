@@ -18,7 +18,13 @@ Remember that there is no free launch, and it's impossible to forecast the futur
 
 * target transformation
 
+skip connect
+The tfts provides some basic skip connect in model params, skip connect is a special and common target transformation.
+If you want try more skip connect, please use AutoModel and custom-defined model.
+
 * different temporal scale
+
+
 
 
 Multi-steps prediction strategy

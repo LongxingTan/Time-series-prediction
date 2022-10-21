@@ -35,9 +35,11 @@
 
 中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 
-## 安装
+## 快速使用
 
-环境要求
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
+
+**安装**环境要求
 
 - python >= 3.7
 - tensorflow >= 2.1
@@ -46,7 +48,7 @@
 $ pip install tfts
 ```
 
-## 快速使用
+**快速入门**
 
 ``` python
 import matplotlib.pyplot as plt
@@ -73,7 +75,8 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
 - [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
 - [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
-- [RNN]()
+
+<!-- - [RNN]()
 - [DeepAR]()
 - [TCN]()
 - [WaveNet]()
@@ -89,7 +92,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 - [Uncertainty prediction](examples/run_uncertainty.py)
 - [optuna调参](./examples/run_optuna_tune.py)
 - [多gpu与tpu加速训练](./examples)
-- [tf-serving部署](./examples)
+- [tf-serving部署](./examples) -->
 
 ## 引用
 

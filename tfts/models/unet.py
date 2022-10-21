@@ -47,6 +47,13 @@ class Unet(object):
 
         encoder_output = self.encoder([x, pool1, pool2])
         decoder_output = self.decoder(encoder_output, predict_seq_length=self.predict_sequence_length)
+
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, :]
+            decoder_output = decoder_output + x_mean
+        if self.params["skip_connect_mean"]:
+            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            decoder_output = decoder_output + x_mean
         return decoder_output
 
 

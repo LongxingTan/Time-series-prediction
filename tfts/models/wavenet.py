@@ -18,7 +18,8 @@ params = {
     "dense_hidden_size": 32,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
     "use_attention": False,
-    "skip_connect": False,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 
@@ -29,6 +30,7 @@ class WaveNet(object):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
+        self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             kernel_sizes=params["kernel_sizes"],
             dilation_rates=params["dilation_rates"],
@@ -72,7 +74,10 @@ class WaveNet(object):
             encoder_outputs=encoder_outputs,
         )
 
-        if self.params["skip_connect"]:
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, :]
+            decoder_outputs = decoder_outputs + x_mean
+        if self.params["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs

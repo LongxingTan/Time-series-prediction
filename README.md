@@ -34,7 +34,7 @@
 
 ## Tutorial
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1_X7O2BkFLvqyCdZzDZvV2MB0aAvYALLC)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 
 **Installation**
 
@@ -72,7 +72,7 @@ plt.show()
 - [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
 - [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
 
-### Performance
+<!-- ### Performance
 
 [Time series prediction](./examples/run_prediction.py) performance is evaluated by tfts implementation, not official
 
@@ -97,7 +97,7 @@ plt.show()
 - [Anomaly detection](./examples/run_anomaly.py)
 - [Uncertainty prediction](examples/run_uncertainty.py)
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
-- [Serving by tf-serving](./examples)
+- [Serving by tf-serving](./examples) -->
 
 if you prefer to use [PyTorch](https://pytorch.org/), please try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
 

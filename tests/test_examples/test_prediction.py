@@ -8,7 +8,7 @@ from examples.utils import set_seed
 
 class PredictionTest(unittest.TestCase):
     def test_train(self):
-        class Args(object):
+        class args(object):
             seed = 315
             use_data = "sine"
             use_model = "rnn"
@@ -18,5 +18,5 @@ class PredictionTest(unittest.TestCase):
             batch_size = 16
             learning_rate = 0.003
 
-        set_seed(Args.seed)
-        run_train(Args)
+        set_seed(args.seed)
+        run_train(args)

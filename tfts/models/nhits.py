@@ -5,4 +5,7 @@
 
 import tensorflow as tf
 
-params = {}
+params = {
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
+}

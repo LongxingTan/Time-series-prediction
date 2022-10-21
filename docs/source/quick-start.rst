@@ -24,7 +24,8 @@ You can also run it in docker
 
 .. code-block:: shell
 
-    $ docker run
+    $ docker build -f ./docker/Dockerfile -t "your custom image name" .
+    $ docker run --rm -it --init --runtime=nvidia --ipc=host --network=host --volume=$PWD:/app -e NVIDIA_VISIBLE_DEVICES=0 "your custom image name" /bin/bash
 
 .. _usage:
 
@@ -40,7 +41,7 @@ The general setup for training and testing a model is
 #. Create a ``Trainer()`` or ``KerasTrainer()`` object. Define the optimizer and loss function in trainer
 #. Train the model on the training dataset and check if it has converged with acceptable accuracy
 #. Tune the hyper-parameters of the model and training
-#. Load the model from the model checkpoint and apply it to new data.
+#. Load the model from the model checkpoint and apply it to new data
 
 
 Example

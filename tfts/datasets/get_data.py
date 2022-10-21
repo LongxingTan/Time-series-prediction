@@ -5,6 +5,7 @@ import random
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 air_passenger_url = (
     "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
@@ -61,8 +62,8 @@ def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test
     # air_passenger_url = "../examples/data/international-airline-passengers.csv"
     df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values
-    mu = np.mean(v)
-    sig = np.std(v)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    v = scaler.fit_transform(v)
 
     x, y = [], []
     for seq in range(1, train_sequence_length + 1):
@@ -70,14 +71,12 @@ def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test
         x.append(x_roll)
     x = np.stack(x, axis=1)
     x = x[train_sequence_length:-predict_sequence_length, ::-1, :]
-    x = (x - mu) / sig - 0.5
 
     for seq in range(predict_sequence_length):
         y_roll = np.roll(v, -seq)
         y.append(y_roll)
     y = np.stack(y, axis=1)
     y = y[train_sequence_length:-predict_sequence_length]
-    y = (y - mu) / sig - 0.5
     logging.info("Load air passenger data", x.shape, y.shape)
 
     if test_size > 0:

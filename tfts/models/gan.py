@@ -10,7 +10,8 @@ params = {
     "rnn_size": 32,
     "dense_size": 8,
     "num_stacked_layers": 1,
-    "predict_window_sizes": 5,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 

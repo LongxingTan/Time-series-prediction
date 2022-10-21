@@ -11,6 +11,8 @@ from tfts.layers.deepar_layer import GaussianLayer
 params = {
     "rnn_size": 64,
     "dense_size": 16,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 

@@ -23,7 +23,8 @@ params = {
     "ffn_dropout": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "skip_connect": False,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 
@@ -112,7 +113,10 @@ class Transformer(object):
         decoder_outputs = self.decoder(decoder_features, memory)
         decoder_outputs = self.project(decoder_outputs)
 
-        if self.params["skip_connect"]:
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, :]
+            decoder_outputs = decoder_outputs + x_mean
+        if self.params["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs

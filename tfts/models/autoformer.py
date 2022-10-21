@@ -24,7 +24,8 @@ params = {
     "ffn_dropout": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "skip_connect": False,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 

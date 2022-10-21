@@ -61,3 +61,12 @@ class AutoConfig(object):
             _description_
         """
         return 1
+
+    def get_config(self):
+        return self.params
+
+    def print_config(self):
+        print(self.params)
+
+    def save_config(self):
+        return

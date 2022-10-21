@@ -27,7 +27,8 @@ params = {
     "num_stacked_layers": 1,
     "scheduler_sampling": 0,
     "use_attention": False,
-    "skip_connect": False,
+    "skip_connect_circle": False,
+    "skip_connect_mean": False,
 }
 
 
@@ -37,16 +38,15 @@ class RNN(object):
     def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
         if custom_model_params:
             params.update(custom_model_params)
-        print(params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(params["rnn_type"], params["rnn_size"], dense_size=params["dense_size"])
         self.project1 = Dense(predict_sequence_length, activation=None)
 
-        self.dense1 = Dense(512, activation="relu")
+        self.dense1 = Dense(128, activation="relu")
         self.bn = BatchNormalization()
         self.drop1 = Dropout(0.25)
-        self.dense2 = Dense(1024, activation="relu")
+        self.dense2 = Dense(128, activation="relu")
         self.drop2 = Dropout(0.25)
         # self.dense3 = TimeDistributed(Dense(1))
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
@@ -82,18 +82,20 @@ class RNN(object):
         else:
             encoder_output = encoder_state
 
-        encoder_output = self.drop1(encoder_output)
+        # encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense1(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
         outputs = tf.expand_dims(outputs, -1)
 
-        if self.params["skip_connect"]:
-            x_mean = tf.tile(tf.reduce_mean(x[:, -144:], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            # x_mean = tf.tile(x, (1, 1, 1))  # 2 is predict_window/train_window
+        if self.params["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
+            outputs = outputs + x_mean
+        if self.params["skip_connect_mean"]:
+            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             outputs = outputs + x_mean
         return outputs
 
