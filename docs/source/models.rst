@@ -10,10 +10,13 @@ Some experiments of tfts in Kaggle Dataset
 ===========  ===========  =============  ========  ==========
 Performance  Web traffic  Grocery sales  M5 sales  Ventilator
 ===========  ===========  =============  ========  ==========
-RNN          False        False          False      False
-DeepAR       False        True           False      False
-Seq2seq      True         True           False      False
-TCN          True         True           False      False
+RNN          soon         soon           False      False
+DeepAR       soon         soon           False      False
+Seq2seq      soon         soon           False      False
+TCN          soon         soon           False      False
+WaveNet      soon         soon           False      False
+Bert         soon         soon           False      False
+Transformer  soon         soon           False      False
 ===========  ===========  =============  ========  ==========
 
 Models supported
@@ -22,5 +25,8 @@ Models supported
 you can you below models in ``AutoModel()``
 
 * RNN
-* DeepAR
 * Seq2seq
+* TCN
+* WaveNet
+* Bert
+* Transformer

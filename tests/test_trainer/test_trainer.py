@@ -12,6 +12,7 @@ class TrainerTest(unittest.TestCase):
         self.fit_params = {
             "n_epochs": 3,
             "batch_size": 2,
+            "stop_no_improve_epochs": 1,
         }
 
         x_train = np.random.random((2, 10, 1))
@@ -33,6 +34,7 @@ class TrainerTest(unittest.TestCase):
         model = AutoModel("rnn", predict_length=2)
         trainer = Trainer(model)
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_params)
+        trainer.predict(self.valid_loader)
 
     # def test_trainer_no_dist_strategy(self):
     #     pass

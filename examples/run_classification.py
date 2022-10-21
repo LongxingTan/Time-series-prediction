@@ -10,5 +10,9 @@ import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
 
+def build_model():
+    return
+
+
 def run_train():
     return

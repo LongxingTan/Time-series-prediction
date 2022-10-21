@@ -17,3 +17,8 @@ class TunerTest(unittest.TestCase):
         #
         # tuner = AutoTuner()
         # tuner.run()
+
+        config = AutoConfig("rnn").get_config()
+
+        tuner = AutoTuner("rnn")
+        tuner.run(config)

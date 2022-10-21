@@ -37,7 +37,6 @@ class AutoFormer(object):
         self.predict_sequence_length = predict_sequence_length
 
         # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
-        # DataEmbedding(params['attention_hidden_sizes'])
         self.series_decomp = SeriesDecomp(params["kernel_size"])
         self.encoder = [
             EncoderLayer(
@@ -81,10 +80,10 @@ class AutoFormer(object):
         -------
         _type_
             _description_
-        """  # inputs:
+        """
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, decoder_features = inputs
-            # encoder_features = tf.concat([x, encoder_features], axis=-1)
+            encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
             decoder_features = tf.cast(

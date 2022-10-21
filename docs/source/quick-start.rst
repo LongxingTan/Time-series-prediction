@@ -43,9 +43,8 @@ The general setup for training and testing a model is
 #. Tune the hyper-parameters of the model and training
 #. Load the model from the model checkpoint and apply it to new data
 
-
 Example
---------
+~~~~~~~~~~~~~
 
 .. code-block:: python
 

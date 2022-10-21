@@ -121,7 +121,7 @@ class ReBlock(tf.keras.layers.Layer):
         return
 
 
-def conv_br(x, units, kernel_size, strides, dilation):
+def conv_br(x, units, kernel_size, strides=1, dilation=1):
     # a function is easier to reuse
     convbr = ConvbrLayer(units=units, kernel_size=kernel_size, strides=strides, dilation=dilation)
     out = convbr(x)
@@ -134,7 +134,7 @@ def se_block(x, units):
     return out
 
 
-def re_block(x, units, kernel_size, strides, dilation, use_se=True):
+def re_block(x, units, kernel_size, strides=1, dilation=1, use_se=True):
     reblock = ReBlock(units, kernel_size, strides, dilation, use_se=use_se)
     out = reblock(x)
     return out

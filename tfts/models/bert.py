@@ -42,7 +42,6 @@ class Bert(object):
             params.update(custom_model_params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
-        print(params)
 
         # DataEmbedding(params['attention_hidden_sizes'])
         self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
@@ -94,7 +93,6 @@ class Bert(object):
         _type_
             _description_
         """
-        # inputs:
         if isinstance(inputs, (list, tuple)):
             x, encoder_features, _ = inputs
             encoder_features = tf.concat([x, encoder_features], axis=-1)

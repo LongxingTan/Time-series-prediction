@@ -24,7 +24,7 @@ Prepare the model inputs
 
 what's more, the input data feed into the model could be
 
-- dict
+- tf.data
 
 - list or tuple
 
@@ -57,10 +57,12 @@ Change the model parameters. If you want touch more parameters in model params, 
 	import tfts
 	from tfts import AutoModel, AutoConfig
 
-	config = AutoConfig('rnn')
+	config = AutoConfig('rnn').get_config()
 	print(config)
 
 	custom_model_params = {
+		"rnn_size": 128,
+    	"dense_size": 128,
 	}
 
 	model = AutoModel('rnn', custom_model_params=custom_model_params)
@@ -73,12 +75,11 @@ Auto-tuned configuration
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+	from tfts import AutoModel, AutoConfig, AutoTuner
 
-	config = AutoConfig('rnn')
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
+	config = AutoConfig('rnn').get_config()
 
-	tuner = AutoTune('rnn')
+	tuner = AutoTuner('rnn')
 	tuner.run(config)
 
 
@@ -93,11 +94,14 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 	import tfts
 	from tfts import AutoModel, AutoConfig, AutoTune
 
-	config = AutoConfig('rnn')
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
+	AutoConfig('rnn').print_config()
 
-	tuner = AutoTune('rnn')
-	tuner.run(config)
+	custom_model_head = tf.keras.Sequential(
+		Dense(1)
+	)
+
+	model = AutoModel('rnn', custom_model_params=custom_model_params, custom_model_head=custom_model_head)
+
 
 Custom-defined trainer
 ----------------------------------------
@@ -107,16 +111,21 @@ If you are already used to your own trainer, and just want to use tfts models.
 .. code-block:: python
 
 	import tensorflow as tf
+	from tensorflow.keras.layers import Dense, Input
 	import tfts
 	from tfts import AutoModel, AutoConfig
 
-	config = AutoConfig('rnn')
-	print(config)
+	train_length = 24
+    train_features = 15
+    predict_length = 16
 
-	custom_model_params = {
-	}
-
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
+    inputs = Input([train_length, train_features])
+    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    outputs = backbone(inputs)
+    outputs = Dense(1, activation="sigmoid")(outputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    model.compile(loss="mse", optimizer="rmsprop")
+    model.fit(x, y)
 
 
 Deployment in tf-serving
@@ -130,12 +139,6 @@ save the model
 	import tfts
 	from tfts import AutoModel, AutoConfig, AutoTune
 
-	config = AutoConfig('rnn')
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
-
-	tuner = AutoTune('rnn')
-	tuner.run(config)
-
 
 serve the model in docker
 
@@ -144,12 +147,6 @@ serve the model in docker
 	import tensorflow as tf
 	import tfts
 	from tfts import AutoModel, AutoConfig, AutoTune
-
-	config = AutoConfig('rnn')
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
-
-	tuner = AutoTune('rnn')
-	tuner.run(config)
 
 
 .. toctree::

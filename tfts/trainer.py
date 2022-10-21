@@ -35,7 +35,7 @@ class Trainer(object):
         batch_size=8,
         learning_rate=3e-4,
         verbose=1,
-        eval_metric=(),
+        eval_metric=None,
         model_dir=None,
         use_ema=False,
         stop_no_improve_epochs=None,
@@ -98,7 +98,7 @@ class Trainer(object):
             log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
             logging.info(log_str)
 
-            if stop_no_improve_epochs is not None:
+            if stop_no_improve_epochs is not None and eval_metric is not None:
                 if valid_scores[0] >= best_metric:
                     best_metric = valid_scores[0]
                     no_improve_epochs = 0

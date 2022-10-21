@@ -50,18 +50,6 @@ class AutoConfig(object):
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 
-    def __call__(
-        self,
-    ):
-        """Auto config
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-        return 1
-
     def get_config(self):
         return self.params
 

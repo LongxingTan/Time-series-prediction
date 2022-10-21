@@ -4,7 +4,6 @@ import argparse
 import logging
 
 import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 

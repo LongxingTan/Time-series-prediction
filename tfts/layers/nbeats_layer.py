@@ -54,7 +54,9 @@ class NBeatsLayer(tf.keras.layers.Layer):
         return b_ls, f_ls
 
     def get_config(self):
-        return
+        config = {"units": self.units}
+        base_config = super(NBeatsLayer, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class GenericBlock(NBeatsLayer):

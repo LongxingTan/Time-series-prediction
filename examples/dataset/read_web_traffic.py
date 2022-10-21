@@ -11,9 +11,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-seed = 2021
-np.random.seed(seed=seed)
-
 
 def log_transform(x, sequence_mean):
     return np.log1p(x) - sequence_mean

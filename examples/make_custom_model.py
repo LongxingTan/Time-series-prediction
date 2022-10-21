@@ -15,4 +15,6 @@ def build_model():
     backbone = AutoModel("seq2seq", predict_length=predict_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
-    return tf.keras.Model(inputs=inputs, outputs=outputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    model.compile(loss="mse", optimizer="rmsprop")
+    return model
