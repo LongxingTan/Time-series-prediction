@@ -29,7 +29,7 @@ black = 1
 [tool.poetry]
 name = "tfts"
 readme = "README.md"  # Markdown files are supported
-version = "0.0.2"  # is being replaced automatically
+version = "0.0.3"  # is being replaced automatically
 
 authors = ["Longxing Tan"]
 classifiers = [

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.layers import Input
 
 from examples.utils import set_seed
 import tfts
@@ -17,7 +16,7 @@ from tfts import AutoConfig, AutoModel, KerasTrainer
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
-    parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
+    parser.add_argument("--use_model", type=str, default="transformer", help="model for train")
     parser.add_argument("--use_data", type=str, default="airpassengers", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for input")
     parser.add_argument("--predict_length", type=int, default=12, help="sequence length for output")

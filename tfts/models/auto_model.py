@@ -23,7 +23,7 @@ from tfts.models.wavenet import WaveNet
 class AutoModel(object):
     """AutoModel"""
 
-    def __init__(self, use_model, predict_length, custom_model_params=None, custom_model_head=None):
+    def __init__(self, use_model, predict_length=1, custom_model_params=None, custom_model_head=None):
         if use_model.lower() == "seq2seq":
             self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "rnn":
@@ -64,6 +64,7 @@ class AutoModel(object):
         _type_
             _description_
         """
+        assert len(x.shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x.shape))
         return self.model(x)
 
     def build_model(self, input_shape):

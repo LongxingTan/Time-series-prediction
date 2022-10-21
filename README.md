@@ -2,6 +2,8 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
+[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
 [lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg?branch=master
@@ -19,6 +21,7 @@
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
+[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
@@ -100,7 +103,7 @@ plt.show()
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples) -->
 
-if you prefer to use [PyTorch](https://pytorch.org/), please try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
+if you prefer to use PyTorch, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
 
 ## Citation
 

@@ -25,7 +25,6 @@ class TCN(object):
     def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
         if custom_model_params:
             params.update(custom_model_params)
-        print(params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
