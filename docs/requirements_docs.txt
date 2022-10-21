@@ -14,3 +14,4 @@ pandas == 1.1.5
 tensorflow==2.7.1
 matplotlib
 optuna>=2.0
+scikit-learn>0.23
