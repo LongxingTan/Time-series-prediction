@@ -18,7 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
-    parser.add_argument("--use_data", type=str, default="airpassengers", help="dataset, sine or airpassengers")
+    parser.add_argument("--use_data", type=str, default="airpassengers", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for input")
     parser.add_argument("--predict_length", type=int, default=12, help="sequence length for output")
     parser.add_argument("--n_epochs", type=int, default=30, help="Number of training epochs")

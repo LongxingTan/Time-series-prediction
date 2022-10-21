@@ -5,7 +5,6 @@ import random
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 
 air_passenger_url = (
     "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
@@ -62,8 +61,7 @@ def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test
     # air_passenger_url = "../examples/data/international-airline-passengers.csv"
     df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    v = scaler.fit_transform(v)
+    v = (v - np.max(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
 
     x, y = [], []
     for seq in range(1, train_sequence_length + 1):
