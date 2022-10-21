@@ -1,0 +1,94 @@
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | docs/build/
+  | node_modules/
+  | venve/
+  | .venv/
+)
+'''
+
+[tool.nbqa.mutate]
+isort = 1
+black = 1
+
+[tool.poetry]
+name = "tfts"
+readme = "README.md"  # Markdown files are supported
+version = "0.0.3"  # is being replaced automatically
+
+authors = ["Longxing Tan"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License"]
+description = "Deep learning time series with TensorFlow"
+repository = "https://github.com/LongxingTan/Time-series-prediction"
+documentation = "https://time-series-prediction.readthedocs.io"
+homepage = "https://time-series-prediction.readthedocs.io"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.11"
+
+tensorflow = "^2.3.1"
+optuna = "^2.3.0"
+pandas = "^1.1.0"
+# scikit-learn = ">=0.24,<1.2"
+matplotlib = "*"
+
+[tool.poetry.dev-dependencies]
+# checks and make tools
+pre-commit = "^2.20.0"
+invoke = "*"
+flake8 = "*"
+mypy = "*"
+pylint = "*"
+isort = "*"
+coverage = "*"
+
+# jupyter notebook
+ipykernel = "*"
+black = { version = "*", allow-prereleases = true, extras = ["jupyter"] }
+
+# documentatation
+sphinx = "*"
+pydata-sphinx-theme = "*"
+nbsphinx = "*"
+# pandoc = "*"
+recommonmark = "*"
+ipywidgets = "^8.0.1"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+dirty = false
+style = "semver"  # semantic versioning
+
+[build-system]  # make the package pip installable
+requires = ["poetry-core>=1.0.7", "poetry-dynamic-versioning>=0.13.1"]
+build-backend = "poetry.core.masonry.api"

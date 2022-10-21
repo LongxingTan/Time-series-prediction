@@ -1,41 +1,49 @@
 # -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
-# @date: 2020-01
+# @author: Longxing Tan
+"""Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dropout, Dense, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
 
-class Attention(tf.keras.layers.Layer):
-    """ Multi-head attention layer
-    """
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.):
+class FullAttention(tf.keras.layers.Layer):
+    """Multi-head attention layer"""
+
+    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
         if hidden_size % num_heads:
-            raise ValueError("Hidden size ({}) must be divisible by the number of heads ({})."
-                             .format(hidden_size, num_heads))
-        super(Attention, self).__init__()
-        self.units = hidden_size
+            raise ValueError(
+                "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
+            )
+        super(FullAttention, self).__init__()
+        self.hidden_size = hidden_size
         self.num_heads = num_heads
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
-        self.dense_q = Dense(self.units, use_bias=False)
-        self.dense_k = Dense(self.units, use_bias=False)
-        self.dense_v = Dense(self.units, use_bias=False)
+        self.dense_q = Dense(self.hidden_size, use_bias=False)
+        self.dense_k = Dense(self.hidden_size, use_bias=False)
+        self.dense_v = Dense(self.hidden_size, use_bias=False)
         self.dropout = Dropout(rate=self.attention_dropout)
-        super(Attention, self).build(input_shape)
+        super(FullAttention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
-        """
-        use query and key generating an attention multiplier for value, multi_heads to repeat it
-        Args:
-            Query: batch * seq_q * fea
-            Key: batch * seq_k * fea
-            Value: batch * seq_v * fea
-            mask: important to avoid the leaks
-        Returns:
-            output: batch * key_sequence * (units * num_heads)
+        """use query and key generating an attention multiplier for value, multi_heads to repeat it
+
+        Parameters
+        ----------
+        q : _type_
+            Query with shape batch * seq_q * fea
+        k : _type_
+            Key with shape batch * seq_k * fea
+        v : _type_
+            value with shape batch * seq_v * fea
+        mask : _type_, optional
+            important to avoid the leaks, defaults to None, by default None
+
+        Returns
+        -------
+        _type_
+            tensor with shape batch * key_sequence * (units * num_heads)
         """
         q = self.dense_q(q)  # project the query/key/value to num_heads * units
         k = self.dense_k(k)
@@ -60,23 +68,37 @@ class Attention(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'units': self.units,
-            'num_heads': self.num_heads,
-            'attention_dropout': self.attention_dropout
+            "hidden_size": self.hidden_size,
+            "num_heads": self.num_heads,
+            "attention_dropout": self.attention_dropout,
         }
-        base_config = super(Attention, self).get_config()
+        base_config = super(FullAttention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class SelfAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.):
+    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
         super(SelfAttention, self).__init__()
-        self.attention = Attention(hidden_size, num_heads, attention_dropout=attention_dropout)
+        self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 
     def build(self, input_shape):
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x, mask=None):
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        mask : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return self.attention(x, x, x, mask)
 
     def get_config(self):
@@ -84,142 +106,71 @@ class SelfAttention(tf.keras.layers.Layer):
         return base_config
 
 
-class FeedForwardNetwork(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, filter_size, relu_dropout):
-        super(FeedForwardNetwork, self).__init__()
-        self.hidden_size = hidden_size
-        self.filter_size = filter_size
-        self.relu_dropout = relu_dropout
-        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation='relu')
-        self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
+class SparseAttention(tf.keras.layers.Layer):
+    def __init__(self) -> None:
+        super().__init__()
 
     def build(self, input_shape):
-        super(FeedForwardNetwork, self).build(input_shape)
-
-    def forward(self, x, training):
-        output = self.filter_dense_layer(x)
-        if training:
-            output = tf.nn.dropout(output, rate=self.relu_dropout)
-        output = self.output_dense_layer(output)
-        return output
-
-    def call(self, x, training):
-        return self.forward(x, training)
-
-    def get_config(self):
-        config = {
-            "hidden_size": self.hidden_size,
-            "filter_size": self.filter_size,
-            "relu_dropout": self.relu_dropout,
-        }
-        base_config = super(FeedForwardNetwork, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
-
-
-class TokenEmbedding(tf.keras.layers.Layer):
-    def __init__(self, embedding_size):
-        super(TokenEmbedding, self).__init__()
-        self.embedding_size = embedding_size
-
-    def build(self, input_shape):
-        self.token_weights = self.add_weight(name='token_weights',
-                                             shape=[input_shape[-1], self.embedding_size],
-                                             initializer=tf.random_normal_initializer(mean=0.,
-                                                                                      stddev=self.embedding_size ** -0.5))
-        super(TokenEmbedding, self).build(input_shape)
+        super().build(input_shape)
 
     def call(self, x):
-        y = tf.einsum('bsf,fk->bsk', x, self.token_weights)
-        return y
+        """_summary_
+
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        """
+        return
 
     def get_config(self):
-        config = {
-            'embedding_size': self.embedding_size
-        }
-        base_config = super(TokenEmbedding, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        base_config = super().get_config()
+        return base_config
 
 
-class PositionEmbedding(tf.keras.layers.Layer):
-    def __init__(self, max_len=5000):
-        super(PositionEmbedding, self).__init__()
-        self.max_len = max_len
+class ProbAttention(tf.keras.layers.Layer):
+    def __init__(self) -> None:
+        super().__init__()
 
     def build(self, input_shape):
-        super(PositionEmbedding, self).build(input_shape)
+        super().build(input_shape)
 
-    def call(self, x, masking=True):
-        E = x.get_shape().as_list()[-1]  # static
-        batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
+    def call(self, x, x_mask=None):
+        """_summary_
 
-        position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])  # => batch_size*seq_length
-        position_enc = np.array(
-            [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)])
-
-        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
-        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-        position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (maxlen,E)
-
-        outputs = tf.nn.embedding_lookup(position_enc, position_ind)
-        if masking:
-            outputs = tf.where(tf.equal(x, 0), x, outputs)
-        return tf.cast(outputs, tf.float32)
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        x_mask : _type_, optional
+            _description_, by default None
+        """
+        return
 
     def get_config(self):
-        config = {
-            'max_len': self.max_len
-        }
-        base_config = super(PositionEmbedding, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        base_config = super().get_config()
+        return base_config
 
 
-class PositionEncoding(tf.keras.layers.Layer):
-    def __init__(self, max_len):
-        super(PositionEncoding, self).__init__()
-        self.max_len = max_len
+class FastAttention(tf.keras.layers.Layer):
+    def __init__(self):
+        super().__init__()
 
     def build(self, input_shape):
-        super(PositionEncoding, self).build(input_shape)
+        super().build(input_shape)
 
-    def call(self, x, masking=True):
-        E = x.get_shape().as_list()[-1]  # static
-        batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
-        with tf.name_scope('position_encode'):
-            position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])  # => batch_size*seq_length
-            position_enc = np.array(
-                [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)])
+    def call(self, x, x_mask=None):
+        """_summary_
 
-            position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
-            position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (maxlen,E)
-
-            outputs = tf.nn.embedding_lookup(position_enc, position_ind)
-            if masking:
-                outputs = tf.where(tf.equal(x, 0), x, outputs)
-        return tf.cast(outputs, tf.float32)
+        Parameters
+        ----------
+        x : _type_
+            _description_
+        x_mask : _type_, optional
+            _description_, by default None
+        """
+        return
 
     def get_config(self):
-        config = {
-            'max_len': self.max_len
-        }
-        base_config = super(PositionEncoding, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
-
-
-class DataEmbedding(tf.keras.layers.Layer):
-    def __init__(self, d_model):
-        super(DataEmbedding, self).__init__()
-        self.value_embedding = TokenEmbedding(d_model)
-        self.position_embedding = PositionEmbedding(d_model)
-        self.dropout = Dropout(0.0)
-
-    def build(self, input_shape):
-        super(DataEmbedding, self).build(input_shape)
-
-    def call(self, x):
-        x = self.value_embedding(x) + self.position_embedding(x)
-        return self.dropout(x)
-
-    def get_config(self):
-        base_config = super(DataEmbedding, self).get_config()
+        base_config = super().get_config()
         return base_config

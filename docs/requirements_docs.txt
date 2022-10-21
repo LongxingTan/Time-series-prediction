@@ -1,0 +1,17 @@
+recommonmark>=0.7.1
+nbconvert>=6.3.0
+sphinx>3.2
+pandoc
+ipython
+nbsphinx
+sphinx_markdown_tables
+pydata_sphinx_theme
+docutils
+sphinx-autobuild
+cloudpickle
+
+pandas == 1.1.5
+tensorflow==2.7.1
+matplotlib
+optuna>=2.0
+scikit-learn>0.23

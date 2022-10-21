@@ -5,9 +5,9 @@ name: Test
 
 on:
   push:
-    branches: [master]
+    branches: [master, dev]
   pull_request:
-    branches: [master]
+    branches: [master, dev]
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest] # add windows-2019 when poetry allows installation with `-f` flag
-        python-version: [3.7, 3.8, 3.9] # python 3.9 is not supported by all dependencies yet
+        python-version: [3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
@@ -25,14 +25,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup macOS
-        if: runner.os == 'macOS'
-        run: |
-          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
-      - name: Setup macOS
-        if: runner.os == 'windows'
-        run: |
-          brew install libomp  # https://github.com/pytorch/pytorch/issues/20030
       - name: Get full Python version
         id: full-python-version
         shell: bash
@@ -41,9 +33,9 @@ jobs:
       - name: Install poetry
         shell: bash
         run: |
-          curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+          curl -sSL https://install.python-poetry.org | python3 -
       - name: Set poetry path variable
-        run: echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+        run: echo "/Users/runner/.local/bin" >> $GITHUB_PATH
 
       - name: Configure poetry
         shell: bash
@@ -67,26 +59,26 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: poetry install -E "github-actions"
+        run: poetry install --no-interaction --no-root
 
-      - name: Run pytest
+      - name: Run unittest
         shell: bash
-        run: poetry run pytest tests
+        run: poetry run coverage run -m unittest discover -s ./tests  -p 'test_*.py'
 
       - name: Statistics
         if: success()
         run: |
-          pip install coverage
-          coverage report
-          coverage xml
+          poetry run coverage report -i
+          poetry run coverage xml -i
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         if: always()
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.xml
-          flags: cpu,pytest
+          flags: cpu, unittest
           name: CPU-coverage
           fail_ci_if_error: false
 
@@ -107,14 +99,15 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements_docs.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y pandoc
           python -m pip install --upgrade pip
-          pip install -r docs/requirements.txt
+          pip install -r docs/requirements_docs.txt
         shell: bash
 
       - name: Build sphinx documentation
@@ -122,6 +115,7 @@ jobs:
           cd docs
           make clean
           make html --debug --jobs 2 SPHINXOPTS="-W"
+
       - name: Upload built docs
         uses: actions/upload-artifact@v2
         with:
