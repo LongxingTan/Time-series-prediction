@@ -5,7 +5,7 @@ python -m unittest -v tests/test_demo.py
 import unittest
 
 import tfts
-from tfts import AutoModel, KerasTrainer as Trainer, build_tfts_model
+from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer, build_tfts_model
 
 
 class DemoTest(unittest.TestCase):
@@ -41,6 +41,22 @@ class DemoTest(unittest.TestCase):
             "gan",
         ]:
             AutoModel(m)
+
+        for m in [
+            "seq2seq",
+            "wavenet",
+            "transformer",
+            "rnn",
+            "tcn",
+            "bert",
+            "tft",
+            "unet",
+            "informer",
+            "autoformer",
+            "nbeats",
+            "gan",
+        ]:
+            AutoConfig(m)
 
     @unittest.skip
     def test_train(self):

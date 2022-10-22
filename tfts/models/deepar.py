@@ -10,7 +10,6 @@ from tfts.layers.deepar_layer import GaussianLayer
 
 params = {
     "rnn_size": 64,
-    "dense_size": 16,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
@@ -25,10 +24,12 @@ class DeepAR(object):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
+        self.predict_sequence_length = predict_sequence_length
+
         cell = tf.keras.layers.GRUCell(units=self.params["rnn_size"])
         self.rnn = tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
         self.bn = BatchNormalization()
-        self.dense = Dense(units=self.params["dense_size"], activation="relu")
+        self.dense = Dense(units=predict_sequence_length, activation="relu")
         self.gauss = GaussianLayer(units=1)
 
     def __call__(self, x):

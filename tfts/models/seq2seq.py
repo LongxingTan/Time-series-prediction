@@ -338,19 +338,19 @@ class Decoder2(tf.keras.layers.Layer):
 
 class Decoder3(tf.keras.layers.Layer):
     # multi-steps static decoding
-    def __init__(self, rnn_type, rnn_size, rnn_dropout=0, dense_size=1, **kwargs) -> None:
+    def __init__(self, rnn_type="gru", rnn_size=32, rnn_dropout=0, dense_size=1, **kwargs) -> None:
         super(Decoder3, self).__init__()
         if rnn_type.lower() == "gru":
             self.rnn = GRU(
                 units=rnn_size, activation="tanh", return_state=False, return_sequences=True, dropout=rnn_dropout
             )
-        elif self.rnn_type.lower() == "lstm":
+        elif rnn_type.lower() == "lstm":
             self.rnn = LSTM(
-                units=self.rnn_size,
+                units=rnn_size,
                 activation="tanh",
                 return_state=False,
                 return_sequences=True,
-                dropout=self.rnn_dropout,
+                dropout=rnn_dropout,
             )
         self.dense = Dense(units=dense_size, activation=None)
         self.drop = Dropout(0.1)

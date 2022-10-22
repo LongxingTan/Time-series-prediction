@@ -94,8 +94,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 	import tfts
 	from tfts import AutoModel, AutoConfig, AutoTune
 
-	AutoConfig('rnn').print_config()
-
+    AutoConfig('rnn').print_config()
 	custom_model_head = tf.keras.Sequential(
 		Dense(1)
 	)
@@ -110,12 +109,11 @@ If you are already used to your own trainer, and just want to use tfts models.
 
 .. code-block:: python
 
-	import tensorflow as tf
-	from tensorflow.keras.layers import Dense, Input
-	import tfts
-	from tfts import AutoModel, AutoConfig
-
-	train_length = 24
+    import tensorflow as tf
+    from tensorflow.keras.layers import Dense, Input
+    import tfts
+    from tfts import AutoModel, AutoConfig
+    train_length = 24
     train_features = 15
     predict_length = 16
 
