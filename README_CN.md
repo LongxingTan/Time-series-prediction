@@ -2,6 +2,8 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
+[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
 [lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg
@@ -14,11 +16,12 @@
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="500" align=center/>
+<img src="./docs/source/_static/logo.svg" width="490" align=center/>
 </h1><br>
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
+[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
@@ -73,7 +76,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
 东流tfts专注业界领先的深度模型
 
-- [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
+- [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022-百度风机功率预测第3名
 - [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
 
 <!-- - [RNN]()
