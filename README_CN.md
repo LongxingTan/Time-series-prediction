@@ -42,7 +42,7 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 
-**安装**环境要求
+**安装**
 
 - python >= 3.7
 - tensorflow >= 2.1

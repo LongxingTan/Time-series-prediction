@@ -20,7 +20,7 @@ Now you are ready, proceed with
     $ pip install tfts
 
 
-You can also run it in docker, download the Dockerfile to host server
+You can run it in docker, download the Dockerfile to host server
 
 .. code-block:: shell
 

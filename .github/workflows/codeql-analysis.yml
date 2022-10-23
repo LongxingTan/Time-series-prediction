@@ -5,7 +5,7 @@ name: "CodeQL"
 
 on:
   schedule:
-    - cron: '0 0 23 * *'  # Runs at 00:00 UTC on the 23rd of every month
+    - cron: '0 0 23 8 *'  # Runs at 00:00 UTC on the 23rd of every August
 
 jobs:
   analyze:
