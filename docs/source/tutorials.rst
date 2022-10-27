@@ -24,9 +24,11 @@ Prepare the model inputs
 
 what's more, the input data feed into the model could be
 
-- tf.data
+- tf.data.Dataset
 
-- list or tuple
+- list or tuple for (x, encoder_feature, decoder_features)
+
+- array for single variable prediction
 
 
 .. _train_models:
@@ -53,6 +55,25 @@ Change the model parameters. If you want touch more parameters in model params, 
 
 .. code-block:: python
 
+    import tensorflow as tf
+    import tfts
+    from tfts import AutoModel, AutoConfig
+
+    config = AutoConfig('rnn').get_config()
+    print(config)
+
+    custom_model_params = {
+        "rnn_size": 128,
+        "dense_size": 128,
+    }
+    model = AutoModel('rnn', custom_model_params=custom_model_params)
+
+
+Multi-variables and multi-steps prediction
+-------------------------------------------------
+
+.. code-block:: python
+
 	import tensorflow as tf
 	import tfts
 	from tfts import AutoModel, AutoConfig
@@ -65,7 +86,12 @@ Change the model parameters. If you want touch more parameters in model params, 
     	"dense_size": 128,
 	}
 
-	model = AutoModel('rnn', custom_model_params=custom_model_params)
+	model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+
+	x = tf.random.normal([1, 14, 1])
+	encoder_features = tf.random.normal([1, 14, 10])
+	decoder_features = tf.random.normal([1, 7, 3])
+	model()
 
 
 Auto-tuned configuration
@@ -73,14 +99,13 @@ Auto-tuned configuration
 
 .. code-block:: python
 
-	import tensorflow as tf
-	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTuner
+    import tensorflow as tf
+    import tfts
+    from tfts import AutoModel, AutoConfig, AutoTuner
 
-	config = AutoConfig('rnn').get_config()
-
-	tuner = AutoTuner('rnn')
-	tuner.run(config)
+    config = AutoConfig('rnn').get_config()
+    tuner = AutoTuner('rnn')
+    tuner.run(config)
 
 
 Custom head for classification or anomaly task
@@ -90,17 +115,15 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 
 .. code-block:: python
 
-	import tensorflow as tf
-	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+    import tensorflow as tf
+    import tfts
+    from tfts import AutoModel, AutoConfig, AutoTune
 
-	AutoConfig('rnn').print_config()
-
-	custom_model_head = tf.keras.Sequential(
-		Dense(1)
-	)
-
-	model = AutoModel('rnn', custom_model_params=custom_model_params, custom_model_head=custom_model_head)
+    AutoConfig('rnn').print_config()
+    custom_model_head = tf.keras.Sequential(
+        Dense(1)
+    )
+    model = AutoModel('rnn', custom_model_params=custom_model_params, custom_model_head=custom_model_head)
 
 
 Custom-defined trainer
@@ -110,12 +133,11 @@ If you are already used to your own trainer, and just want to use tfts models.
 
 .. code-block:: python
 
-	import tensorflow as tf
-	from tensorflow.keras.layers import Dense, Input
-	import tfts
-	from tfts import AutoModel, AutoConfig
-
-	train_length = 24
+    import tensorflow as tf
+    from tensorflow.keras.layers import Dense, Input
+    import tfts
+    from tfts import AutoModel, AutoConfig
+    train_length = 24
     train_features = 15
     predict_length = 16
 

@@ -4,8 +4,10 @@ python -m unittest -v tests/test_demo.py
 
 import unittest
 
+import tensorflow as tf
+
 import tfts
-from tfts import AutoModel, KerasTrainer as Trainer, build_tfts_model
+from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer, build_tfts_model
 
 
 class DemoTest(unittest.TestCase):
@@ -23,8 +25,16 @@ class DemoTest(unittest.TestCase):
         trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
     def test_auto_model(self):
+        predict_length = 2
         for m in ["seq2seq", "wavenet", "transformer"]:
-            build_tfts_model(m, predict_length=2)
+            build_tfts_model(m, predict_length=predict_length)
+
+        for m in ["seq2seq", "wavenet", "transformer", "rnn", "tcn", "bert", "informer", "autoformer"]:
+            model = AutoModel(m, predict_length=predict_length)
+            y = model(
+                (tf.random.normal([1, 13, 1]), tf.random.normal([1, 13, 3]), tf.random.normal([1, predict_length, 5]))
+            )
+            self.assertEqual(y.shape, (1, predict_length, 1))
 
         for m in [
             "seq2seq",
@@ -40,7 +50,7 @@ class DemoTest(unittest.TestCase):
             "nbeats",
             "gan",
         ]:
-            AutoModel(m)
+            AutoConfig(m)
 
     @unittest.skip
     def test_train(self):

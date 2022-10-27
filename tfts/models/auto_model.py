@@ -64,7 +64,8 @@ class AutoModel(object):
         _type_
             _description_
         """
-        assert len(x.shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x.shape))
+        if isinstance(x, (list, tuple)):
+            assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
         return self.model(x)
 
     def build_model(self, input_shape):

@@ -1,13 +1,15 @@
 """Demo of time series prediction by tfts"""
+# python run_prediction.py --use_model rnn
 
 import argparse
-import logging
+import os
+import random
 
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
-from examples.utils import set_seed
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
@@ -15,15 +17,22 @@ from tfts import AutoConfig, AutoModel, KerasTrainer
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
-    parser.add_argument("--use_model", type=str, default="transformer", help="model for train")
-    parser.add_argument("--use_data", type=str, default="airpassengers", help="dataset: sine or airpassengers")
+    parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
+    parser.add_argument("--use_data", type=str, default="sine", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for input")
     parser.add_argument("--predict_length", type=int, default=12, help="sequence length for output")
-    parser.add_argument("--n_epochs", type=int, default=30, help="Number of training epochs")
+    parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=3e-4, help="learning rate for training")
 
     return parser.parse_args()
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    tf.random.set_seed(seed)
 
 
 def run_train(args):

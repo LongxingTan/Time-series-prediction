@@ -56,8 +56,8 @@ homepage = "https://time-series-prediction.readthedocs.io"
 python = ">=3.7,<3.11"
 
 tensorflow = "^2.3.1"
-optuna = "^2.3.0"
-pandas = "^1.1.0"
+optuna = "*"
+pandas = "*"
 # scikit-learn = ">=0.24,<1.2"
 matplotlib = "*"
 

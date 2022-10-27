@@ -2,6 +2,8 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
+[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
 [lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg
@@ -14,11 +16,12 @@
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="500" align=center/>
+<img src="./docs/source/_static/logo.svg" width="490" align=center/>
 </h1><br>
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
+[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
@@ -27,7 +30,7 @@
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow，支持多种深度学习模型
+**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow/ Keras，支持多种深度学习模型
 
 - 结构灵活，适配多种时间序列任务
 - [多套久经考验的深度学习模型](./examples)
@@ -39,7 +42,7 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 
-**安装**环境要求
+**安装**
 
 - python >= 3.7
 - tensorflow >= 2.1
@@ -73,7 +76,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
 东流tfts专注业界领先的深度模型
 
-- [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022百度风机功率预测第3名
+- [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022-百度风机功率预测第3名
 - [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
 
 <!-- - [RNN]()

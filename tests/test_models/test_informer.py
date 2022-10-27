@@ -2,7 +2,6 @@
 python -m unittest -v tests/test_models/test_informer.py
 """
 
-import functools
 import unittest
 
 import tensorflow as tf

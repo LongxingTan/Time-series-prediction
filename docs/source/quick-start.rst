@@ -20,12 +20,12 @@ Now you are ready, proceed with
     $ pip install tfts
 
 
-You can also run it in docker
+You can run it in docker, download the Dockerfile to host server
 
 .. code-block:: shell
 
-    $ docker build -f ./docker/Dockerfile -t "your custom image name" .
-    $ docker run --rm -it --init --runtime=nvidia --ipc=host --network=host --volume=$PWD:/app -e NVIDIA_VISIBLE_DEVICES=0 "your custom image name" /bin/bash
+    $ docker build -f ./Dockerfile -t "custom image name" .
+    $ docker run --rm -it --init --ipc=host --network=host --volume=$PWD:/app -e NVIDIA_VISIBLE_DEVICES=0 "custom image name" /bin/bash
 
 .. _usage:
 
