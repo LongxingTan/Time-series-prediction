@@ -6,8 +6,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-from reference.gan import GAN
-from reference.temporal_fusion_transformer import TFTransformer
 from tfts.models.autoformer import AutoFormer
 from tfts.models.bert import Bert
 from tfts.models.informer import Informer
@@ -40,14 +38,14 @@ class AutoModel(object):
             self.model = Informer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "autoformer":
             self.model = AutoFormer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "tft":
-            self.model = TFTransformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        # elif use_model.lower() == "tft":
+        #    self.model = TFTransformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "unet":
             self.model = Unet(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "nbeats":
             self.model = NBeats(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "gan":
-            self.model = GAN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
+        # elif use_model.lower() == "gan":
+        #     self.model = GAN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 

@@ -3,8 +3,6 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoConfig to set up models custom config"""
 
-from reference.gan import params as gan_params
-from reference.temporal_fusion_transformer import params as tf_transformer_params
 from tfts.models.autoformer import params as autoformer_params
 from tfts.models.bert import params as bert_params
 from tfts.models.informer import params as informer_params
@@ -37,14 +35,14 @@ class AutoConfig(object):
             self.params = informer_params
         elif use_model.lower() == "autoformer":
             self.params = autoformer_params
-        elif use_model.lower() == "tft":
-            self.params = tf_transformer_params
+        # elif use_model.lower() == "tft":
+        #     self.params = tf_transformer_params
         elif use_model.lower() == "unet":
             self.params = unet_params
         elif use_model.lower() == "nbeats":
             self.params = nbeats_params
-        elif use_model.lower() == "gan":
-            self.params = gan_params
+        # elif use_model.lower() == "gan":
+        #     self.params = gan_params
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 
