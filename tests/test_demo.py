@@ -43,12 +43,12 @@ class DemoTest(unittest.TestCase):
             "rnn",
             "tcn",
             "bert",
-            "tft",
+            # "tft",
             "unet",
             "informer",
             "autoformer",
             "nbeats",
-            "gan",
+            # "gan",
         ]:
             AutoConfig(m)
 
