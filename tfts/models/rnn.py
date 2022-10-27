@@ -48,8 +48,6 @@ class RNN(object):
         self.drop1 = Dropout(0.25)
         self.dense2 = Dense(128, activation="relu")
         self.drop2 = Dropout(0.25)
-        # self.dense3 = TimeDistributed(Dense(1))
-        # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
 
     def __call__(self, inputs, teacher=None):
         """_summary_
@@ -71,8 +69,6 @@ class RNN(object):
             encoder_features = tf.concat([x, encoder_features], axis=-1)
         else:  # for single variable prediction
             encoder_features = x = inputs
-
-        # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
 
         encoder_outputs, encoder_state = self.encoder(encoder_features)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length

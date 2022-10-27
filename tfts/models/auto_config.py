@@ -3,17 +3,15 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoConfig to set up models custom config"""
 
+from reference.gan import params as gan_params
+from reference.temporal_fusion_transformer import params as tf_transformer_params
 from tfts.models.autoformer import params as autoformer_params
 from tfts.models.bert import params as bert_params
-from tfts.models.deepar import params as deepar_params
-from tfts.models.gan import params as gan_params
 from tfts.models.informer import params as informer_params
 from tfts.models.nbeats import params as nbeats_params
-from tfts.models.nhits import params as nhits_params
 from tfts.models.rnn import params as rnn_params
 from tfts.models.seq2seq import params as seq2seq_params
 from tfts.models.tcn import params as tcn_params
-from tfts.models.temporal_fusion_transformer import params as tf_transformer_params
 from tfts.models.transformer import params as transformer_params
 from tfts.models.unet import params as unet_params
 from tfts.models.wavenet import params as wavenet_params

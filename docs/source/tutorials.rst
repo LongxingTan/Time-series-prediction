@@ -117,7 +117,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 
     import tensorflow as tf
     import tfts
-    from tfts import AutoModel, AutoConfig, AutoTune
+    from tfts import AutoModel, AutoConfig, AutoTuner
 
     AutoConfig('rnn').print_config()
     custom_model_head = tf.keras.Sequential(
@@ -159,7 +159,7 @@ save the model
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+	from tfts import AutoModel, AutoConfig, AutoTuner
 
 
 serve the model in docker
@@ -168,7 +168,7 @@ serve the model in docker
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+	from tfts import AutoModel, AutoConfig, AutoTuner
 
 
 .. toctree::
