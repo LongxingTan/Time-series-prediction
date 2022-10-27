@@ -17,7 +17,7 @@ class ConvTemp(tf.keras.layers.Layer):
         kernel_size,
         strides=1,
         dilation_rate=1,
-        activation=None,
+        activation="relu",
         causal=True,
         kernel_initializer="glorot_uniform",
         name=None,
@@ -42,12 +42,12 @@ class ConvTemp(tf.keras.layers.Layer):
         )
         super(ConvTemp, self).build(input_shape)
 
-    def call(self, input):
+    def call(self, inputs):
         """_summary_
 
         Parameters
         ----------
-        input : _type_
+        inputs : _type_
             _description_
 
         Returns
@@ -57,11 +57,11 @@ class ConvTemp(tf.keras.layers.Layer):
         """
         if self.causal:
             padding_size = (self.kernel_size - 1) * self.dilation_rate
-            # padding: 1st dim is batch, [0,0]; 2nd dim is time, [padding_size, 0]; 3rd dim is feature [0,0]
-            input = tf.pad(input, [[0, 0], [padding_size, 0], [0, 0]])
+            # padding: dim 1 is batch, [0,0]; dim 2 is time, [padding_size, 0]; dim 3 is feature [0,0]
+            inputs = tf.pad(inputs, [[0, 0], [padding_size, 0], [0, 0]])
 
-        output = self.conv(input)
-        return output
+        outputs = self.conv(inputs)
+        return outputs
 
     def get_config(self):
         config = {

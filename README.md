@@ -53,7 +53,7 @@ $ pip install tfts
 ``` python
 import matplotlib.pyplot as plt
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
+from tfts import AutoModel, AutoConfig, KerasTrainer
 
 train_length = 24
 predict_length = 8
