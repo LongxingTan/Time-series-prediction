@@ -29,7 +29,7 @@ black = 1
 [tool.poetry]
 name = "tfts"
 readme = "README.md"  # Markdown files are supported
-version = "0.0.3"  # is being replaced automatically
+version = "0.0.4"  # is being replaced automatically
 
 authors = ["Longxing Tan"]
 classifiers = [
@@ -75,7 +75,7 @@ coverage = "*"
 ipykernel = "*"
 black = { version = "*", allow-prereleases = true, extras = ["jupyter"] }
 
-# documentatation
+# documentation
 sphinx = "*"
 pydata-sphinx-theme = "*"
 nbsphinx = "*"
@@ -91,4 +91,4 @@ style = "semver"  # semantic versioning
 
 [build-system]  # make the package pip installable
 requires = ["poetry-core>=1.0.7", "poetry-dynamic-versioning>=0.13.1"]
-build-backend = "poetry.core.masonry.api"
+build-backend = "poetry_dynamic_versioning.backend"
