@@ -32,7 +32,7 @@
 
 **TFTS** (TensorFlow Time Series) is an easy-to-use python package for time series, supporting the classical and SOTA deep learning methods in TensorFlow or Keras.
 - Flexible and powerful design for time series task
-- Advanced deep learning models
+- Advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 ## Tutorial

@@ -33,7 +33,7 @@
 **东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow/ Keras，支持多种深度学习模型
 
 - 结构灵活，适配多种时间序列任务
-- [多套久经考验的深度学习模型](./examples)
+- [经典与前沿的深度学习模型，用于工业、科研、竞赛](./examples)
 - [查阅文档，快速入门](https://time-series-prediction.readthedocs.io)
 
 中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
