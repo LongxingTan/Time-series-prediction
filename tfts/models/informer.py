@@ -82,7 +82,7 @@ class Informer(object):
         # self.projection = Dense(predict_sequence_length, activation=None)
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """Informer call fucntion
 
         Parameters
         ----------
@@ -114,10 +114,10 @@ class Informer(object):
         # decoder_outputs = decoder_outputs[:, -self.predict_sequence_length:, :]
 
         if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, :]
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
         if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            x_mean = tf.tile(tf.reduce_mean(x[:, :, 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
@@ -130,7 +130,7 @@ class Encoder(tf.keras.layers.Layer):
         self.norm_layer = norm_layer
 
     def call(self, x, mask=None):
-        """_summary_
+        """Informer encoder call function
 
         Parameters
         ----------
@@ -178,7 +178,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         super(EncoderLayer, self).build(input_shape)
 
     def call(self, x, mask=None):
-        """_summary_
+        """Informer encoder layer call
 
         Parameters
         ----------
@@ -231,7 +231,7 @@ class CustomConv(tf.keras.layers.Layer):
         super(CustomConv, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """Informer custom conv
 
         Parameters
         ----------
@@ -257,7 +257,7 @@ class Decoder(tf.keras.layers.Layer):
         self.norm = norm_layer
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
-        """_summary_
+        """Informer decoder call function
 
         Parameters
         ----------
@@ -305,7 +305,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
-        """_summary_
+        """Informer decoder layer call function
 
         Parameters
         ----------

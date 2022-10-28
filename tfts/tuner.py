@@ -15,5 +15,8 @@ class AutoTuner(object):
     def __init__(self, use_model):
         self.use_model = use_model
 
+    def generate_parameter(self):
+        pass
+
     def run(self, config, direction="maximize"):
         pass
