@@ -37,8 +37,6 @@
 
 ## Tutorial
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
-
 **Installation**
 
 - python >= 3.7
@@ -48,7 +46,9 @@
 $ pip install tfts
 ```
 
-**Usage**
+**Basic usage**
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 
 ``` python
 import matplotlib.pyplot as plt
@@ -70,17 +70,63 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 plt.show()
 ```
 
+**Prepare your own data**
+
+You could train your own data by preparing 3D array as inputs
+
+- option1 `np.array/pd.DataFrame`
+
+```python
+# for single variable prediction
+
+
+# for multi-variable prediction
+
+```
+- option2 `tf.data`
+
+```python
+# for single variable prediction
+
+
+# for multi-variable prediction
+
+```
+
+**Build your own model**
+
+You could build the custom model
+
+```python
+import tensorflow as tf
+from tensorflow.keras.layers import Input, Dense
+from tfts import AutoModel
+
+
+def build_model():
+    train_length = 24
+    train_features = 15
+    predict_length = 16
+
+    inputs = Input([train_length, train_features])
+    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    outputs = backbone(inputs)
+    outputs = Dense(1, activation="sigmoid")(outputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    model.compile(loss="mse", optimizer="rmsprop")
+    return model
+```
+
 ## Examples
 
-- [TFTS-prediction](./examples/run_prediction.py) for basic usage
-- [TFTS-Bert model](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
-- [TFTS-Seq2seq model](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
+- [TFTS/Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
+- [TFTS/Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
 
 <!-- ### Performance
 
 [Time series prediction](./examples/run_prediction.py) performance is evaluated by tfts implementation, not official
 
-| Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>rmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
+| Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>wrmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: |
 | [RNN]() | 672 | 47.7% |52.6% | 61.4% |
 | [DeepAR]() | 672 | 47.7% |52.6% | 61.4% |

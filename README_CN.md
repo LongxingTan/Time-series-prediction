@@ -51,7 +51,7 @@
 $ pip install tfts
 ```
 
-**快速入门**
+**入门使用**
 
 ``` python
 import matplotlib.pyplot as plt
@@ -70,6 +70,19 @@ trainer.train(train, valid)
 
 pred = trainer.predict(valid[0])
 trainer.plot(history=valid[0], true=valid[1], pred=pred)
+```
+
+**训练自己的数据**
+
+```python
+
+```
+
+**搭建自己的模型**
+
+
+```python
+
 ```
 
 ## 示例
