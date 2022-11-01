@@ -11,8 +11,10 @@ The following tutorials can be also found as `notebooks on GitHub <https://githu
 
 .. _prepare_data:
 
-Prepare the model inputs
+Train your own data
 --------------------------
+
+tfts supports multi-type time series prediction:
 
 - single-value single-step prediction
 
@@ -22,7 +24,22 @@ Prepare the model inputs
 
 - multi-value multi-steps prediction
 
-what's more, the input data feed into the model could be
+the input data feed into the model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+input 1
+
+.. code-block:: python
+
+	"""
+	tf.data.Dataset
+	"""
+	batch_size = 1
+	train_length = 10
+	predict_length = 5
+	x = tf.random.normal([batch_size, train_length, 1])
+	encoder_feature
+
 
 - tf.data.Dataset
 
