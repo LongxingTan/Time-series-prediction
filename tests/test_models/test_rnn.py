@@ -5,7 +5,7 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.rnn import ESRNN, RNN, RNN2
+from tfts.models.rnn import RNN, RNN2
 
 
 class RNNTest(unittest.TestCase):
