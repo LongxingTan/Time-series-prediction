@@ -33,7 +33,15 @@ class NBeats(object):
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
-    def __call__(self, x):
+    def __call__(self, inputs):
+        if isinstance(inputs, (list, tuple)):
+            print("NBeats only support single variable prediction, so ignore encoder_features and decoder_features")
+            x, encoder_features, _ = inputs
+        else:  # for single variable prediction
+            x = inputs
+
+        x = tf.squeeze(x, 2)  # 3 dim for all models
+        # Todo: if train_length and predict_length is both 12, train fail
         self.train_sequence_length = x.get_shape().as_list()[1]
 
         self.stacks = []
@@ -47,6 +55,7 @@ class NBeats(object):
                 b, f = self.stacks[stack_id][block_id](backcast)
                 backcast = backcast - b
                 forecast = forecast + f
+        forecast = tf.expand_dims(forecast, -1)
         return forecast
 
     def create_stack(self, stack_id):

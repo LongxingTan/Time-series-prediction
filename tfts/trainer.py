@@ -19,6 +19,7 @@ class Trainer(object):
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
         strategy=None,
+        **kwargs
     ):
         self.model = model
 
@@ -203,6 +204,7 @@ class KerasTrainer(object):
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
         strategy=None,
+        **kwargs
     ):
         """
         model: tf.keras.Model instance
@@ -294,7 +296,7 @@ class KerasTrainer(object):
         return self.model
 
     def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
-        # save the model
+        # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
             logging.info("checkpoint Loaded", checkpoint_dir)
             self.model.load_weights(checkpoint_dir)

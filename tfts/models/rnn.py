@@ -208,8 +208,3 @@ class RNN2(object):
         output = self.dense2(output)
 
         return output[:, -self.predict_sequence_length :]
-
-
-class ESRNN(object):
-    def __init__(self) -> None:
-        pass
