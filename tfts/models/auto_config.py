@@ -18,7 +18,7 @@ from tfts.models.wavenet import params as wavenet_params
 class AutoConfig(object):
     """AutoConfig for model"""
 
-    def __init__(self, use_model):
+    def __init__(self, use_model: str):
         if use_model.lower() == "seq2seq":
             self.params = seq2seq_params
         elif use_model.lower() == "rnn":

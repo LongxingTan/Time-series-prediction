@@ -146,7 +146,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 Custom-defined trainer
 ----------------------------------------
 
-If you are already used to your own trainer, and just want to use tfts models.
+You could use tfts trainer, a custom trainer or use keras to train directly.
 
 .. code-block:: python
 

@@ -1,6 +1,7 @@
 """tfts Trainer"""
 
 import logging
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,14 +33,14 @@ class Trainer(object):
         self,
         train_loader,
         valid_loader,
-        n_epochs=10,
-        batch_size=8,
-        learning_rate=3e-4,
-        verbose=1,
+        n_epochs: int = 10,
+        batch_size: int = 8,
+        learning_rate: float = 3e-4,
+        verbose: int = 1,
         eval_metric=None,
-        model_dir=None,
-        use_ema=False,
-        stop_no_improve_epochs=None,
+        model_dir: Optional[str] = None,
+        use_ema: bool = False,
+        stop_no_improve_epochs: Optional[int] = None,
         transform=None,
     ):
         """train function

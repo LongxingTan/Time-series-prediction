@@ -3,6 +3,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoModel to choose different models"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
@@ -21,7 +23,7 @@ from tfts.models.wavenet import WaveNet
 class AutoModel(object):
     """AutoModel"""
 
-    def __init__(self, use_model, predict_length=1, custom_model_params=None, custom_model_head=None):
+    def __init__(self, use_model: str, predict_length: int = 1, custom_model_params=None, custom_model_head=None):
         if use_model.lower() == "seq2seq":
             self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "rnn":
