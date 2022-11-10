@@ -2,6 +2,8 @@
 # @author: Longxing Tan
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
@@ -9,7 +11,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
         if hidden_size % num_heads:
             raise ValueError(
                 "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
@@ -77,7 +79,7 @@ class FullAttention(tf.keras.layers.Layer):
 
 
 class SelfAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
         super(SelfAttention, self).__init__()
         self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 

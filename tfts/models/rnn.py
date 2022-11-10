@@ -3,6 +3,8 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import (
     GRU,
@@ -35,7 +37,12 @@ params = {
 class RNN(object):
     """RNN model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params

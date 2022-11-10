@@ -11,7 +11,7 @@ air_passenger_url = (
 )
 
 
-def get_data(name="sine", train_length=24, predict_length=8, test_size=0.1):
+def get_data(name: str = "sine", train_length: int = 24, predict_length: int = 8, test_size: float = 0.1):
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
         return get_sine(train_length, predict_length, test_size=test_size)
@@ -23,7 +23,7 @@ def get_data(name="sine", train_length=24, predict_length=8, test_size=0.1):
         raise ValueError("unsupported data of {} yet, try 'sine', 'airpassengers'".format(name))
 
 
-def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2, n_examples=100):
+def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2, n_examples=100):
     x = []
     y = []
     for _ in range(n_examples):
@@ -56,7 +56,7 @@ def get_sine(train_sequence_length=24, predict_sequence_length=8, test_size=0.2,
     return x, y
 
 
-def get_air_passengers(train_sequence_length=24, predict_sequence_length=8, test_size=0.2):
+def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2):
     """Air passengers data, just use divide 500 to normalize it"""
     # air_passenger_url = "../examples/data/international-airline-passengers.csv"
     df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)

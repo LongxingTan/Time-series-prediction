@@ -10,7 +10,9 @@ from tensorflow.keras.layers import Activation, Dense
 class GenericBlock(tf.keras.layers.Layer):
     """Generic block"""
 
-    def __init__(self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4):
+    def __init__(
+        self, train_sequence_length: int, predict_sequence_length: int, hidden_size: int, n_block_layers: int = 4
+    ):
         super(GenericBlock, self).__init__()
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
@@ -46,7 +48,12 @@ class TrendBlock(tf.keras.layers.Layer):
     """Trend block"""
 
     def __init__(
-        self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, polynomial_term=2
+        self,
+        train_sequence_length: int,
+        predict_sequence_length: int,
+        hidden_size: int,
+        n_block_layers: int = 4,
+        polynomial_term=2,
     ):
         super().__init__()
         self.train_sequence_length = train_sequence_length

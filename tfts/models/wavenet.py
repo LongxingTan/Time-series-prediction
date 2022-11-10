@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
@@ -26,7 +28,12 @@ params = {
 class WaveNet(object):
     """WaveNet model for time series"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params

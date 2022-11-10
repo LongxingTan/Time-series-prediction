@@ -1,7 +1,7 @@
 """tfts Trainer"""
 
 import logging
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +15,7 @@ class Trainer(object):
 
     def __init__(
         self,
-        model,
+        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
         loss_fn=tf.keras.losses.MeanSquaredError(),
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
@@ -200,7 +200,7 @@ class KerasTrainer(object):
 
     def __init__(
         self,
-        model,
+        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
         loss_fn=tf.keras.losses.MeanSquaredError(),
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,

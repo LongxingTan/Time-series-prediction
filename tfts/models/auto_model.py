@@ -3,8 +3,10 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoModel to choose different models"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
+import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
@@ -23,7 +25,13 @@ from tfts.models.wavenet import WaveNet
 class AutoModel(object):
     """AutoModel"""
 
-    def __init__(self, use_model: str, predict_length: int = 1, custom_model_params=None, custom_model_head=None):
+    def __init__(
+        self,
+        use_model: str,
+        predict_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if use_model.lower() == "seq2seq":
             self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
         elif use_model.lower() == "rnn":
@@ -51,7 +59,9 @@ class AutoModel(object):
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 
-    def __call__(self, x):
+    def __call__(
+        self, x: Union[tf.data.Dataset, Tuple[np.array], Tuple[pd.DataFrame], List[np.array], List[pd.DataFrame]]
+    ):
         """_summary_
 
         Parameters
@@ -68,7 +78,7 @@ class AutoModel(object):
             assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
         return self.model(x)
 
-    def build_model(self, input_shape):
+    def build_model(self, input_shape: Tuple[int]):
         inputs = Input(input_shape)
         outputs = self.model(inputs)
         return tf.keras.Model(inputs, outputs)

@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1704.04110>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropout
 
@@ -16,7 +18,12 @@ params = {
 
 
 class DeepAR(object):
-    def __init__(self, predict_sequence_length, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         """DeepAR Network
 
         :param custom_model_params:

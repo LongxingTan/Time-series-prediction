@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout
 
 
 class GaussianLayer(tf.keras.layers.Layer):
-    def __init__(self, units):
+    def __init__(self, units: int):
         self.units = units
         super(GaussianLayer, self).__init__()
 

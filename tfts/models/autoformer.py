@@ -32,7 +32,12 @@ params = {
 
 
 class AutoFormer(object):
-    def __init__(self, predict_sequence_length: int = 1, custom_model_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params

@@ -13,7 +13,7 @@ class TokenEmbedding(tf.keras.layers.Layer):
     outout: batch * time * new_attention_size）
     """
 
-    def __init__(self, embed_size):
+    def __init__(self, embed_size: int):
         super(TokenEmbedding, self).__init__()
         self.embed_size = embed_size
 
@@ -48,7 +48,7 @@ class TokenEmbedding(tf.keras.layers.Layer):
 
 
 class TokenRnnEmbedding(tf.keras.layers.Layer):
-    def __init__(self, embed_size) -> None:
+    def __init__(self, embed_size: int) -> None:
         super().__init__()
         self.embed_size = embed_size
 
@@ -79,7 +79,7 @@ class TokenRnnEmbedding(tf.keras.layers.Layer):
 
 
 class PositionalEmbedding(tf.keras.layers.Layer):
-    def __init__(self, max_len=5000):
+    def __init__(self, max_len: int = 5000):
         super(PositionalEmbedding, self).__init__()
         self.max_len = max_len
 
@@ -125,7 +125,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, max_len=5000):
+    def __init__(self, max_len: int = 5000):
         super(PositionalEncoding, self).__init__()
         self.max_len = max_len
 
@@ -212,7 +212,7 @@ class TemporalEmbedding(tf.keras.layers.Layer):
 
 
 class DataEmbedding(tf.keras.layers.Layer):
-    def __init__(self, embed_size, dropout=0):
+    def __init__(self, embed_size: int, dropout: float = 0.0):
         super(DataEmbedding, self).__init__()
         self.embed_size = embed_size
         self.value_embedding = TokenEmbedding(embed_size)

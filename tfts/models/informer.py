@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/2012.07436>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Activation,
@@ -34,7 +36,12 @@ params = {
 class Informer(object):
     """Informer model for time series"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         """
 
         :param custom_model_params: _description_

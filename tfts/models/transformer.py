@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, TimeDistributed
@@ -31,7 +33,12 @@ params = {
 class Transformer(object):
     """Transformer model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         """Transformer for time series
 
         :param custom_model_params: _description_

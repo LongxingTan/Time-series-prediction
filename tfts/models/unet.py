@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1505.04597>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatenate, Conv1D, Input, Lambda, UpSampling1D
 
@@ -17,7 +19,12 @@ params = {
 class Unet(object):
     """Unet model"""
 
-    def __init__(self, predict_sequence_length, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params

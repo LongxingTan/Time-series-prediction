@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D,
 
 
 class ConvbrLayer(tf.keras.layers.Layer):
-    def __init__(self, units, kernel_size, strides, dilation):
+    def __init__(self, units: int, kernel_size: int, strides: int, dilation: int):
         super(ConvbrLayer, self).__init__()
         self.units = units
         self.kernel_size = kernel_size
