@@ -6,6 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LSTMCell
 
@@ -64,16 +65,21 @@ class Seq2seq(object):
         :rtype: _type_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
-            decoder_features = None
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
+            decoder_feature = None
 
-        encoder_outputs, encoder_state = self.encoder(encoder_features)
+        encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         decoder_outputs = self.decoder(
-            decoder_features,
+            decoder_feature,
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,

@@ -9,9 +9,11 @@
 [lint-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml/badge.svg?branch=master
 [lint-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/lint.yml?query=branch%3Amaster
 [docs-image]: https://readthedocs.org/projects/time-series-prediction/badge/?version=latest
-[docs-url]: https://time-series-prediction.readthedocs.io/en/latest/
+[docs-url]: https://time-series-prediction.readthedocs.io/en/latest/?version=latest
 [coverage-image]: https://codecov.io/gh/longxingtan/Time-series-prediction/branch/master/graph/badge.svg
 [coverage-url]: https://codecov.io/github/longxingtan/Time-series-prediction?branch=master
+[contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
+[contributing-url]: https://github.com/longxingtan/Time-series-prediction/blob/master/CONTRIBUTING.md
 [codeql-image]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml/badge.svg
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
@@ -26,6 +28,7 @@
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
+[![Contributing][contributing-image]][contributing-url]
 [![CodeQL Status][codeql-image]][codeql-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
@@ -57,45 +60,118 @@ from tfts import AutoModel, AutoConfig, KerasTrainer
 
 train_length = 24
 predict_length = 8
+(x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
 
-# train is a tuple of (x_train, y_train), valid is (x_valid, y_valid)
-train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
-model = AutoModel('seq2seq', predict_length)
-
+model = AutoModel("seq2seq", predict_length=predict_length)
 trainer = KerasTrainer(model)
-trainer.train(train, valid)
+trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
 
-pred = trainer.predict(valid[0])
-trainer.plot(history=valid[0], true=valid[1], pred=pred)
+pred = trainer.predict(x_valid)
+trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
 
 **Prepare your own data**
 
-You could train your own data by preparing 3D array as inputs
+You could train your own data by preparing 3D data as inputs, for both inputs and targets
 
-- option1 `np.array/pd.DataFrame`
+- option1 `np.ndarray`
+- option2 `tf.data.Dataset`
+
+Encoder only model inputs
 
 ```python
-# for single variable prediction
+train_length = 49
+predict_length = 10
+n_feature = 2
 
+x_train = np.random.rand(1, train_length, n_feature)
+y_train = np.random.rand(1, predict_length, 1)
+x_valid = np.random.rand(1, train_length, n_feature)
+y_valid = np.random.rand(1, predict_length, 1)
 
-# for multi-variable prediction
+model = AutoModel("rnn", predict_length=predict_length)
+trainer = KerasTrainer(model)
+trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
 
 ```
-- option2 `tf.data`
+
+Encoder-decoder model inputs
 
 ```python
-# for single variable prediction
+# option1
+train_length = 49
+predict_length = 10
+n_encoder_feature = 2
+n_decoder_feature = 3
+
+x_train = (
+    np.random.rand(1, train_length, 1),
+    np.random.rand(1, train_length, n_encoder_feature),
+    np.random.rand(1, predict_length, n_decoder_feature),
+)
+y_train = np.random.rand(1, predict_length, 1)
+x_valid = (
+    np.random.rand(1, train_length, 1),
+    np.random.rand(1, train_length, n_encoder_feature),
+    np.random.rand(1, predict_length, n_decoder_feature),
+)
+y_valid = np.random.rand(1, predict_length, 1)
+
+model = AutoModel("seq2seq", predict_length=predict_length)
+trainer = KerasTrainer(model)
+trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
+```
+
+```python
+# option2
+class FakeReader(object):
+    def __init__(self, predict_length=10):
+        train_length = 49
+        n_encoder_feature = 2
+        n_decoder_feature = 3
+        self.x = np.random.rand(15, train_length, 1)
+        self.encoder_feature = np.random.rand(15, train_length, n_encoder_feature)
+        self.decoder_feature = np.random.rand(15, predict_length, n_decoder_feature)
+        self.target = np.random.rand(15, predict_length, 1)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return {
+            "x": self.x[idx],
+            "encoder_feature": self.encoder_feature[idx],
+            "decoder_feature": self.decoder_feature[idx],
+        }, self.target[idx]
+
+    def iter(self):
+        for i in range(len(self.x)):
+            yield self[i]
 
 
-# for multi-variable prediction
+predict_length = 10
+train_reader = FakeReader(predict_length=10)
+train_loader = tf.data.Dataset.from_generator(
+    train_reader.iter,
+    ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
+)
+train_loader = train_loader.batch(batch_size=1)
+valid_reader = FakeReader(predict_length=10)
+valid_loader = tf.data.Dataset.from_generator(
+    valid_reader.iter,
+    ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
+)
+valid_loader = valid_loader.batch(batch_size=1)
 
+model = AutoModel("seq2seq", predict_length=predict_length)
+trainer = KerasTrainer(model)
+trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
 
 **Build your own model**
 
-You could build the custom model
+You could build the custom model based on tfts backbone
 
 ```python
 import tensorflow as tf
@@ -149,7 +225,7 @@ def build_model():
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples) -->
 
-if you prefer to use PyTorch, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting)
+if you prefer other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
 
 ## Citation
 

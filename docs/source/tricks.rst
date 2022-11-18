@@ -14,7 +14,7 @@ If you want a better performance, you can import tfts source code to modify it d
 General Tricks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Remember that there is no free launch, and it's impossible to forecast the future.
+There is no free launch, and it's impossible to forecast the future. So we should understand first how to forecast based on the trend, seasonality, cyclicity and noise.
 
 * target transformation
 
