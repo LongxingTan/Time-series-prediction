@@ -101,17 +101,21 @@ class Bert(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, _ = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
 
-        encoder_features = self.encoder_embedding(encoder_features)
+        encoder_feature = self.encoder_embedding(encoder_feature)
         # encoder_features = self.spatial_drop(encoder_features)
         # encoder_features_res = self.tcn(encoder_features)
         # encoder_features += encoder_features_res
 
-        memory = self.encoder(encoder_features, src_mask=None)  # batch * train_sequence * (hidden * heads)
+        memory = self.encoder(encoder_feature, src_mask=None)  # batch * train_sequence * (hidden * heads)
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)

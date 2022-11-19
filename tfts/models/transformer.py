@@ -105,19 +105,28 @@ class Transformer(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         else:
-            encoder_features = x = inputs
-            decoder_features = tf.cast(
-                tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
+            encoder_feature = x = inputs
+            decoder_feature = tf.cast(
+                tf.tile(
+                    tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                    (tf.shape(encoder_feature)[0], 1, 1),
+                ),
+                tf.float32,
             )
 
-        encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_features, src_mask=None)
+        encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
+        memory = self.encoder(encoder_feature, src_mask=None)
 
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
-        decoder_outputs = self.decoder(decoder_features, memory)
+        decoder_outputs = self.decoder(decoder_feature, memory)
         decoder_outputs = self.project(decoder_outputs)
 
         if self.params["skip_connect_circle"]:

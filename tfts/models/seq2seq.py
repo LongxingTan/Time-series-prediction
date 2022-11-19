@@ -74,7 +74,13 @@ class Seq2seq(object):
             encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         else:
             encoder_feature = x = inputs
-            decoder_feature = None
+            decoder_feature = tf.cast(
+                tf.tile(
+                    tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                    (tf.shape(encoder_feature)[0], 1, 1),
+                ),
+                tf.float32,
+            )
 
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 

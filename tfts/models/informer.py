@@ -104,19 +104,24 @@ class Informer(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         else:
-            encoder_features = x = inputs
-            decoder_features = tf.cast(
+            encoder_feature = x = inputs
+            decoder_feature = tf.cast(
                 tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
             )
 
-        encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_features, mask=None)
+        encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
+        memory = self.encoder(encoder_feature, mask=None)
 
-        decoder_features = self.decoder_embedding(decoder_features)
-        decoder_outputs = self.decoder(decoder_features, memory=memory)
+        decoder_feature = self.decoder_embedding(decoder_feature)
+        decoder_outputs = self.decoder(decoder_feature, memory=memory)
         decoder_outputs = self.projection(decoder_outputs)
         # decoder_outputs = decoder_outputs[:, -self.predict_sequence_length:, :]
 

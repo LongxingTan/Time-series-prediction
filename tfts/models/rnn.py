@@ -72,12 +72,16 @@ class RNN(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, _ = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
 
-        encoder_outputs, encoder_state = self.encoder(encoder_features)
+        encoder_outputs, encoder_state = self.encoder(encoder_feature)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
         if self.params["rnn_type"] == "lstm":
