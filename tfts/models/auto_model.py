@@ -61,17 +61,17 @@ class AutoModel(object):
     def __call__(
         self, x: Union[tf.data.Dataset, Tuple[np.array], Tuple[pd.DataFrame], List[np.array], List[pd.DataFrame]]
     ):
-        """_summary_
+        """automodel callable
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.data.Dataset, np.array
+            model inputs
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            model output
         """
         # if isinstance(x, (list, tuple)):
         #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))

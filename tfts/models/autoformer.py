@@ -74,7 +74,7 @@ class AutoFormer(object):
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None, **kwargs):
-        """_summary_
+        """autoformer call
 
         Parameters
         ----------

@@ -11,7 +11,7 @@ Installation
 Install `time series tfts <https://github.com/LongxingTan/Time-series-prediction>`_, follow the installation instructions first
 
 * Python 3.7+
-* `TensorFlow 2.0 <https://www.tensorflow.org/install/pip>`_ installation instructions
+* `TensorFlow 2.x <https://www.tensorflow.org/install/pip>`_ installation instructions
 
 Now you are ready, proceed with
 

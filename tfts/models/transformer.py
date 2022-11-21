@@ -41,8 +41,8 @@ class Transformer(object):
     ):
         """Transformer for time series
 
-        :param custom_model_params: _description_
-        :type custom_model_params: _type_
+        :param custom_model_params: _custom model defined model hyper parameters_
+        :type custom_model_params: _dict_
         :param dynamic_decoding: _description_, defaults to True
         :type dynamic_decoding: bool, optional
         """

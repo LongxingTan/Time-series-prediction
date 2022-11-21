@@ -49,7 +49,7 @@
 **安装**
 
 - python >= 3.7
-- tensorflow >= 2.1
+- tensorflow >= 2.3
 
 ``` bash
 $ pip install tfts

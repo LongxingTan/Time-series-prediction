@@ -86,7 +86,7 @@ class Bert(object):
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """Bert model call
 
         Parameters
         ----------
@@ -97,7 +97,7 @@ class Bert(object):
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if isinstance(inputs, (list, tuple)):
