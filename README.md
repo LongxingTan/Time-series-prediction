@@ -99,7 +99,7 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 Encoder-decoder model inputs
 
 ```python
-# option1
+# option1: np.ndarray
 train_length = 49
 predict_length = 10
 n_encoder_feature = 2
@@ -124,7 +124,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
 ```python
-# option2
+# option2: tf.data.Dataset
 class FakeReader(object):
     def __init__(self, predict_length=10):
         train_length = 49
