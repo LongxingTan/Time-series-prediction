@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D,
 
 
 class ConvbrLayer(tf.keras.layers.Layer):
-    def __init__(self, units, kernel_size, strides, dilation):
+    def __init__(self, units: int, kernel_size: int, strides: int, dilation: int):
         super(ConvbrLayer, self).__init__()
         self.units = units
         self.kernel_size = kernel_size
@@ -41,7 +41,9 @@ class ConvbrLayer(tf.keras.layers.Layer):
         return x
 
     def get_config(self):
-        return
+        config = {"units": self.units, "kernel_size": self.kernel_size}
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class SeBlock(tf.keras.layers.Layer):
@@ -78,7 +80,9 @@ class SeBlock(tf.keras.layers.Layer):
         return x_out
 
     def get_config(self):
-        return
+        config = {"units": self.units}
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class ReBlock(tf.keras.layers.Layer):
@@ -118,7 +122,9 @@ class ReBlock(tf.keras.layers.Layer):
         return x_re
 
     def get_config(self):
-        return
+        config = {"units": self.units}
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 def conv_br(x, units, kernel_size, strides=1, dilation=1):

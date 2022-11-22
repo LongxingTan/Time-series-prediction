@@ -15,7 +15,7 @@ from tfts.models.informer import CustomConv, Decoder, DecoderLayer, Encoder, Enc
 class InformerTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
+        custom_model_params = {"skip_connect_mean": True}
         model = Informer(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
 
         x = tf.random.normal([2, 16, 3])
@@ -32,6 +32,10 @@ class InformerTest(unittest.TestCase):
         x = tf.random.normal([2, 100, attention_hidden_sizes])  # after embedding
         y = layer(x)
         self.assertEqual(y.shape, (2, 100, attention_hidden_sizes))
+
+        config = layer.get_config()
+        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
+        self.assertEqual(config["num_heads"], num_heads)
 
     def test_encoder(self):
         attention_hidden_sizes = 64
@@ -66,6 +70,10 @@ class InformerTest(unittest.TestCase):
         memory = tf.random.normal([2, 100, attention_hidden_sizes])
         y = layer(x, memory=memory)
         self.assertEqual(y.shape, (2, 50, attention_hidden_sizes))
+
+        config = layer.get_config()
+        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
+        self.assertEqual(config["num_heads"], num_heads)
 
     def test_decoder(self):
         attention_hidden_sizes = 64

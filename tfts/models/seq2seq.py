@@ -3,7 +3,10 @@
 <https://arxiv.org/abs/1409.3215>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LSTMCell
 
@@ -28,7 +31,12 @@ params = {
 class Seq2seq(object):
     """Seq2seq model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -57,16 +65,27 @@ class Seq2seq(object):
         :rtype: _type_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
-            decoder_features = None
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
+            decoder_feature = tf.cast(
+                tf.tile(
+                    tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                    (tf.shape(encoder_feature)[0], 1, 1),
+                ),
+                tf.float32,
+            )
 
-        encoder_outputs, encoder_state = self.encoder(encoder_features)
+        encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         decoder_outputs = self.decoder(
-            decoder_features,
+            decoder_feature,
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
@@ -75,7 +94,7 @@ class Seq2seq(object):
         )
 
         if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, :]
+            x_mean = x[:, : self.predict_sequence_length, :]
             decoder_outputs = decoder_outputs + x_mean
         if self.params["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])

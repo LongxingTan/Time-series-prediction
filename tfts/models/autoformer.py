@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/2106.13008>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
@@ -30,7 +32,12 @@ params = {
 
 
 class AutoFormer(object):
-    def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -67,7 +74,7 @@ class AutoFormer(object):
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs, teacher=None, **kwargs):
-        """_summary_
+        """autoformer call
 
         Parameters
         ----------
@@ -82,33 +89,33 @@ class AutoFormer(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
-            decoder_features = tf.cast(
-                tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
-            )
-            print(decoder_features)
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
 
-        batch_size, _, n_feature = tf.shape(encoder_features)
-        # de-comp
-        seasonal_init, trend_init = self.series_decomp(encoder_features)
-        # decoder input
-        seasonal_init = tf.concat(
-            [seasonal_init, tf.zeros([batch_size, self.predict_sequence_length, n_feature])], axis=1
-        )
-        trend_init = tf.concat(
-            [
-                trend_init,
-                tf.repeat(
-                    tf.reduce_mean(encoder_features, axis=1)[:, tf.newaxis, :],
-                    repeats=self.predict_sequence_length,
-                    axis=1,
-                ),
-            ],
-            axis=1,
-        )
+        batch_size, _, n_feature = tf.shape(encoder_feature)
+        # # de-comp
+        # seasonal_init, trend_init = self.series_decomp(encoder_feature)
+        # # decoder input
+        # seasonal_init = tf.concat(
+        #     [seasonal_init, tf.zeros([batch_size, self.predict_sequence_length, n_feature])], axis=1
+        # )
+        # trend_init = tf.concat(
+        #     [
+        #         trend_init,
+        #         tf.repeat(
+        #             tf.reduce_mean(encoder_feature, axis=1)[:, tf.newaxis, :],
+        #             repeats=self.predict_sequence_length,
+        #             axis=1,
+        #         ),
+        #     ],
+        #     axis=1,
+        # )
 
         # encoder
         for layer in self.encoder:

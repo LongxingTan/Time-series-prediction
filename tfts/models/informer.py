@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/2012.07436>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Activation,
@@ -34,7 +36,12 @@ params = {
 class Informer(object):
     """Informer model for time series"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         """
 
         :param custom_model_params: _description_
@@ -82,7 +89,7 @@ class Informer(object):
         # self.projection = Dense(predict_sequence_length, activation=None)
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """Informer call fucntion
 
         Parameters
         ----------
@@ -97,27 +104,32 @@ class Informer(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, decoder_features = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         else:
-            encoder_features = x = inputs
-            decoder_features = tf.cast(
+            encoder_feature = x = inputs
+            decoder_feature = tf.cast(
                 tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
             )
 
-        encoder_features = self.encoder_embedding(encoder_features)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_features, mask=None)
+        encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
+        memory = self.encoder(encoder_feature, mask=None)
 
-        decoder_features = self.decoder_embedding(decoder_features)
-        decoder_outputs = self.decoder(decoder_features, memory=memory)
+        decoder_feature = self.decoder_embedding(decoder_feature)
+        decoder_outputs = self.decoder(decoder_feature, memory=memory)
         decoder_outputs = self.projection(decoder_outputs)
         # decoder_outputs = decoder_outputs[:, -self.predict_sequence_length:, :]
 
         if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, :]
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
         if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            x_mean = tf.tile(tf.reduce_mean(x[:, :, 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
@@ -130,7 +142,7 @@ class Encoder(tf.keras.layers.Layer):
         self.norm_layer = norm_layer
 
     def call(self, x, mask=None):
-        """_summary_
+        """Informer encoder call function
 
         Parameters
         ----------
@@ -178,7 +190,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         super(EncoderLayer, self).build(input_shape)
 
     def call(self, x, mask=None):
-        """_summary_
+        """Informer encoder layer call
 
         Parameters
         ----------
@@ -231,7 +243,7 @@ class CustomConv(tf.keras.layers.Layer):
         super(CustomConv, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """Informer custom conv
 
         Parameters
         ----------
@@ -257,7 +269,7 @@ class Decoder(tf.keras.layers.Layer):
         self.norm = norm_layer
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
-        """_summary_
+        """Informer decoder call function
 
         Parameters
         ----------
@@ -305,7 +317,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
-        """_summary_
+        """Informer decoder layer call function
 
         Parameters
         ----------

@@ -9,7 +9,7 @@ from tensorflow.keras.layers import AveragePooling1D, Conv1D, Dense, Dropout
 
 
 class SeriesDecomp(tf.keras.layers.Layer):
-    def __init__(self, kernel_size) -> None:
+    def __init__(self, kernel_size: int) -> None:
         super().__init__()
         self.kernel_size = kernel_size
         self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
@@ -41,7 +41,7 @@ class SeriesDecomp(tf.keras.layers.Layer):
 class AutoCorrelation(tf.keras.layers.Layer):
     """Auto"""
 
-    def __init__(self, d_model, num_heads, attention_dropout=0.1) -> None:
+    def __init__(self, d_model: int, num_heads: int, attention_dropout: float = 0.0) -> None:
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads

@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1810.04805>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -37,7 +39,12 @@ params = {
 
 
 class Bert(object):
-    def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -79,7 +86,7 @@ class Bert(object):
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """Bert model call
 
         Parameters
         ----------
@@ -90,21 +97,25 @@ class Bert(object):
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, _ = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
 
-        encoder_features = self.encoder_embedding(encoder_features)
+        encoder_feature = self.encoder_embedding(encoder_feature)
         # encoder_features = self.spatial_drop(encoder_features)
         # encoder_features_res = self.tcn(encoder_features)
         # encoder_features += encoder_features_res
 
-        memory = self.encoder(encoder_features, src_mask=None)  # batch * train_sequence * (hidden * heads)
+        memory = self.encoder(encoder_feature, src_mask=None)  # batch * train_sequence * (hidden * heads)
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)

@@ -1,10 +1,13 @@
 """tfts Trainer"""
 
 import logging
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.layers import Input
 
 __all__ = ["Trainer", "KerasTrainer"]
 
@@ -14,11 +17,12 @@ class Trainer(object):
 
     def __init__(
         self,
-        model,
+        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
         loss_fn=tf.keras.losses.MeanSquaredError(),
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
         strategy=None,
+        **kwargs
     ):
         self.model = model
 
@@ -31,14 +35,14 @@ class Trainer(object):
         self,
         train_loader,
         valid_loader,
-        n_epochs=10,
-        batch_size=8,
-        learning_rate=3e-4,
-        verbose=1,
+        n_epochs: int = 10,
+        batch_size: int = 8,
+        learning_rate: float = 3e-4,
+        verbose: int = 1,
         eval_metric=None,
-        model_dir=None,
-        use_ema=False,
-        stop_no_improve_epochs=None,
+        model_dir: Optional[str] = None,
+        use_ema: bool = False,
+        stop_no_improve_epochs: Optional[int] = None,
         transform=None,
     ):
         """train function
@@ -87,8 +91,12 @@ class Trainer(object):
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
-            input_shape = list(train_loader.take(1).as_numpy_iterator())[0][0].shape[1:]
-            self.model = self.model.build_model(input_shape=input_shape)
+            x = list(train_loader.take(1).as_numpy_iterator())[0][0]
+            if isinstance(x, dict):
+                inputs = {key: Input(item.shape[1:]) for key, item in x.items()}
+            else:
+                inputs = Input(x.shape[1:])
+            self.model = self.model.build_model(inputs=inputs)
 
         for epoch in range(n_epochs):
             train_loss, train_scores = self.train_loop(train_loader)
@@ -198,11 +206,12 @@ class KerasTrainer(object):
 
     def __init__(
         self,
-        model,
+        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
         loss_fn=tf.keras.losses.MeanSquaredError(),
         optimizer=tf.keras.optimizers.Adam(0.003),
         lr_scheduler=None,
         strategy=None,
+        **kwargs
     ):
         """
         model: tf.keras.Model instance
@@ -254,16 +263,33 @@ class KerasTrainer(object):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
             if isinstance(train_dataset, tf.data.Dataset):
-                input_shape = list(train_dataset.take(1).as_numpy_iterator())[0][0].shape[1:]
+                # first 0 choose the batch, second 0 choose the x
+                x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
+                if isinstance(x, dict):
+                    inputs = {key: Input(item.shape[1:]) for key, item in x.items()}
+                else:
+                    inputs = Input(x.shape[1:])
+            elif isinstance(train_dataset, (list, tuple)):
+                # for encoder only model, single array inputs
+                if isinstance(train_dataset[0], (np.ndarray, pd.DataFrame)):
+                    inputs = Input(train_dataset[0].shape[1:])
+                # for encoder decoder model, 3 item of array as inputs
+                elif isinstance(train_dataset[0], (list, tuple)):
+                    inputs = [Input(item.shape[1:]) for item in train_dataset[0]]
+                # for encoder decoder model, 3 item dict as inputs
+                elif isinstance(train_dataset[0], dict):
+                    inputs = {key: Input(item.shape[1:]) for key, item in train_dataset[0].items()}
             else:
-                input_shape = train_dataset[0].shape[1:]
-            self.model = self.model.build_model(input_shape=input_shape)
+                raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
+
+            self.model = self.model.build_model(inputs=inputs)
 
         # print(self.model.summary())
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
             x_valid, y_valid = valid_dataset
+
             self.history = self.model.fit(
                 x_train,
                 y_train,
@@ -294,7 +320,7 @@ class KerasTrainer(object):
         return self.model
 
     def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
-        # save the model
+        # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
             logging.info("checkpoint Loaded", checkpoint_dir)
             self.model.load_weights(checkpoint_dir)

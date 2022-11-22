@@ -11,8 +11,10 @@ The following tutorials can be also found as `notebooks on GitHub <https://githu
 
 .. _prepare_data:
 
-Prepare the model inputs
+Train your own data
 --------------------------
+
+tfts supports multi-type time series prediction:
 
 - single-value single-step prediction
 
@@ -22,7 +24,22 @@ Prepare the model inputs
 
 - multi-value multi-steps prediction
 
-what's more, the input data feed into the model could be
+the input data feed into the model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+input 1
+
+.. code-block:: python
+
+	"""
+	tf.data.Dataset
+	"""
+	batch_size = 1
+	train_length = 10
+	predict_length = 5
+	x = tf.random.normal([batch_size, train_length, 1])
+	encoder_feature
+
 
 - tf.data.Dataset
 
@@ -117,7 +134,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 
     import tensorflow as tf
     import tfts
-    from tfts import AutoModel, AutoConfig, AutoTune
+    from tfts import AutoModel, AutoConfig, AutoTuner
 
     AutoConfig('rnn').print_config()
     custom_model_head = tf.keras.Sequential(
@@ -129,7 +146,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 Custom-defined trainer
 ----------------------------------------
 
-If you are already used to your own trainer, and just want to use tfts models.
+You could use tfts trainer, a custom trainer or use keras to train directly.
 
 .. code-block:: python
 
@@ -159,7 +176,7 @@ save the model
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+	from tfts import AutoModel, AutoConfig, AutoTuner
 
 
 serve the model in docker
@@ -168,7 +185,7 @@ serve the model in docker
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel, AutoConfig, AutoTune
+	from tfts import AutoModel, AutoConfig, AutoTuner
 
 
 .. toctree::

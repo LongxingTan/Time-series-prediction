@@ -5,15 +5,11 @@
 
 from tfts.models.autoformer import params as autoformer_params
 from tfts.models.bert import params as bert_params
-from tfts.models.deepar import params as deepar_params
-from tfts.models.gan import params as gan_params
 from tfts.models.informer import params as informer_params
 from tfts.models.nbeats import params as nbeats_params
-from tfts.models.nhits import params as nhits_params
 from tfts.models.rnn import params as rnn_params
 from tfts.models.seq2seq import params as seq2seq_params
 from tfts.models.tcn import params as tcn_params
-from tfts.models.temporal_fusion_transformer import params as tf_transformer_params
 from tfts.models.transformer import params as transformer_params
 from tfts.models.unet import params as unet_params
 from tfts.models.wavenet import params as wavenet_params
@@ -22,7 +18,7 @@ from tfts.models.wavenet import params as wavenet_params
 class AutoConfig(object):
     """AutoConfig for model"""
 
-    def __init__(self, use_model):
+    def __init__(self, use_model: str):
         if use_model.lower() == "seq2seq":
             self.params = seq2seq_params
         elif use_model.lower() == "rnn":
@@ -39,14 +35,14 @@ class AutoConfig(object):
             self.params = informer_params
         elif use_model.lower() == "autoformer":
             self.params = autoformer_params
-        elif use_model.lower() == "tft":
-            self.params = tf_transformer_params
+        # elif use_model.lower() == "tft":
+        #     self.params = tf_transformer_params
         elif use_model.lower() == "unet":
             self.params = unet_params
         elif use_model.lower() == "nbeats":
             self.params = nbeats_params
-        elif use_model.lower() == "gan":
-            self.params = gan_params
+        # elif use_model.lower() == "gan":
+        #     self.params = gan_params
         else:
             raise ValueError("unsupported model of {} yet".format(use_model))
 

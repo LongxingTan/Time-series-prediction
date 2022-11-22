@@ -2,6 +2,8 @@
 # @author: Longxing Tan
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
@@ -9,7 +11,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
         if hidden_size % num_heads:
             raise ValueError(
                 "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
@@ -43,7 +45,7 @@ class FullAttention(tf.keras.layers.Layer):
         Returns
         -------
         _type_
-            tensor with shape batch * key_sequence * (units * num_heads)
+            tensor with shape batch * seq_q * (units * num_heads)
         """
         q = self.dense_q(q)  # project the query/key/value to num_heads * units
         k = self.dense_k(k)
@@ -53,7 +55,7 @@ class FullAttention(tf.keras.layers.Layer):
         k_ = tf.concat(tf.split(k, self.num_heads, axis=2), axis=0)
         v_ = tf.concat(tf.split(v, self.num_heads, axis=2), axis=0)
 
-        score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch*heads) * seq_q * seq_k
+        score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
         score /= tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
 
         if mask is not None:
@@ -62,7 +64,7 @@ class FullAttention(tf.keras.layers.Layer):
         score = tf.nn.softmax(score)
         score = self.dropout(score)
 
-        outputs = tf.linalg.matmul(score, v_)  # (batch*heads) * seq_q * units
+        outputs = tf.linalg.matmul(score, v_)  # (batch * heads) * seq_q * units
         outputs = tf.concat(tf.split(outputs, self.num_heads, axis=0), axis=2)
         return outputs
 
@@ -77,7 +79,7 @@ class FullAttention(tf.keras.layers.Layer):
 
 
 class SelfAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, num_heads, attention_dropout=0.0):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
         super(SelfAttention, self).__init__()
         self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 

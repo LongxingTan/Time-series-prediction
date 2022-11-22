@@ -2,38 +2,34 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.nbeats`"""
 
-import math
-
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Dense
 
 
-class NBeatsLayer(tf.keras.layers.Layer):
-    def __init__(self, units, thetas_dim, share_thetas):
-        super(NBeatsLayer, self).__init__()
-        self.units = units
-        self.thetas_dim = thetas_dim
-        self.share_thetas = share_thetas
+class GenericBlock(tf.keras.layers.Layer):
+    """Generic block"""
 
-        self.fc1 = Dense(units=self.units, activation="relu")
-        self.fc2 = Dense(units=self.units, activation="relu")
-        self.fc3 = Dense(units=self.units, activation="relu")
-        self.fc4 = Dense(units=self.units, activation="relu")
-
-        if self.share_thetas:
-            self.theta_b_fn = self.theta_f_fn = Dense(units=self.thetas_dim, activation="relu", use_bias=False)
-        self.theta_b_fn = Dense(units=self.thetas_dim, activation="relu", use_bias=False)
-        self.theta_f_fn = Dense(units=self.thetas_dim, activation="relu", use_bias=False)
+    def __init__(
+        self, train_sequence_length: int, predict_sequence_length: int, hidden_size: int, n_block_layers: int = 4
+    ):
+        super(GenericBlock, self).__init__()
+        self.train_sequence_length = train_sequence_length
+        self.predict_sequence_length = predict_sequence_length
+        self.hidden_size = hidden_size
+        self.n_block_layers = n_block_layers
 
     def build(self, input_shape):
-        super(NBeatsLayer, self).build(input_shape)
+        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
+        self.theta = Dense(self.train_sequence_length + self.predict_sequence_length, use_bias=False, activation=None)
+        super(GenericBlock, self).build(input_shape)
 
-    def call(self, x):
+    def call(self, inputs):
         """_summary_
 
         Parameters
         ----------
-        x : _type_
+        inputs : _type_
             _description_
 
         Returns
@@ -41,36 +37,55 @@ class NBeatsLayer(tf.keras.layers.Layer):
         _type_
             _description_
         """
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-        x = self.fc4(x)
-        return x
-
-    def linspace(self, backcast_length, forecast_length):
-        lin_space = tf.linspace(-float(backcast_length), float(forecast_length), backcast_length + forecast_length)
-        b_ls = lin_space[:backcast_length]
-        f_ls = lin_space[backcast_length:]
-        return b_ls, f_ls
-
-    def get_config(self):
-        config = {"units": self.units}
-        base_config = super(NBeatsLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        x = inputs
+        for layer in self.layers:
+            x = layer(x)
+        x = self.theta(x)
+        return x[:, : self.train_sequence_length], x[:, -self.predict_sequence_length :]
 
 
-class GenericBlock(NBeatsLayer):
-    def __init__(self, units, thetas_dim, backcast_length, forecast_length, share_thetas=False):
-        super(GenericBlock, self).__init__(units, thetas_dim, share_thetas)
-        self.backcast_fn = Dense(units=backcast_length)
-        self.forecast_fn = Dense(units=forecast_length)
+class TrendBlock(tf.keras.layers.Layer):
+    """Trend block"""
 
-    def __call__(self, x):
+    def __init__(
+        self,
+        train_sequence_length: int,
+        predict_sequence_length: int,
+        hidden_size: int,
+        n_block_layers: int = 4,
+        polynomial_term=2,
+    ):
+        super().__init__()
+        self.train_sequence_length = train_sequence_length
+        self.predict_sequence_length = predict_sequence_length
+        self.hidden_size = hidden_size
+        self.n_bloack_layers = n_block_layers
+        self.polynomial_size = polynomial_term + 1
+        self.forecast_time = tf.concat(
+            [
+                tf.math.pow(tf.range(predict_sequence_length, dtype=tf.float32) / predict_sequence_length, i)[None, :]
+                for i in range(self.polynomial_size)
+            ],
+            axis=0,
+        )
+        self.backcast_time = tf.concat(
+            [
+                tf.math.pow(tf.range(train_sequence_length, dtype=tf.float32) / train_sequence_length, i)[None, :]
+                for i in range(self.polynomial_size)
+            ],
+            axis=0,
+        )
+
+    def build(self, input_shape):
+        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_bloack_layers)]
+        self.theta = Dense(2 * self.polynomial_size, use_bias=False, activation=None)
+
+    def call(self, inputs):
         """_summary_
 
         Parameters
         ----------
-        x : _type_
+        inputs : _type_
             _description_
 
         Returns
@@ -78,25 +93,61 @@ class GenericBlock(NBeatsLayer):
         _type_
             _description_
         """
-        x = super(GenericBlock, self).call(x)
-        theta_b = self.theta_b_fn(x)
-        theta_f = self.theta_f_fn(x)
-        backcast = self.backcast_fn(theta_b)
-        forecast = self.forecast_fn(theta_f)
+        x = inputs
+        for layer in self.layers:
+            x = layer(x)
+        x = self.theta(x)
+        backcast = tf.einsum("bp,pt->bt", x[:, self.polynomial_size :], self.backcast_time)
+        forecast = tf.einsum("bp,pt->bt", x[:, : self.polynomial_size], self.forecast_time)
         return backcast, forecast
 
 
-class TrendBlock(NBeatsLayer):
-    def __init__(self, units, thetas_dim, backcast_length, forecast_length):
-        super(TrendBlock, self).__init__(units, thetas_dim, share_thetas=True)
-        self.backcast_linspace, self.forecast_linspace = self.linspace(backcast_length, forecast_length)
+class SeasonalityBlock(tf.keras.layers.Layer):
+    """Seasonality block"""
 
-    def __call__(self, x):
+    def __init__(self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1):
+        super().__init__()
+        self.train_sequence_length = train_sequence_length
+        self.predict_sequence_length = predict_sequence_length
+        self.hidden_size = hidden_size
+        self.n_block_layers = n_block_layers
+        self.num_harmonics = num_harmonics
+        self.theta_size = 4 * int(np.ceil(num_harmonics / 2 * predict_sequence_length) - (num_harmonics - 1))
+
+        self.frequency = tf.concat(
+            [
+                tf.zeros(1, dtype=tf.float32),
+                tf.range(num_harmonics, num_harmonics / 2 * predict_sequence_length, dtype=tf.float32),
+            ],
+            axis=0,
+        )
+        self.backcast_grid = (
+            -2
+            * np.pi
+            * (tf.range(self.train_sequence_length, dtype=tf.float32)[:, None] / train_sequence_length)
+            * self.frequency
+        )
+        self.forecast_grid = (
+            2
+            * np.pi
+            * (tf.range(predict_sequence_length, dtype=tf.float32)[:, None] / predict_sequence_length)
+            * self.frequency
+        )
+        self.backcast_cos_template = tf.transpose(tf.cos(self.backcast_grid))
+        self.backcast_sin_template = tf.transpose(tf.sin(self.backcast_grid))
+        self.forecast_cos_template = tf.transpose(tf.cos(self.forecast_grid))
+        self.forecast_sin_template = tf.transpose(tf.sin(self.forecast_grid))
+
+    def build(self, input_shape):
+        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
+        self.theta = Dense(self.theta_size, use_bias=False, activation=None)
+
+    def call(self, inputs):
         """_summary_
 
         Parameters
         ----------
-        x : _type_
+        inputs : _type_
             _description_
 
         Returns
@@ -104,51 +155,23 @@ class TrendBlock(NBeatsLayer):
         _type_
             _description_
         """
-        x = super(TrendBlock, self).call(x)
-        theta_b = self.theta_b_fn(x)
-        theta_f = self.theta_f_fn(x)
-        backcast = self.trend_model(theta_b, self.backcast_linspace)
-        forecast = self.trend_model(theta_f, self.forecast_linspace)
+        x = inputs
+        for layer in self.layers:
+            x = layer(x)
+        x = self.theta(x)
+
+        params_per_harmonic = self.theta_size // 4
+
+        backcast_harmonics_cos = tf.einsum(
+            "bp,pt->bt", inputs[:, 2 * params_per_harmonic : 3 * params_per_harmonic], self.backcast_cos_template
+        )
+        backcast_harmonics_sin = tf.einsum("bp,pt->bt", x[:, 3 * params_per_harmonic :], self.backcast_sin_template)
+        backcast = backcast_harmonics_sin + backcast_harmonics_cos
+
+        forecast_harmonics_cos = tf.einsum("bp,pt->bt", x[:, :params_per_harmonic], self.forecast_cos_template)
+        forecast_harmonics_sin = tf.einsum(
+            "bp,pt->bt", x[:, params_per_harmonic : 2 * params_per_harmonic], self.forecast_sin_template
+        )
+        forecast = forecast_harmonics_sin + forecast_harmonics_cos
+
         return backcast, forecast
-
-    def trend_model(self, thetas, t):
-        p = thetas.get_shape().as_list()[-1]
-        t = tf.transpose(tf.stack([tf.math.pow(t, i) for i in range(p)], axis=0))
-        t = tf.cast(t, tf.float32)
-        return tf.linalg.matmul(thetas, t, transpose_b=True)
-
-
-class SeasonalityBlock(NBeatsLayer):
-    def __init__(self, units, thetas_dim, backcast_length, forecast_length):
-        super(SeasonalityBlock, self).__init__(units, thetas_dim, share_thetas=True)
-        self.backcast_linspace, self.forecast_linspace = self.linspace(backcast_length, forecast_length)
-
-    def __call__(self, x):
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-        x = super(SeasonalityBlock, self).call(x)
-        theta_b = self.theta_b_fn(x)
-        theta_f = self.theta_f_fn(x)
-        backcast = self.seasonality_model(theta_b, self.backcast_linspace)
-        forecst = self.seasonality_model(theta_f, self.forecast_linspace)
-        return backcast, forecst
-
-    def seasonality_model(self, thetas, t):
-        p = thetas.get_shape().as_list()[-1]
-        p1, p2 = (p // 2, p // 2) if p % 2 == 0 else (p // 2, p // 2 + 1)
-        s1 = tf.stack([tf.math.cos(2 * math.pi * i * t) for i in range(p1)], axis=0)
-        s1 = tf.cast(s1, tf.float32)
-        s2 = tf.stack([tf.math.sin(2 * math.pi * i * t) for i in range(p2)], axis=0)
-        s2 = tf.cast(s2, tf.float32)
-        s = tf.concat([s1, s2], axis=0)
-        return tf.linalg.matmul(thetas, s, transpose_b=True)

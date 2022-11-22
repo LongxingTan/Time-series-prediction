@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
@@ -10,12 +12,12 @@ from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
 class DenseTemp(tf.keras.layers.Layer):
     def __init__(
         self,
-        hidden_size,
-        activation=None,
-        kernel_initializer="glorot_uniform",
-        kernel_regularizer=None,
-        kernel_constraint=None,
-        use_bias=True,
+        hidden_size: int,
+        activation: Optional[str] = None,
+        kernel_initializer: str = "glorot_uniform",
+        kernel_regularizer: Optional[str] = None,
+        kernel_constraint: Optional[str] = None,
+        use_bias: bool = True,
         bias_initializer="zeros",
         trainable=True,
         name=None,
@@ -77,7 +79,7 @@ class DenseTemp(tf.keras.layers.Layer):
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, filter_size, relu_dropout):
+    def __init__(self, hidden_size: int, filter_size: int, relu_dropout: float = 0.0):
         super(FeedForwardNetwork, self).__init__()
         self.hidden_size = hidden_size
         self.filter_size = filter_size

@@ -1,13 +1,5 @@
 """Test the TFT model"""
 
-import unittest
-
-import tensorflow as tf
-
-import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.temporal_fusion_transformer import TFTransformer
-
 # class TFTransformerTest(unittest.TestCase):
 #     def test_model(self):
 #         predict_sequence_length = 8

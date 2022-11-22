@@ -13,13 +13,13 @@ class ConvTemp(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        filters,
-        kernel_size,
-        strides=1,
-        dilation_rate=1,
-        activation="relu",
-        causal=True,
-        kernel_initializer="glorot_uniform",
+        filters: int,
+        kernel_size: int,
+        strides: int = 1,
+        dilation_rate: int = 1,
+        activation: str = "relu",
+        causal: bool = True,
+        kernel_initializer: str = "glorot_uniform",
         name=None,
     ):
         super(ConvTemp, self).__init__(name=name)

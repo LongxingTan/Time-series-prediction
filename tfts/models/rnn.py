@@ -3,6 +3,8 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type
+
 import tensorflow as tf
 from tensorflow.keras.layers import (
     GRU,
@@ -35,7 +37,12 @@ params = {
 class RNN(object):
     """RNN model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None) -> None:
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_head: Optional[Callable] = None,
+    ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -48,8 +55,6 @@ class RNN(object):
         self.drop1 = Dropout(0.25)
         self.dense2 = Dense(128, activation="relu")
         self.drop2 = Dropout(0.25)
-        # self.dense3 = TimeDistributed(Dense(1))
-        # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
 
     def __call__(self, inputs, teacher=None):
         """_summary_
@@ -67,14 +72,16 @@ class RNN(object):
             _description_
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_features, _ = inputs
-            encoder_features = tf.concat([x, encoder_features], axis=-1)
-        else:  # for single variable prediction
-            encoder_features = x = inputs
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
 
-        # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
-
-        encoder_outputs, encoder_state = self.encoder(encoder_features)
+        encoder_outputs, encoder_state = self.encoder(encoder_feature)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
         if self.params["rnn_type"] == "lstm":
@@ -212,8 +219,3 @@ class RNN2(object):
         output = self.dense2(output)
 
         return output[:, -self.predict_sequence_length :]
-
-
-class ESRNN(object):
-    def __init__(self) -> None:
-        pass
