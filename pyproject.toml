@@ -61,7 +61,7 @@ numpy = "*"
 matplotlib = "*"
 
 [tool.poetry.dev-dependencies]
-tensorflow = {version = "^2.3.1", optional = false}  # better install independently,
+tensorflow = "^2.3.1"  # better install independently,
 
 # checks and make tools
 pre-commit = "^2.20.0"
