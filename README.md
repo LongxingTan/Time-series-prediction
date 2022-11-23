@@ -100,6 +100,7 @@ Encoder-decoder model inputs
 
 ```python
 # option1: np.ndarray
+
 train_length = 49
 predict_length = 10
 n_encoder_feature = 2
@@ -125,6 +126,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 
 ```python
 # option2: tf.data.Dataset
+
 class FakeReader(object):
     def __init__(self, predict_length=10):
         train_length = 49
@@ -171,7 +173,9 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1
 
 **Build your own model**
 
-You could build the custom model based on tfts backbone
+You could build the model based on tfts backbone, especially
+- add custom-defined embeddings for categorical variables
+- add custom-defined head layers for classification or anomaly task
 
 ```python
 import tensorflow as tf
