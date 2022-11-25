@@ -19,12 +19,9 @@ jobs:
         tf-version: ["2.3.1", "2.8.1", "2.10.1"]
 
         exclude:
-          - os: ubuntu-latest
+          - os: [ubuntu-latest, macOS-latest]
             python-version: 3.9
-            tf_version: 2.3.1
-          - os: macOS-latest
-            python-version: 3.9
-            tf_version: 2.3.1
+            tf-version: 2.3.1
 
     steps:
       - uses: actions/checkout@v2
