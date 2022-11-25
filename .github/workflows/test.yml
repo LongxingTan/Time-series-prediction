@@ -18,6 +18,10 @@ jobs:
         python-version: [3.8, 3.9]
         tf-version: ["2.3.1", "2.8.1", "2.10.1"]
 
+        exclude:
+          - python-version: 3.9
+            tf_version: 2.3.1
+
     steps:
       - uses: actions/checkout@v2
 
