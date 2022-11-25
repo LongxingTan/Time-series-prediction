@@ -16,7 +16,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest] # add windows-2019 when poetry allows installation with `-f` flag
         python-version: [3.8, 3.9]
-        tf-version: ["2.3.1", "2.8", "2.10", "disable"]
+        tf-version: ["2.3.1", "2.8.1", "2.10.1"]
 
     steps:
       - uses: actions/checkout@v2
@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           poetry install --no-interaction --no-root
-          poetry run python -m pip install tensorflow==2.8.1
+          poetry run python -m pip install tensorflow==${{ matrix.tf-version }}
 
       - name: Run unittest
         shell: bash
