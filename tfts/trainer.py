@@ -261,7 +261,7 @@ class KerasTrainer(object):
         # with self.strategy.scope():
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
+                raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
             if isinstance(train_dataset, tf.data.Dataset):
                 # first 0 choose the batch, second 0 choose the x
                 x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
