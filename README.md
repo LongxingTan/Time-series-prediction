@@ -85,8 +85,8 @@ train_length = 49
 predict_length = 10
 n_feature = 2
 
-x_train = np.random.rand(1, train_length, n_feature)
-y_train = np.random.rand(1, predict_length, 1)
+x_train = np.random.rand(1, train_length, n_feature)  # feature: (n, train_length, feature)
+y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
@@ -107,11 +107,11 @@ n_encoder_feature = 2
 n_decoder_feature = 3
 
 x_train = (
-    np.random.rand(1, train_length, 1),
-    np.random.rand(1, train_length, n_encoder_feature),
-    np.random.rand(1, predict_length, n_decoder_feature),
+    np.random.rand(1, train_length, 1),  # x: (n, train_length, 1)
+    np.random.rand(1, train_length, n_encoder_feature),  # encoder_feature: (n, train_length, encoder_features)
+    np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (n, predict_length, decoder_features)
 )
-y_train = np.random.rand(1, predict_length, 1)
+y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
