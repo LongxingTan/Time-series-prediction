@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
 
 from tfts.layers.attention_layer import FullAttention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
@@ -191,7 +191,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.drop = Dropout(self.drop_rate)
         self.dense1 = Dense(input_shape[-1])
         self.conv2 = Conv1D(input_shape[-1], kernel_size=3, strides=1, padding="same")
-        self.activation = tf.keras.activations.gelu
+        self.activation = ReLU()
 
     def call(self, x, cross, init_trend):
         """_summary_
