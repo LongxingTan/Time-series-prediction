@@ -79,7 +79,7 @@ class AutoModel(object):
 
     def build_model(self, inputs):
         outputs = self.model(inputs)
-        return tf.keras.Model(inputs, outputs)
+        return tf.keras.Model(inputs, [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
 
 def build_tfts_model(use_model, predict_length, custom_model_params=None):
