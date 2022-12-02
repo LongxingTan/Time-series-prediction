@@ -2,7 +2,7 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
-[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-image]: https://pepy.tech/badge/tfts/month
 [pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
@@ -43,7 +43,7 @@
 **Installation**
 
 - python >= 3.7
-- tensorflow >= 2.3
+- tensorflow >= 2.4
 
 ``` bash
 $ pip install tfts
@@ -85,8 +85,8 @@ train_length = 49
 predict_length = 10
 n_feature = 2
 
-x_train = np.random.rand(1, train_length, n_feature)
-y_train = np.random.rand(1, predict_length, 1)
+x_train = np.random.rand(1, train_length, n_feature)  # feature: (n, train_length, feature)
+y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
@@ -100,17 +100,18 @@ Encoder-decoder model inputs
 
 ```python
 # option1: np.ndarray
+
 train_length = 49
 predict_length = 10
 n_encoder_feature = 2
 n_decoder_feature = 3
 
 x_train = (
-    np.random.rand(1, train_length, 1),
-    np.random.rand(1, train_length, n_encoder_feature),
-    np.random.rand(1, predict_length, n_decoder_feature),
+    np.random.rand(1, train_length, 1),  # x: (n, train_length, 1)
+    np.random.rand(1, train_length, n_encoder_feature),  # encoder_feature: (n, train_length, encoder_features)
+    np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (n, predict_length, decoder_features)
 )
-y_train = np.random.rand(1, predict_length, 1)
+y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
@@ -125,6 +126,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 
 ```python
 # option2: tf.data.Dataset
+
 class FakeReader(object):
     def __init__(self, predict_length=10):
         train_length = 49
@@ -171,7 +173,18 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1
 
 **Build your own model**
 
-You could build the custom model based on tfts backbone
+The models tfts support to use in `AutoModel()`
+- rnn
+- tcn
+- bert
+- nbeats
+- seq2seq
+- wavenet
+- transformer
+
+You could build the model based on tfts backbone, especially
+- add custom-defined embeddings for categorical variables
+- add custom-defined head layers for classification or anomaly task
 
 ```python
 import tensorflow as tf

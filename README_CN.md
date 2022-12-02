@@ -2,7 +2,7 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
-[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-image]: https://pepy.tech/badge/tfts/month
 [pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
@@ -49,7 +49,7 @@
 **安装**
 
 - python >= 3.7
-- tensorflow >= 2.3
+- tensorflow >= 2.4
 
 ``` bash
 $ pip install tfts
@@ -105,6 +105,7 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 
 ```python
 # option1
+
 train_length = 49
 predict_length = 10
 n_encoder_feature = 2
@@ -130,6 +131,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 
 ```python
 # option2
+
 class FakeReader(object):
     def __init__(self, predict_length=10):
         train_length = 49

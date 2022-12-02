@@ -18,7 +18,7 @@ params = {
     "rnn_size": 64,
     "dense_size": 64,
     "num_stacked_layers": 1,
-    "scheduler_sampling": 0,
+    "scheduler_sampling": 0,  # teacher forcing
     "use_attention": False,
     "attention_sizes": 64,
     "attention_heads": 2,

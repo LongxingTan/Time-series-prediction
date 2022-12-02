@@ -34,7 +34,7 @@ class Trainer(object):
     def train(
         self,
         train_loader,
-        valid_loader,
+        valid_loader=None,
         n_epochs: int = 10,
         batch_size: int = 8,
         learning_rate: float = 3e-4,
@@ -100,21 +100,24 @@ class Trainer(object):
 
         for epoch in range(n_epochs):
             train_loss, train_scores = self.train_loop(train_loader)
-            valid_loss, valid_scores = self.valid_loop(valid_loader)
+            log_str = "Epoch: {}, Train Loss: {:.4f}".format(epoch + 1, train_loss)
 
-            log_str = "Epoch: {}, Train Loss: {:.4f}, Valid Loss: {:.4f}".format(epoch + 1, train_loss, valid_loss)
-            log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
+            if valid_loader is not None:
+                valid_loss, valid_scores = self.valid_loop(valid_loader)
+                log_str += ", Valid Loss: {:.4f}".format(valid_loss)
+                log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
+
+                if (stop_no_improve_epochs is not None) & (eval_metric is not None):
+                    if valid_scores[0] >= best_metric:
+                        best_metric = valid_scores[0]
+                        no_improve_epochs = 0
+                    else:
+                        no_improve_epochs += 1
+                    if no_improve_epochs >= stop_no_improve_epochs and epoch >= 4:
+                        logging.info("Tried the best, no improved and stop training")
+                        break
+
             logging.info(log_str)
-
-            if stop_no_improve_epochs is not None and eval_metric is not None:
-                if valid_scores[0] >= best_metric:
-                    best_metric = valid_scores[0]
-                    no_improve_epochs = 0
-                else:
-                    no_improve_epochs += 1
-                if no_improve_epochs >= stop_no_improve_epochs and epoch >= 4:
-                    logging.info("Tried the best, no improved and stop training")
-                    break
 
         self.export_model(model_dir, only_pb=True)  # save the model
 
@@ -227,9 +230,9 @@ class KerasTrainer(object):
     def train(
         self,
         train_dataset,
-        valid_dataset,
-        n_epochs=30,
-        batch_size=16,
+        valid_dataset=None,
+        n_epochs=20,
+        batch_size=64,
         steps_per_epoch=None,
         callback_eval_metrics=None,
         early_stopping=None,
@@ -261,7 +264,7 @@ class KerasTrainer(object):
         # with self.strategy.scope():
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
+                raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
             if isinstance(train_dataset, tf.data.Dataset):
                 # first 0 choose the batch, second 0 choose the x
                 x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
@@ -288,12 +291,11 @@ class KerasTrainer(object):
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
-            x_valid, y_valid = valid_dataset
 
             self.history = self.model.fit(
                 x_train,
                 y_train,
-                validation_data=(x_valid, y_valid),
+                validation_data=valid_dataset,
                 steps_per_epoch=steps_per_epoch,
                 epochs=n_epochs,
                 batch_size=batch_size,

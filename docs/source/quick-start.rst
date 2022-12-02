@@ -43,6 +43,8 @@ The general setup for training and testing a model is
 #. Tune the hyper-parameters of the model and training
 #. Load the model from the model checkpoint and apply it to new data
 
+If you prefer other DL frameworks, try `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_, `gluonts <https://github.com/awslabs/gluonts>`_, `paddlets <https://github.com/PaddlePaddle/PaddleTS>`_
+
 Example
 ~~~~~~~~~~~~~
 
