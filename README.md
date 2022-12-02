@@ -2,7 +2,7 @@
 [license-url]: https://opensource.org/licenses/MIT
 [pypi-image]: https://badge.fury.io/py/tfts.svg
 [pypi-url]: https://pypi.python.org/pypi/tfts
-[pepy-image]: https://pepy.tech/badge/tfts
+[pepy-image]: https://pepy.tech/badge/tfts/month
 [pepy-url]: https://pepy.tech/project/tfts
 [build-image]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml/badge.svg?branch=master
 [build-url]: https://github.com/LongxingTan/Time-series-prediction/actions/workflows/test.yml?query=branch%3Amaster
@@ -172,6 +172,15 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1
 ```
 
 **Build your own model**
+
+The models tfts support to use in `AutoModel()`
+- rnn
+- tcn
+- bert
+- nbeats
+- seq2seq
+- wavenet
+- transformer
 
 You could build the model based on tfts backbone, especially
 - add custom-defined embeddings for categorical variables

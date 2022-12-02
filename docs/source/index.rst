@@ -42,9 +42,8 @@ The tfts library supports the SOTA deep learning models for time series.
 
 
 Tricks
-------
+-------
 Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the prediction performance.
-
 
 
 .. toctree::
