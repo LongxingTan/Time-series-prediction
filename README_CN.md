@@ -176,6 +176,23 @@ trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
 
+**修改模型配置参数**
+
+```python
+import tensorflow as tf
+import tfts
+from tfts import AutoModel, AutoConfig
+
+config = AutoConfig('rnn').get_config()
+print(config)
+
+custom_model_params = {
+    "rnn_size": 128,
+    "dense_size": 128,
+}
+
+model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+```
 
 **搭建自己的模型**
 
@@ -197,6 +214,23 @@ def build_model():
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     model.compile(loss="mse", optimizer="rmsprop")
     return model
+```
+
+**修改自己的模型配置**
+
+```python
+import tensorflow as tf
+import tfts
+from tfts import AutoModel, AutoConfig
+
+config = AutoConfig('rnn').get_config()
+print(config)  # 查看模型可配置参数
+
+custom_model_params = {
+    "rnn_size": 128,
+    "dense_size": 128,
+}
+model = AutoModel('rnn', custom_model_params=custom_model_params)
 ```
 
 ## 示例

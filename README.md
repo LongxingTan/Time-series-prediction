@@ -86,7 +86,7 @@ predict_length = 10
 n_feature = 2
 
 x_train = np.random.rand(1, train_length, n_feature)  # feature: (n, train_length, feature)
-y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
+y_train = np.random.rand(1, predict_length, 1)  # target: (n, predict_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
@@ -111,7 +111,7 @@ x_train = (
     np.random.rand(1, train_length, n_encoder_feature),  # encoder_feature: (n, train_length, encoder_features)
     np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (n, predict_length, decoder_features)
 )
-y_train = np.random.rand(1, predict_length, 1)  # y: (n, predict_length, 1)
+y_train = np.random.rand(1, predict_length, 1)  # target: (n, predict_length, 1)
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
@@ -169,6 +169,24 @@ valid_loader = valid_loader.batch(batch_size=1)
 model = AutoModel("seq2seq", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
+```
+
+**Prepare custom model params**
+
+```python
+import tensorflow as tf
+import tfts
+from tfts import AutoModel, AutoConfig
+
+config = AutoConfig('rnn').get_config()
+print(config)
+
+custom_model_params = {
+    "rnn_size": 128,
+    "dense_size": 128,
+}
+
+model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
 ```
 
 **Build your own model**
