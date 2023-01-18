@@ -85,8 +85,8 @@ train_length = 49
 predict_length = 10
 n_feature = 2
 
-x_train = np.random.rand(1, train_length, n_feature)  # feature: (n, train_length, feature)
-y_train = np.random.rand(1, predict_length, 1)  # target: (n, predict_length, 1)
+x_train = np.random.rand(1, train_length, n_feature)  # inputs: (batch, train_length, feature)
+y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
@@ -107,11 +107,11 @@ n_encoder_feature = 2
 n_decoder_feature = 3
 
 x_train = (
-    np.random.rand(1, train_length, 1),  # x: (n, train_length, 1)
-    np.random.rand(1, train_length, n_encoder_feature),  # encoder_feature: (n, train_length, encoder_features)
-    np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (n, predict_length, decoder_features)
+    np.random.rand(1, train_length, 1),  # inputs: (batch, train_length, 1)
+    np.random.rand(1, train_length, n_encoder_feature),  # encoder_feature: (batch, train_length, encoder_features)
+    np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (batch, predict_length, decoder_features)
 )
-y_train = np.random.rand(1, predict_length, 1)  # target: (n, predict_length, 1)
+y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length, 1)
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
@@ -128,7 +128,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 # option2: tf.data.Dataset
 
 class FakeReader(object):
-    def __init__(self, predict_length=10):
+    def __init__(self, predict_length):
         train_length = 49
         n_encoder_feature = 2
         n_decoder_feature = 3
@@ -153,13 +153,13 @@ class FakeReader(object):
 
 
 predict_length = 10
-train_reader = FakeReader(predict_length=10)
+train_reader = FakeReader(predict_length=predict_length)
 train_loader = tf.data.Dataset.from_generator(
     train_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
 )
 train_loader = train_loader.batch(batch_size=1)
-valid_reader = FakeReader(predict_length=10)
+valid_reader = FakeReader(predict_length=predict_length)
 valid_loader = tf.data.Dataset.from_generator(
     valid_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
@@ -191,7 +191,8 @@ model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_para
 
 **Build your own model**
 
-The models tfts support to use in `AutoModel()`
+<details><summary> Full list of model tfts supported using AutoModel </summary>
+
 - rnn
 - tcn
 - bert
@@ -199,6 +200,8 @@ The models tfts support to use in `AutoModel()`
 - seq2seq
 - wavenet
 - transformer
+
+</details>
 
 You could build the model based on tfts backbone, especially
 - add custom-defined embeddings for categorical variables
@@ -226,8 +229,8 @@ def build_model():
 
 ## Examples
 
-- [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022 Baidu-wind power forecasting
-- [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Alibaba Tianchi-ENSO prediction 2021
+- [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022-wind power forecasting
+- [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Tianchi-ENSO prediction 2021
 
 <!-- ### Performance
 

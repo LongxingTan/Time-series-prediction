@@ -76,18 +76,18 @@ Train your first model
 ---------------------------
 
 1. Prepare the data
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 After you prepare the raw data, maybe you need preprocess the data.
 
 
 2. Train the model
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 3. Evaluate the model
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 4. Serve the model
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: tfts
