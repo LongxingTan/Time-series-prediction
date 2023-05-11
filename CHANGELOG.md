@@ -1,6 +1,7 @@
 # Release notes
 
-## v0.0.4 Add models support (dd/mm/2022)
+## v0.0.6 Add models
+
 ### Added
 - function support
     - serving
@@ -9,20 +10,22 @@
     - tft
     - nbeats
     - unet
-
-- input support
-    - tf.Data or array
-    - single item or three items
+    - informer
+    - deepar
 
 ### Changed
 
 ### Fixed
 
+## v0.0.4 Add models support (21/11/2022)
 
-### Contributor
-- LongxingTan
+### Added
+- input support
+    - tf.Data or array
+    - single item or three items
 
 ## v0.0.3 Add models support (21/10/2022)
+
 ### Added
 - function support
     - serving
@@ -48,7 +51,6 @@
     - seq2seq
     - wavenet
     - transformer
-    - informer
 - example support
     - sine data
     - air passenger data

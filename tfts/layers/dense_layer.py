@@ -49,17 +49,13 @@ class DenseTemp(tf.keras.layers.Layer):
         super(DenseTemp, self).build(input_shape)
 
     def call(self, inputs):
-        """_summary_
+        """Computes the output of the layer.
 
-        Parameters
-        ----------
-        inputs : _type_
-            _description_
+        Args:
+            inputs: Tensor of shape (batch_size, sequence_length, input_dim)
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+            output: Tensor of shape (batch_size, sequence_length, hidden_size)
         """
         output = tf.einsum("ijk,kl->ijl", inputs, self.kernel)
 

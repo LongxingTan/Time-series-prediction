@@ -25,17 +25,13 @@ class GaussianLayer(tf.keras.layers.Layer):
         super(GaussianLayer, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """Returns mean and standard deviation tensors.
 
-        Parameters
-        ----------
-        x : _type_
-            _description_
+        Args:
+          x (tf.Tensor): Input tensor.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+          Tuple[tf.Tensor, tf.Tensor]: Mean and standard deviation tensors.
         """
         mu = tf.matmul(x, self.weight1) + self.bias1
         sig = tf.matmul(x, self.weight2) + self.bias2
@@ -43,4 +39,7 @@ class GaussianLayer(tf.keras.layers.Layer):
         return mu, sig_pos
 
     def get_config(self):
-        return
+        """Returns the configuration of the layer."""
+        config = {"units": self.units}
+        base_config = super(GaussianLayer, self).get_config()
+        return {**base_config, **config}

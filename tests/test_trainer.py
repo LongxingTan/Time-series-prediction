@@ -1,3 +1,5 @@
+import os
+import shutil
 import unittest
 
 import numpy as np
@@ -13,6 +15,8 @@ class TrainerTest(unittest.TestCase):
             "n_epochs": 3,
             "batch_size": 2,
             "stop_no_improve_epochs": 1,
+            "eval_metric": lambda x, y: np.mean(np.abs(x.numpy() - y.numpy())),
+            "model_dir": "./weights",
         }
 
         x_train = np.random.random((2, 10, 1))
@@ -27,7 +31,8 @@ class TrainerTest(unittest.TestCase):
             break
 
     def tearDown(self):
-        pass
+        if os.path.exists("./weights"):
+            shutil.rmtree("./weights", ignore_errors=True)
 
     def test_trainer_basic(self):
         # 1gpu, no dist
@@ -35,6 +40,7 @@ class TrainerTest(unittest.TestCase):
         trainer = Trainer(model)
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_params)
         trainer.predict(self.valid_loader)
+        trainer.export_model(model_dir="./weights")
 
     # def test_trainer_no_dist_strategy(self):
     #     pass

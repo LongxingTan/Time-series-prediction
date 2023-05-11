@@ -37,7 +37,6 @@
 
 - 经典与前沿的深度学习模型，用于工业、科研、竞赛
 - 结构灵活，适配多种时间序列任务
-- 提供详细的中文视频教程 【录制中】
 - 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门
 
 中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
@@ -133,7 +132,7 @@ trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 # option2
 
 class FakeReader(object):
-    def __init__(self, predict_length=10):
+    def __init__(self, predict_length):
         train_length = 49
         n_encoder_feature = 2
         n_decoder_feature = 3
@@ -158,13 +157,13 @@ class FakeReader(object):
 
 
 predict_length = 10
-train_reader = FakeReader(predict_length=10)
+train_reader = FakeReader(predict_length=predict_length)
 train_loader = tf.data.Dataset.from_generator(
     train_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
 )
 train_loader = train_loader.batch(batch_size=1)
-valid_reader = FakeReader(predict_length=10)
+valid_reader = FakeReader(predict_length=predict_length)
 valid_loader = tf.data.Dataset.from_generator(
     valid_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
@@ -176,8 +175,37 @@ trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
 
+**修改模型配置参数**
+
+```python
+import tensorflow as tf
+import tfts
+from tfts import AutoModel, AutoConfig
+
+config = AutoConfig('rnn').get_config()
+print(config)
+
+custom_model_params = {
+    "rnn_size": 128,
+    "dense_size": 128,
+}
+
+model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+```
 
 **搭建自己的模型**
+
+<details><summary> 检查tfts AutoModel已支持的模型 </summary>
+
+- rnn
+- tcn
+- bert
+- nbeats
+- seq2seq
+- wavenet
+- transformer
+
+</details>
 
 ```python
 import tensorflow as tf
@@ -197,6 +225,23 @@ def build_model():
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     model.compile(loss="mse", optimizer="rmsprop")
     return model
+```
+
+**修改自己的模型配置**
+
+```python
+import tensorflow as tf
+import tfts
+from tfts import AutoModel, AutoConfig
+
+config = AutoConfig('rnn').get_config()
+print(config)  # 查看模型可配置参数
+
+custom_model_params = {
+    "rnn_size": 128,
+    "dense_size": 128,
+}
+model = AutoModel('rnn', custom_model_params=custom_model_params)
 ```
 
 ## 示例

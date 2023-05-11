@@ -45,8 +45,8 @@ The general setup for training and testing a model is
 
 If you prefer other DL frameworks, try `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_, `gluonts <https://github.com/awslabs/gluonts>`_, `paddlets <https://github.com/PaddlePaddle/PaddleTS>`_
 
-Example
-~~~~~~~~~~~~~
+Simple Example
+----------------
 
 .. code-block:: python
 
@@ -72,5 +72,22 @@ Example
     # test
     trainer.predict(valid[0])
 
+Train your first model
+---------------------------
+
+1. Prepare the data
+~~~~~~~~~~~~~~~~~~~~~~~
+
+After you prepare the raw data, maybe you need preprocess the data.
+
+
+2. Train the model
+~~~~~~~~~~~~~~~~~~~~
+
+3. Evaluate the model
+~~~~~~~~~~~~~~~~~~~~~~~
+
+4. Serve the model
+~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: tfts
