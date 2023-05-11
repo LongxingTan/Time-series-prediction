@@ -15,17 +15,20 @@ class SeriesDecomp(tf.keras.layers.Layer):
         self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
 
     def call(self, x):
-        """_summary_
+        """
+        Perform time-series decomposition on the input tensor.
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            A 3D tensor with shape (batch_size, sequence_length, input_dim).
 
         Returns
         -------
-        _type_
-            _description_
+        Tuple[tf.Tensor, tf.Tensor]
+            A tuple of two 3D tensors:
+            - The residual tensor, shape (batch_size, sequence_length, input_dim).
+            - The moving average tensor, which is a smoothed version of the input tensor.
         """
         x_ma = self.moving_avg(x)
         return x - x_ma, x_ma
@@ -39,7 +42,7 @@ class SeriesDecomp(tf.keras.layers.Layer):
 
 
 class AutoCorrelation(tf.keras.layers.Layer):
-    """Auto"""
+    """Self-Attention layer that computes time-delayed autocorrelation between queries and keys"""
 
     def __init__(self, d_model: int, num_heads: int, attention_dropout: float = 0.0) -> None:
         super().__init__()
@@ -56,6 +59,22 @@ class AutoCorrelation(tf.keras.layers.Layer):
         self.dense = Dense(self.d_model, name="project")
 
     def time_delay_agg(self, q, k, v):  # TODO: v not used in process
+        """Compute time-delayed autocorrelation between queries and keys.
+
+        Parameters
+        ----------
+        q : Tensor of shape (batch_size, num_heads, timesteps, depth)
+            Queries.
+        k : Tensor of shape (batch_size, num_heads, timesteps, depth)
+            Keys.
+        v : Tensor of shape (batch_size, num_heads, timesteps, depth)
+            Values.
+
+        Returns
+        -------
+        Tensor of shape (batch_size, num_heads, timesteps, depth)
+            Time-delayed autocorrelation between queries and keys.
+        """
         batch_size = tf.shape(q)[0]
         time_steps = tf.shape(q)[2]
         q_fft = tf.signal.rfft(tf.transpose(q, perm=[0, 1, 3, 2]))

@@ -43,16 +43,16 @@ class ConvTemp(tf.keras.layers.Layer):
         super(ConvTemp, self).build(input_shape)
 
     def call(self, inputs):
-        """_summary_
+        """forward pass
 
         Parameters
         ----------
-        inputs : _type_
-            _description_
+        inputs : inputs
+            tensor with batch * sequence * features
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if self.causal:

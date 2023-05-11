@@ -12,6 +12,17 @@ class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
     def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
+        """Initialize the layer.
+
+        Parameters:
+        -----------
+        hidden_size : int
+            The number of hidden units in each attention head.
+        num_heads : int
+            The number of attention heads.
+        attention_dropout : float, optional
+            Dropout rate for the attention weights. Defaults to 0.0.
+        """
         if hidden_size % num_heads:
             raise ValueError(
                 "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
@@ -33,18 +44,18 @@ class FullAttention(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        q : _type_
+        q : tf.Tenor
             Query with shape batch * seq_q * fea
-        k : _type_
+        k : tf.Tensor
             Key with shape batch * seq_k * fea
-        v : _type_
+        v : tf.Tensor
             value with shape batch * seq_v * fea
         mask : _type_, optional
             important to avoid the leaks, defaults to None, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             tensor with shape batch * seq_q * (units * num_heads)
         """
         q = self.dense_q(q)  # project the query/key/value to num_heads * units
@@ -91,14 +102,14 @@ class SelfAttention(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            input tensor for self-attention
         mask : _type_, optional
-            _description_, by default None
+            masked, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         return self.attention(x, x, x, mask)

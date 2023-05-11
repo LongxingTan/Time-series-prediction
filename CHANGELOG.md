@@ -1,6 +1,7 @@
 # Release notes
 
 ## v0.0.6 Add models
+
 ### Added
 - function support
     - serving
@@ -17,15 +18,14 @@
 ### Fixed
 
 ## v0.0.4 Add models support (21/11/2022)
+
 ### Added
 - input support
     - tf.Data or array
     - single item or three items
 
-### Contributor
-- LongxingTan
-
 ## v0.0.3 Add models support (21/10/2022)
+
 ### Added
 - function support
     - serving

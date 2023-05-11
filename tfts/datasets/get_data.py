@@ -24,6 +24,18 @@ def get_data(name: str = "sine", train_length: int = 24, predict_length: int = 8
 
 
 def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2, n_examples=100):
+    """
+    Generate synthetic sine wave data.
+
+    Parameters:
+    train_sequence_length (int): Length of the training sequence.
+    predict_sequence_length (int): Length of the prediction sequence.
+    test_size (float): Fraction of the data to use for validation.
+    n_examples (int): Number of examples to generate.
+
+    Returns:
+    (tuple): Two tuples of numpy arrays containing training and validation data.
+    """
     x = []
     y = []
     for _ in range(n_examples):
@@ -57,7 +69,18 @@ def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, 
 
 
 def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2):
-    """Air passengers data, just use divide 500 to normalize it"""
+    """
+    A function that loads and preprocesses the air passenger data.
+
+    Args:
+        train_sequence_length (int): The length of each input sequence.
+        predict_sequence_length (int): The length of each output sequence.
+        test_size (float): The fraction of the data to use for validation.
+
+    Returns:
+        Tuple of training and validation data, each containing inputs and outputs.
+
+    """
     # air_passenger_url = "../examples/data/international-airline-passengers.csv"
     df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values

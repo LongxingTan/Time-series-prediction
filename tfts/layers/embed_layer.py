@@ -9,8 +9,16 @@ from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding
 
 class TokenEmbedding(tf.keras.layers.Layer):
     """
-    x: batch * time * feature
-    outout: batch * time * new_attention_size）
+    A layer that performs token embedding.
+
+    Args:
+        embed_size (int): The size of the embedding.
+
+    Input shape:
+        - 3D tensor with shape `(batch_size, time_steps, input_dim)`
+
+    Output shape:
+        - 3D tensor with shape `(batch_size, time_steps, embed_size)`
     """
 
     def __init__(self, embed_size: int):
@@ -26,17 +34,14 @@ class TokenEmbedding(tf.keras.layers.Layer):
         super(TokenEmbedding, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """
+        Performs the token embedding.
 
-        Parameters
-        ----------
-        x : _type_
-            _description_
+        Args:
+            x (tensor): Input tensor.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+            Tensor: Embedded tensor.
         """
         y = tf.einsum("bsf,fk->bsk", x, self.token_weights)
         return y
@@ -57,17 +62,18 @@ class TokenRnnEmbedding(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """
+        Forward pass of the layer.
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            Input tensor of shape `(batch_size, sequence_length, input_dim)`.
 
         Returns
         -------
-        _type_
-            _description_
+        y : tf.Tensor
+            Output tensor of shape `(batch_size, sequence_length, embed_size)`.
         """
         y, _ = self.rnn(x)
         return y
@@ -87,19 +93,15 @@ class PositionalEmbedding(tf.keras.layers.Layer):
         super(PositionalEmbedding, self).build(input_shape)
 
     def call(self, x, masking=True):
-        """_summary_
+        """
+        Applies positional encoding to the input tensor.
 
-        Parameters
-        ----------
-        x : _type_
-            _description_
-        masking : bool, optional
-            _description_, by default True
+        Parameters:
+        x (tf.Tensor): Input tensor of shape (batch_size, sequence_length, embedding_dim).
+        masking (bool, optional): If True, applies masking to the output tensor, by default True.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+        tf.Tensor: Output tensor of the same shape as the input tensor, after applying positional encoding.
         """
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
@@ -133,19 +135,19 @@ class PositionalEncoding(tf.keras.layers.Layer):
         super(PositionalEncoding, self).build(input_shape)
 
     def call(self, x, masking=True):
-        """_summary_
+        """Applies positional encoding to the input tensor.
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
         masking : bool, optional
-            _description_, by default True
+            Whether to mask padded values, by default True.
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            The output tensor of shape (batch_size, seq_length, embed_dim) with positional encoding applied.
         """
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
@@ -175,18 +177,24 @@ class FixedEmbedding(tf.keras.layers.Layer):
     def __init__(self) -> None:
         super().__init__()
 
+    def build(self, input_shape):
+        self.embed = tf.keras.layers.Embedding(input_dim=input_shape[1], output_dim=input_shape[2])
+        super().build(input_shape)
+
     def call(self, x, **kwargs):
-        """_summary_
+        """Perform the embedding lookup operation.
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            The input tensor of shape (batch_size, seq_length).
+        kwargs : dict
+            Additional keyword arguments.
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            The tensor of embeddings of shape (batch_size, seq_length, embedding_size).
         """
         return self.embed(x)
 
@@ -213,6 +221,13 @@ class TemporalEmbedding(tf.keras.layers.Layer):
 
 class DataEmbedding(tf.keras.layers.Layer):
     def __init__(self, embed_size: int, dropout: float = 0.0):
+        """
+        Data Embedding layer.
+
+        Args:
+            embed_size (int): Embedding size for tokens.
+            dropout (float, optional): Dropout rate to apply. Defaults to 0.0.
+        """
         super(DataEmbedding, self).__init__()
         self.embed_size = embed_size
         self.value_embedding = TokenEmbedding(embed_size)
@@ -223,17 +238,14 @@ class DataEmbedding(tf.keras.layers.Layer):
         super(DataEmbedding, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """
+        Forward pass of the layer.
 
-        Parameters
-        ----------
-        x : _type_
-            _description_
+        Args:
+            x (tf.Tensor): Input tensor of shape (batch_size, seq_length).
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+            tf.Tensor: Output tensor of shape (batch_size, seq_length, embed_size).
         """
         ve = self.value_embedding(x)
         pe = self.positional_embedding(ve)

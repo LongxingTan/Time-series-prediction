@@ -25,17 +25,18 @@ class GenericBlock(tf.keras.layers.Layer):
         super(GenericBlock, self).build(input_shape)
 
     def call(self, inputs):
-        """_summary_
+        """Compute the output of the Generic Block.
 
         Parameters
         ----------
-        inputs : _type_
-            _description_
+        inputs : tf.Tensor
+            A tensor of shape (batch_size, train_sequence_length, input_size)
 
         Returns
         -------
-        _type_
-            _description_
+        Tuple[tf.Tensor, tf.Tensor]
+            A tuple of two tensors, the first of shape (batch_size, train_sequence_length, output_size)
+            and the second of shape (batch_size, predict_sequence_length, output_size)
         """
         x = inputs
         for layer in self.layers:
