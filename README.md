@@ -203,7 +203,7 @@ model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_para
 
 </details>
 
-You could build the model based on tfts backbone, especially
+You could build the custom model based on tfts, especially
 - add custom-defined embeddings for categorical variables
 - add custom-defined head layers for classification or anomaly task
 
@@ -259,7 +259,7 @@ def build_model():
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples) -->
 
-if you prefer other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
+For other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
 
 ## Citation
 

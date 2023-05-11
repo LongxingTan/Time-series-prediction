@@ -1,5 +1,6 @@
 """tfts Trainer"""
 
+from collections.abc import Iterable
 import logging
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
@@ -73,7 +74,7 @@ class Trainer(object):
             _description_, by default None
         """
         self.learning_rate = learning_rate
-        self.eval_metric = eval_metric
+        self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
         self.use_ema = use_ema
         self.transform = transform
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
