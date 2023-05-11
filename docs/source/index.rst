@@ -56,3 +56,4 @@ Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the pred
    models
    tricks
    api
+   CHANGELOG
