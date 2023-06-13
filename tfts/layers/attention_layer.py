@@ -123,21 +123,6 @@ class SelfAttention(tf.keras.layers.Layer):
         return base_config
 
 
-class SparseAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
-        super().__init__()
-
-    def build(self, input_shape):
-        super().build(input_shape)
-
-    def call(self, x):
-        return
-
-    def get_config(self):
-        base_config = super().get_config()
-        return base_config
-
-
 class ProbAttention(tf.keras.layers.Layer):
     def __init__(self, hidden_size: int = 128, num_heads: int = 1, attention_dropout: float = 0.0, **kwargs):
         super().__init__()
@@ -241,6 +226,25 @@ class ProbAttention(tf.keras.layers.Layer):
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+class SparseAttention(tf.keras.layers.Layer):
+    """
+    SparseAttention implementation
+    """
+
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
+        super().__init__()
+
+    def build(self, input_shape):
+        super().build(input_shape)
+
+    def call(self, x):
+        return
+
+    def get_config(self):
+        base_config = super().get_config()
+        return base_config
 
 
 class FastAttention(tf.keras.layers.Layer):
