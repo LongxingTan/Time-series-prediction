@@ -15,7 +15,7 @@ from tfts.layers.mask_layer import ProbMask
 class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
         """Initialize the layer.
 
         Parameters:
