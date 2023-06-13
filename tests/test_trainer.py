@@ -78,7 +78,8 @@ class KerasTrainerTest(unittest.TestCase):
         }
 
     def tearDown(self):
-        pass
+        if os.path.exists("./weights"):
+            shutil.rmtree("./weights", ignore_errors=True)
 
     def test_trainer_basic_array(self):
         x_train = np.random.random((2, 10, 1))

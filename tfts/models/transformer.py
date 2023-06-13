@@ -130,10 +130,10 @@ class Transformer(object):
         decoder_outputs = self.project(decoder_outputs)
 
         if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, :]
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
         if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
@@ -236,7 +236,7 @@ class Decoder(tf.keras.layers.Layer):
     def call(
         self, decoder_features, init_input, encoder_memory, teacher=None, scheduler_sampling=0, training=None, **kwargs
     ):
-        """_summary_
+        """Transformer decoder
 
         Parameters
         ----------

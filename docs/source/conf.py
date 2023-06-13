@@ -46,6 +46,7 @@ extensions = [
     "nbsphinx",
     "recommonmark",
     "sphinx_markdown_tables",
+    "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
@@ -53,7 +54,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
-    "sphinx.ext.napoleon",
 ]
 
 autosummary_generate = True
