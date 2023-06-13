@@ -131,7 +131,6 @@ class ProbAttention(tf.keras.layers.Layer):
         self.num_heads = num_heads
         self.factor = 5
         self.scale = None
-        self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 
     def build(self, input_shape):
         self.dense_q = Dense(self.hidden_size, use_bias=False)

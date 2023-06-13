@@ -236,7 +236,7 @@ class Decoder(tf.keras.layers.Layer):
     def call(
         self, decoder_features, init_input, encoder_memory, teacher=None, scheduler_sampling=0, training=None, **kwargs
     ):
-        """_summary_
+        """Transformer decoder
 
         Parameters
         ----------

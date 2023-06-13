@@ -57,7 +57,7 @@ class RNN(object):
         self.drop2 = Dropout(0.25)
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """RNN model call
 
         Parameters
         ----------
