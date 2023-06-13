@@ -239,7 +239,16 @@ class SparseAttention(tf.keras.layers.Layer):
     def build(self, input_shape):
         super().build(input_shape)
 
-    def call(self, x):
+    def call(self, x, mask=None):
+        """Sparse attention
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            _description_
+        mask : tf.Tensor, optional
+            _description_, by default None
+        """
         return
 
     def get_config(self):
@@ -254,14 +263,14 @@ class FastAttention(tf.keras.layers.Layer):
     def build(self, input_shape):
         super().build(input_shape)
 
-    def call(self, x, x_mask=None):
-        """_summary_
+    def call(self, x, mask=None):
+        """Fast attention
 
         Parameters
         ----------
-        x : _type_
+        x : tf.Tensor
             _description_
-        x_mask : _type_, optional
+        mask : _type_, optional
             _description_, by default None
         """
         return
