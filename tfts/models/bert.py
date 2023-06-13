@@ -151,9 +151,9 @@ class Bert(object):
         # outputs += base
 
         if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, :]
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
             outputs = outputs + x_mean
         if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x, axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             outputs = outputs + x_mean
         return outputs

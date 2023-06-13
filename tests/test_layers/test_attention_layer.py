@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import FullAttention, ProbAttention, SelfAttention
 
 
 class AttentionLayerTest(unittest.TestCase):
@@ -17,6 +17,8 @@ class AttentionLayerTest(unittest.TestCase):
         v = tf.random.normal([2, 128, 4])
         y = layer(q, k, v, training=True)
         self.assertEqual(y.shape, (2, 128, hidden_size))
+        config = layer.get_config()
+        self.assertEqual(config["hidden_size"], hidden_size)
 
     def test_self_attention_layer(self):
         hidden_size = 64
@@ -32,7 +34,18 @@ class AttentionLayerTest(unittest.TestCase):
         pass
 
     def test_prob_attention_layer(self):
-        pass
+        hidden_size = 128
+        num_heads = 4
+        attention_dropout = 0
+        layer = ProbAttention(hidden_size, num_heads, attention_dropout)
+
+        q = tf.random.normal([2, 128, 16])
+        k = tf.random.normal([2, 128, 4])
+        v = tf.random.normal([2, 128, 4])
+        y = layer(q, k, v)
+        self.assertEqual(y.shape, (2, 128, hidden_size))
+        config = layer.get_config()
+        self.assertEqual(config["hidden_size"], hidden_size)
 
     def test_fast_attention_layer(self):
         pass
