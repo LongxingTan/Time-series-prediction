@@ -6,19 +6,15 @@ import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
 
-class MaskLayer(tf.keras.layers.Layer):
-    def __init__(self):
-        super().__init__()
+class CausalMask:
+    """Casual Mask is used for transformer decoder, used in first self-attention for decoder feature"""
 
-
-class TriangularCausalMask:
     def __init__(self, B, L):
-        mask_shape = [B, 1, L, L]
+        mask_shape = [B, L, L]  # for multi-heads split [B, 1, L, L]
 
         mask_a = tf.linalg.band_part(tf.ones(mask_shape), 0, -1)  # Upper triangular matrix of 0s and 1s
         mask_b = tf.linalg.band_part(tf.ones(mask_shape), 0, 0)  # Diagonal matrix of 0s and 1s
         mask = tf.cast(mask_a - mask_b, dtype=tf.float32)
-
         self._mask = mask
         tf.stop_gradient(self._mask)
 
@@ -28,6 +24,8 @@ class TriangularCausalMask:
 
 
 class ProbMask:
+    """ProbMask for informer"""
+
     def __init__(self, B, H, L, index, scores):
         # B: batch_size, H: num_heads, L: seq_length
         mask = tf.ones([L, scores.shape[-1]], tf.float32)

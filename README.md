@@ -200,6 +200,7 @@ model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_para
 - seq2seq
 - wavenet
 - transformer
+- informer
 
 </details>
 
