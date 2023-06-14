@@ -3,6 +3,7 @@ import unittest
 import tensorflow as tf
 
 from tfts.layers.attention_layer import FullAttention, ProbAttention, SelfAttention
+from tfts.layers.mask_layer import CausalMask
 
 
 class AttentionLayerTest(unittest.TestCase):
@@ -19,6 +20,10 @@ class AttentionLayerTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, 128, hidden_size))
         config = layer.get_config()
         self.assertEqual(config["hidden_size"], hidden_size)
+
+        mask = CausalMask(2 * num_heads, 128).mask
+        y2 = layer(q, k, v, mask=mask)
+        self.assertEqual(y2.shape, (2, 128, hidden_size))
 
     def test_self_attention_layer(self):
         hidden_size = 64

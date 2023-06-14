@@ -18,6 +18,7 @@ from tensorflow.keras.layers import (
 
 from tfts.layers.attention_layer import FullAttention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.mask_layer import CausalMask
 
 params = {
     "n_encoder_layers": 1,
@@ -118,8 +119,11 @@ class Informer(object):
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
 
+        B, L, _ = tf.shape(decoder_feature)
+        casual_mask = CausalMask(B * self.params["num_heads"], L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
-        outputs = self.decoder(decoder_feature, memory=memory)
+
+        outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
         outputs = self.projection(outputs)
 
         if self.params["skip_connect_circle"]:

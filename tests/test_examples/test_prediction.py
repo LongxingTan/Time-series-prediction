@@ -19,7 +19,7 @@ class PredictionTest(unittest.TestCase):
             use_model = "rnn"
             train_length = 10
             predict_length = 5
-            n_epochs = 2
+            epochs = 2
             batch_size = 32
             learning_rate = 0.003
 

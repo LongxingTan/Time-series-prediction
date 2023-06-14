@@ -1,5 +1,6 @@
-"""Demo of time series prediction by tfts"""
-# python run_prediction.py --use_model rnn
+"""Demo of time series prediction by tfts
+python run_prediction.py --use_model rnn
+"""
 
 import argparse
 import os
@@ -23,9 +24,9 @@ def parse_args():
     parser.add_argument("--use_data", type=str, default="sine", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=24, help="sequence length for train")
     parser.add_argument("--predict_length", type=int, default=12, help="sequence length for predict")
-    parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
-    parser.add_argument("--learning_rate", type=float, default=3e-4, help="learning rate for training")
+    parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
 
     return parser.parse_args()
 
@@ -50,7 +51,7 @@ def run_train(args):
     model = AutoModel(args.use_model, predict_length=args.predict_length)
 
     trainer = KerasTrainer(model, optimizer=optimizer, loss_fn=loss_fn)
-    trainer.train(train, valid, n_epochs=args.n_epochs, early_stopping=EarlyStopping("val_loss", patience=5))
+    trainer.train(train, valid, n_epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))
 
     pred = trainer.predict(valid[0])
     trainer.plot(history=valid[0], true=valid[1], pred=pred)

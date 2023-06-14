@@ -66,7 +66,7 @@ class FullAttention(tf.keras.layers.Layer):
         k = self.dense_k(k)
         v = self.dense_v(v)
 
-        q_ = tf.concat(tf.split(q, self.num_heads, axis=2), axis=0)  # multi-heads transfer to
+        q_ = tf.concat(tf.split(q, self.num_heads, axis=2), axis=0)  # multi-heads transfer to multi-sample
         k_ = tf.concat(tf.split(k, self.num_heads, axis=2), axis=0)
         v_ = tf.concat(tf.split(v, self.num_heads, axis=2), axis=0)
 
