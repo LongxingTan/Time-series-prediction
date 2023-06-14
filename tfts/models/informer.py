@@ -122,6 +122,7 @@ class Informer(object):
         B, L, _ = tf.shape(decoder_feature)
         casual_mask = CausalMask(B * self.params["num_heads"], L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
+        
         outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
         outputs = self.projection(outputs)
 
