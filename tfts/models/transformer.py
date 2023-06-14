@@ -51,7 +51,7 @@ class Transformer(object):
             params.update(custom_model_params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
+        self.encoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
 
         self.encoder = Encoder(
             params["n_encoder_layers"],
@@ -64,7 +64,7 @@ class Transformer(object):
         )
 
         self.decoder = Decoder2(
-            embed_layer=TokenEmbedding(params["attention_hidden_sizes"]),
+            embed_layer=DataEmbedding(params["attention_hidden_sizes"]),
             att_layers=[
                 DecoderLayer2(
                     params["n_decoder_layers"],
