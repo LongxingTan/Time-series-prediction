@@ -157,7 +157,7 @@ class Decoder1(object):
         training=None,
         **kwargs
     ):
-        """_summary_
+        """wavenet decoder1
 
         Parameters
         ----------

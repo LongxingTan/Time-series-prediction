@@ -192,7 +192,7 @@ class RNN2(object):
         self.dense2 = Dense(1)
 
     def __call__(self, inputs, teacher=None):
-        """_summary_
+        """RNN model2
 
         Parameters
         ----------
