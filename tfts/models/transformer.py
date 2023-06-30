@@ -115,7 +115,7 @@ class Transformer(object):
             )
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_feature, src_mask=None)
+        memory = self.encoder(encoder_feature, mask=None)
 
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
 
@@ -163,28 +163,28 @@ class Encoder(tf.keras.layers.Layer):
             self.layers.append([attention_layer, ln_layer1, feed_forward_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
-    def call(self, encoder_inputs, src_mask=None):
+    def call(self, inputs, mask=None):
         """Transformer encoder
 
         Parameters
         ----------
-        encoder_inputs : _type_
-            _description_
-        src_mask : _type_, optional
+        inputs : tf.Tensor
+            Transformer encoder inputs, with dimension of (batch, seq_len, features)
+        mask : tf.Tensor, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
-        x = encoder_inputs
+        x = inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
             enc = x
-            enc = attention_layer(enc, src_mask)
-            enc1 = ln_layer1(x + enc)  # residual connect
-            enc1 = ffn_layer(enc1)
+            enc = attention_layer(enc, mask)
+            enc = ln_layer1(x + enc)  # residual connect
+            enc1 = ffn_layer(enc)
             x = ln_layer2(enc + enc1)
         return x
 
@@ -351,8 +351,8 @@ class DecoderLayer(tf.keras.layers.Layer):
             dec = self_attention_layer(dec, mask=tgt_mask)
             dec1 = ln_layer1(x + dec)
             dec1 = enc_dec_attention_layer(dec1, encoder_memory, encoder_memory, mask=cross_mask)
-            dec2 = ln_layer2(dec + dec1)
-            dec2 = ffn_layer(dec2)
+            dec1 = ln_layer2(dec + dec1)
+            dec2 = ffn_layer(dec1)
             x = ln_layer3(dec1 + dec2)
         return x
 

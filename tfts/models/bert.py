@@ -115,7 +115,7 @@ class Bert(object):
         # encoder_features_res = self.tcn(encoder_features)
         # encoder_features += encoder_features_res
 
-        memory = self.encoder(encoder_feature, src_mask=None)  # batch * train_sequence * (hidden * heads)
+        memory = self.encoder(encoder_feature, mask=None)  # batch * train_sequence * (hidden * heads)
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)
