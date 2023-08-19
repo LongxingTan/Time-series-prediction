@@ -24,13 +24,15 @@ class Trainer(object):
         lr_scheduler=None,
         strategy=None,
         **kwargs
-    ):
+    ) -> None:
         self.model = model
-
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def train(
         self,
@@ -216,7 +218,7 @@ class KerasTrainer(object):
         lr_scheduler=None,
         strategy=None,
         **kwargs
-    ):
+    ) -> None:
         """
         model: tf.keras.Model instance
         loss: loss function
@@ -228,6 +230,9 @@ class KerasTrainer(object):
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
 
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
     def train(
         self,
         train_dataset,
@@ -235,7 +240,7 @@ class KerasTrainer(object):
         n_epochs=20,
         batch_size=64,
         steps_per_epoch=None,
-        callback_eval_metrics=None,
+        callback_metrics=None,
         early_stopping=None,
         checkpoint=None,
         verbose=2,
@@ -289,7 +294,7 @@ class KerasTrainer(object):
             self.model = self.model.build_model(inputs=inputs)
 
         # print(self.model.summary())
-        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
+        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=False)
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
 
@@ -315,14 +320,14 @@ class KerasTrainer(object):
             )
         return self.history
 
-    def predict(self, x_test, batch_size=1):
+    def predict(self, x_test, batch_size: int = 1):
         y_test_pred = self.model.predict(x_test, batch_size=batch_size)
         return y_test_pred
 
     def get_model(self):
         return self.model
 
-    def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
+    def save_model(self, model_dir, only_pb=True, checkpoint_dir: str = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
             logging.info("checkpoint Loaded", checkpoint_dir)

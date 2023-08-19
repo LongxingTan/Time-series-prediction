@@ -12,7 +12,7 @@ __all__ = ["AutoTuner"]
 class AutoTuner(object):
     """Auto tune parameters by optuna"""
 
-    def __init__(self, use_model: str):
+    def __init__(self, use_model: str) -> None:
         self.use_model = use_model
 
     def generate_parameter(self):
