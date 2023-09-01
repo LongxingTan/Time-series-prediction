@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.nbeats`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Dense
@@ -19,7 +21,7 @@ class GenericBlock(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.n_block_layers = n_block_layers
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(self.train_sequence_length + self.predict_sequence_length, use_bias=False, activation=None)
         super(GenericBlock, self).build(input_shape)
@@ -77,9 +79,10 @@ class TrendBlock(tf.keras.layers.Layer):
             axis=0,
         )
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_bloack_layers)]
         self.theta = Dense(2 * self.polynomial_size, use_bias=False, activation=None)
+        super().build(input_shape)
 
     def call(self, inputs):
         """_summary_
@@ -139,7 +142,7 @@ class SeasonalityBlock(tf.keras.layers.Layer):
         self.forecast_cos_template = tf.transpose(tf.cos(self.forecast_grid))
         self.forecast_sin_template = tf.transpose(tf.sin(self.forecast_grid))
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(self.theta_size, use_bias=False, activation=None)
 

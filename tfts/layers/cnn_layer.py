@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.wavenet`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
@@ -31,7 +33,7 @@ class ConvTemp(tf.keras.layers.Layer):
         self.causal = causal
         self.kernel_initializer = initializers.get(kernel_initializer)
 
-    def build(self, input_shape):  # Create the weights
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
             kernel_initializer=self.kernel_initializer,
@@ -83,7 +85,7 @@ class ConvAttTemp(tf.keras.layers.Layer):
         self.temporal_conv = ConvTemp()
         self.att = SelfAttention()
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super(ConvAttTemp, self).build(input_shape)
 
     def call(self, inputs):

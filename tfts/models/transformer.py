@@ -39,7 +39,7 @@ class Transformer(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         """Transformer for time series
 
         :param custom_model_params: custom model defined model hyper parameters
@@ -81,7 +81,7 @@ class Transformer(object):
         )
         self.project = Dense(1, activation=None)
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """Time series transformer
 
         Parameters
@@ -152,9 +152,9 @@ class Encoder(tf.keras.layers.Layer):
         self.ffn_hidden_sizes = ffn_hidden_sizes
         self.ffn_filter_sizes = ffn_filter_sizes
         self.ffn_dropout = ffn_dropout
-        self.layers = []
+        self.layers: list[tf.keras.layers.Layer] = []
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         for _ in range(self.n_encoder_layers):
             attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
             feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
@@ -163,7 +163,7 @@ class Encoder(tf.keras.layers.Layer):
             self.layers.append([attention_layer, ln_layer1, feed_forward_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
-    def call(self, encoder_inputs, src_mask=None):
+    def call(self, encoder_inputs: tf.Tensor, src_mask: Optional[tf.Tensor] = None):
         """Transformer encoder
 
         Parameters
@@ -213,7 +213,7 @@ class Decoder(tf.keras.layers.Layer):
         ffn_hidden_sizes,
         ffn_filter_sizes,
         ffn_dropout,
-    ):
+    ) -> None:
         super(Decoder, self).__init__()
         self.predict_sequence_length = predict_sequence_length
         self.decoder_embedding = DataEmbedding(embed_size=attention_hidden_sizes)
@@ -274,7 +274,7 @@ class Decoder(tf.keras.layers.Layer):
             this_input = tf.concat([this_input, this_output[:, -1:, :]], axis=1)
         return this_input[:, 1:]
 
-    def get_causal_attention_mask(self, inputs):
+    def get_causal_attention_mask(self, inputs: tf.Tensor):
         input_shape = tf.shape(inputs)
         batch_size, sequence_length = input_shape[0], input_shape[1]
         i = tf.range(sequence_length)[:, tf.newaxis]
@@ -291,15 +291,15 @@ class Decoder(tf.keras.layers.Layer):
 class DecoderLayer(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_decoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
-        eps=1e-7,
-    ):
+        n_decoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
+        eps: float = 1e-7,
+    ) -> None:
         super(DecoderLayer, self).__init__()
         self.n_decoder_layers = n_decoder_layers
         self.attention_hidden_sizes = attention_hidden_sizes

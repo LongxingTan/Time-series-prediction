@@ -31,7 +31,7 @@ class DenseTemp(tf.keras.layers.Layer):
         self.use_bias = use_bias
         self.bias_initializer = bias_initializer
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         inputs_units = int(input_shape[-1])  # input.get_shape().as_list()[-1]
         self.kernel = self.add_weight(
             "kernel",
@@ -81,7 +81,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.filter_size = filter_size
         self.relu_dropout = relu_dropout
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
         self.drop = Dropout(self.relu_dropout)
