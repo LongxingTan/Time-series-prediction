@@ -15,7 +15,7 @@ from tfts.layers.mask_layer import ProbMask
 class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0):
+    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0) -> None:
         """Initialize the layer.
 
         Parameters:
@@ -36,7 +36,7 @@ class FullAttention(tf.keras.layers.Layer):
         self.num_heads = num_heads
         self.attention_dropout = attention_dropout
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
         self.dense_k = Dense(self.hidden_size, use_bias=False)
         self.dense_v = Dense(self.hidden_size, use_bias=False)
@@ -94,14 +94,16 @@ class FullAttention(tf.keras.layers.Layer):
 
 
 class SelfAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
+    def __init__(
+        self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs: Dict[str, Any]
+    ) -> None:
         super(SelfAttention, self).__init__()
         self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
         """_summary_
 
         Parameters
@@ -132,7 +134,7 @@ class ProbAttention(tf.keras.layers.Layer):
         self.factor = 5
         self.scale = None
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
         self.dense_k = Dense(self.hidden_size, use_bias=False)
         self.dense_v = Dense(self.hidden_size, use_bias=False)
@@ -235,7 +237,7 @@ class SparseAttention(tf.keras.layers.Layer):
     def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
         super().__init__()
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
 
     def call(self, x, mask=None):
@@ -256,10 +258,10 @@ class SparseAttention(tf.keras.layers.Layer):
 
 
 class FastAttention(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__()
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
 
     def call(self, x, mask=None):

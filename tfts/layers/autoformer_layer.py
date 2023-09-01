@@ -3,6 +3,7 @@
 """Layer for :py:class:`~tfts.models.autoformer`"""
 
 import math
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import tensorflow as tf
 from tensorflow.keras.layers import AveragePooling1D, Conv1D, Dense, Dropout
@@ -14,7 +15,7 @@ class SeriesDecomp(tf.keras.layers.Layer):
         self.kernel_size = kernel_size
         self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
 
-    def call(self, x):
+    def call(self, x: tf.Tensor):
         """
         Perform time-series decomposition on the input tensor.
 
@@ -51,12 +52,13 @@ class AutoCorrelation(tf.keras.layers.Layer):
         self.depth = d_model // num_heads
         self.attention_dropout = attention_dropout
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.wq = Dense(self.d_model, name="q")
         self.wk = Dense(self.d_model, name="k")
         self.wv = Dense(self.d_model, name="v")
         self.drop = Dropout(self.attention_dropout)
         self.dense = Dense(self.d_model, name="project")
+        super().build(input_shape)
 
     def time_delay_agg(self, q, k, v):  # TODO: v not used in process
         """Compute time-delayed autocorrelation between queries and keys.

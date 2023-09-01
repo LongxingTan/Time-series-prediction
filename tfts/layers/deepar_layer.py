@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.deepar`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout
@@ -12,7 +14,7 @@ class GaussianLayer(tf.keras.layers.Layer):
         self.units = units
         super(GaussianLayer, self).__init__()
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         in_channels = input_shape[2]
         self.weight1 = self.add_weight(
             name="gauss_w1", shape=(in_channels, self.units), initializer=tf.keras.initializers.GlorotNormal()

@@ -37,7 +37,7 @@ class AutoFormer(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -73,7 +73,7 @@ class AutoFormer(object):
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs, teacher=None, **kwargs):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """autoformer call
 
         Parameters
@@ -146,17 +146,17 @@ class AutoFormer(object):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, kernel_size, d_model, num_heads, dropout_rate=0.1) -> None:
+    def __init__(self, kernel_size: int, d_model: int, num_heads: int, dropout_rate: float = 0.1) -> None:
         super().__init__()
         self.series_decomp1 = SeriesDecomp(kernel_size)
         self.series_decomp2 = SeriesDecomp(kernel_size)
         self.autocorrelation = AutoCorrelation(d_model, num_heads)
         self.drop = Dropout(dropout_rate)
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense = Dense(input_shape[-1])
 
-    def call(self, x):
+    def call(self, x: tf.Tensor) -> tf.Tensor:
         """_summary_
 
         Parameters
@@ -185,7 +185,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.autocorrelation1 = AutoCorrelation(d_model, num_heads)
         self.autocorrelation2 = AutoCorrelation(d_model, num_heads)
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding="same")
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same")
         self.drop = Dropout(self.drop_rate)

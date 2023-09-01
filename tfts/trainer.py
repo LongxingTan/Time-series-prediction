@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 import logging
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Generator, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,11 +19,11 @@ class Trainer(object):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential, Type],
-        loss_fn=tf.keras.losses.MeanSquaredError(),
-        optimizer=tf.keras.optimizers.Adam(0.003),
-        lr_scheduler=None,
-        strategy=None,
-        **kwargs
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
+        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        **kwargs: Dict[str, Any]
     ) -> None:
         self.model = model
         self.loss_fn = loss_fn
@@ -36,18 +36,18 @@ class Trainer(object):
 
     def train(
         self,
-        train_loader,
-        valid_loader=None,
+        train_loader: Union[tf.data.Dataset, Generator],
+        valid_loader: Union[tf.data.Dataset, Generator] = None,
         n_epochs: int = 10,
         batch_size: int = 8,
         learning_rate: float = 3e-4,
         verbose: int = 1,
-        eval_metric=None,
+        eval_metric: Optional[Callable] = None,
         model_dir: Optional[str] = None,
         use_ema: bool = False,
         stop_no_improve_epochs: Optional[int] = None,
-        transform=None,
-    ):
+        transform: Optional[Callable] = None,
+    ) -> None:
         """train function
 
         Parameters
@@ -213,10 +213,10 @@ class KerasTrainer(object):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential, Type],
-        loss_fn=tf.keras.losses.MeanSquaredError(),
-        optimizer=tf.keras.optimizers.Adam(0.003),
-        lr_scheduler=None,
-        strategy=None,
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
+        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         **kwargs
     ) -> None:
         """

@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.unet`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Multiply
 
@@ -14,7 +16,7 @@ class ConvbrLayer(tf.keras.layers.Layer):
         self.strides = strides
         self.dilation = dilation
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.conv1 = Conv1D(
             self.units, kernel_size=self.kernel_size, strides=self.strides, dilation_rate=self.dilation, padding="same"
         )
@@ -53,7 +55,7 @@ class SeBlock(tf.keras.layers.Layer):
         super(SeBlock, self).__init__()
         self.units = units
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.pool = GlobalAveragePooling1D()
         self.fc1 = Dense(self.units // 8, activation="relu")
         self.fc2 = Dense(self.units, activation="sigmoid")
@@ -98,7 +100,7 @@ class ReBlock(tf.keras.layers.Layer):
             self.se_block = SeBlock(units=units)
         self.use_se = use_se
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super(ReBlock, self).build(input_shape)
 
     def call(self, x):

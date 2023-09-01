@@ -49,7 +49,7 @@ class AutoConfig(object):
     def get_config(self):
         return self.params
 
-    def print_config(self):
+    def print_config(self) -> None:
         print(self.params)
 
     def save_config(self):

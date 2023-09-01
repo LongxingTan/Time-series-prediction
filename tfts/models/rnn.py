@@ -191,8 +191,8 @@ class RNN2(object):
         self.dense1 = Dense(predict_sequence_length)
         self.dense2 = Dense(1)
 
-    def __call__(self, inputs, teacher=None):
-        """RNN model2
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+        """_summary_
 
         Parameters
         ----------

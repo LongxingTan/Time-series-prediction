@@ -84,8 +84,13 @@ class AutoModel(object):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
+    def from_pretrained(
+        self,
+    ):
+        return
 
-def build_tfts_model(use_model, predict_length, custom_model_params=None):
+
+def build_tfts_model(use_model, predict_length, custom_model_params: Optional[Dict[str, Any]] = None):
     if use_model.lower() == "seq2seq":
         Model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
     elif use_model.lower() == "wavenet":

@@ -54,8 +54,8 @@ class Seq2seq(object):
             attention_dropout=params["attention_dropout"],
         )
 
-    def __call__(self, inputs, teacher=None):
-        """An RNN seq2seq structure for time series
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+        """A RNN seq2seq structure for time series
 
         :param inputs: _description_
         :type inputs: _type_
