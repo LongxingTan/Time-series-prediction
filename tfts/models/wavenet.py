@@ -159,7 +159,7 @@ class Decoder1(object):
         training: bool = None,
         **kwargs
     ):
-        """_summary_
+        """wavenet decoder1
 
         Parameters
         ----------

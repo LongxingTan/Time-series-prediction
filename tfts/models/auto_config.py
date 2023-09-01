@@ -44,7 +44,7 @@ class AutoConfig(object):
         # elif use_model.lower() == "gan":
         #     self.params = gan_params
         else:
-            raise ValueError("unsupported model of {} yet".format(use_model))
+            raise ValueError("Unsupported model of {} yet".format(use_model))
 
     def get_config(self):
         return self.params

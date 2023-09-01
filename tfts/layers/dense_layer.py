@@ -88,7 +88,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         super(FeedForwardNetwork, self).build(input_shape)
 
     def call(self, x):
-        """_summary_
+        """Feed Forward Network
 
         Parameters
         ----------

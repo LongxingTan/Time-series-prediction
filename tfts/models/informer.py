@@ -49,8 +49,8 @@ class Informer(object):
             params.update(custom_model_params)
         self.params = params
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
-        self.decoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
+        self.encoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
+        self.decoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
         if not params["prob_attention"]:
             attn_layer = FullAttention(
                 params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"]

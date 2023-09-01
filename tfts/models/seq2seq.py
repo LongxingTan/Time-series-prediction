@@ -62,7 +62,7 @@ class Seq2seq(object):
         :param teacher: teacher forcing decoding, defaults to None
         :type teacher: _type_, optional
         :return: _description_
-        :rtype: _type_
+        :type: _type_
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -105,36 +105,42 @@ class Seq2seq(object):
 class Encoder(tf.keras.layers.Layer):
     def __init__(self, rnn_type, rnn_size, rnn_dropout=0, dense_size=32, **kwargs):
         super(Encoder, self).__init__(**kwargs)
+        self.rnn_type = rnn_type
         if rnn_type.lower() == "gru":
             self.rnn = GRU(
                 units=rnn_size, activation="tanh", return_state=True, return_sequences=True, dropout=rnn_dropout
             )
-        elif self.rnn_type.lower() == "lstm":
+        elif rnn_type.lower() == "lstm":
             self.rnn = LSTM(
-                units=self.rnn_size,
+                units=rnn_size,
                 activation="tanh",
                 return_state=True,
                 return_sequences=True,
-                dropout=self.rnn_dropout,
+                dropout=rnn_dropout,
             )
         self.dense = Dense(units=dense_size, activation="tanh")
 
     def call(self, inputs):
-        """_summary_
+        """Seq2seq encoder
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             _description_
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         """
-        # outputs: batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
-        outputs, state = self.rnn(inputs)
-        state = self.dense(state)
+        if self.rnn_type.lower() == "gru":
+            outputs, state = self.rnn(inputs)
+            state = self.dense(state)
+        elif self.rnn_type.lower() == "lstm":
+            outputs, state1, state2 = self.rnn(inputs)
+            state = (state1, state2)
+        else:
+            raise ValueError("No supported rnn type of {}".format(self.rnn_type))
         # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
         # outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
@@ -164,7 +170,7 @@ class Decoder1(tf.keras.layers.Layer):
         if self.rnn_type.lower() == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
         elif self.rnn_type.lower() == "lstm":
-            self.rnn = LSTMCell(units=self.rnn_size)
+            self.rnn_cell = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
             self.attention = FullAttention(
@@ -172,6 +178,7 @@ class Decoder1(tf.keras.layers.Layer):
                 num_heads=self.attention_heads,
                 attention_dropout=self.attention_dropout,
             )
+        super().build(input_shape)
 
     def call(
         self,
@@ -183,7 +190,7 @@ class Decoder1(tf.keras.layers.Layer):
         training=None,
         **kwargs
     ):
-        """_summary_
+        """Seq2seq decoder1: step by step
 
         :param decoder_features: _description_
         :type decoder_features: _type_
@@ -221,10 +228,21 @@ class Decoder1(tf.keras.layers.Layer):
                 this_input = tf.concat([this_input, decoder_features[:, i]], axis=-1)
 
             if self.use_attention:
-                att = self.attention(
-                    tf.expand_dims(prev_state, 1), k=kwargs["encoder_output"], v=kwargs["encoder_output"]
-                )
-                att = tf.squeeze(att, 1)
+                if self.rnn_type.lower() == "gru":
+                    # q: (batch, 1, feature), att_output: (batch, 1, feature)
+                    att = self.attention(
+                        tf.expand_dims(prev_state, 1), k=kwargs["encoder_output"], v=kwargs["encoder_output"]
+                    )
+                    att = tf.squeeze(att, 1)  # (batch, feature)
+                elif self.rnn_type.lower() == "lstm":
+                    # q: (batch, 1, feature * 2), att_output: (batch, 1, feature)
+                    att = self.attention(
+                        tf.expand_dims(tf.concat(prev_state, 1), 1),
+                        k=kwargs["encoder_output"],
+                        v=kwargs["encoder_output"],
+                    )
+                    att = tf.squeeze(att, 1)  # (batch, feature)
+
                 this_input = tf.concat([this_input, att], axis=-1)
 
             this_output, this_state = self.rnn_cell(this_input, prev_state)
@@ -268,6 +286,7 @@ class Decoder2(tf.keras.layers.Layer):
                 num_heads=self.attention_heads,
                 attention_dropout=self.attention_dropout,
             )
+        super().build(input_shape)
 
     def forward(
         self,
@@ -327,7 +346,7 @@ class Decoder2(tf.keras.layers.Layer):
         training=None,
         **kwargs
     ):
-        """_summary_
+        """Decoder model2
 
         Parameters
         ----------
@@ -336,8 +355,6 @@ class Decoder2(tf.keras.layers.Layer):
         init_state : _type_
             _description_
         decoder_init_input : _type_
-            _description_
-        encoder_output : _type_
             _description_
         teacher : _type_, optional
             _description_, by default None
@@ -384,7 +401,7 @@ class Decoder3(tf.keras.layers.Layer):
         training=None,
         **kwargs
     ):
-        """_summary_
+        """Decoder3: just simple
 
         Parameters
         ----------
