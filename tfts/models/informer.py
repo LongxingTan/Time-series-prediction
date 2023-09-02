@@ -20,7 +20,7 @@ from tfts.layers.attention_layer import FullAttention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "attention_hidden_sizes": 32 * 1,

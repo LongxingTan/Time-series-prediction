@@ -15,7 +15,7 @@ from tfts.models.unet import params as unet_params
 from tfts.models.wavenet import params as wavenet_params
 
 
-class AutoConfig(object):
+class AutoConfig:
     """AutoConfig for model"""
 
     def __init__(self, use_model: str) -> None:

@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -13,7 +13,7 @@ from tfts.layers.attention_layer import FullAttention
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-params = {
+params: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(3)],
     "kernel_sizes": [2 for _ in range(3)],
     "filters": 32,
@@ -102,7 +102,9 @@ class WaveNet(object):
 
 
 class Encoder(object):
-    def __init__(self, kernel_sizes: int, filters: int, dilation_rates: int, dense_hidden_size: int) -> None:
+    def __init__(
+        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int
+    ) -> None:
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -138,7 +140,7 @@ class Encoder(object):
 
 class Decoder1(object):
     def __init__(
-        self, filters: int, dilation_rates: int, dense_hidden_size: int, predict_sequence_length: int = 24
+        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
     ) -> None:
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
@@ -156,8 +158,8 @@ class Decoder1(object):
         encoder_outputs,
         teacher: Optional[tf.Tensor] = None,
         scheduler_sampling: float = 0.0,
-        training: bool = None,
-        **kwargs
+        training: Optional[bool] = None,
+        **kwargs: Dict
     ):
         """wavenet decoder1
 
@@ -225,7 +227,9 @@ class Decoder1(object):
 class Decoder2(object):
     """Decoder need avoid future data leaks"""
 
-    def __init__(self, filters: int, dilation_rates: int, dense_hidden_size: int, predict_sequence_length: int = 24):
+    def __init__(
+        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+    ):
         self.filters = filters
         self.dilation_rates = dilation_rates
         self.predict_sequence_length = predict_sequence_length

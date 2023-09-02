@@ -22,7 +22,7 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "use_token_embedding": False,
     "attention_hidden_sizes": 32 * 1,

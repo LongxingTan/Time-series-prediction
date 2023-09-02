@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -14,7 +14,7 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "use_token_embedding": False,
@@ -151,9 +151,9 @@ class Encoder(tf.keras.layers.Layer):
         self.ffn_hidden_sizes = ffn_hidden_sizes
         self.ffn_filter_sizes = ffn_filter_sizes
         self.ffn_dropout = ffn_dropout
-        self.layers: list[tf.keras.layers.Layer] = []
+        self.layers: List[tf.keras.layers.Layer] = []
 
-    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
+    def build(self, input_shape: Tuple[int]) -> None:
         for _ in range(self.n_encoder_layers):
             attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
             ffn_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
@@ -308,7 +308,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.ffn_filter_sizes = ffn_filter_sizes
         self.ffn_dropout = ffn_dropout
         self.eps = eps
-        self.layers = []
+        self.layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape):
         for _ in range(self.n_decoder_layers):

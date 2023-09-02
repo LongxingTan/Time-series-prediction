@@ -11,7 +11,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-params = {
+params: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(4)],
     "kernel_sizes": [2 for i in range(4)],
     "filters": 128,
