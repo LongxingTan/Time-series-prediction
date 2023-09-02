@@ -114,7 +114,7 @@ class Transformer(object):
             )
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_feature, mask=None)
+        memory = self.encoder(encoder_feature, encoder_mask=None)
 
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
 
@@ -135,13 +135,13 @@ class Transformer(object):
 class Encoder(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_encoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
+        n_encoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
     ):
         super(Encoder, self).__init__()
         self.n_encoder_layers = n_encoder_layers
@@ -162,7 +162,7 @@ class Encoder(tf.keras.layers.Layer):
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
-    def call(self, encoder_inputs: tf.Tensor, src_mask: Optional[tf.Tensor] = None):
+    def call(self, encoder_inputs: tf.Tensor, encoder_mask: Optional[tf.Tensor] = None):
         """Transformer encoder
 
         Parameters
@@ -170,18 +170,18 @@ class Encoder(tf.keras.layers.Layer):
         inputs : tf.Tensor
             Transformer encoder inputs, with dimension of (batch, seq_len, features)
         mask : tf.Tensor, optional
-            _description_, by default None
+            encoder mask to ignore it during attention, by default None
 
         Returns
         -------
         tf.Tensor
-            _description_
+            Transformer encoder output
         """
-        x = inputs
+        x = encoder_inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
             enc = x
-            enc = attention_layer(enc, mask)
+            enc = attention_layer(enc, encoder_mask)
             enc = ln_layer1(x + enc)  # residual connect
             enc1 = ffn_layer(enc)
             x = ln_layer2(enc + enc1)
@@ -204,14 +204,14 @@ class Encoder(tf.keras.layers.Layer):
 class Decoder(tf.keras.layers.Layer):
     def __init__(
         self,
-        predict_sequence_length,
-        n_decoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
+        predict_sequence_length: int,
+        n_decoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
     ) -> None:
         super(Decoder, self).__init__()
         self.predict_sequence_length = predict_sequence_length

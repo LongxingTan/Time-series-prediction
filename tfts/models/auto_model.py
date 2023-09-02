@@ -77,16 +77,11 @@ class AutoModel(object):
         #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
         return self.model(x)
 
-    def from_pretrained(self, name: str):
-        return
-
     def build_model(self, inputs):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
-    def from_pretrained(
-        self,
-    ):
+    def from_pretrained(self, name: str):
         return
 
 
