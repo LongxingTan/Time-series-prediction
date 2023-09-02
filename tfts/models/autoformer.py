@@ -14,7 +14,7 @@ from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "kernel_size": 24,

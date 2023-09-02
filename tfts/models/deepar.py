@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropo
 
 from tfts.layers.deepar_layer import GaussianLayer
 
-params = {
+params: Dict[str, Any] = {
     "rnn_size": 64,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -40,7 +40,7 @@ class DeepAR(object):
         self.gauss = GaussianLayer(units=1)
 
     def __call__(self, x: tf.Tensor):
-        """_summary_
+        """DeepAR
 
         Parameters
         ----------

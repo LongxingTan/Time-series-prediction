@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatena
 
 from tfts.layers.unet_layer import conv_br, re_block
 
-params = {
+params: Dict[str, Any] = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
