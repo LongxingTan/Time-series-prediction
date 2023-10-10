@@ -1,7 +1,7 @@
 """tfts Trainer"""
 
-import logging
 from collections.abc import Iterable
+import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
