@@ -33,7 +33,7 @@
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow/ Keras，支持多种深度学习模型
+**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列开源工具，基于TensorFlow/ Keras，支持多种深度学习模型。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
 
 - 经典与前沿的深度学习模型，用于工业、科研、竞赛
 - 结构灵活，适配多种时间序列任务
@@ -44,6 +44,8 @@
 ## 快速使用
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
+[![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
+
 
 **安装**
 
