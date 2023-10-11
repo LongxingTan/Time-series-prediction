@@ -141,28 +141,28 @@ class ProbAttention(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def _prob_qk(self, q, k, sample_k, top_n):
-        B, H, L, E = k.shape
+        _, H, L, E = k.shape
         _, _, S, _ = q.shape
+        B = tf.shape(k)[0]
 
         k_expand = tf.broadcast_to(tf.expand_dims(k, -3), (B, H, L, S, E))
-        k_random_index = tf.random.uniform((S, sample_k), maxval=L, dtype=tf.int32)
-        k_random_index = tf.tile(k_random_index[tf.newaxis, tf.newaxis, :], [B, H, 1, 1])
 
-        batch_indexes = tf.tile(tf.range(B)[:, tf.newaxis, tf.newaxis, tf.newaxis], (1, H, L, k_random_index.shape[-1]))
-        head_indexes = tf.tile(tf.range(H)[tf.newaxis, :, tf.newaxis, tf.newaxis], (B, 1, L, k_random_index.shape[-1]))
-        k_indexes = tf.tile(tf.range(L)[tf.newaxis, tf.newaxis, :, tf.newaxis], (B, H, 1, k_random_index.shape[-1]))
+        indx_q_seq = tf.random.uniform((S,), maxval=L, dtype=tf.int32)
+        indx_k_seq = tf.random.uniform((sample_k,), maxval=L, dtype=tf.int32)
 
-        k_random_index = tf.stack([batch_indexes, head_indexes, k_indexes, k_random_index], axis=-1)
-        k_sample = tf.gather_nd(k_expand, k_random_index)
+        K_sample = tf.gather(k_expand, tf.range(S), axis=2)
 
-        qk_sample = tf.squeeze(tf.matmul(tf.expand_dims(q, -2), tf.transpose(k_sample, [0, 1, 2, 4, 3])))
-        m = tf.math.reduce_max(qk_sample, axis=-1) - tf.divide(tf.reduce_sum(qk_sample, axis=-1), L)
-        m_top = tf.math.top_k(m, top_n, sorted=False)[1]
-        m_top = m_top[tf.newaxis] if B == 1 else m_top
-        m_top = tf.tile(m_top, (1, 1, 1))
+        K_sample = tf.gather(K_sample, indx_q_seq, axis=2)
+        K_sample = tf.gather(K_sample, indx_k_seq, axis=3)
+
+        Q_K_sample = tf.squeeze(tf.matmul(tf.expand_dims(q, -2), tf.einsum("...ij->...ji", K_sample)))
+        M = tf.math.reduce_max(Q_K_sample, axis=-1) - tf.raw_ops.Div(x=tf.reduce_sum(Q_K_sample, axis=-1), y=L)
+        m_top = tf.math.top_k(M, top_n, sorted=False)[1]
+        m_top = m_top[tf.newaxis, tf.newaxis] if B == 1 else m_top
 
         batch_indexes = tf.tile(tf.range(B)[:, tf.newaxis, tf.newaxis], (1, H, top_n))
         head_indexes = tf.tile(tf.range(H)[tf.newaxis, :, tf.newaxis], (B, 1, top_n))
+
         idx = tf.stack([batch_indexes, head_indexes, m_top], axis=-1)
 
         q_reduce = tf.gather_nd(q, idx)
@@ -170,7 +170,8 @@ class ProbAttention(tf.keras.layers.Layer):
         return qk, m_top
 
     def _get_initial_context(self, v, L_Q):
-        B, H, L_V, D = v.shape
+        _, H, L_V, D = v.shape
+        B = tf.shape(v)[0]
         if not self.mask_flag:
             v_sum = tf.math.reduce_sum(v, axis=-2)
             context = tf.identity(tf.boradcast_to(tf.expand_dims(v_sum, -2), [B, H, L_Q, v_sum.shape[-1]]))
@@ -180,9 +181,10 @@ class ProbAttention(tf.keras.layers.Layer):
         return context
 
     def _update_context(self, context_in, v, scores, index, L_Q):
-        B, H, L_V, D = v.shape
-        batch_indexes = tf.tile(tf.range(B)[:, tf.newaxis, tf.newaxis], (1, H, index.shape[-1]))
-        head_indexes = tf.tile(tf.range(H)[tf.newaxis, :, tf.newaxis], (B, 1, index.shape[-1]))
+        _, H, L_V, D = v.shape
+        B = tf.shape(v)[0]
+        batch_indexes = tf.tile(tf.range(B)[:, tf.newaxis, tf.newaxis], (1, H, tf.shape(index)[-1]))
+        head_indexes = tf.tile(tf.range(H)[tf.newaxis, :, tf.newaxis], (B, 1, tf.shape(index)[-1]))
         index = tf.stack([batch_indexes, head_indexes, index], axis=-1)
 
         if self.mask_flag:
@@ -193,18 +195,20 @@ class ProbAttention(tf.keras.layers.Layer):
         context_in = tf.tensor_scatter_nd_update(context_in, index, tf.matmul(attn, v))
         return tf.convert_to_tensor(context_in)
 
+    # @tf.function
     def call(self, q, k, v, mask=None):
         """Prob attention"""
         q = self.dense_q(q)  # project the query/key/value to num_heads * units
         k = self.dense_k(k)
         v = self.dense_v(v)
 
-        B, L, D = q.shape
+        _, L, D = q.shape
+        B = tf.shape(q)[0]
         _, S, _ = k.shape
 
-        q_ = tf.reshape(q, (B, self.num_heads, L, -1))
-        k_ = tf.reshape(k, (B, self.num_heads, S, -1))
-        v_ = tf.reshape(v, (B, self.num_heads, S, -1))
+        q_ = tf.reshape(q, (-1, self.num_heads, L, self.hidden_size // self.num_heads))
+        k_ = tf.reshape(k, (-1, self.num_heads, S, self.hidden_size // self.num_heads))
+        v_ = tf.reshape(v, (-1, self.num_heads, S, self.hidden_size // self.num_heads))
 
         u_q = self.factor * np.ceil(np.log(L)).astype("int").item()
         u_k = self.factor * np.ceil(np.log(S)).astype("int").item()

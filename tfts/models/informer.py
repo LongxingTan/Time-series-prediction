@@ -147,9 +147,7 @@ class Encoder(tf.keras.layers.Layer):
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
                 x = attn_layer(x, mask)
-                # print(x.shape)
                 # x = conv_layer(x)
-                # print(x.shape)
             x = self.layers[-1](x, mask)
 
         else:
