@@ -20,10 +20,8 @@ from tfts.layers.attention_layer import FullAttention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-tf.config.run_functions_eagerly(True)
 
-
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "attention_hidden_sizes": 32 * 1,
@@ -103,7 +101,7 @@ class Informer(object):
         self.projection = Dense(1)
         # self.projection = Dense(predict_sequence_length, activation=None)
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """Informer call function"""
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs

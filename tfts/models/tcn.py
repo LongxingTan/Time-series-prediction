@@ -11,7 +11,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-params = {
+params: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(4)],
     "kernel_sizes": [2 for i in range(4)],
     "filters": 128,
@@ -29,7 +29,7 @@ class TCN(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -52,7 +52,7 @@ class TCN(object):
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """_summary_
 
         Parameters

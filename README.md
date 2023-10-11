@@ -52,6 +52,7 @@ $ pip install tfts
 **Basic usage**
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
+[![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
 
 ``` python
 import matplotlib.pyplot as plt
@@ -112,6 +113,7 @@ x_train = (
     np.random.rand(1, predict_length, n_decoder_feature),  # decoder_feature: (batch, predict_length, decoder_features)
 )
 y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length, 1)
+
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),

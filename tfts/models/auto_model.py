@@ -28,7 +28,7 @@ class AutoModel(object):
         self,
         use_model: str,
         predict_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_params: Optional[Dict[str, object]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
         if use_model.lower() == "seq2seq":
@@ -59,7 +59,7 @@ class AutoModel(object):
             raise ValueError("unsupported model of {} yet".format(use_model))
 
     def __call__(
-        self, x: Union[tf.data.Dataset, Tuple[np.array], Tuple[pd.DataFrame], List[np.array], List[pd.DataFrame]]
+        self, x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]]
     ):
         """automodel callable
 
@@ -81,8 +81,11 @@ class AutoModel(object):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
+    def from_pretrained(self, name: str):
+        return
 
-def build_tfts_model(use_model, predict_length, custom_model_params=None):
+
+def build_tfts_model(use_model: str, predict_length: int, custom_model_params: Optional[Dict[str, Any]] = None):
     if use_model.lower() == "seq2seq":
         Model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
     elif use_model.lower() == "wavenet":

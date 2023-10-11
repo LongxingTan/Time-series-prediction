@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -14,17 +14,16 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "use_token_embedding": False,
-    "attention_hidden_sizes": 32 * 1,
+    "attention_hidden_sizes": 128 * 1,
     "num_heads": 1,
     "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 32 * 1,
-    "ffn_filter_sizes": 32 * 1,
+    "ffn_hidden_sizes": 128 * 1,
+    "ffn_filter_sizes": 128 * 1,
     "ffn_dropout": 0.0,
-    "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -39,7 +38,7 @@ class Transformer(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         """Transformer for time series
 
         :param custom_model_params: custom model defined model hyper parameters
@@ -81,7 +80,7 @@ class Transformer(object):
         )
         self.project = Dense(1, activation=None)
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """Time series transformer
 
         Parameters
@@ -115,7 +114,7 @@ class Transformer(object):
             )
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_feature, src_mask=None)
+        memory = self.encoder(encoder_feature, encoder_mask=None)
 
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
 
@@ -136,13 +135,13 @@ class Transformer(object):
 class Encoder(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_encoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
+        n_encoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
     ):
         super(Encoder, self).__init__()
         self.n_encoder_layers = n_encoder_layers
@@ -152,39 +151,39 @@ class Encoder(tf.keras.layers.Layer):
         self.ffn_hidden_sizes = ffn_hidden_sizes
         self.ffn_filter_sizes = ffn_filter_sizes
         self.ffn_dropout = ffn_dropout
-        self.layers = []
+        self.layers: List[tf.keras.layers.Layer] = []
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[int]) -> None:
         for _ in range(self.n_encoder_layers):
             attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
+            ffn_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
             ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
-            self.layers.append([attention_layer, ln_layer1, feed_forward_layer, ln_layer2])
+            self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
-    def call(self, encoder_inputs, src_mask=None):
+    def call(self, encoder_inputs: tf.Tensor, encoder_mask: Optional[tf.Tensor] = None):
         """Transformer encoder
 
         Parameters
         ----------
-        encoder_inputs : _type_
-            _description_
-        src_mask : _type_, optional
-            _description_, by default None
+        inputs : tf.Tensor
+            Transformer encoder inputs, with dimension of (batch, seq_len, features)
+        mask : tf.Tensor, optional
+            encoder mask to ignore it during attention, by default None
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            Transformer encoder output
         """
         x = encoder_inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
             enc = x
-            enc = attention_layer(enc, src_mask)
-            enc1 = ln_layer1(x + enc)  # residual connect
-            enc1 = ffn_layer(enc1)
+            enc = attention_layer(enc, encoder_mask)
+            enc = ln_layer1(x + enc)  # residual connect
+            enc1 = ffn_layer(enc)
             x = ln_layer2(enc + enc1)
         return x
 
@@ -205,15 +204,15 @@ class Encoder(tf.keras.layers.Layer):
 class Decoder(tf.keras.layers.Layer):
     def __init__(
         self,
-        predict_sequence_length,
-        n_decoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
-    ):
+        predict_sequence_length: int,
+        n_decoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
+    ) -> None:
         super(Decoder, self).__init__()
         self.predict_sequence_length = predict_sequence_length
         self.decoder_embedding = DataEmbedding(embed_size=attention_hidden_sizes)
@@ -274,13 +273,13 @@ class Decoder(tf.keras.layers.Layer):
             this_input = tf.concat([this_input, this_output[:, -1:, :]], axis=1)
         return this_input[:, 1:]
 
-    def get_causal_attention_mask(self, inputs):
+    def get_causal_attention_mask(self, inputs: tf.Tensor):
         input_shape = tf.shape(inputs)
         batch_size, sequence_length = input_shape[0], input_shape[1]
         i = tf.range(sequence_length)[:, tf.newaxis]
         j = tf.range(sequence_length)
         mask = tf.cast(i >= j, dtype="int32")
-        mask = tf.reshape(mask, (1, input_shape[1], input_shape[1]))
+        mask = tf.reshape(mask, (1, sequence_length, sequence_length))
         mult = tf.concat(
             [tf.expand_dims(batch_size, -1), tf.constant([1, 1], dtype=tf.int32)],
             axis=0,
@@ -291,15 +290,15 @@ class Decoder(tf.keras.layers.Layer):
 class DecoderLayer(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_decoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
-        eps=1e-7,
-    ):
+        n_decoder_layers: int,
+        attention_hidden_sizes: int,
+        num_heads: int,
+        attention_dropout: float,
+        ffn_hidden_sizes: int,
+        ffn_filter_sizes: int,
+        ffn_dropout: float,
+        eps: float = 1e-7,
+    ) -> None:
         super(DecoderLayer, self).__init__()
         self.n_decoder_layers = n_decoder_layers
         self.attention_hidden_sizes = attention_hidden_sizes
@@ -309,19 +308,17 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.ffn_filter_sizes = ffn_filter_sizes
         self.ffn_dropout = ffn_dropout
         self.eps = eps
-        self.layers = []
+        self.layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape):
         for _ in range(self.n_decoder_layers):
             self_attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            enc_dec_attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
+            attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
+            ffn_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
-            self.layers.append(
-                [self_attention_layer, enc_dec_attention_layer, feed_forward_layer, ln_layer1, ln_layer2, ln_layer3]
-            )
+            self.layers.append([self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3])
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None):
@@ -346,13 +343,13 @@ class DecoderLayer(tf.keras.layers.Layer):
         x = decoder_inputs
 
         for _, layer in enumerate(self.layers):
-            self_attention_layer, enc_dec_attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 = layer
+            self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 = layer
             dec = x
             dec = self_attention_layer(dec, mask=tgt_mask)
-            dec1 = ln_layer1(x + dec)
-            dec1 = enc_dec_attention_layer(dec1, encoder_memory, encoder_memory, mask=cross_mask)
-            dec2 = ln_layer2(dec + dec1)
-            dec2 = ffn_layer(dec2)
+            dec = ln_layer1(x + dec)
+            dec1 = attention_layer(dec, encoder_memory, encoder_memory, mask=cross_mask)
+            dec1 = ln_layer2(dec + dec1)
+            dec2 = ffn_layer(dec1)
             x = ln_layer3(dec1 + dec2)
         return x
 

@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -13,7 +13,7 @@ from tfts.layers.attention_layer import FullAttention
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-params = {
+params: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(3)],
     "kernel_sizes": [2 for _ in range(3)],
     "filters": 32,
@@ -33,7 +33,7 @@ class WaveNet(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -51,7 +51,7 @@ class WaveNet(object):
             predict_sequence_length=predict_sequence_length,
         )
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """wavenet call
 
         Parameters
@@ -102,7 +102,9 @@ class WaveNet(object):
 
 
 class Encoder(object):
-    def __init__(self, kernel_sizes, filters, dilation_rates, dense_hidden_size):
+    def __init__(
+        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int
+    ) -> None:
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -114,7 +116,7 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
-    def __call__(self, x):
+    def __call__(self, x: tf.Tensor):
         inputs = self.dense_time1(inputs=x)
 
         skip_outputs = []
@@ -137,7 +139,9 @@ class Encoder(object):
 
 
 class Decoder1(object):
-    def __init__(self, filters, dilation_rates, dense_hidden_size, predict_sequence_length=24):
+    def __init__(
+        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+    ) -> None:
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
         self.dense1 = Dense(filters, activation="tanh")
@@ -152,12 +156,12 @@ class Decoder1(object):
         decoder_features,
         decoder_init_input,
         encoder_outputs,
-        teacher=None,
-        scheduler_sampling=0,
-        training=None,
-        **kwargs
+        teacher: Optional[tf.Tensor] = None,
+        scheduler_sampling: float = 0.0,
+        training: Optional[bool] = None,
+        **kwargs: Dict
     ):
-        """_summary_
+        """wavenet decoder1
 
         Parameters
         ----------
@@ -223,7 +227,9 @@ class Decoder1(object):
 class Decoder2(object):
     """Decoder need avoid future data leaks"""
 
-    def __init__(self, filters, dilation_rates, dense_hidden_size, predict_sequence_length=24):
+    def __init__(
+        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+    ):
         self.filters = filters
         self.dilation_rates = dilation_rates
         self.predict_sequence_length = predict_sequence_length
@@ -234,7 +240,7 @@ class Decoder2(object):
         self.dense_5 = Dense(dense_hidden_size, activation="relu", name="decoder_dense_5")
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
-    def __call__(self, decoder_features, decoder_init_input, encoder_states, teacher=None):
+    def __call__(self, decoder_features: tf.Tensor, decoder_init_input, encoder_states, teacher=None):
         """_summary_
 
         Parameters

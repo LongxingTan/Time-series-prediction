@@ -21,7 +21,7 @@ from tensorflow.keras.layers import (
 
 from tfts.layers.attention_layer import FullAttention
 
-params = {
+params: Dict[str, Any] = {
     "rnn_type": "gru",
     "bi_direction": False,
     "rnn_size": 64,
@@ -191,7 +191,7 @@ class RNN2(object):
         self.dense1 = Dense(predict_sequence_length)
         self.dense2 = Dense(1)
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
         """_summary_
 
         Parameters

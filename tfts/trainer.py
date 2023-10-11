@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 import logging
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,38 +14,40 @@ __all__ = ["Trainer", "KerasTrainer"]
 
 
 class Trainer(object):
-    """Custom trainer in tensorflow"""
+    """Custom trainer for tensorflow"""
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
-        loss_fn=tf.keras.losses.MeanSquaredError(),
-        optimizer=tf.keras.optimizers.Adam(0.003),
-        lr_scheduler=None,
-        strategy=None,
-        **kwargs
-    ):
+        model: Union[tf.keras.Model, tf.keras.Sequential],
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
+        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        **kwargs: Dict[str, Any]
+    ) -> None:
         self.model = model
-
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
 
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
     def train(
         self,
-        train_loader,
-        valid_loader=None,
+        train_loader: Union[tf.data.Dataset, Generator],
+        valid_loader: Union[tf.data.Dataset, Generator, None] = None,
         n_epochs: int = 10,
         batch_size: int = 8,
         learning_rate: float = 3e-4,
         verbose: int = 1,
-        eval_metric=None,
+        eval_metric: Union[Callable, List[Callable], None] = None,
         model_dir: Optional[str] = None,
         use_ema: bool = False,
         stop_no_improve_epochs: Optional[int] = None,
-        transform=None,
-    ):
+        transform: Optional[Callable] = None,
+    ) -> None:
         """train function
 
         Parameters
@@ -74,7 +76,11 @@ class Trainer(object):
             _description_, by default None
         """
         self.learning_rate = learning_rate
-        self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
+        if eval_metric:
+            if isinstance(eval_metric, Iterable):
+                self.eval_metric = eval_metric
+            else:
+                self.eval_metric = [eval_metric]
         self.use_ema = use_ema
         self.transform = transform
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
@@ -86,12 +92,12 @@ class Trainer(object):
             model_dir = "../weights"
 
         if stop_no_improve_epochs is not None:
-            no_improve_epochs = 0
-            best_metric = -np.inf
+            no_improve_epochs: int = 0
+            best_metric: float = float("inf")
 
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be tf.keras.Model or has build_model method")
+                raise TypeError("Trainer model should either be tf.keras.Model or has the build_model method")
             x = list(train_loader.take(1).as_numpy_iterator())[0][0]
             if isinstance(x, dict):
                 inputs = {key: Input(item.shape[1:]) for key, item in x.items()}
@@ -133,7 +139,7 @@ class Trainer(object):
             y_trues.append(y_train)
 
         scores = []
-        if self.eval_metric:
+        if self.eval_metric is not None:
             y_preds = tf.concat(y_preds, axis=0)
             y_trues = tf.concat(y_trues, axis=0)
 
@@ -160,7 +166,7 @@ class Trainer(object):
         return y_pred, loss
 
     def valid_loop(self, valid_loader):
-        valid_loss = 0.0
+        valid_loss: float = 0.0
         y_valid_trues, y_valid_preds = [], []
 
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
@@ -210,36 +216,42 @@ class KerasTrainer(object):
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential, Type],
-        loss_fn=tf.keras.losses.MeanSquaredError(),
-        optimizer=tf.keras.optimizers.Adam(0.003),
-        lr_scheduler=None,
-        strategy=None,
-        **kwargs
-    ):
+        model: Union[tf.keras.Model, tf.keras.Sequential],
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
+        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        run_eagerly: bool = True,
+        **kwargs: Dict
+    ) -> None:
         """
         model: tf.keras.Model instance
         loss: loss function
         optimizer: tf.keras.Optimizer instance
+        run_eargely: it depends which one is much faster
         """
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
+        self.run_eargely = run_eagerly
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def train(
         self,
         train_dataset,
         valid_dataset=None,
-        n_epochs=20,
-        batch_size=64,
-        steps_per_epoch=None,
-        callback_eval_metrics=None,
-        early_stopping=None,
+        n_epochs: int = 20,
+        batch_size: int = 64,
+        steps_per_epoch: Optional[int] = None,
+        callback_metrics: Optional[List] = None,
+        early_stopping: Optional[bool] = None,
         checkpoint=None,
-        verbose=2,
-        **kwargs
+        verbose: int = 2,
+        **kwargs: Dict
     ):
         """
         train_dataset: tf.data.Dataset instance, or [x_train, y_train]
@@ -289,7 +301,9 @@ class KerasTrainer(object):
             self.model = self.model.build_model(inputs=inputs)
 
         # print(self.model.summary())
-        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_eval_metrics, run_eagerly=True)
+        self.model.compile(
+            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eargely
+        )
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
 
@@ -315,14 +329,14 @@ class KerasTrainer(object):
             )
         return self.history
 
-    def predict(self, x_test, batch_size=1):
-        y_test_pred = self.model.predict(x_test, batch_size=batch_size)
+    def predict(self, x_test, batch_size: int = 1):
+        y_test_pred = self.model(x_test)
         return y_test_pred
 
     def get_model(self):
         return self.model
 
-    def save_model(self, model_dir, only_pb=True, checkpoint_dir=None):
+    def save_model(self, model_dir, only_pb: bool = True, checkpoint_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
             logging.info("checkpoint Loaded", checkpoint_dir)

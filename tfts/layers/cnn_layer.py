@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.wavenet`"""
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
@@ -31,7 +33,7 @@ class ConvTemp(tf.keras.layers.Layer):
         self.causal = causal
         self.kernel_initializer = initializers.get(kernel_initializer)
 
-    def build(self, input_shape):  # Create the weights
+    def build(self, input_shape: Tuple[int]) -> None:
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
             kernel_initializer=self.kernel_initializer,
@@ -75,38 +77,38 @@ class ConvTemp(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-class ConvAttTemp(tf.keras.layers.Layer):
-    """Temp convolutional attention layer"""
-
-    def __init__(self):
-        super(ConvAttTemp, self).__init__()
-        self.temporal_conv = ConvTemp()
-        self.att = SelfAttention()
-
-    def build(self, input_shape):
-        super(ConvAttTemp, self).build(input_shape)
-
-    def call(self, inputs):
-        """_summary_
-
-        Parameters
-        ----------
-        inputs : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-        x = inputs
-        x = self.temporal_conv(x)
-        x = self.att(x)
-        return x
-
-    def get_config(self):
-        config = {
-            "units": self.units,
-        }
-        base_config = super(ConvAttTemp, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+# class ConvAttTemp(tf.keras.layers.Layer):
+#     """Temp convolutional attention layer"""
+#
+#     def __init__(self):
+#         super(ConvAttTemp, self).__init__()
+#         self.temporal_conv = ConvTemp()
+#         self.att = SelfAttention()
+#
+#     def build(self, input_shape: Tuple[Optional[int], ...]):
+#         super(ConvAttTemp, self).build(input_shape)
+#
+#     def call(self, inputs):
+#         """_summary_
+#
+#         Parameters
+#         ----------
+#         inputs : _type_
+#             _description_
+#
+#         Returns
+#         -------
+#         _type_
+#             _description_
+#         """
+#         x = inputs
+#         x = self.temporal_conv(x)
+#         x = self.att(x)
+#         return x
+#
+#     def get_config(self):
+#         config = {
+#             "units": self.units,
+#         }
+#         base_config = super(ConvAttTemp, self).get_config()
+#         return dict(list(base_config.items()) + list(config.items()))

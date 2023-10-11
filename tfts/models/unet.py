@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatena
 
 from tfts.layers.unet_layer import conv_br, re_block
 
-params = {
+params: Dict[str, Any] = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
@@ -35,7 +35,7 @@ class Unet(object):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def __call__(self, x, training=True):
+    def __call__(self, x: tf.Tensor, training: bool = True):
         """_summary_
 
         Parameters
@@ -71,7 +71,7 @@ class Encoder(object):
     def __init__(self):
         pass
 
-    def __call__(self, input_tensor, units=64, kernel_size=2, depth=2):
+    def __call__(self, input_tensor: tf.Tensor, units: int = 64, kernel_size: int = 2, depth: int = 2):
         """_summary_
 
         Parameters
@@ -119,7 +119,7 @@ class Decoder(object):
     def __init__(self):
         pass
 
-    def __call__(self, input_tensor, units=64, kernel_size=2, predict_seq_length=1):
+    def __call__(self, input_tensor: tf.Tensor, units: int = 64, kernel_size: int = 2, predict_seq_length: int = 1):
         """_summary_
 
         Parameters

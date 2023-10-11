@@ -2,6 +2,8 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.transformer`"""
 
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding, LayerNormalization, SpatialDropout1D
@@ -25,7 +27,7 @@ class TokenEmbedding(tf.keras.layers.Layer):
         super(TokenEmbedding, self).__init__()
         self.embed_size = embed_size
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.token_weights = self.add_weight(
             name="token_weights",
             shape=[input_shape[-1], self.embed_size],
@@ -57,7 +59,7 @@ class TokenRnnEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.embed_size = embed_size
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.rnn = GRU(self.embed_size, return_sequences=True, return_state=True)
         super().build(input_shape)
 
@@ -89,7 +91,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
         super(PositionalEmbedding, self).__init__()
         self.max_len = max_len
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super(PositionalEmbedding, self).build(input_shape)
 
     def call(self, x, masking=True):
@@ -131,7 +133,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         super(PositionalEncoding, self).__init__()
         self.max_len = max_len
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super(PositionalEncoding, self).build(input_shape)
 
     def call(self, x, masking=True):
@@ -177,7 +179,7 @@ class FixedEmbedding(tf.keras.layers.Layer):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         self.embed = tf.keras.layers.Embedding(input_dim=input_shape[1], output_dim=input_shape[2])
         super().build(input_shape)
 
@@ -234,7 +236,7 @@ class DataEmbedding(tf.keras.layers.Layer):
         self.positional_embedding = PositionalEncoding()
         self.dropout = Dropout(dropout)
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[Optional[int], ...]):
         super(DataEmbedding, self).build(input_shape)
 
     def call(self, x):

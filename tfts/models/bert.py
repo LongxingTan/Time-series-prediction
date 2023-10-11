@@ -22,7 +22,7 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
-params = {
+params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "use_token_embedding": False,
     "attention_hidden_sizes": 32 * 1,
@@ -44,7 +44,7 @@ class Bert(object):
         predict_sequence_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
-    ):
+    ) -> None:
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
@@ -85,20 +85,20 @@ class Bert(object):
         # self.dense_se = Dense(16, activation='relu')
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Bert model call
 
         Parameters
         ----------
         inputs : _type_
-            _description_
+            BERT model input
         teacher : _type_, optional
-            _description_, by default None
+            teacher forcing for autoregression, by default None
 
         Returns
         -------
         tf.Tensor
-            _description_
+            BERT model output tensor as prediction output
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -115,7 +115,7 @@ class Bert(object):
         # encoder_features_res = self.tcn(encoder_features)
         # encoder_features += encoder_features_res
 
-        memory = self.encoder(encoder_feature, src_mask=None)  # batch * train_sequence * (hidden * heads)
+        memory = self.encoder(encoder_feature, encoder_mask=None)  # batch * train_sequence * (hidden * heads)
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)

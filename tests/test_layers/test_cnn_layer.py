@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.cnn_layer import ConvAttTemp, ConvTemp
+from tfts.layers.cnn_layer import ConvTemp
 
 
 class CNNLayerTest(unittest.TestCase):

@@ -2,6 +2,7 @@
 
 import logging
 import random
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,9 @@ air_passenger_url = (
 )
 
 
-def get_data(name: str = "sine", train_length: int = 24, predict_length: int = 8, test_size: float = 0.1):
+def get_data(
+    name: str = "sine", train_length: int = 24, predict_length: int = 8, test_size: float = 0.1
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], None]:
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
         return get_sine(train_length, predict_length, test_size=test_size)
@@ -23,7 +26,9 @@ def get_data(name: str = "sine", train_length: int = 24, predict_length: int = 8
         raise ValueError("unsupported data of {} yet, try 'sine', 'airpassengers'".format(name))
 
 
-def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2, n_examples=100):
+def get_sine(
+    train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2, n_examples: int = 100
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]]]:
     """
     Generate synthetic sine wave data.
 
@@ -36,8 +41,8 @@ def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, 
     Returns:
     (tuple): Two tuples of numpy arrays containing training and validation data.
     """
-    x = []
-    y = []
+    x: List[np.ndarray] = []
+    y: List[np.ndarray] = []
     for _ in range(n_examples):
         rand = random.random() * 2 * np.pi
         sig1 = np.sin(np.linspace(rand, 3.0 * np.pi + rand, train_sequence_length + predict_sequence_length))
@@ -54,18 +59,18 @@ def get_sine(train_sequence_length: int = 24, predict_sequence_length: int = 8, 
         x.append(x_.T)
         y.append(y_.T)
 
-    x = np.array(x)[:, :, 0:1]
-    y = np.array(y)[:, :, 0:1]
-    logging.info("Load sine data", x.shape, y.shape)
+    x_array = np.array(x)[:, :, 0:1]
+    y_array = np.array(y)[:, :, 0:1]
+    logging.info("Load sine data", x_array.shape, y_array.shape)
 
     if test_size > 0:
         slice = int(n_examples * (1 - test_size))
-        x_train = x[:slice]
-        y_train = y[:slice]
-        x_valid = x[slice:]
-        y_valid = y[slice:]
+        x_train = x_array[:slice]
+        y_train = y_array[:slice]
+        x_valid = x_array[slice:]
+        y_valid = y_array[slice:]
         return (x_train, y_train), (x_valid, y_valid)
-    return x, y
+    return x_array, y_array
 
 
 def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2):
@@ -86,25 +91,26 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
     v = df.iloc[:, 1:2].values
     v = (v - np.max(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
 
-    x, y = [], []
+    x: List[np.ndarray] = []
+    y: List[np.ndarray] = []
     for seq in range(1, train_sequence_length + 1):
         x_roll = np.roll(v, seq, axis=0)
         x.append(x_roll)
-    x = np.stack(x, axis=1)
-    x = x[train_sequence_length:-predict_sequence_length, ::-1, :]
+    x_array = np.stack(x, axis=1)
+    x_array = x_array[train_sequence_length:-predict_sequence_length, ::-1, :]
 
     for seq in range(predict_sequence_length):
         y_roll = np.roll(v, -seq)
         y.append(y_roll)
-    y = np.stack(y, axis=1)
-    y = y[train_sequence_length:-predict_sequence_length]
-    logging.info("Load air passenger data", x.shape, y.shape)
+    y_array = np.stack(y, axis=1)
+    y_array = y_array[train_sequence_length:-predict_sequence_length]
+    logging.info("Load air passenger data", x_array.shape, y_array.shape)
 
     if test_size > 0:
-        slice = int(len(x) * (1 - test_size))
-        x_train = x[:slice]
-        y_train = y[:slice]
-        x_valid = x[slice:]
-        y_valid = y[slice:]
+        slice = int(len(x_array) * (1 - test_size))
+        x_train = x_array[:slice]
+        y_train = y_array[:slice]
+        x_valid = x_array[slice:]
+        y_valid = y_array[slice:]
         return (x_train, y_train), (x_valid, y_valid)
-    return x, y
+    return x_array, y_array
