@@ -20,6 +20,9 @@ from tfts.layers.attention_layer import FullAttention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
+tf.config.run_functions_eagerly(True)
+
+
 params = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
@@ -147,9 +150,7 @@ class Encoder(tf.keras.layers.Layer):
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
                 x = attn_layer(x, mask)
-                # print(x.shape)
                 # x = conv_layer(x)
-                # print(x.shape)
             x = self.layers[-1](x, mask)
 
         else:

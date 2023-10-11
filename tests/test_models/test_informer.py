@@ -2,8 +2,10 @@
 python -m unittest -v tests/test_models/test_informer.py
 """
 
+from typing import Any, Dict
 import unittest
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization
 
@@ -11,6 +13,8 @@ import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
 from tfts.layers.attention_layer import FullAttention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer
+
+tf.config.run_functions_eagerly(True)
 
 
 class InformerTest(unittest.TestCase):
@@ -101,3 +105,45 @@ class InformerTest(unittest.TestCase):
         y = decoder(x, memory=memory)
 
         self.assertEqual(y.shape, (2, 50, attention_hidden_sizes))
+
+    def test_train(self):
+        params: Dict[str, Any] = {
+            "n_encoder_layers": 1,
+            "n_decoder_layers": 1,
+            "attention_hidden_sizes": 32 * 1,
+            "num_heads": 1,
+            "attention_dropout": 0.0,
+            "ffn_hidden_sizes": 32 * 1,
+            "ffn_filter_sizes": 32 * 1,
+            "ffn_dropout": 0.0,
+            "skip_connect_circle": False,
+            "skip_connect_mean": False,
+            "prob_attention": False,
+            "distil_conv": False,
+        }
+
+        custom_params = params.copy()
+        custom_params["prob_attention"] = True
+
+        train_length = 49
+        predict_length = 10
+        n_encoder_feature = 2
+        n_decoder_feature = 3
+
+        x_train = (
+            np.random.rand(1, train_length, 1),
+            np.random.rand(1, train_length, n_encoder_feature),
+            np.random.rand(1, predict_length, n_decoder_feature),
+        )
+        y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length, 1)
+
+        x_valid = (
+            np.random.rand(1, train_length, 1),
+            np.random.rand(1, train_length, n_encoder_feature),
+            np.random.rand(1, predict_length, n_decoder_feature),
+        )
+        y_valid = np.random.rand(1, predict_length, 1)
+
+        model = AutoModel("Informer", predict_length=predict_length, custom_model_params=custom_params)
+        trainer = KerasTrainer(model)
+        trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)

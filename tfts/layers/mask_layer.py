@@ -34,7 +34,7 @@ class ProbMask:
         mask_expanded = tf.broadcast_to(mask, [B, H, L, scores.shape[-1]])
         # mask specific q based on reduced Q
         mask_Q = tf.gather_nd(mask_expanded, index)
-        self._mask = tf.cast(tf.reshape(mask_Q, scores.shape), tf.bool)
+        self._mask = tf.cast(tf.reshape(mask_Q, tf.shape(scores)), tf.bool)
 
     @property
     def mask(self):
