@@ -166,7 +166,7 @@ class Trainer(object):
         return y_pred, loss
 
     def valid_loop(self, valid_loader):
-        valid_loss = 0.0
+        valid_loss: float = 0.0
         y_valid_trues, y_valid_preds = [], []
 
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
@@ -221,18 +221,21 @@ class KerasTrainer(object):
         optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
         strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        run_eagerly: bool = True,
         **kwargs: Dict
     ) -> None:
         """
         model: tf.keras.Model instance
         loss: loss function
         optimizer: tf.keras.Optimizer instance
+        run_eargely: it depends which one is much faster
         """
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
+        self.run_eargely = run_eagerly
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -298,7 +301,9 @@ class KerasTrainer(object):
             self.model = self.model.build_model(inputs=inputs)
 
         # print(self.model.summary())
-        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=False)
+        self.model.compile(
+            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eargely
+        )
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
 
