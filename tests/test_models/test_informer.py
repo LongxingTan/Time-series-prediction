@@ -129,20 +129,21 @@ class InformerTest(unittest.TestCase):
         predict_length = 10
         n_encoder_feature = 2
         n_decoder_feature = 3
+        batch_size = 1
 
         x_train = (
-            np.random.rand(1, train_length, 1),
-            np.random.rand(1, train_length, n_encoder_feature),
-            np.random.rand(1, predict_length, n_decoder_feature),
+            np.random.rand(batch_size, train_length, 1),
+            np.random.rand(batch_size, train_length, n_encoder_feature),
+            np.random.rand(batch_size, predict_length, n_decoder_feature),
         )
-        y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length, 1)
+        y_train = np.random.rand(batch_size, predict_length, 1)  # target: (batch, predict_length, 1)
 
         x_valid = (
-            np.random.rand(1, train_length, 1),
-            np.random.rand(1, train_length, n_encoder_feature),
-            np.random.rand(1, predict_length, n_decoder_feature),
+            np.random.rand(batch_size, train_length, 1),
+            np.random.rand(batch_size, train_length, n_encoder_feature),
+            np.random.rand(batch_size, predict_length, n_decoder_feature),
         )
-        y_valid = np.random.rand(1, predict_length, 1)
+        y_valid = np.random.rand(batch_size, predict_length, 1)
 
         model = AutoModel("Informer", predict_length=predict_length, custom_model_params=custom_params)
         trainer = KerasTrainer(model)

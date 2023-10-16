@@ -155,10 +155,9 @@ class ProbAttention(tf.keras.layers.Layer):
         K_sample = tf.gather(K_sample, indx_q_seq, axis=2)
         K_sample = tf.gather(K_sample, indx_k_seq, axis=3)
 
-        Q_K_sample = tf.squeeze(tf.matmul(tf.expand_dims(q, -2), tf.einsum("...ij->...ji", K_sample)))
+        Q_K_sample = tf.squeeze(tf.matmul(tf.expand_dims(q, -2), tf.einsum("...ij->...ji", K_sample)), axis=3)
         M = tf.math.reduce_max(Q_K_sample, axis=-1) - tf.raw_ops.Div(x=tf.reduce_sum(Q_K_sample, axis=-1), y=L)
         m_top = tf.math.top_k(M, top_n, sorted=False)[1]
-        m_top = m_top[tf.newaxis, tf.newaxis] if B == 1 else m_top
 
         batch_indexes = tf.tile(tf.range(B)[:, tf.newaxis, tf.newaxis], (1, H, top_n))
         head_indexes = tf.tile(tf.range(H)[tf.newaxis, :, tf.newaxis], (B, 1, top_n))
