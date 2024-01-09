@@ -30,6 +30,7 @@ class AutoModel(object):
         predict_length: int = 1,
         custom_model_params: Optional[Dict[str, object]] = None,
         custom_model_head: Optional[Callable] = None,
+        include_top: bool = False,
     ):
         if use_model.lower() == "seq2seq":
             self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
@@ -82,6 +83,40 @@ class AutoModel(object):
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
     def from_pretrained(self, name: str):
+        return
+
+
+class AutoModelForPrediction(object):
+    def __init__(self):
+        pass
+
+    def __call__(self):
+        return
+
+
+class AutoModelForClassification(object):
+    def __init__(self):
+        pass
+
+    def __call__(
+        self,
+    ):
+        return
+
+
+class AutoModelForAnomaly(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return
+
+
+class AutoModelForSegmentation(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, *args, **kwargs):
         return
 
 
