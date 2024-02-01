@@ -85,7 +85,9 @@ class Bert(object):
         # self.dense_se = Dense(16, activation='relu')
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None) -> tf.Tensor:
+    def __call__(
+        self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None
+    ) -> tf.Tensor:
         """Bert model call
 
         Parameters

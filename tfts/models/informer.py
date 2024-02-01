@@ -100,7 +100,7 @@ class Informer(object):
         self.projection = Dense(1)
         # self.projection = Dense(predict_sequence_length, activation=None)
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """Informer call function"""
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs

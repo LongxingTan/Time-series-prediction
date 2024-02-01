@@ -1,5 +1,5 @@
 """Demo of time series prediction by tfts
-python run_prediction.py --use_model rnn
+python run_prediction_simple.py --use_model rnn
 """
 
 import argparse

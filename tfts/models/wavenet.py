@@ -51,7 +51,7 @@ class WaveNet(object):
             predict_sequence_length=predict_sequence_length,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """wavenet call
 
         Parameters

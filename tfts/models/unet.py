@@ -35,7 +35,7 @@ class Unet(object):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def __call__(self, x: tf.Tensor, training: bool = True):
+    def __call__(self, x: tf.Tensor, training: bool = True, return_dict: Optional[bool] = None):
         """_summary_
 
         Parameters

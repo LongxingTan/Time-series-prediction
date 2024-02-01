@@ -237,7 +237,7 @@ def build_model():
 
 <!-- ### Performance
 
-[Time series prediction](./examples/run_prediction.py) performance is evaluated by tfts implementation, not official
+[Time series prediction](./examples/run_prediction_simple.py) performance is evaluated by tfts implementation, not official
 
 | Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>wrmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: |

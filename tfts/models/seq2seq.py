@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1409.3215>`_
 """
 
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
@@ -26,6 +27,11 @@ params: Dict[str, Any] = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
+
+
+@dataclass
+class ModelArguments:
+    pass
 
 
 class Seq2seq(object):
@@ -54,7 +60,7 @@ class Seq2seq(object):
             attention_dropout=params["attention_dropout"],
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """A RNN seq2seq structure for time series
 
         :param inputs: _description_

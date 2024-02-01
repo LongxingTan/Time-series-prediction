@@ -264,7 +264,7 @@ model = AutoModel('rnn', custom_model_params=custom_model_params)
 
 ### 更多应用
 
-- [时序预测](./examples/run_prediction.py)
+- [时序预测](./examples/run_prediction_simple.py)
 - [时序分类](./examples/run_classification.py)
 - [异常检测](./examples/run_anomaly.py)
 - [Uncertainty prediction](examples/run_uncertainty.py)

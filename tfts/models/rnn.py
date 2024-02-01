@@ -56,7 +56,7 @@ class RNN(object):
         self.dense2 = Dense(128, activation="relu")
         self.drop2 = Dropout(0.25)
 
-    def __call__(self, inputs, teacher=None):
+    def __call__(self, inputs, teacher=None, return_dict: Optional[bool] = None):
         """RNN model call
 
         Parameters

@@ -40,7 +40,7 @@ class NBeats(object):
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
-    def __call__(self, inputs: tf.Tensor):
+    def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
         if isinstance(inputs, (list, tuple)):
             print("NBeats only support single variable prediction, so ignore encoder_features and decoder_features")
             x, encoder_features, _ = inputs

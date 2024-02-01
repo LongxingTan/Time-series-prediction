@@ -321,7 +321,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             self.layers.append([self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3])
         super(DecoderLayer, self).build(input_shape)
 
-    def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None):
+    def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None, return_dict: Optional[bool] = None):
         """Decoder layer
 
         Parameters

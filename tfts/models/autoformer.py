@@ -73,7 +73,7 @@ class AutoFormer(object):
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """autoformer call
 
         Parameters

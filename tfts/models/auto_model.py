@@ -60,7 +60,9 @@ class AutoModel(object):
             raise ValueError("unsupported model of {} yet".format(use_model))
 
     def __call__(
-        self, x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]]
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        return_dict: Optional[bool] = None,
     ):
         """automodel callable
 
@@ -76,13 +78,14 @@ class AutoModel(object):
         """
         # if isinstance(x, (list, tuple)):
         #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
-        return self.model(x)
+        return self.model(x, return_dict=return_dict)
 
     def build_model(self, inputs):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
-    def from_pretrained(self, name: str):
+    @classmethod
+    def from_pretrained(cls, name: str):
         return
 
 
