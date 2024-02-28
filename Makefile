@@ -15,7 +15,6 @@ style:
 test:
 	python -m unittest
 
-
 # run tests for the docs
 
 docs:
