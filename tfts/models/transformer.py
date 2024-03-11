@@ -131,6 +131,9 @@ class Transformer(object):
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
+    def _shift_right(self, input_ids):
+        return  # shifted_input_ids
+
 
 class Encoder(tf.keras.layers.Layer):
     def __init__(
