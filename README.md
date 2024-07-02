@@ -38,6 +38,7 @@
 - Advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
+
 ## Tutorial
 
 **Installation**
@@ -49,7 +50,7 @@
 $ pip install tfts
 ```
 
-**Basic usage**
+**Quick start**
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
@@ -81,7 +82,7 @@ You could train your own data by preparing 3D data as inputs, for both inputs an
 
 Encoder only model inputs
 
-```python
+``` python
 train_length = 49
 predict_length = 10
 n_feature = 2
@@ -99,7 +100,7 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 
 Encoder-decoder model inputs
 
-```python
+``` python
 # option1: np.ndarray
 
 train_length = 49
@@ -126,7 +127,7 @@ trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
-```python
+``` python
 # option2: tf.data.Dataset
 
 class FakeReader(object):
@@ -175,7 +176,7 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1
 
 **Prepare custom model params**
 
-```python
+``` python
 import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
@@ -210,7 +211,7 @@ You could build the custom model based on tfts, especially
 - add custom-defined embeddings for categorical variables
 - add custom-defined head layers for classification or anomaly task
 
-```python
+``` python
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
 from tfts import AutoModel
@@ -229,6 +230,7 @@ def build_model():
     model.compile(loss="mse", optimizer="rmsprop")
     return model
 ```
+
 
 ## Examples
 

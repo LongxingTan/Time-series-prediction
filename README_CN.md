@@ -41,6 +41,7 @@
 
 中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
 
+
 ## 快速使用
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
@@ -86,7 +87,7 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
 编码类模型输入
 
-```python
+``` python
 train_length = 49
 predict_length = 10
 n_feature = 2
@@ -99,12 +100,11 @@ y_valid = np.random.rand(1, predict_length, 1)
 model = AutoModel("rnn", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
-
 ```
 
 编码-解码类模型输入
 
-```python
+``` python
 # option1
 
 train_length = 49
@@ -130,7 +130,7 @@ trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
-```python
+``` python
 # option2
 
 class FakeReader(object):
@@ -179,7 +179,7 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1
 
 **修改模型配置参数**
 
-```python
+``` python
 import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
@@ -210,7 +210,7 @@ model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_para
 
 </details>
 
-```python
+``` python
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
 from tfts import AutoModel
@@ -232,7 +232,7 @@ def build_model():
 
 **修改自己的模型配置**
 
-```python
+``` python
 import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
