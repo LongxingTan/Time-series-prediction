@@ -23,13 +23,11 @@
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
-[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
 [![Contributing][contributing-image]][contributing-url]
-[![CodeQL Status][codeql-image]][codeql-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
