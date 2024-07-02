@@ -217,7 +217,7 @@ class KerasTrainer(object):
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.legacy.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
         strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         run_eagerly: bool = True,
