@@ -4,7 +4,6 @@ from collections.abc import Iterable
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -353,6 +352,8 @@ class KerasTrainer(object):
         return
 
     def plot(self, history, true, pred):
+        import matplotlib.pyplot as plt
+
         train_length = history.shape[1]
         pred_length = true.shape[1]
         example = np.random.choice(range(history.shape[0]))

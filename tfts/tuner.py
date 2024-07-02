@@ -3,7 +3,6 @@
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import numpy as np
-import optuna
 
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import AutoModel
@@ -18,7 +17,11 @@ class AutoTuner(object):
         self.use_model = use_model
 
     def generate_parameter(self) -> None:
+        import optuna
+
         return
 
     def run(self, config, direction: str = "maximize") -> None:
+        import optuna
+
         return

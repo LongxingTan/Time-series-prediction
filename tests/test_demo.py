@@ -4,7 +4,6 @@ python -m unittest -v tests/test_demo.py
 
 import unittest
 
-import matplotlib.pyplot as plt
 import tensorflow as tf
 
 import tfts
@@ -23,7 +22,8 @@ class DemoTest(unittest.TestCase):
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
 
         pred = trainer.predict(x_valid)
-        trainer.plot(history=x_valid, true=y_valid, pred=pred)
+        # trainer.plot(history=x_valid, true=y_valid, pred=pred)
+        print(pred)
 
     def test_demo2(self):
         train_length = 24
@@ -37,8 +37,8 @@ class DemoTest(unittest.TestCase):
         trainer.train((x_train, y_train), n_epochs=3)
 
         pred = trainer.predict(x_valid)
-        trainer.plot(history=x_valid, true=y_valid, pred=pred)
-        # plt.show()
+        # trainer.plot(history=x_valid, true=y_valid, pred=pred)
+        print(pred)
 
     # def test_auto_model(self):
     #     predict_length = 2

@@ -13,6 +13,4 @@ class TunerTest(unittest.TestCase):
         print(train[0].shape, valid[0].shape)
 
         config = AutoConfig("rnn").get_config()
-
-        tuner = AutoTuner("rnn")
-        tuner.run(config)
+        print(config)
