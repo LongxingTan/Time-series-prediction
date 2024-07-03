@@ -4,7 +4,6 @@ from collections.abc import Iterable
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -20,7 +19,7 @@ class Trainer(object):
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.legacy.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
         strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         **kwargs: Dict[str, Any]
@@ -218,7 +217,7 @@ class KerasTrainer(object):
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.legacy.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
         strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         run_eagerly: bool = True,
@@ -353,6 +352,8 @@ class KerasTrainer(object):
         return
 
     def plot(self, history, true, pred):
+        import matplotlib.pyplot as plt
+
         train_length = history.shape[1]
         pred_length = true.shape[1]
         example = np.random.choice(range(history.shape[0]))
