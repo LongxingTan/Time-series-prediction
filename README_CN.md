@@ -51,8 +51,8 @@
 - python >= 3.7
 - tensorflow >= 2.4
 
-``` bash
-$ pip install tfts
+```shell
+pip install tfts
 ```
 
 **入门使用**
@@ -79,7 +79,6 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 **训练自己的数据**
 
 为方便使用，将数据转化为三维作为tfts的输入
-
 - 选项1 `np.ndarray`
 - 选项2 `tf.data.Dataset`
 

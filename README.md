@@ -44,8 +44,8 @@
 - python >= 3.7
 - tensorflow >= 2.4
 
-``` bash
-$ pip install tfts
+```shell
+pip install tfts
 ```
 
 **Quick start**
@@ -74,7 +74,6 @@ plt.show()
 **Prepare your own data**
 
 You could train your own data by preparing 3D data as inputs, for both inputs and targets
-
 - option1 `np.ndarray`
 - option2 `tf.data.Dataset`
 
