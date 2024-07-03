@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoModel to choose different models"""
-
+from collections import OrderedDict
+import importlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -22,6 +23,22 @@ from tfts.models.wavenet import WaveNet
 
 from .base import BaseConfig, BaseModel
 
+MODEL_MAPPING_NAMES = OrderedDict(
+    [
+        ("seq2seq", "Seq2seq"),
+        ("rnn", "RNN"),
+        ("wavenet", "WaveNet"),
+        ("tcn", "TCN"),
+        ("transformer", "Transformer"),
+        ("bert", "Bert"),
+        ("informer", "Informer"),
+        ("autoformer", "AutoFormer"),
+        ("tft", "TFTransformer"),
+        ("unet", "Unet"),
+        ("nbeats", "NBeats"),
+    ]
+)
+
 
 class AutoModel(object):
     """tftf auto model"""
@@ -31,35 +48,10 @@ class AutoModel(object):
         use_model: str,
         predict_length: int = 1,
         custom_model_params: Optional[Dict[str, object]] = None,
-        custom_model_head: Optional[Callable] = None,
-        include_top: bool = False,
     ):
-        if use_model.lower() == "seq2seq":
-            self.model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "rnn":
-            self.model = RNN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "wavenet":
-            self.model = WaveNet(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "tcn":
-            self.model = TCN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "transformer":
-            self.model = Transformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "bert":
-            self.model = Bert(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "informer":
-            self.model = Informer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "autoformer":
-            self.model = AutoFormer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        # elif use_model.lower() == "tft":
-        #    self.model = TFTransformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "unet":
-            self.model = Unet(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        elif use_model.lower() == "nbeats":
-            self.model = NBeats(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        # elif use_model.lower() == "gan":
-        #     self.model = GAN(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-        else:
-            raise ValueError("unsupported model of {} yet".format(use_model))
+        class_name = MODEL_MAPPING_NAMES[use_model]
+        module = importlib.import_module(use_model)
+        self.model = getattr(module, class_name)
 
     def __call__(
         self,
@@ -111,7 +103,7 @@ class AutoModelForClassification(BaseModel):
 
     def __init__(self):
         super(AutoModelForClassification, self).__init__()
-        pass
+        self.model = AutoModel()
 
     def __call__(
         self,
@@ -124,7 +116,7 @@ class AutoModelForAnomaly(BaseModel):
 
     def __init__(self):
         super(AutoModelForAnomaly, self).__init__()
-        pass
+        self.model = AutoModel()
 
     def __call__(self, *args, **kwargs):
         return
@@ -135,7 +127,7 @@ class AutoModelForSegmentation(BaseModel):
 
     def __init__(self):
         super(AutoModelForSegmentation, self).__init__()
-        pass
+        self.model = AutoModel()
 
     def __call__(self, *args, **kwargs):
         return
