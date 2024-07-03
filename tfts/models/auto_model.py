@@ -20,9 +20,11 @@ from tfts.models.transformer import Transformer
 from tfts.models.unet import Unet
 from tfts.models.wavenet import WaveNet
 
+from .base import BaseConfig, BaseModel
+
 
 class AutoModel(object):
-    """AutoModel"""
+    """tftf auto model"""
 
     def __init__(
         self,
@@ -85,20 +87,30 @@ class AutoModel(object):
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
     @classmethod
+    def from_config(cls, name: str):
+        return
+
+    @classmethod
     def from_pretrained(cls, name: str):
         return
 
 
-class AutoModelForPrediction(object):
-    def __init__(self):
-        pass
+class AutoModelForPrediction(BaseModel):
+    """tfts model for prediction"""
+
+    def __init__(self, use_model):
+        super(AutoModelForPrediction, self).__init__()
+        self.model = AutoModel(use_model=use_model)
 
     def __call__(self):
         return
 
 
-class AutoModelForClassification(object):
+class AutoModelForClassification(BaseModel):
+    """tfts model for classification"""
+
     def __init__(self):
+        super(AutoModelForClassification, self).__init__()
         pass
 
     def __call__(
@@ -107,29 +119,23 @@ class AutoModelForClassification(object):
         return
 
 
-class AutoModelForAnomaly(object):
+class AutoModelForAnomaly(BaseModel):
+    """tfts model for anomaly detection"""
+
     def __init__(self):
+        super(AutoModelForAnomaly, self).__init__()
         pass
 
     def __call__(self, *args, **kwargs):
         return
 
 
-class AutoModelForSegmentation(object):
+class AutoModelForSegmentation(BaseModel):
+    """tfts model for time series segmentation"""
+
     def __init__(self):
+        super(AutoModelForSegmentation, self).__init__()
         pass
 
     def __call__(self, *args, **kwargs):
         return
-
-
-def build_tfts_model(use_model: str, predict_length: int, custom_model_params: Optional[Dict[str, Any]] = None):
-    if use_model.lower() == "seq2seq":
-        Model = Seq2seq(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-    elif use_model.lower() == "wavenet":
-        Model = WaveNet(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-    elif use_model.lower() == "transformer":
-        Model = Transformer(predict_sequence_length=predict_length, custom_model_params=custom_model_params)
-    else:
-        raise ValueError("unsupported use_model of {} yet".format(use_model))
-    return Model
