@@ -39,21 +39,21 @@ class Seq2seq(object):
 
     def __init__(
         self,
-        predict_sequence_length: int = 1,
+        predict_length: int = 1,
         custom_model_params: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
         if custom_model_params:
             params.update(custom_model_params)
         self.params = params
-        self.predict_sequence_length = predict_sequence_length
+        self.predict_sequence_length = predict_length
         self.encoder = Encoder(
             rnn_type=params["rnn_type"], rnn_size=params["rnn_size"], dense_size=params["dense_size"]
         )
         self.decoder = Decoder1(
             rnn_type=params["rnn_type"],
             rnn_size=params["rnn_size"],
-            predict_sequence_length=predict_sequence_length,
+            predict_sequence_length=predict_length,
             use_attention=params["use_attention"],
             attention_sizes=params["attention_sizes"],
             attention_heads=params["attention_heads"],

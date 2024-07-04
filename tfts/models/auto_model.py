@@ -10,17 +10,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from tfts.models.autoformer import AutoFormer
-from tfts.models.bert import Bert
-from tfts.models.informer import Informer
-from tfts.models.nbeats import NBeats
-from tfts.models.rnn import RNN
-from tfts.models.seq2seq import Seq2seq
-from tfts.models.tcn import TCN
-from tfts.models.transformer import Transformer
-from tfts.models.unet import Unet
-from tfts.models.wavenet import WaveNet
-
 from .base import BaseConfig, BaseModel
 
 MODEL_MAPPING_NAMES = OrderedDict(
@@ -33,7 +22,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bert", "Bert"),
         ("informer", "Informer"),
         ("autoformer", "AutoFormer"),
-        ("tft", "TFTransformer"),
+        # ("tft", "TFTransformer"),
         ("unet", "Unet"),
         ("nbeats", "NBeats"),
     ]
@@ -45,13 +34,13 @@ class AutoModel(object):
 
     def __init__(
         self,
-        use_model: str,
+        model_name: str,
         predict_length: int = 1,
         custom_model_params: Optional[Dict[str, object]] = None,
     ):
-        class_name = MODEL_MAPPING_NAMES[use_model]
-        module = importlib.import_module(use_model)
-        self.model = getattr(module, class_name)
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        self.model = getattr(module, class_name)(predict_length, custom_model_params=custom_model_params)
 
     def __call__(
         self,
@@ -90,9 +79,9 @@ class AutoModel(object):
 class AutoModelForPrediction(BaseModel):
     """tfts model for prediction"""
 
-    def __init__(self, use_model):
+    def __init__(self, model_name):
         super(AutoModelForPrediction, self).__init__()
-        self.model = AutoModel(use_model=use_model)
+        self.model = AutoModel(model_name)
 
     def __call__(self):
         return
@@ -101,9 +90,9 @@ class AutoModelForPrediction(BaseModel):
 class AutoModelForClassification(BaseModel):
     """tfts model for classification"""
 
-    def __init__(self):
+    def __init__(self, model_name):
         super(AutoModelForClassification, self).__init__()
-        self.model = AutoModel()
+        self.model = AutoModel(model_name)
 
     def __call__(
         self,
@@ -114,9 +103,9 @@ class AutoModelForClassification(BaseModel):
 class AutoModelForAnomaly(BaseModel):
     """tfts model for anomaly detection"""
 
-    def __init__(self):
+    def __init__(self, model_name):
         super(AutoModelForAnomaly, self).__init__()
-        self.model = AutoModel()
+        self.model = AutoModel(model_name)
 
     def __call__(self, *args, **kwargs):
         return
@@ -125,9 +114,9 @@ class AutoModelForAnomaly(BaseModel):
 class AutoModelForSegmentation(BaseModel):
     """tfts model for time series segmentation"""
 
-    def __init__(self):
+    def __init__(self, model_name):
         super(AutoModelForSegmentation, self).__init__()
-        self.model = AutoModel()
+        self.model = AutoModel(model_name)
 
     def __call__(self, *args, **kwargs):
         return
