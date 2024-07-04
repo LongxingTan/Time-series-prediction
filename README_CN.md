@@ -23,13 +23,11 @@
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
-[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
 [![Contributing][contributing-image]][contributing-url]
-[![CodeQL Status][codeql-image]][codeql-url]
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
@@ -40,6 +38,7 @@
 - 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门
 
 中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
+
 
 ## 快速使用
 
@@ -52,13 +51,13 @@
 - python >= 3.7
 - tensorflow >= 2.4
 
-``` bash
-$ pip install tfts
+```shell
+pip install tfts
 ```
 
 **入门使用**
 
-``` python
+```python
 import matplotlib.pyplot as plt
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
@@ -80,7 +79,6 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 **训练自己的数据**
 
 为方便使用，将数据转化为三维作为tfts的输入
-
 - 选项1 `np.ndarray`
 - 选项2 `tf.data.Dataset`
 
@@ -99,7 +97,6 @@ y_valid = np.random.rand(1, predict_length, 1)
 model = AutoModel("rnn", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
-
 ```
 
 编码-解码类模型输入
@@ -247,6 +244,7 @@ custom_model_params = {
 model = AutoModel('rnn', custom_model_params=custom_model_params)
 ```
 
+
 ## 示例
 
 东流tfts专注业界领先的深度模型
@@ -271,6 +269,7 @@ model = AutoModel('rnn', custom_model_params=custom_model_params)
 - [optuna调参](./examples/run_optuna_tune.py)
 - [多gpu与tpu加速训练](./examples)
 - [tf-serving部署](./examples) -->
+
 
 ## 引用
 

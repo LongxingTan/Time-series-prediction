@@ -23,13 +23,11 @@
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
-[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
 [![Contributing][contributing-image]][contributing-url]
-[![CodeQL Status][codeql-image]][codeql-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
@@ -38,6 +36,7 @@
 - Advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
+
 ## Tutorial
 
 **Installation**
@@ -45,16 +44,16 @@
 - python >= 3.7
 - tensorflow >= 2.4
 
-``` bash
-$ pip install tfts
+```shell
+pip install tfts
 ```
 
-**Basic usage**
+**Quick start**
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
 
-``` python
+```python
 import matplotlib.pyplot as plt
 import tfts
 from tfts import AutoModel, AutoConfig, KerasTrainer
@@ -75,7 +74,6 @@ plt.show()
 **Prepare your own data**
 
 You could train your own data by preparing 3D data as inputs, for both inputs and targets
-
 - option1 `np.ndarray`
 - option2 `tf.data.Dataset`
 
@@ -94,7 +92,6 @@ y_valid = np.random.rand(1, predict_length, 1)
 model = AutoModel("rnn", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
-
 ```
 
 Encoder-decoder model inputs
@@ -230,6 +227,7 @@ def build_model():
     return model
 ```
 
+
 ## Examples
 
 - [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022-wind power forecasting
@@ -263,6 +261,7 @@ def build_model():
 - [Serving by tf-serving](./examples) -->
 
 For other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
+
 
 ## Citation
 
