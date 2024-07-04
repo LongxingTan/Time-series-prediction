@@ -9,7 +9,9 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-__all__ = ["Trainer", "KerasTrainer"]
+logger = logging.getLogger(__name__)
+
+__all__ = ["Trainer", "KerasTrainer", "Seq2SeqKerasTrainer"]
 
 
 class Trainer(object):
@@ -362,3 +364,8 @@ class KerasTrainer(object):
         plt.plot(range(train_length, train_length + pred_length), true[example, :, 0], label="true")
         plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="pred")
         plt.legend()
+
+
+class Seq2SeqKerasTrainer(KerasTrainer):
+    def __init__(self, *args, **kwargs):
+        super(Seq2SeqKerasTrainer, self).__init__(*args, **kwargs)

@@ -145,6 +145,6 @@ class InformerTest(unittest.TestCase):
         )
         y_valid = np.random.rand(batch_size, predict_length, 1)
 
-        model = Informer(predict_length, custom_model_params=custom_params)
+        model = AutoModel("informer", predict_length, custom_model_params=custom_params)
         trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
