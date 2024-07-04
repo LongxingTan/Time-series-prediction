@@ -30,7 +30,10 @@ MODEL_MAPPING_NAMES = OrderedDict(
 
 
 class AutoModel(object):
-    """tftf auto model"""
+    """tftf auto model
+    input tensor: [batch_size, sequence_length, num_features]
+    output tensor: [batch_size, predict_sequence_length, num_labels]
+    """
 
     def __init__(
         self,
