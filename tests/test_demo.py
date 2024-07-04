@@ -7,7 +7,7 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer, build_tfts_model
+from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer
 
 
 class DemoTest(unittest.TestCase):
