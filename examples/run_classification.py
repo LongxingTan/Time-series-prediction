@@ -1,14 +1,17 @@
+"""Demo of time series classification"""
+
+import argparse
+
+import numpy as np
 import tensorflow as tf
 
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
 
-class CustomModel(tf.keras.Model):
-    def __init__(
-        self,
-    ):
-        super().__init__()
+def build_model():
+    return
 
-    def call(self):
-        return
+
+def run_train():
+    return

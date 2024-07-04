@@ -22,7 +22,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bert", "Bert"),
         ("informer", "Informer"),
         ("autoformer", "AutoFormer"),
-        # ("tft", "TFTransformer"),
+        ("tft", "TFTransformer"),
         ("unet", "Unet"),
         ("nbeats", "NBeats"),
     ]
