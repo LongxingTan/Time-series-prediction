@@ -3,6 +3,7 @@
 # @author: Longxing Tan, tanlongxing888@163.com
 """AutoConfig to set up models custom config"""
 
+import json
 
 from tfts.models.autoformer import params as autoformer_params
 from tfts.models.bert import params as bert_params
@@ -14,6 +15,32 @@ from tfts.models.tcn import params as tcn_params
 from tfts.models.transformer import params as transformer_params
 from tfts.models.unet import params as unet_params
 from tfts.models.wavenet import params as wavenet_params
+
+
+class BaseConfig:
+    def __init__(self, **kwargs):
+        self.update(kwargs)
+
+    def update(self, config_dict):
+        for key, value in config_dict.items():
+            setattr(self, key, value)
+
+    def to_dict(self):
+        return {key: getattr(self, key) for key in self.__dict__}
+
+    @classmethod
+    def from_dict(cls, config_dict):
+        return cls(**config_dict)
+
+    @classmethod
+    def from_pretrained(cls, pretrained_path):
+        with open(pretrained_path, "r") as f:
+            config_dict = json.load(f)
+        return cls.from_dict(config_dict)
+
+    def save_pretrained(self, save_path):
+        with open(save_path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
 
 
 class AutoConfig:
