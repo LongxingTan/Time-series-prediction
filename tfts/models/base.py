@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 import collections
 import json
+import logging
 import os
 from typing import Any, Dict, Union
+
+logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
@@ -19,12 +22,28 @@ class BaseModel(ABC):
 
 
 class BaseConfig(ABC):
+    attribute_map: Dict[str, str] = {}
+
     def __init__(self, **kwargs):
         self.update(kwargs)
 
+    def __setattr__(self, key, value):
+        if key in super().__getattribute__("attribute_map"):
+            key = super().__getattribute__("attribute_map")[key]
+        super().__setattr__(key, value)
+
+    def __getattribute__(self, key):
+        if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
+            key = super().__getattribute__("attribute_map")[key]
+        return super().__getattribute__(key)
+
     def update(self, config_dict):
         for key, value in config_dict.items():
-            setattr(self, key, value)
+            try:
+                setattr(self, key, value)
+            except AttributeError as err:
+                logger.error(f"Can't set {key} with value {value} for {self}")
+                raise err
 
     def to_dict(self):
         # output_dict = {}

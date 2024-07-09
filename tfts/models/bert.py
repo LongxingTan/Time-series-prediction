@@ -71,7 +71,7 @@ class Bert(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=BertConfig,
+        config=BertConfig(),
     ) -> None:
         super(Bert, self).__init__()
         self.config = config
