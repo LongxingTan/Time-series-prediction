@@ -25,7 +25,6 @@ class AutoFormerConfig(object):
 
     def __init__(
         self,
-        vocab_size=1000,
         hidden_size=128,
         num_hidden_layers=4,
         num_attention_heads=4,
@@ -43,7 +42,6 @@ class AutoFormerConfig(object):
         classifier_dropout=None,
         **kwargs,
     ):
-        self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads

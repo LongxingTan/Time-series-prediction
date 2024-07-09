@@ -15,12 +15,6 @@ class TFTransformerConfig(BaseConfig):
         super(TFTransformerConfig, self).__init__()
 
 
-config = {
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class TFTransformer(BaseModel):
     """Temporal fusion transformer model"""
 

@@ -47,19 +47,6 @@ class RNNConfig(BaseConfig):
         self.use_attention = use_attention
 
 
-config: Dict[str, Any] = {
-    "rnn_type": "gru",
-    "bi_direction": False,
-    "rnn_size": 64,
-    "dense_size": 32,
-    "num_stacked_layers": 1,
-    "scheduler_sampling": 0,
-    "use_attention": False,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class RNN(BaseModel):
     """RNN model"""
 
@@ -196,12 +183,10 @@ class Encoder(tf.keras.layers.Layer):
 
 
 class RNN2(object):
-    def __init__(self, predict_sequence_length=3, custom_model_config=None) -> None:
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length=3, config=RNNConfig) -> None:
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.rnn = GRU(units=config["rnn_size"], activation="tanh", return_state=True, return_sequences=True, dropout=0)
+        self.rnn = GRU(units=config.rnn_size, activation="tanh", return_state=True, return_sequences=True, dropout=0)
         self.dense1 = Dense(predict_sequence_length)
         self.dense2 = Dense(1)
 

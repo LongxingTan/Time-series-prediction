@@ -31,16 +31,6 @@ class TCNConfig(BaseConfig):
         self.dense_hidden_size = dense_hidden_size
 
 
-config: Dict[str, Any] = {
-    "dilation_rates": [2**i for i in range(4)],
-    "kernel_sizes": [2 for i in range(4)],
-    "filters": 128,
-    "dense_hidden_size": 64,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class TCN(BaseModel):
     """Temporal convolutional network"""
 

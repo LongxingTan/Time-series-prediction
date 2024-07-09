@@ -20,12 +20,6 @@ class UnetConfig(BaseConfig):
         super(UnetConfig, self).__init__()
 
 
-config: Dict[str, Any] = {
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class Unet(BaseModel):
     """Unet model"""
 

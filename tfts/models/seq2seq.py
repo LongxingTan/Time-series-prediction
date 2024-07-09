@@ -38,27 +38,11 @@ class Seq2seqConfig(BaseConfig):
         self.bi_direction = bi_direction
         self.dense_hidden_size = dense_hidden_size
         self.num_stacked_layers = num_stacked_layers
-        self.scheduling_sampling = scheduling_sampling
+        self.scheduling_sampling = scheduling_sampling  # 0: teacher forcing
         self.use_attention = use_attention
         self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-
-
-config: Dict[str, Any] = {
-    "rnn_type": "gru",
-    "bi_direction": False,
-    "rnn_size": 64,
-    "dense_size": 64,
-    "num_stacked_layers": 1,
-    "scheduler_sampling": 0,  # teacher forcing
-    "use_attention": False,
-    "attention_sizes": 64,
-    "num_attention_heads": 2,
-    "attention_probs_dropout_prob": 0,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
 
 
 class Seq2seq(BaseModel):

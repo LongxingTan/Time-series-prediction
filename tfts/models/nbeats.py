@@ -19,6 +19,7 @@ class NbeatsConfig(BaseConfig):
         self,
         stack_types=["trend_block", "seasonality_block"],
         nb_blocks_per_stack=3,
+        n_block_layers=4,
         hidden_size=64,
         thetas_dims=(4, 8),
         share_weights_in_stack=False,
@@ -26,19 +27,10 @@ class NbeatsConfig(BaseConfig):
         super(NbeatsConfig, self).__init__()
         self.stack_types = stack_types
         self.nb_blocks_per_stack = nb_blocks_per_stack
+        self.n_block_layers = n_block_layers
         self.hidden_size = hidden_size
         self.thetas_dims = thetas_dims
         self.share_weights_in_stack = share_weights_in_stack
-
-
-config: Dict[str, Any] = {
-    "stack_types": ["trend_block", "seasonality_block"],
-    "nb_blocks_per_stack": 3,
-    "n_block_layers": 4,
-    "hidden_size": 64,
-    "thetas_dims": (4, 8),
-    "share_weights_in_stack": False,
-}
 
 
 class NBeats(BaseModel):
