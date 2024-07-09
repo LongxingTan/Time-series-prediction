@@ -25,6 +25,8 @@ from .base import BaseConfig, BaseModel
 
 
 class RNNConfig(BaseConfig):
+    model_type = "rnn"
+
     def __init__(
         self,
         rnn_hidden_size=64,

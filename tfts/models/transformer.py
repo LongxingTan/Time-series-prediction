@@ -18,6 +18,8 @@ from .base import BaseConfig, BaseModel
 
 
 class TransformerConfig(BaseConfig):
+    model_type = "transformer"
+
     def __init__(
         self,
         vocab_size=30522,

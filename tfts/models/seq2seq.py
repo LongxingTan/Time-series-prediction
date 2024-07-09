@@ -17,6 +17,8 @@ from .base import BaseConfig, BaseModel
 
 
 class Seq2seqConfig(BaseConfig):
+    model_type = "seq2seq"
+
     def __init__(
         self,
         rnn_hidden_size=64,

@@ -17,7 +17,8 @@ class DemoTest(unittest.TestCase):
 
         (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
 
-        model = AutoModel.from_config("seq2seq", predict_length=predict_length)
+        config = AutoConfig.for_model("seq2seq")
+        model = AutoModel.from_config(config, predict_length=predict_length)
 
         trainer = Trainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)

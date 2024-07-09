@@ -15,6 +15,8 @@ from .base import BaseConfig, BaseModel
 
 
 class TCNConfig(BaseConfig):
+    model_type = "tcn"
+
     def __init__(
         self,
         dilation_rates=[2**i for i in range(4)],

@@ -21,6 +21,8 @@ class AutoFormerConfig(object):
     This is the configuration class to store the configuration of a [`AutoFormer`]
     """
 
+    model_type = "autoformer"
+
     def __init__(
         self,
         vocab_size=1000,

@@ -13,6 +13,8 @@ from .base import BaseConfig, BaseModel
 
 
 class NbeatsConfig(BaseConfig):
+    model_type = "nbeats"
+
     def __init__(
         self,
         stack_types=["trend_block", "seasonality_block"],

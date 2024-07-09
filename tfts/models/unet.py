@@ -14,6 +14,8 @@ from .base import BaseConfig, BaseModel
 
 
 class UnetConfig(BaseConfig):
+    model_type = "unet"
+
     def __init__(self):
         super(UnetConfig, self).__init__()
 

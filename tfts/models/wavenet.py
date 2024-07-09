@@ -17,6 +17,8 @@ from .base import BaseConfig, BaseModel
 
 
 class WaveNetConfig(BaseConfig):
+    model_type = "wavenet"
+
     def __init__(
         self,
         dilation_rates=[2**i for i in range(4)],
