@@ -15,6 +15,12 @@ from tfts.layers.attention_layer import FullAttention
 
 from .base import BaseConfig, BaseModel
 
+
+class Seq2seqConfig(BaseConfig):
+    def __init__(self):
+        super(Seq2seqConfig, self).__init__()
+
+
 config: Dict[str, Any] = {
     "rnn_type": "gru",
     "bi_direction": False,
@@ -31,17 +37,11 @@ config: Dict[str, Any] = {
 }
 
 
-class Seq2seq(object):
+class Seq2seq(BaseModel):
     """Seq2seq model"""
 
-    def __init__(
-        self,
-        predict_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ):
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_length: int = 1, config=Seq2seqConfig):
+        super(Seq2seq, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_length
         self.encoder = Encoder(

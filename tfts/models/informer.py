@@ -49,17 +49,15 @@ config: Dict[str, Any] = {
 }
 
 
-class Informer(object):
+class Informer(BaseModel):
     """Informer model for time series"""
 
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
+        config=InformerConfig,
     ):
-        if custom_model_config:
-            config.update(custom_model_config)
+        super(Informer, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(config["hidden_size"])

@@ -16,6 +16,12 @@ from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
 
+
+class TransformerConfig(BaseConfig):
+    def __init__(self):
+        super(TransformerConfig, self).__init__()
+
+
 config: Dict[str, Any] = {
     "num_hidden_layers": 1,
     "n_decoder_layers": 1,
@@ -31,15 +37,10 @@ config: Dict[str, Any] = {
 }
 
 
-class Transformer(object):
+class Transformer(BaseModel):
     """Transformer model"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=TransformerConfig) -> None:
         """Transformer for time series
 
         :param custom_model_config: custom model defined model hyper parameters
@@ -47,8 +48,7 @@ class Transformer(object):
         :param dynamic_decoding: _description_, defaults to True
         :type dynamic_decoding: bool, optional
         """
-        if custom_model_config:
-            config.update(custom_model_config)
+        super(Transformer, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(config["hidden_size"])

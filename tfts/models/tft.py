@@ -7,18 +7,23 @@ import tensorflow as tf
 
 from .base import BaseConfig, BaseModel
 
+
+class TFTransformerConfig(BaseConfig):
+    def __init__(self):
+        super(TFTransformerConfig, self).__init__()
+
+
 config = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
 
 
-class TFTransformer(object):
+class TFTransformer(BaseModel):
     """Temporal fusion transformer model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_config=None):
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length=3, config=TFTransformerConfig):
+        super(TFTransformer, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

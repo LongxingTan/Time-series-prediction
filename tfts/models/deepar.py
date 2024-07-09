@@ -31,13 +31,14 @@ config: Dict[str, Any] = {
 }
 
 
-class DeepAR(object):
+class DeepAR(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
         config=DeepARConfig,
     ):
         """DeepAR Network"""
+        super(DeepAR, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

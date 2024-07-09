@@ -43,17 +43,11 @@ config: Dict[str, Any] = {
 }
 
 
-class RNN(object):
+class RNN(BaseModel):
     """RNN model"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ):
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length: int = 1, config=RNNConfig):
+        super(RNN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(config["rnn_type"], config["rnn_size"], dense_size=config["dense_size"])

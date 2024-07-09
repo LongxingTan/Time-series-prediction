@@ -12,23 +12,24 @@ from tfts.layers.unet_layer import conv_br, re_block
 
 from .base import BaseConfig, BaseModel
 
+
+class UnetConfig(BaseConfig):
+    def __init__(self):
+        super(UnetConfig, self).__init__()
+
+
 config: Dict[str, Any] = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
 
 
-class Unet(object):
+class Unet(BaseModel):
     """Unet model"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ):
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length: int = 1, config=UnetConfig):
+        super(Unet, self).__init__()
+
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

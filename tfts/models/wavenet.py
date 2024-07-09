@@ -15,6 +15,12 @@ from tfts.layers.dense_layer import DenseTemp
 
 from .base import BaseConfig, BaseModel
 
+
+class WaveNetConfig(BaseConfig):
+    def __init__(self):
+        super(WaveNetConfig, self).__init__()
+
+
 config: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(3)],
     "kernel_sizes": [2 for _ in range(3)],
@@ -27,17 +33,12 @@ config: Dict[str, Any] = {
 }
 
 
-class WaveNet(object):
+class WaveNet(BaseModel):
     """WaveNet model for time series"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length: int = 1, config=WaveNetConfig) -> None:
+        super(WaveNet, self).__init__()
+
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
