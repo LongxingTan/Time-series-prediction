@@ -26,13 +26,7 @@ from .base import BaseConfig, BaseModel
 
 
 class BertConfig(BaseConfig):
-    model_type = "xlm"
-    attribute_map = {
-        "hidden_size": "emb_dim",
-        "num_attention_heads": "n_heads",
-        "num_hidden_layers": "n_layers",
-        "n_words": "vocab_size",
-    }
+    model_type = "bert"
 
     def __init__(
         self,
@@ -139,9 +133,9 @@ class Bert(BaseModel):
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             BERT model input
-        teacher : _type_, optional
+        teacher : tf.Tensor, optional
             teacher forcing for autoregression, by default None
 
         Returns

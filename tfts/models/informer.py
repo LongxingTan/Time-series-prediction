@@ -22,6 +22,18 @@ from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
 
+
+class InformerConfig(BaseConfig):
+    model_type = "informer"
+
+    def __init__(
+        self,
+        vocab_size=30522,
+        hidden_size=768,
+    ):
+        super().__init__()
+
+
 config: Dict[str, Any] = {
     "num_hidden_layers": 1,
     "n_decoder_layers": 1,
