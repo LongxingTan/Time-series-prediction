@@ -36,12 +36,12 @@ class AutoModel(object):
     def __init__(
         self,
         model_name: str,
-        predict_length: int = 1,
-        custom_model_config: Optional[Dict[str, object]] = None,
+        predict_length: int,
+        config,
     ):
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        self.model = getattr(module, class_name)(predict_length, custom_model_config=custom_model_config)
+        self.model = getattr(module, class_name)(predict_length, config=config)
 
     def __call__(
         self,
@@ -67,6 +67,10 @@ class AutoModel(object):
     def build_model(self, inputs):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
+
+    @classmethod
+    def from_config(cls):
+        return
 
 
 class AutoModelForPrediction(BaseModel):

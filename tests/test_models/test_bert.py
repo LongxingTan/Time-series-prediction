@@ -10,8 +10,8 @@ from tfts.models.bert import Bert
 class AutoFormerTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_config = {"hidden_size": 32}
-        model = Bert(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
+
+        model = Bert(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 32])
         y = model(x)

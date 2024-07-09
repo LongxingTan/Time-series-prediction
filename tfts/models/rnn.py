@@ -23,6 +23,13 @@ from tfts.layers.attention_layer import FullAttention
 
 from .base import BaseConfig, BaseModel
 
+
+class RNNConfig(BaseConfig):
+    def __init__(self, rnn_hidden_size: 54):
+        super(RNNConfig, self).__init__()
+        self.rnn_hidden_size = rnn_hidden_size
+
+
 config: Dict[str, Any] = {
     "rnn_type": "gru",
     "bi_direction": False,
