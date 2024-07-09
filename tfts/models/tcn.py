@@ -34,7 +34,7 @@ class TCNConfig(BaseConfig):
 class TCN(BaseModel):
     """Temporal convolutional network"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=TCNConfig) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=TCNConfig()) -> None:
         super(TCN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length

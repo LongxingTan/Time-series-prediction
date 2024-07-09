@@ -30,7 +30,7 @@ class TransformerConfig(BaseConfig):
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
-        scheduler_sampling=1,
+        scheduled_sampling=1,
         max_position_embeddings=512,
         initializer_range=0.02,
         layer_norm_eps=1e-12,
@@ -49,7 +49,7 @@ class TransformerConfig(BaseConfig):
         self.intermediate_size = intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.scheduler_sampling = scheduler_sampling  # 0 means teacher forcing, 1 means use last prediction
+        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
         self.max_position_embeddings = max_position_embeddings
         self.initializer_range = initializer_range
         self.layer_norm_eps = layer_norm_eps
@@ -62,7 +62,7 @@ class TransformerConfig(BaseConfig):
 class Transformer(BaseModel):
     """Transformer model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=TransformerConfig) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=TransformerConfig()) -> None:
         """Transformer for time series
 
         :param custom_model_config: custom model defined model hyper parameters
@@ -243,7 +243,7 @@ class Decoder(tf.keras.layers.Layer):
         self.projection = Dense(units=1, name="final_projection")
 
     def call(
-        self, decoder_features, init_input, encoder_memory, teacher=None, scheduler_sampling=0, training=None, **kwargs
+        self, decoder_features, init_input, encoder_memory, teacher=None, scheduled_sampling=0, training=None, **kwargs
     ):
         """Transformer decoder
 
@@ -257,7 +257,7 @@ class Decoder(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None
@@ -272,7 +272,7 @@ class Decoder(tf.keras.layers.Layer):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     input = teacher[:, : i + 1]
                 else:
                     input = this_input[:, : i + 1]

@@ -25,8 +25,10 @@ class AutoFormerConfig(object):
 
     def __init__(
         self,
+        kernel_size=32,
         hidden_size=128,
-        num_hidden_layers=4,
+        num_layers=1,
+        num_decoder_layers=None,
         num_attention_heads=4,
         intermediate_size=128,
         hidden_act="relu",
@@ -42,8 +44,10 @@ class AutoFormerConfig(object):
         classifier_dropout=None,
         **kwargs,
     ):
+        self.kernel_size = kernel_size
         self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
+        self.num_layers = num_layers
+        self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
         self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
         self.intermediate_size = intermediate_size
@@ -68,44 +72,37 @@ config: Dict[str, Any] = {
     "intermediate_size": 32 * 1,
     "hidden_dropout_prob": 0.0,
     "layer_postprocess_dropout": 0.0,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
+    "scheduled_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
 
 
 class AutoFormer(object):
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_config: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
-        if custom_model_config:
-            config.update(custom_model_config)
+    def __init__(self, predict_sequence_length: int = 1, config=AutoFormerConfig()) -> None:
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 
         # self.encoder_embedding = TokenEmbedding(config['hidden_size'])
-        self.series_decomp = SeriesDecomp(config["kernel_size"])
+        self.series_decomp = SeriesDecomp(config.kernel_size)
         self.encoder = [
             EncoderLayer(
-                config["kernel_size"],
-                config["hidden_size"],
-                config["num_attention_heads"],
-                config["attention_probs_dropout_prob"],
+                config.kernel_size,
+                config.hidden_size,
+                config.num_attention_heads,
+                config.attention_probs_dropout_prob,
             )
-            for _ in range(config["num_hidden_layers"])
+            for _ in range(config.num_layers)
         ]
 
         self.decoder = [
             DecoderLayer(
-                config["kernel_size"],
-                config["hidden_size"],
-                config["num_attention_heads"],
-                config["attention_probs_dropout_prob"],
+                config.kernel_size,
+                config.hidden_size,
+                config.num_attention_heads,
+                config.attention_probs_dropout_prob,
             )
-            for _ in range(config["n_decoder_layers"])
+            for _ in range(config.num_decoder_layers)
         ]
 
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)

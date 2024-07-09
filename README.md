@@ -62,7 +62,9 @@ train_length = 24
 predict_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+model_name_or_path = 'seq2seq'
+config = AutoConfig(model_name_or_path)
+model = AutoModel.from_config(model_name_or_path, predict_length=predict_length, config=config)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
 
@@ -89,7 +91,7 @@ y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("rnn", predict_length=predict_length)
+model = AutoModel.from_config("rnn", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
 ```
@@ -118,7 +120,7 @@ x_valid = (
 )
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+model = AutoModel.from_config("seq2seq", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
@@ -165,7 +167,7 @@ valid_loader = tf.data.Dataset.from_generator(
 )
 valid_loader = valid_loader.batch(batch_size=1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+model = AutoModel.from_config("seq2seq", predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
@@ -219,7 +221,7 @@ def build_model():
     predict_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    backbone = AutoModel.from_config("seq2seq", predict_length=predict_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)

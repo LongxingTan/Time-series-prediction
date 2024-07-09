@@ -25,7 +25,7 @@ class WaveNetConfig(BaseConfig):
         kernel_sizes=[2 for i in range(4)],
         filters=128,
         dense_hidden_size=64,
-        scheduler_sampling=1,
+        scheduled_sampling=1,
         use_attention=False,
         attention_size=64,
         num_attention_heads=2,
@@ -36,7 +36,7 @@ class WaveNetConfig(BaseConfig):
         self.kernel_sizes = kernel_sizes
         self.filters = filters
         self.dense_hidden_size = dense_hidden_size
-        self.scheduler_sampling = scheduler_sampling  # 0 means teacher forcing, 1 means use last prediction
+        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
         self.use_attention = use_attention
         self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
@@ -46,7 +46,7 @@ class WaveNetConfig(BaseConfig):
 class WaveNet(BaseModel):
     """WaveNet model for time series"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=WaveNetConfig) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=WaveNetConfig()) -> None:
         super(WaveNet, self).__init__()
 
         self.config = config
@@ -164,7 +164,7 @@ class Decoder1(object):
         decoder_init_input,
         encoder_outputs,
         teacher: Optional[tf.Tensor] = None,
-        scheduler_sampling: float = 0.0,
+        scheduled_sampling: float = 0.0,
         training: Optional[bool] = None,
         **kwargs: Dict
     ):
@@ -180,7 +180,7 @@ class Decoder1(object):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None
@@ -196,7 +196,7 @@ class Decoder1(object):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     this_input = teacher[:, i : i + 1]
                 else:
                     this_input = prev_output
@@ -327,7 +327,7 @@ class Decoder3(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -343,7 +343,7 @@ class Decoder3(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None

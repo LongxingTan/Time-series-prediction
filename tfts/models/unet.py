@@ -23,7 +23,7 @@ class UnetConfig(BaseConfig):
 class Unet(BaseModel):
     """Unet model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=UnetConfig):
+    def __init__(self, predict_sequence_length: int = 1, config=UnetConfig()):
         super(Unet, self).__init__()
 
         self.config = config

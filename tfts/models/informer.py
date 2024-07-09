@@ -72,7 +72,7 @@ class Informer(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=InformerConfig,
+        config=InformerConfig(),
     ):
         super(Informer, self).__init__()
         self.config = config

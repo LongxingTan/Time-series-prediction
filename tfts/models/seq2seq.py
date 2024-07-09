@@ -26,7 +26,7 @@ class Seq2seqConfig(BaseConfig):
         bi_direction=False,
         dense_hidden_size=32,
         num_stacked_layers=1,
-        scheduling_sampling=0,
+        scheduled_sampling=0,
         use_attention=False,
         attention_size=64,
         num_attention_heads=2,
@@ -38,7 +38,7 @@ class Seq2seqConfig(BaseConfig):
         self.bi_direction = bi_direction
         self.dense_hidden_size = dense_hidden_size
         self.num_stacked_layers = num_stacked_layers
-        self.scheduling_sampling = scheduling_sampling  # 0: teacher forcing
+        self.scheduled_sampling = scheduled_sampling  # 0: teacher forcing
         self.use_attention = use_attention
         self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
@@ -48,17 +48,19 @@ class Seq2seqConfig(BaseConfig):
 class Seq2seq(BaseModel):
     """Seq2seq model"""
 
-    def __init__(self, predict_length: int = 1, config=Seq2seqConfig):
+    def __init__(self, predict_length: int = 1, config=Seq2seqConfig()):
         super(Seq2seq, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_length
-        self.encoder = Encoder(rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_size)
+        self.encoder = Encoder(
+            rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
+        )
         self.decoder = Decoder1(
             rnn_size=config.rnn_hidden_size,
             rnn_type=config.rnn_type,
             predict_sequence_length=predict_length,
             use_attention=config.use_attention,
-            attention_sizes=config.attention_sizes,
+            attention_size=config.attention_size,
             num_attention_heads=config.num_attention_heads,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
         )
@@ -98,7 +100,7 @@ class Seq2seq(BaseModel):
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
-            scheduler_sampling=self.config.scheduler_sampling,
+            scheduled_sampling=self.config.scheduled_sampling,
             encoder_output=encoder_outputs,
         )
 
@@ -156,7 +158,7 @@ class Decoder1(tf.keras.layers.Layer):
         rnn_type="gru",
         predict_sequence_length=3,
         use_attention=False,
-        attention_sizes=32,
+        attention_size=32,
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
     ):
@@ -165,7 +167,7 @@ class Decoder1(tf.keras.layers.Layer):
         self.use_attention = use_attention
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
-        self.attention_sizes = attention_sizes
+        self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
@@ -177,7 +179,7 @@ class Decoder1(tf.keras.layers.Layer):
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
             self.attention = FullAttention(
-                hidden_size=self.attention_sizes,
+                hidden_size=self.attention_size,
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
@@ -189,7 +191,7 @@ class Decoder1(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -203,8 +205,8 @@ class Decoder1(tf.keras.layers.Layer):
         :type init_state: _type_
         :param teacher: _description_, defaults to None
         :type teacher: _type_, optional
-        :param scheduler_sampling: _description_, defaults to 0
-        :type scheduler_sampling: int, optional
+        :param scheduled_sampling: _description_, defaults to 0
+        :type scheduled_sampling: int, optional
         :param training: _description_, defaults to None
         :type training: _type_, optional
         :return: _description_
@@ -220,7 +222,7 @@ class Decoder1(tf.keras.layers.Layer):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     this_input = teachers[i]
                 else:
                     this_input = prev_output
@@ -297,7 +299,7 @@ class Decoder2(tf.keras.layers.Layer):
         decoder_init_value,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -345,7 +347,7 @@ class Decoder2(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -400,7 +402,7 @@ class Decoder3(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -416,7 +418,7 @@ class Decoder3(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None

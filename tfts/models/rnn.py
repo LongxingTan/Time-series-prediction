@@ -34,7 +34,7 @@ class RNNConfig(BaseConfig):
         bi_direction=False,
         dense_hidden_size=32,
         num_stacked_layers=1,
-        scheduling_sampling=0,
+        scheduled_sampling=0,
         use_attention=False,
     ):
         super(RNNConfig, self).__init__()
@@ -43,18 +43,20 @@ class RNNConfig(BaseConfig):
         self.bi_direction = bi_direction
         self.dense_hidden_size = dense_hidden_size
         self.num_stacked_layers = num_stacked_layers
-        self.scheduling_sampling = scheduling_sampling
+        self.scheduled_sampling = scheduled_sampling
         self.use_attention = use_attention
 
 
 class RNN(BaseModel):
     """RNN model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=RNNConfig):
+    def __init__(self, predict_sequence_length: int = 1, config=RNNConfig()):
         super(RNN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = Encoder(rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_size)
+        self.encoder = Encoder(
+            rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
+        )
         self.project1 = Dense(predict_sequence_length, activation=None)
 
         self.dense1 = Dense(128, activation="relu")
@@ -183,10 +185,12 @@ class Encoder(tf.keras.layers.Layer):
 
 
 class RNN2(object):
-    def __init__(self, predict_sequence_length=3, config=RNNConfig) -> None:
+    def __init__(self, predict_sequence_length=3, config=RNNConfig()) -> None:
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.rnn = GRU(units=config.rnn_size, activation="tanh", return_state=True, return_sequences=True, dropout=0)
+        self.rnn = GRU(
+            units=config.rnn_hidden_size, activation="tanh", return_state=True, return_sequences=True, dropout=0
+        )
         self.dense1 = Dense(predict_sequence_length)
         self.dense2 = Dense(1)
 

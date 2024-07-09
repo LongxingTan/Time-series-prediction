@@ -35,7 +35,7 @@ class DeepAR(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=DeepARConfig,
+        config=DeepARConfig(),
     ):
         """DeepAR Network"""
         super(DeepAR, self).__init__()
