@@ -43,18 +43,6 @@ class WaveNetConfig(BaseConfig):
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
 
-config: Dict[str, Any] = {
-    "dilation_rates": [2**i for i in range(3)],
-    "kernel_sizes": [2 for _ in range(3)],
-    "filters": 32,
-    "dense_hidden_size": 32,
-    "scheduler_sampling": 1,
-    "use_attention": False,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class WaveNet(BaseModel):
     """WaveNet model for time series"""
 

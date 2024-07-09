@@ -4,10 +4,14 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.bert import Bert
+from tfts.models.bert import Bert, BertConfig
 
 
 class AutoFormerTest(unittest.TestCase):
+    def test_config(self):
+        config = BertConfig
+        print(config)
+
     def test_model(self):
         predict_sequence_length = 8
 

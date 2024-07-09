@@ -3,10 +3,15 @@ import unittest
 import tensorflow as tf
 
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.wavenet import Decoder1, Decoder2, Decoder3, Encoder, WaveNet
+from tfts.models.wavenet import Decoder1, Decoder2, Decoder3, Encoder, WaveNet, WaveNetConfig
 
 
 class WaveNetTest(unittest.TestCase):
+    def test_config(self):
+        config = WaveNetConfig()
+        print(config.dense_hidden_size)
+        print(config.kernel_sizes)
+
     def test_encoder(self):
         kernel_sizes = [2]
         filters = 32

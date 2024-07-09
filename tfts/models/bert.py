@@ -67,21 +67,6 @@ class BertConfig(BaseConfig):
         self.pad_token_id = pad_token_id
 
 
-config: Dict[str, Any] = {
-    "num_hidden_layers": 1,
-    "use_token_embedding": False,
-    "hidden_size": 32 * 1,
-    "num_attention_heads": 2,
-    "attention_probs_dropout_prob": 0.0,
-    "intermediate_size": 32 * 1,
-    "hidden_dropout_prob": 0.0,
-    "layer_postprocess_dropout": 0.0,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class Bert(BaseModel):
     def __init__(
         self,
