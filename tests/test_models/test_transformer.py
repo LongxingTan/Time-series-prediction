@@ -10,48 +10,48 @@ from tfts.models.transformer import Decoder, Decoder2, Encoder, Transformer
 
 class TransformerTest(unittest.TestCase):
     def test_encoder(self):
-        n_encoder_layers = 2
-        attention_hidden_sizes = 32
-        num_heads = 2
+        num_hidden_layers = 2
+        hidden_size = 32
+        num_attention_heads = 2
         attention_dropout = 0.0
-        ffn_hidden_sizes = 32
+        intermediate_size = 32
         ffn_dropout = 0.0
         layer = Encoder(
-            n_encoder_layers,
-            attention_hidden_sizes,
-            num_heads,
+            num_hidden_layers,
+            hidden_size,
+            num_attention_heads,
             attention_dropout,
-            ffn_hidden_sizes,
+            intermediate_size,
             ffn_dropout,
         )
-        x = tf.random.normal([2, 16, attention_hidden_sizes])
+        x = tf.random.normal([2, 16, hidden_size])
         y = layer(x)
-        self.assertEqual(y.shape, (2, 16, attention_hidden_sizes))
+        self.assertEqual(y.shape, (2, 16, hidden_size))
 
         config = layer.get_config()
-        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
+        self.assertEqual(config["hidden_size"], hidden_size)
 
     def test_decoder(self):
         predict_sequence_length = 2
         n_decoder_layers = 2
-        attention_hidden_sizes = 32
-        num_heads = 1
+        hidden_size = 32
+        num_attention_heads = 1
         attention_dropout = 0
-        ffn_hidden_sizes = 32
+        intermediate_size = 32
         ffn_dropout = 0
         layer = Decoder(
             predict_sequence_length,
             n_decoder_layers,
-            attention_hidden_sizes,
-            num_heads,
+            hidden_size,
+            num_attention_heads,
             attention_dropout,
-            ffn_hidden_sizes,
+            intermediate_size,
             ffn_dropout,
         )
 
-        x = tf.random.normal([2, 16, attention_hidden_sizes])
+        x = tf.random.normal([2, 16, hidden_size])
         init = tf.random.normal([2, 1, 1])
-        memory = tf.random.normal([2, 16, attention_hidden_sizes])
+        memory = tf.random.normal([2, 16, hidden_size])
         y = layer(x, init, memory)
         self.assertEqual(y.shape, (2, predict_sequence_length, 1))
 

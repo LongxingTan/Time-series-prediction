@@ -9,9 +9,9 @@ from tfts.layers.mask_layer import CausalMask
 class AttentionLayerTest(unittest.TestCase):
     def test_full_attention_layer(self):
         hidden_size = 64
-        num_heads = 4
+        num_attention_heads = 4
         attention_dropout = 0.1
-        layer = FullAttention(hidden_size, num_heads, attention_dropout)
+        layer = FullAttention(hidden_size, num_attention_heads, attention_dropout)
 
         q = tf.random.normal([2, 128, 16])
         k = tf.random.normal([2, 128, 4])
@@ -21,15 +21,15 @@ class AttentionLayerTest(unittest.TestCase):
         config = layer.get_config()
         self.assertEqual(config["hidden_size"], hidden_size)
 
-        mask = CausalMask(2 * num_heads, 128).mask
+        mask = CausalMask(2 * num_attention_heads, 128).mask
         y2 = layer(q, k, v, mask=mask)
         self.assertEqual(y2.shape, (2, 128, hidden_size))
 
     def test_self_attention_layer(self):
         hidden_size = 64
-        num_heads = 4
+        num_attention_heads = 4
         attention_dropout = 0.1
-        layer = SelfAttention(hidden_size, num_heads, attention_dropout)
+        layer = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
 
         x = tf.random.normal([2, 128, 16])
         y = layer(x)
@@ -40,9 +40,9 @@ class AttentionLayerTest(unittest.TestCase):
 
     def test_prob_attention_layer(self):
         hidden_size = 128
-        num_heads = 4
+        num_attention_heads = 4
         attention_dropout = 0
-        layer = ProbAttention(hidden_size, num_heads, attention_dropout)
+        layer = ProbAttention(hidden_size, num_attention_heads, attention_dropout)
 
         q = tf.random.normal([2, 128, 16])
         k = tf.random.normal([2, 128, 4])

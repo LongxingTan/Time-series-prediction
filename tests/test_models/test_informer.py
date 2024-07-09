@@ -28,92 +28,91 @@ class InformerTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
     def test_encoder_layer(self):
-        attention_hidden_sizes = 64
-        num_heads = 4
+        hidden_size = 64
+        num_attention_heads = 4
         attention_dropout = 0.1
-        ffn_hidden_sizes = 64
+        intermediate_size = 64
         ffn_dropout = 0.1
 
-        attn_layer = ProbAttention(attention_hidden_sizes, num_heads, attention_dropout)
+        attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_dropout)
 
-        layer = EncoderLayer(attn_layer, attention_hidden_sizes, ffn_hidden_sizes, ffn_dropout)
-        x = tf.random.normal([2, 100, attention_hidden_sizes])  # after embedding
+        layer = EncoderLayer(attn_layer, hidden_size, intermediate_size, ffn_dropout)
+        x = tf.random.normal([2, 100, hidden_size])  # after embedding
         y = layer(x)
-        self.assertEqual(y.shape, (2, 100, attention_hidden_sizes))
+        self.assertEqual(y.shape, (2, 100, hidden_size))
 
         config = layer.get_config()
-        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
+        self.assertEqual(config["hidden_size"], hidden_size)
 
     def test_encoder(self):
-        attention_hidden_sizes = 64
-        num_heads = 4
+        hidden_size = 64
+        num_attention_heads = 4
         attention_dropout = 0.1
-        ffn_hidden_sizes = 64
+        intermediate_size = 64
         ffn_dropout = 0.1
-        n_encoder_layers = 4
-        attn_layer = ProbAttention(attention_hidden_sizes, num_heads, attention_dropout)
+        num_hidden_layers = 4
+        attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_dropout)
 
         layers = [
-            EncoderLayer(attn_layer, attention_hidden_sizes, ffn_hidden_sizes, ffn_dropout)
-            for _ in range(n_encoder_layers)
+            EncoderLayer(attn_layer, hidden_size, intermediate_size, ffn_dropout) for _ in range(num_hidden_layers)
         ]
-        conv_layers = [DistilConv(attention_hidden_sizes) for _ in range(n_encoder_layers - 1)]
+        conv_layers = [DistilConv(hidden_size) for _ in range(num_hidden_layers - 1)]
         norm_layer = LayerNormalization()
 
         layer = Encoder(layers, conv_layers=conv_layers, norm_layer=norm_layer)
-        x = tf.random.normal([2, 100, attention_hidden_sizes])  # after embedding
+        x = tf.random.normal([2, 100, hidden_size])  # after embedding
         y = layer(x)
-        self.assertEqual(y.shape, (2, 100, attention_hidden_sizes))
+        self.assertEqual(y.shape, (2, 100, hidden_size))
 
     def test_decoder_layer(self):
-        attention_hidden_sizes = 64
-        num_heads = 4
+        hidden_size = 64
+        num_attention_heads = 4
         attention_dropout = 0.1
-        ffn_hidden_sizes = 64
+        intermediate_size = 64
         ffn_dropout = 0.1
 
-        attn_layer1 = ProbAttention(attention_hidden_sizes, num_heads, attention_dropout)
-        attn_layer2 = FullAttention(attention_hidden_sizes, num_heads, attention_dropout)
-        layer = DecoderLayer(attn_layer1, attn_layer2, attention_hidden_sizes, ffn_hidden_sizes, ffn_dropout)
-        x = tf.random.normal([2, 50, attention_hidden_sizes])  # after embedding
-        memory = tf.random.normal([2, 100, attention_hidden_sizes])
+        attn_layer1 = ProbAttention(hidden_size, num_attention_heads, attention_dropout)
+        attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_dropout)
+        layer = DecoderLayer(attn_layer1, attn_layer2, hidden_size, intermediate_size, ffn_dropout)
+        x = tf.random.normal([2, 50, hidden_size])  # after embedding
+        memory = tf.random.normal([2, 100, hidden_size])
         y = layer(x, memory=memory)
-        self.assertEqual(y.shape, (2, 50, attention_hidden_sizes))
+        self.assertEqual(y.shape, (2, 50, hidden_size))
 
         config = layer.get_config()
-        self.assertEqual(config["attention_hidden_sizes"], attention_hidden_sizes)
+        self.assertEqual(config["hidden_size"], hidden_size)
 
     def test_decoder(self):
-        attention_hidden_sizes = 64
-        num_heads = 4
+        hidden_size = 64
+        num_attention_heads = 4
         attention_dropout = 0.1
-        ffn_hidden_sizes = 64
+        intermediate_size = 64
         ffn_dropout = 0.1
         n_decoder_layers = 4
-        attn_layer1 = FullAttention(attention_hidden_sizes, num_heads, attention_dropout)
-        attn_layer2 = FullAttention(attention_hidden_sizes, num_heads, attention_dropout)
+        attn_layer1 = FullAttention(hidden_size, num_attention_heads, attention_dropout)
+        attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_dropout)
 
         layers = [
-            DecoderLayer(attn_layer1, attn_layer2, attention_hidden_sizes, ffn_hidden_sizes, ffn_dropout)
+            DecoderLayer(attn_layer1, attn_layer2, hidden_size, intermediate_size, ffn_dropout)
             for _ in range(n_decoder_layers)
         ]
         norm_layer = LayerNormalization()
 
         decoder = Decoder(layers, norm_layer)
-        x = tf.random.normal([2, 50, attention_hidden_sizes])  # after embedding
-        memory = tf.random.normal([2, 100, attention_hidden_sizes])
+        x = tf.random.normal([2, 50, hidden_size])  # after embedding
+        memory = tf.random.normal([2, 100, hidden_size])
         y = decoder(x, memory=memory)
 
-        self.assertEqual(y.shape, (2, 50, attention_hidden_sizes))
+        self.assertEqual(y.shape, (2, 50, hidden_size))
 
     def test_train(self):
         config: Dict[str, Any] = {
-            "n_encoder_layers": 1,
+            "num_hidden_layers": 1,
             "n_decoder_layers": 1,
-            "attention_hidden_sizes": 32 * 1,
-            "num_heads": 1,
+            "hidden_size": 32 * 1,
+            "num_attention_heads": 1,
             "attention_dropout": 0.0,
-            "ffn_hidden_sizes": 32 * 1,
+            "intermediate_size": 32 * 1,
             "ffn_dropout": 0.0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,

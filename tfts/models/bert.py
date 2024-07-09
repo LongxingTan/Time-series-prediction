@@ -75,12 +75,12 @@ class BertConfig(BaseConfig):
 
 
 config: Dict[str, Any] = {
-    "n_encoder_layers": 1,
+    "num_hidden_layers": 1,
     "use_token_embedding": False,
-    "attention_hidden_sizes": 32 * 1,
-    "num_heads": 2,
+    "hidden_size": 32 * 1,
+    "num_attention_heads": 2,
     "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 32 * 1,
+    "intermediate_size": 32 * 1,
     "ffn_dropout": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
@@ -108,7 +108,7 @@ class Bert(BaseModel):
             config.num_attention_heads,
             config.attention_probs_dropout_prob,
             config.intermediate_size,
-            config["ffn_dropout"],
+            config.hidden_dropout_prob,
         )
 
         self.project1 = Dense(predict_sequence_length, activation=None)

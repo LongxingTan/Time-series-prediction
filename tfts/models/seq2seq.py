@@ -24,7 +24,7 @@ config: Dict[str, Any] = {
     "scheduler_sampling": 0,  # teacher forcing
     "use_attention": False,
     "attention_sizes": 64,
-    "attention_heads": 2,
+    "num_attention_heads": 2,
     "attention_dropout": 0,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -53,7 +53,7 @@ class Seq2seq(object):
             predict_sequence_length=predict_length,
             use_attention=config["use_attention"],
             attention_sizes=config["attention_sizes"],
-            attention_heads=config["attention_heads"],
+            num_attention_heads=config["num_attention_heads"],
             attention_dropout=config["attention_dropout"],
         )
 
@@ -157,7 +157,7 @@ class Decoder1(tf.keras.layers.Layer):
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
-        attention_heads=1,
+        num_attention_heads=1,
         attention_dropout=0.0,
     ):
         super(Decoder1, self).__init__()
@@ -166,7 +166,7 @@ class Decoder1(tf.keras.layers.Layer):
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
         self.attention_sizes = attention_sizes
-        self.attention_heads = attention_heads
+        self.num_attention_heads = num_attention_heads
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
@@ -178,7 +178,7 @@ class Decoder1(tf.keras.layers.Layer):
         if self.use_attention:
             self.attention = FullAttention(
                 hidden_size=self.attention_sizes,
-                num_heads=self.attention_heads,
+                num_attention_heads=self.num_attention_heads,
                 attention_dropout=self.attention_dropout,
             )
         super().build(input_shape)
@@ -265,7 +265,7 @@ class Decoder2(tf.keras.layers.Layer):
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
-        attention_heads=1,
+        num_attention_heads=1,
         attention_dropout=0.0,
     ):
         super(Decoder2, self).__init__()
@@ -274,7 +274,7 @@ class Decoder2(tf.keras.layers.Layer):
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention
         self.attention_sizes = attention_sizes
-        self.attention_heads = attention_heads
+        self.num_attention_heads = num_attention_heads
         self.attention_dropout = attention_dropout
 
     def build(self, input_shape):
@@ -286,7 +286,7 @@ class Decoder2(tf.keras.layers.Layer):
         if self.use_attention:
             self.attention = FullAttention(
                 hidden_size=self.attention_sizes,
-                num_heads=self.attention_heads,
+                num_attention_heads=self.num_attention_heads,
                 attention_dropout=self.attention_dropout,
             )
         super().build(input_shape)

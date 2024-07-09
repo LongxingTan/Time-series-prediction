@@ -59,13 +59,13 @@ class AutoFormerConfig(object):
 
 
 config: Dict[str, Any] = {
-    "n_encoder_layers": 1,
+    "num_hidden_layers": 1,
     "n_decoder_layers": 1,
     "kernel_size": 24,
-    "attention_hidden_sizes": 32,
-    "num_heads": 1,
+    "hidden_size": 32,
+    "num_attention_heads": 1,
     "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 32 * 1,
+    "intermediate_size": 32 * 1,
     "ffn_dropout": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
@@ -86,23 +86,23 @@ class AutoFormer(object):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        # self.encoder_embedding = TokenEmbedding(config['attention_hidden_sizes'])
+        # self.encoder_embedding = TokenEmbedding(config['hidden_size'])
         self.series_decomp = SeriesDecomp(config["kernel_size"])
         self.encoder = [
             EncoderLayer(
                 config["kernel_size"],
-                config["attention_hidden_sizes"],
-                config["num_heads"],
+                config["hidden_size"],
+                config["num_attention_heads"],
                 config["attention_dropout"],
             )
-            for _ in range(config["n_encoder_layers"])
+            for _ in range(config["num_hidden_layers"])
         ]
 
         self.decoder = [
             DecoderLayer(
                 config["kernel_size"],
-                config["attention_hidden_sizes"],
-                config["num_heads"],
+                config["hidden_size"],
+                config["num_attention_heads"],
                 config["attention_dropout"],
             )
             for _ in range(config["n_decoder_layers"])
@@ -189,11 +189,11 @@ class AutoFormer(object):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, kernel_size: int, d_model: int, num_heads: int, dropout_rate: float = 0.1) -> None:
+    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
         super().__init__()
         self.series_decomp1 = SeriesDecomp(kernel_size)
         self.series_decomp2 = SeriesDecomp(kernel_size)
-        self.autocorrelation = AutoCorrelation(d_model, num_heads)
+        self.autocorrelation = AutoCorrelation(d_model, num_attention_heads)
         self.drop = Dropout(dropout_rate)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
@@ -218,15 +218,15 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, kernel_size, d_model, num_heads, drop_rate=0.1) -> None:
+    def __init__(self, kernel_size, d_model, num_attention_heads, drop_rate=0.1) -> None:
         super().__init__()
         self.d_model = d_model
         self.drop_rate = drop_rate
         self.series_decomp1 = SeriesDecomp(kernel_size)
         self.series_decomp2 = SeriesDecomp(kernel_size)
         self.series_decomp3 = SeriesDecomp(kernel_size)
-        self.autocorrelation1 = AutoCorrelation(d_model, num_heads)
-        self.autocorrelation2 = AutoCorrelation(d_model, num_heads)
+        self.autocorrelation1 = AutoCorrelation(d_model, num_attention_heads)
+        self.autocorrelation2 = AutoCorrelation(d_model, num_attention_heads)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding="same")
