@@ -5,6 +5,8 @@
 
 import tensorflow as tf
 
+from .base import BaseConfig, BaseModel
+
 params = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,

@@ -14,6 +14,8 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
+from .base import BaseConfig, BaseModel
+
 params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,

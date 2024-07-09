@@ -22,6 +22,23 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
+from .base import BaseConfig, BaseModel
+
+
+class BertConfig(BaseConfig):
+    model_type = "xlm"
+    attribute_map = {
+        "hidden_size": "emb_dim",
+        "num_attention_heads": "n_heads",
+        "num_hidden_layers": "n_layers",
+        "n_words": "vocab_size",  # For backward compatibility
+    }
+
+    def __init__(self, n_encoder_layer: int = 1, **kwargs):
+        self.n_encoder_layer = n_encoder_layer
+        super(BertConfig, self).__init__(**kwargs)
+
+
 params: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "use_token_embedding": False,

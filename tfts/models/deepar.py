@@ -10,6 +10,8 @@ from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropo
 
 from tfts.layers.deepar_layer import GaussianLayer
 
+from .base import BaseConfig, BaseModel
+
 params: Dict[str, Any] = {
     "rnn_size": 64,
     "skip_connect_circle": False,

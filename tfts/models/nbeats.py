@@ -9,6 +9,8 @@ import tensorflow as tf
 
 from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 
+from .base import BaseConfig, BaseModel
+
 params: Dict[str, Any] = {
     "stack_types": ["trend_block", "seasonality_block"],
     "nb_blocks_per_stack": 3,

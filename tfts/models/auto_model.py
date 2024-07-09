@@ -68,14 +68,6 @@ class AutoModel(object):
         outputs = self.model(inputs)
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
-    @classmethod
-    def from_config(cls, name: str):
-        return
-
-    @classmethod
-    def from_pretrained(cls, name: str):
-        return
-
 
 class AutoModelForPrediction(BaseModel):
     """tfts model for prediction"""

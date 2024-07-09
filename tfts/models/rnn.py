@@ -21,6 +21,8 @@ from tensorflow.keras.layers import (
 
 from tfts.layers.attention_layer import FullAttention
 
+from .base import BaseConfig, BaseModel
+
 params: Dict[str, Any] = {
     "rnn_type": "gru",
     "bi_direction": False,

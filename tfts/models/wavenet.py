@@ -13,6 +13,8 @@ from tfts.layers.attention_layer import FullAttention
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
+from .base import BaseConfig, BaseModel
+
 params: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(3)],
     "kernel_sizes": [2 for _ in range(3)],
