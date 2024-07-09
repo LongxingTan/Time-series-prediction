@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from .auto_config import AutoConfig
 from .base import BaseConfig, BaseModel
 
 MODEL_MAPPING_NAMES = OrderedDict(
@@ -37,10 +38,12 @@ class AutoModel(object):
         self,
         model_name: str,
         predict_length: int,
-        config,
+        config=None,
     ):
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
+        if not config:
+            config = AutoConfig.for_model(model_name)
         self.model = getattr(module, class_name)(predict_length, config=config)
 
     def __call__(

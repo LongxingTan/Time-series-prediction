@@ -174,7 +174,7 @@ class Encoder(tf.keras.layers.Layer):
             attention_layer = SelfAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            ffn_layer = FeedForwardNetwork(self.intermediate_size, self.hidden_size, self.hidden_dropout_prob)
+            ffn_layer = FeedForwardNetwork(self.hidden_size, self.intermediate_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
@@ -396,7 +396,7 @@ class Decoder2(tf.keras.layers.Layer):
         self.drop2 = TimeDistributed(Dropout(0.1))
         self.proj = TimeDistributed(Dense(1))
 
-    def call(self, x, memory, x_mask=None, memory_mask=None):
+    def call(self, x: tf.Tensor, memory, x_mask=None, memory_mask=None):
         """Transformer decoder2
 
         Parameters
@@ -457,7 +457,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
             enc_dec_attention_layer = FullAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            feed_forward_layer = FeedForwardNetwork(self.intermediate_size, self.hidden_size, self.hidden_dropout_prob)
+            feed_forward_layer = FeedForwardNetwork(self.hidden_size, self.intermediate_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -466,16 +466,22 @@ class DecoderLayer2(tf.keras.layers.Layer):
             )
         super(DecoderLayer2, self).build(input_shape)
 
-    def call(self, decoder_inputs, encoder_memory, decoder_mask=None, memory_mask=None):
+    def call(
+        self,
+        decoder_inputs: tf.Tensor,
+        encoder_memory: tf.Tensor,
+        decoder_mask: Optional[tf.Tensor] = None,
+        memory_mask: Optional[tf.Tensor] = None,
+    ) -> tf.Tensor:
         """Decoder layer2
 
         Parameters
         ----------
-        decoder_inputs : _type_
+        decoder_inputs : tf.Tensor
             _description_
         encoder_memory : _type_
             _description_
-        tgt_mask : _type_, optional
+        decoder_mask : _type_, optional
             _description_, by default None
         memory_mask : _type_, optional
             _description_, by default None

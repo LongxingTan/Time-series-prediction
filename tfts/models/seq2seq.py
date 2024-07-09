@@ -66,7 +66,7 @@ class Seq2seq(BaseModel):
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
-        """A RNN seq2seq structure for time series
+        """An RNN seq2seq structure for time series
 
         :param inputs: _description_
         :type inputs: _type_

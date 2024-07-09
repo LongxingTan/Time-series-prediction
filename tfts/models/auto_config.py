@@ -36,7 +36,7 @@ class AutoConfig(object):
             module = importlib.import_module(f".{model_name}", "tfts.models")
             mapping = getattr(module, class_name)
 
-            return mapping
+            return mapping()
         raise ValueError(
             f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
         )
