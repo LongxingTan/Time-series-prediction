@@ -80,8 +80,17 @@ class AutoModelForPrediction(BaseModel):
         super(AutoModelForPrediction, self).__init__()
         self.model = AutoModel(model_name)
 
-    def __call__(self):
-        return
+    def __call__(self, x):
+
+        model_output = self.model(x)
+
+        if self.config["skip_connect_circle"]:
+            x_mean = x[:, -self.predict_sequence_length :, 0:1]
+            model_output = model_output + x_mean
+        if self.config["skip_connect_mean"]:
+            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
+            model_output = model_output + x_mean
+        return model_output
 
 
 class AutoModelForClassification(BaseModel):

@@ -107,12 +107,6 @@ class TCN(BaseModel):
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
         # outputs = self.dense3(encoder_outputs)
 
-        if self.config["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            outputs = outputs + x_mean
-        if self.config["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            outputs = outputs + x_mean
         return outputs
 
 
