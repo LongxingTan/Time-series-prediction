@@ -10,8 +10,8 @@ class AttentionLayerTest(unittest.TestCase):
     def test_full_attention_layer(self):
         hidden_size = 64
         num_attention_heads = 4
-        attention_dropout = 0.1
-        layer = FullAttention(hidden_size, num_attention_heads, attention_dropout)
+        attention_probs_dropout_prob = 0.1
+        layer = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         q = tf.random.normal([2, 128, 16])
         k = tf.random.normal([2, 128, 4])
@@ -28,8 +28,8 @@ class AttentionLayerTest(unittest.TestCase):
     def test_self_attention_layer(self):
         hidden_size = 64
         num_attention_heads = 4
-        attention_dropout = 0.1
-        layer = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
+        attention_probs_dropout_prob = 0.1
+        layer = SelfAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         x = tf.random.normal([2, 128, 16])
         y = layer(x)
@@ -41,8 +41,8 @@ class AttentionLayerTest(unittest.TestCase):
     def test_prob_attention_layer(self):
         hidden_size = 128
         num_attention_heads = 4
-        attention_dropout = 0
-        layer = ProbAttention(hidden_size, num_attention_heads, attention_dropout)
+        attention_probs_dropout_prob = 0
+        layer = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         q = tf.random.normal([2, 128, 16])
         k = tf.random.normal([2, 128, 4])

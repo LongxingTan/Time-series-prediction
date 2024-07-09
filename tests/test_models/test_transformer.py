@@ -13,16 +13,16 @@ class TransformerTest(unittest.TestCase):
         num_hidden_layers = 2
         hidden_size = 32
         num_attention_heads = 2
-        attention_dropout = 0.0
+        attention_probs_dropout_prob = 0.0
         intermediate_size = 32
-        ffn_dropout = 0.0
+        hidden_dropout_prob = 0.0
         layer = Encoder(
             num_hidden_layers,
             hidden_size,
             num_attention_heads,
-            attention_dropout,
+            attention_probs_dropout_prob,
             intermediate_size,
-            ffn_dropout,
+            hidden_dropout_prob,
         )
         x = tf.random.normal([2, 16, hidden_size])
         y = layer(x)
@@ -36,17 +36,17 @@ class TransformerTest(unittest.TestCase):
         n_decoder_layers = 2
         hidden_size = 32
         num_attention_heads = 1
-        attention_dropout = 0
+        attention_probs_dropout_prob = 0
         intermediate_size = 32
-        ffn_dropout = 0
+        hidden_dropout_prob = 0
         layer = Decoder(
             predict_sequence_length,
             n_decoder_layers,
             hidden_size,
             num_attention_heads,
-            attention_dropout,
+            attention_probs_dropout_prob,
             intermediate_size,
-            ffn_dropout,
+            hidden_dropout_prob,
         )
 
         x = tf.random.normal([2, 16, hidden_size])

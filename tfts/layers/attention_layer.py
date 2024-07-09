@@ -15,7 +15,7 @@ from tfts.layers.mask_layer import ProbMask
 class FullAttention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_attention_heads: int, attention_dropout: float = 0.0) -> None:
+    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
         """Initialize the layer.
 
         Parameters:
@@ -24,7 +24,7 @@ class FullAttention(tf.keras.layers.Layer):
             The number of hidden units in each attention head.
         num_attention_heads : int
             The number of attention heads.
-        attention_dropout : float, optional
+        attention_probs_dropout_prob : float, optional
             Dropout rate for the attention weights. Defaults to 0.0.
         """
         super(FullAttention, self).__init__()
@@ -36,13 +36,13 @@ class FullAttention(tf.keras.layers.Layer):
             )
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
-        self.attention_dropout = attention_dropout
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
         self.dense_k = Dense(self.hidden_size, use_bias=False)
         self.dense_v = Dense(self.hidden_size, use_bias=False)
-        self.dropout = Dropout(rate=self.attention_dropout)
+        self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
         super(FullAttention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
@@ -89,7 +89,7 @@ class FullAttention(tf.keras.layers.Layer):
         config = {
             "hidden_size": self.hidden_size,
             "num_attention_heads": self.num_attention_heads,
-            "attention_dropout": self.attention_dropout,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
         }
         base_config = super(FullAttention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -97,10 +97,16 @@ class FullAttention(tf.keras.layers.Layer):
 
 class SelfAttention(tf.keras.layers.Layer):
     def __init__(
-        self, hidden_size: int, num_attention_heads: int, attention_dropout: float = 0.0, **kwargs: Dict[str, Any]
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float = 0.0,
+        **kwargs: Dict[str, Any]
     ) -> None:
         super(SelfAttention, self).__init__()
-        self.attention = FullAttention(hidden_size, num_attention_heads, attention_dropout=attention_dropout)
+        self.attention = FullAttention(
+            hidden_size, num_attention_heads, attention_probs_dropout_prob=attention_probs_dropout_prob
+        )
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
@@ -128,7 +134,9 @@ class SelfAttention(tf.keras.layers.Layer):
 
 
 class ProbAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int = 128, num_attention_heads: int = 1, attention_dropout: float = 0.0, **kwargs):
+    def __init__(
+        self, hidden_size: int = 128, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
+    ):
         super().__init__()
         self.mask_flag = True
         self.hidden_size = hidden_size
@@ -239,7 +247,7 @@ class SparseAttention(tf.keras.layers.Layer):
     SparseAttention implementation
     """
 
-    def __init__(self, hidden_size: int, num_attention_heads: int, attention_dropout: float = 0.0, **kwargs):
+    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0, **kwargs):
         super().__init__()
 
     def build(self, input_shape: Tuple[Optional[int], ...]):

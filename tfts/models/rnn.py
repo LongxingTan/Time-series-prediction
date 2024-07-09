@@ -25,9 +25,24 @@ from .base import BaseConfig, BaseModel
 
 
 class RNNConfig(BaseConfig):
-    def __init__(self, rnn_hidden_size: 54):
+    def __init__(
+        self,
+        rnn_hidden_size=64,
+        rnn_type="gru",
+        bi_direction=False,
+        dense_hidden_size=32,
+        num_stacked_layers=1,
+        scheduling_sampling=0,
+        use_attention=False,
+    ):
         super(RNNConfig, self).__init__()
         self.rnn_hidden_size = rnn_hidden_size
+        self.rnn_type = rnn_type
+        self.bi_direction = bi_direction
+        self.dense_hidden_size = dense_hidden_size
+        self.num_stacked_layers = num_stacked_layers
+        self.scheduling_sampling = scheduling_sampling
+        self.use_attention = use_attention
 
 
 config: Dict[str, Any] = {
@@ -50,7 +65,7 @@ class RNN(BaseModel):
         super(RNN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = Encoder(config["rnn_type"], config["rnn_size"], dense_size=config["dense_size"])
+        self.encoder = Encoder(rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_size)
         self.project1 = Dense(predict_sequence_length, activation=None)
 
         self.dense1 = Dense(128, activation="relu")
@@ -87,7 +102,7 @@ class RNN(BaseModel):
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
-        if self.config["rnn_type"] == "lstm":
+        if self.config.rnn_type == "lstm":
             encoder_output = tf.concat(encoder_state, axis=-1)
         else:
             encoder_output = encoder_state
@@ -111,7 +126,7 @@ class RNN(BaseModel):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, rnn_type, rnn_size, rnn_dropout=0, dense_size=32, **kwargs):
+    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, **kwargs):
         super(Encoder, self).__init__(**kwargs)
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size

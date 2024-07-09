@@ -48,7 +48,7 @@ class DeepAR(BaseModel):
         self.dense = Dense(units=predict_sequence_length, activation="relu")
         self.gauss = GaussianLayer(units=1)
 
-    def __call__(self, x: tf.Tensor, return_dict: Optional[bool] = None):
+    def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
         """DeepAR
 
         Parameters
@@ -61,7 +61,7 @@ class DeepAR(BaseModel):
         _type_
             _description_
         """
-        x, _ = self.rnn(x)
+        x, _ = self.rnn(inputs)
         x = self.dense(x)
         loc, scale = self.gauss(x)
         return loc, scale

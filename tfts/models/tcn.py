@@ -15,8 +15,18 @@ from .base import BaseConfig, BaseModel
 
 
 class TCNConfig(BaseConfig):
-    def __init__(self):
+    def __init__(
+        self,
+        dilation_rates=[2**i for i in range(4)],
+        kernel_sizes=[2 for i in range(4)],
+        filters=128,
+        dense_hidden_size=64,
+    ):
         super(TCNConfig, self).__init__()
+        self.dilation_rates = dilation_rates
+        self.kernel_sizes = kernel_sizes
+        self.filters = filters
+        self.dense_hidden_size = dense_hidden_size
 
 
 config: Dict[str, Any] = {
@@ -36,9 +46,7 @@ class TCN(BaseModel):
         super(TCN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = Encoder(
-            config["kernel_sizes"], config["dilation_rates"], config["filters"], config["dense_hidden_size"]
-        )
+        self.encoder = Encoder(config.kernel_sizes, config.dilation_rates, config.filters, config.dense_hidden_size)
         # self.dense2 = Dense(1)
         # self.dense3 = TimeDistributed(Dense(1))
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')

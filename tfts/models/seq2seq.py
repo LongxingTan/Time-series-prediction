@@ -17,8 +17,30 @@ from .base import BaseConfig, BaseModel
 
 
 class Seq2seqConfig(BaseConfig):
-    def __init__(self):
+    def __init__(
+        self,
+        rnn_hidden_size=64,
+        rnn_type="gru",
+        bi_direction=False,
+        dense_hidden_size=32,
+        num_stacked_layers=1,
+        scheduling_sampling=0,
+        use_attention=False,
+        attention_size=64,
+        num_attention_heads=2,
+        attention_probs_dropout_prob=0,
+    ):
         super(Seq2seqConfig, self).__init__()
+        self.rnn_hidden_size = rnn_hidden_size
+        self.rnn_type = rnn_type
+        self.bi_direction = bi_direction
+        self.dense_hidden_size = dense_hidden_size
+        self.num_stacked_layers = num_stacked_layers
+        self.scheduling_sampling = scheduling_sampling
+        self.use_attention = use_attention
+        self.attention_size = attention_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
 
 config: Dict[str, Any] = {
@@ -31,7 +53,7 @@ config: Dict[str, Any] = {
     "use_attention": False,
     "attention_sizes": 64,
     "num_attention_heads": 2,
-    "attention_dropout": 0,
+    "attention_probs_dropout_prob": 0,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
@@ -44,17 +66,15 @@ class Seq2seq(BaseModel):
         super(Seq2seq, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_length
-        self.encoder = Encoder(
-            rnn_type=config["rnn_type"], rnn_size=config["rnn_size"], dense_size=config["dense_size"]
-        )
+        self.encoder = Encoder(rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_size)
         self.decoder = Decoder1(
-            rnn_type=config["rnn_type"],
-            rnn_size=config["rnn_size"],
+            rnn_size=config.rnn_hidden_size,
+            rnn_type=config.rnn_type,
             predict_sequence_length=predict_length,
-            use_attention=config["use_attention"],
-            attention_sizes=config["attention_sizes"],
-            num_attention_heads=config["num_attention_heads"],
-            attention_dropout=config["attention_dropout"],
+            use_attention=config.use_attention,
+            attention_sizes=config.attention_sizes,
+            num_attention_heads=config.num_attention_heads,
+            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
@@ -92,7 +112,7 @@ class Seq2seq(BaseModel):
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
-            scheduler_sampling=self.config["scheduler_sampling"],
+            scheduler_sampling=self.config.scheduler_sampling,
             encoder_output=encoder_outputs,
         )
 
@@ -106,7 +126,7 @@ class Seq2seq(BaseModel):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, rnn_type, rnn_size, rnn_dropout=0, dense_size=32, **kwargs):
+    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, **kwargs):
         super(Encoder, self).__init__(**kwargs)
         self.rnn_type = rnn_type
         if rnn_type.lower() == "gru":
@@ -152,13 +172,13 @@ class Encoder(tf.keras.layers.Layer):
 class Decoder1(tf.keras.layers.Layer):
     def __init__(
         self,
-        rnn_type="gru",
         rnn_size=32,
+        rnn_type="gru",
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
         num_attention_heads=1,
-        attention_dropout=0.0,
+        attention_probs_dropout_prob=0.0,
     ):
         super(Decoder1, self).__init__()
         self.predict_sequence_length = predict_sequence_length
@@ -167,7 +187,7 @@ class Decoder1(tf.keras.layers.Layer):
         self.rnn_size = rnn_size
         self.attention_sizes = attention_sizes
         self.num_attention_heads = num_attention_heads
-        self.attention_dropout = attention_dropout
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
         if self.rnn_type.lower() == "gru":
@@ -179,7 +199,7 @@ class Decoder1(tf.keras.layers.Layer):
             self.attention = FullAttention(
                 hidden_size=self.attention_sizes,
                 num_attention_heads=self.num_attention_heads,
-                attention_dropout=self.attention_dropout,
+                attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
         super().build(input_shape)
 
@@ -260,13 +280,13 @@ class Decoder1(tf.keras.layers.Layer):
 class Decoder2(tf.keras.layers.Layer):
     def __init__(
         self,
-        rnn_type="gru",
         rnn_size=32,
+        rnn_type="gru",
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
         num_attention_heads=1,
-        attention_dropout=0.0,
+        attention_probs_dropout_prob=0.0,
     ):
         super(Decoder2, self).__init__()
         self.rnn_type = rnn_type
@@ -275,7 +295,7 @@ class Decoder2(tf.keras.layers.Layer):
         self.use_attention = use_attention
         self.attention_sizes = attention_sizes
         self.num_attention_heads = num_attention_heads
-        self.attention_dropout = attention_dropout
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
         if self.rnn_type.lower() == "gru":
@@ -287,7 +307,7 @@ class Decoder2(tf.keras.layers.Layer):
             self.attention = FullAttention(
                 hidden_size=self.attention_sizes,
                 num_attention_heads=self.num_attention_heads,
-                attention_dropout=self.attention_dropout,
+                attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
         super().build(input_shape)
 
@@ -377,7 +397,7 @@ class Decoder2(tf.keras.layers.Layer):
 
 class Decoder3(tf.keras.layers.Layer):
     # multi-steps static decoding
-    def __init__(self, rnn_type="gru", rnn_size=32, rnn_dropout=0, dense_size=1, **kwargs) -> None:
+    def __init__(self, rnn_size=32, rnn_type="gru", rnn_dropout=0, dense_size=1, **kwargs) -> None:
         super(Decoder3, self).__init__()
         if rnn_type.lower() == "gru":
             self.rnn = GRU(

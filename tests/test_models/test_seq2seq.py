@@ -64,7 +64,7 @@ class Seq2seqTest(unittest.TestCase):
             "use_attention": True,
             "attention_sizes": 64,
             "attention_heads": 2,
-            "attention_dropout": 0,
+            "attention_probs_dropout_prob": 0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }
@@ -86,7 +86,7 @@ class Seq2seqTest(unittest.TestCase):
             "use_attention": False,
             "attention_sizes": 64,
             "attention_heads": 2,
-            "attention_dropout": 0,
+            "attention_probs_dropout_prob": 0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }
@@ -108,7 +108,7 @@ class Seq2seqTest(unittest.TestCase):
             "use_attention": True,
             "attention_sizes": 64,
             "attention_heads": 2,
-            "attention_dropout": 0,
+            "attention_probs_dropout_prob": 0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }

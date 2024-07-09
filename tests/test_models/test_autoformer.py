@@ -22,8 +22,8 @@ class AutoFormerTest(unittest.TestCase):
         kernel_size = 32
         hidden_size = 64
         num_attention_heads = 4
-        attention_dropout = 0.1
-        layer = EncoderLayer(kernel_size, hidden_size, num_attention_heads, attention_dropout)
+        attention_probs_dropout_prob = 0.1
+        layer = EncoderLayer(kernel_size, hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         x = tf.random.normal([2, 100, hidden_size])  # after embedding
         y = layer(x)
@@ -33,8 +33,8 @@ class AutoFormerTest(unittest.TestCase):
         kernel_size = 32
         hidden_size = 64
         num_attention_heads = 4
-        attention_dropout = 0.1
-        layer = DecoderLayer(kernel_size, hidden_size, num_attention_heads, attention_dropout)
+        attention_probs_dropout_prob = 0.1
+        layer = DecoderLayer(kernel_size, hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])

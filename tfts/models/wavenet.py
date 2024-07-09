@@ -17,8 +17,28 @@ from .base import BaseConfig, BaseModel
 
 
 class WaveNetConfig(BaseConfig):
-    def __init__(self):
+    def __init__(
+        self,
+        dilation_rates=[2**i for i in range(4)],
+        kernel_sizes=[2 for i in range(4)],
+        filters=128,
+        dense_hidden_size=64,
+        scheduler_sampling=1,
+        use_attention=False,
+        attention_size=64,
+        num_attention_heads=2,
+        attention_probs_dropout_prob=0,
+    ):
         super(WaveNetConfig, self).__init__()
+        self.dilation_rates = dilation_rates
+        self.kernel_sizes = kernel_sizes
+        self.filters = filters
+        self.dense_hidden_size = dense_hidden_size
+        self.scheduler_sampling = scheduler_sampling  # 0 means teacher forcing, 1 means use last prediction
+        self.use_attention = use_attention
+        self.attention_size = attention_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
 
 config: Dict[str, Any] = {
@@ -26,7 +46,7 @@ config: Dict[str, Any] = {
     "kernel_sizes": [2 for _ in range(3)],
     "filters": 32,
     "dense_hidden_size": 32,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
+    "scheduler_sampling": 1,
     "use_attention": False,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -42,15 +62,15 @@ class WaveNet(BaseModel):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=config["kernel_sizes"],
-            dilation_rates=config["dilation_rates"],
-            filters=config["filters"],
-            dense_hidden_size=config["dense_hidden_size"],
+            kernel_sizes=config.kernel_sizes,
+            dilation_rates=config.dilation_rates,
+            filters=config.filters,
+            dense_hidden_size=config.dense_hidden_size,
         )
         self.decoder = Decoder1(
-            filters=config["filters"],
-            dilation_rates=config["dilation_rates"],
-            dense_hidden_size=config["dense_hidden_size"],
+            filters=config.filters,
+            dilation_rates=config.dilation_rates,
+            dense_hidden_size=config.dense_hidden_size,
             predict_sequence_length=predict_sequence_length,
         )
 

@@ -45,18 +45,18 @@ class SeriesDecomp(tf.keras.layers.Layer):
 class AutoCorrelation(tf.keras.layers.Layer):
     """Self-Attention layer that computes time-delayed autocorrelation between queries and keys"""
 
-    def __init__(self, d_model: int, num_attention_heads: int, attention_dropout: float = 0.0) -> None:
+    def __init__(self, d_model: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
         super().__init__()
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads
         self.depth = d_model // num_attention_heads
-        self.attention_dropout = attention_dropout
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         self.wq = Dense(self.d_model, name="q")
         self.wk = Dense(self.d_model, name="k")
         self.wv = Dense(self.d_model, name="v")
-        self.drop = Dropout(self.attention_dropout)
+        self.drop = Dropout(self.attention_probs_dropout_prob)
         self.dense = Dense(self.d_model, name="project")
         super().build(input_shape)
 

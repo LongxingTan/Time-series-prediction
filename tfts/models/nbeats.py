@@ -13,8 +13,20 @@ from .base import BaseConfig, BaseModel
 
 
 class NbeatsConfig(BaseConfig):
-    def __init__(self):
+    def __init__(
+        self,
+        stack_types=["trend_block", "seasonality_block"],
+        nb_blocks_per_stack=3,
+        hidden_size=64,
+        thetas_dims=(4, 8),
+        share_weights_in_stack=False,
+    ):
         super(NbeatsConfig, self).__init__()
+        self.stack_types = stack_types
+        self.nb_blocks_per_stack = nb_blocks_per_stack
+        self.hidden_size = hidden_size
+        self.thetas_dims = thetas_dims
+        self.share_weights_in_stack = share_weights_in_stack
 
 
 config: Dict[str, Any] = {
@@ -39,10 +51,10 @@ class NBeats(BaseModel):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        self.stack_types = config["stack_types"]
-        self.nb_blocks_per_stack = config["nb_blocks_per_stack"]
-        self.hidden_size = config["hidden_size"]
-        self.n_block_layers = config["n_block_layers"]
+        self.stack_types = config.stack_types
+        self.nb_blocks_per_stack = config.nb_blocks_per_stack
+        self.hidden_size = config.hidden_size
+        self.n_block_layers = config.n_block_layers
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
