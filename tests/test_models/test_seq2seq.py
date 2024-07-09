@@ -45,8 +45,8 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_config = {}
-        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
+
+        model = Seq2seq(predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -54,21 +54,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_gru_attn(self):
         predict_sequence_length = 8
-        custom_model_config = {
-            "rnn_type": "gru",
-            "bi_direction": False,
-            "rnn_size": 64,
-            "dense_size": 64,
-            "num_stacked_layers": 1,
-            "scheduler_sampling": 0,  # teacher forcing
-            "use_attention": True,
-            "attention_sizes": 64,
-            "attention_heads": 2,
-            "attention_probs_dropout_prob": 0,
-            "skip_connect_circle": False,
-            "skip_connect_mean": False,
-        }
-        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
+        model = Seq2seq(predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -76,21 +62,8 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_lstm(self):
         predict_sequence_length = 8
-        custom_model_config = {
-            "rnn_type": "lstm",
-            "bi_direction": False,
-            "rnn_size": 64,
-            "dense_size": 64,
-            "num_stacked_layers": 1,
-            "scheduler_sampling": 0,  # teacher forcing
-            "use_attention": False,
-            "attention_sizes": 64,
-            "attention_heads": 2,
-            "attention_probs_dropout_prob": 0,
-            "skip_connect_circle": False,
-            "skip_connect_mean": False,
-        }
-        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
+
+        model = Seq2seq(predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -98,21 +71,8 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_lstm_gru(self):
         predict_sequence_length = 8
-        custom_model_config = {
-            "rnn_type": "lstm",
-            "bi_direction": False,
-            "rnn_size": 64,
-            "dense_size": 64,
-            "num_stacked_layers": 1,
-            "scheduler_sampling": 0,  # teacher forcing
-            "use_attention": True,
-            "attention_sizes": 64,
-            "attention_heads": 2,
-            "attention_probs_dropout_prob": 0,
-            "skip_connect_circle": False,
-            "skip_connect_mean": False,
-        }
-        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
+
+        model = Seq2seq(predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)

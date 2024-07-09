@@ -11,7 +11,16 @@ from .base import BaseConfig
 CONFIG_MAPPING_NAMES = OrderedDict(
     [
         ("seq2seq", "Seq2seqConfig"),
+        ("rnn", "RNNConfig"),
+        ("wavenet", "WaveNetConfig"),
+        ("tcn", "TCNConfig"),
+        ("transformer", "TransformerConfig"),
         ("bert", "BertConfig"),
+        ("informer", "InformerConfig"),
+        ("autoformer", "AutoFormerConfig"),
+        ("tft", "TFTransformerConfig"),
+        ("unet", "UnetConfig"),
+        ("nbeats", "NBeatsConfig"),
     ]
 )
 

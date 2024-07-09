@@ -10,8 +10,7 @@ from tfts.models.deepar import DeepAR
 class DeepARTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_config = {}
-        model = DeepAR(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
+        model = DeepAR(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, predict_sequence_length, 3])
         loc, scale = model(x)

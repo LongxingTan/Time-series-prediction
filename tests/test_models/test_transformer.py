@@ -60,8 +60,7 @@ class TransformerTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_config = {}
-        model = Transformer(predict_sequence_length, custom_model_config)
+        model = Transformer(predict_sequence_length)
         x = tf.random.normal([16, 160, 36])
         y = model(x)
         self.assertEqual(y.shape, (16, predict_sequence_length, 1), "incorrect output shape")

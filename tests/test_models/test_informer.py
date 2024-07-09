@@ -20,8 +20,7 @@ tf.config.run_functions_eagerly(True)
 class InformerTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_config = {"skip_connect_mean": True}
-        model = Informer(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
+        model = Informer(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 5])
         y = model(x)
@@ -144,6 +143,6 @@ class InformerTest(unittest.TestCase):
         )
         y_valid = np.random.rand(batch_size, predict_length, 1)
 
-        model = AutoModel("informer", predict_length, custom_model_config=custom_config)
+        model = AutoModel("informer", predict_length)
         trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
