@@ -41,7 +41,6 @@ class TransformerConfig(BaseConfig):
         **kwargs,
     ):
         super(TransformerConfig, self).__init__()
-
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
@@ -74,7 +73,7 @@ class Transformer(BaseModel):
         super(Transformer, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(config.hidden_size)
+        self.encoder_embedding = DataEmbedding(self.config.hidden_size)
 
         self.encoder = Encoder(
             num_hidden_layers=config.num_layers,

@@ -38,7 +38,12 @@ class TCN(BaseModel):
         super(TCN, self).__init__()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = Encoder(config.kernel_sizes, config.dilation_rates, config.filters, config.dense_hidden_size)
+        self.encoder = Encoder(
+            kernel_sizes=config.kernel_sizes,
+            dilation_rates=config.dilation_rates,
+            filters=config.filters,
+            dense_hidden_size=config.dense_hidden_size,
+        )
         # self.dense2 = Dense(1)
         # self.dense3 = TimeDistributed(Dense(1))
         # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
@@ -55,7 +60,7 @@ class TCN(BaseModel):
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
-        """_summary_
+        """TCN call
 
         Parameters
         ----------

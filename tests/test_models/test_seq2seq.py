@@ -45,7 +45,6 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-
         model = Seq2seq(predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
