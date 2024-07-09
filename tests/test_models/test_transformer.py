@@ -15,7 +15,6 @@ class TransformerTest(unittest.TestCase):
         num_heads = 2
         attention_dropout = 0.0
         ffn_hidden_sizes = 32
-        ffn_filter_sizes = 32
         ffn_dropout = 0.0
         layer = Encoder(
             n_encoder_layers,
@@ -23,7 +22,6 @@ class TransformerTest(unittest.TestCase):
             num_heads,
             attention_dropout,
             ffn_hidden_sizes,
-            ffn_filter_sizes,
             ffn_dropout,
         )
         x = tf.random.normal([2, 16, attention_hidden_sizes])
@@ -40,7 +38,6 @@ class TransformerTest(unittest.TestCase):
         num_heads = 1
         attention_dropout = 0
         ffn_hidden_sizes = 32
-        ffn_filter_sizes = 32
         ffn_dropout = 0
         layer = Decoder(
             predict_sequence_length,
@@ -49,7 +46,6 @@ class TransformerTest(unittest.TestCase):
             num_heads,
             attention_dropout,
             ffn_hidden_sizes,
-            ffn_filter_sizes,
             ffn_dropout,
         )
 
@@ -64,8 +60,8 @@ class TransformerTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = Transformer(predict_sequence_length, custom_model_params)
+        custom_model_config = {}
+        model = Transformer(predict_sequence_length, custom_model_config)
         x = tf.random.normal([16, 160, 36])
         y = model(x)
         self.assertEqual(y.shape, (16, predict_sequence_length, 1), "incorrect output shape")

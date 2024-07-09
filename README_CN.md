@@ -184,12 +184,12 @@ from tfts import AutoModel, AutoConfig
 config = AutoConfig('rnn').get_config()
 print(config)
 
-custom_model_params = {
+custom_model_config = {
     "rnn_size": 128,
     "dense_size": 128,
 }
 
-model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
 ```
 
 **搭建自己的模型**
@@ -237,11 +237,11 @@ from tfts import AutoModel, AutoConfig
 config = AutoConfig('rnn').get_config()
 print(config)  # 查看模型可配置参数
 
-custom_model_params = {
+custom_model_config = {
     "rnn_size": 128,
     "dense_size": 128,
 }
-model = AutoModel('rnn', custom_model_params=custom_model_params)
+model = AutoModel('rnn', custom_model_config=custom_model_config)
 ```
 
 

@@ -37,11 +37,11 @@ class AutoModel(object):
         self,
         model_name: str,
         predict_length: int = 1,
-        custom_model_params: Optional[Dict[str, object]] = None,
+        custom_model_config: Optional[Dict[str, object]] = None,
     ):
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        self.model = getattr(module, class_name)(predict_length, custom_model_params=custom_model_params)
+        self.model = getattr(module, class_name)(predict_length, custom_model_config=custom_model_config)
 
     def __call__(
         self,

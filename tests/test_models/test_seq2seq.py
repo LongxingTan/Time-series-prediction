@@ -45,8 +45,8 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = Seq2seq(predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {}
+        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -54,7 +54,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_gru_attn(self):
         predict_sequence_length = 8
-        custom_model_params = {
+        custom_model_config = {
             "rnn_type": "gru",
             "bi_direction": False,
             "rnn_size": 64,
@@ -68,7 +68,7 @@ class Seq2seqTest(unittest.TestCase):
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }
-        model = Seq2seq(predict_sequence_length, custom_model_params=custom_model_params)
+        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -76,7 +76,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_lstm(self):
         predict_sequence_length = 8
-        custom_model_params = {
+        custom_model_config = {
             "rnn_type": "lstm",
             "bi_direction": False,
             "rnn_size": 64,
@@ -90,7 +90,7 @@ class Seq2seqTest(unittest.TestCase):
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }
-        model = Seq2seq(predict_sequence_length, custom_model_params=custom_model_params)
+        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -98,7 +98,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_lstm_gru(self):
         predict_sequence_length = 8
-        custom_model_params = {
+        custom_model_config = {
             "rnn_type": "lstm",
             "bi_direction": False,
             "rnn_size": 64,
@@ -112,7 +112,7 @@ class Seq2seqTest(unittest.TestCase):
             "skip_connect_circle": False,
             "skip_connect_mean": False,
         }
-        model = Seq2seq(predict_sequence_length, custom_model_params=custom_model_params)
+        model = Seq2seq(predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)

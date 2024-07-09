@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from .base import BaseConfig, BaseModel
 
-params = {
+config = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
@@ -16,10 +16,10 @@ params = {
 class TFTransformer(object):
     """Temporal fusion transformer model"""
 
-    def __init__(self, predict_sequence_length=3, custom_model_params=None):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+    def __init__(self, predict_sequence_length=3, custom_model_config=None):
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
     def __call__(self, x):

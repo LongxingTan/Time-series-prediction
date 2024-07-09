@@ -229,7 +229,7 @@ class KerasTrainer(object):
         model: tf.keras.Model instance
         loss: loss function
         optimizer: tf.keras.Optimizer instance
-        run_eargely: it depends which one is much faster
+        run_eagerly: it depends on which one is much faster
         """
         self.model = model
         self.loss_fn = loss_fn

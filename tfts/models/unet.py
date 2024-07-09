@@ -12,7 +12,7 @@ from tfts.layers.unet_layer import conv_br, re_block
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
@@ -24,12 +24,12 @@ class Unet(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
         self.AvgPool1D1 = AveragePooling1D(pool_size=2)
@@ -60,10 +60,10 @@ class Unet(object):
         encoder_output = self.encoder([x, pool1, pool2])
         decoder_outputs = self.decoder(encoder_output, predict_seq_length=self.predict_sequence_length)
 
-        if self.params["skip_connect_circle"]:
+        if self.config["skip_connect_circle"]:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
+        if self.config["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs

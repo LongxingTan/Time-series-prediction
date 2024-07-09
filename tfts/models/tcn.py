@@ -13,7 +13,7 @@ from tfts.layers.dense_layer import DenseTemp
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(4)],
     "kernel_sizes": [2 for i in range(4)],
     "filters": 128,
@@ -29,15 +29,15 @@ class TCN(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            params["kernel_sizes"], params["dilation_rates"], params["filters"], params["dense_hidden_size"]
+            config["kernel_sizes"], config["dilation_rates"], config["filters"], config["dense_hidden_size"]
         )
         # self.dense2 = Dense(1)
         # self.dense3 = TimeDistributed(Dense(1))
@@ -99,10 +99,10 @@ class TCN(object):
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
         # outputs = self.dense3(encoder_outputs)
 
-        if self.params["skip_connect_circle"]:
+        if self.config["skip_connect_circle"]:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             outputs = outputs + x_mean
-        if self.params["skip_connect_mean"]:
+        if self.config["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             outputs = outputs + x_mean
         return outputs

@@ -170,7 +170,7 @@ trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
 
-**Prepare custom model params**
+**Prepare custom model config**
 
 ```python
 import tensorflow as tf
@@ -180,12 +180,12 @@ from tfts import AutoModel, AutoConfig
 config = AutoConfig('rnn').get_config()
 print(config)
 
-custom_model_params = {
+custom_model_config = {
     "rnn_size": 128,
     "dense_size": 128,
 }
 
-model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
 ```
 
 **Build your own model**

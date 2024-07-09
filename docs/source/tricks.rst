@@ -18,7 +18,7 @@ There is no free launch, and it's impossible to forecast the future. So we shoul
 
 * target transformation
 
-	skip connect. skip connect from ResNet is a special and common target transformation, tfts provides some basic skip connect in model params. If you want try more skip connect, please use ``AutoModel`` to make custom model.
+	skip connect. skip connect from ResNet is a special and common target transformation, tfts provides some basic skip connect in model config. If you want try more skip connect, please use ``AutoModel`` to make custom model.
 
 * different temporal scale
 

@@ -15,7 +15,7 @@ from tfts.layers.attention_layer import FullAttention
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "rnn_type": "gru",
     "bi_direction": False,
     "rnn_size": 64,
@@ -37,24 +37,24 @@ class Seq2seq(object):
     def __init__(
         self,
         predict_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_length
         self.encoder = Encoder(
-            rnn_type=params["rnn_type"], rnn_size=params["rnn_size"], dense_size=params["dense_size"]
+            rnn_type=config["rnn_type"], rnn_size=config["rnn_size"], dense_size=config["dense_size"]
         )
         self.decoder = Decoder1(
-            rnn_type=params["rnn_type"],
-            rnn_size=params["rnn_size"],
+            rnn_type=config["rnn_type"],
+            rnn_size=config["rnn_size"],
             predict_sequence_length=predict_length,
-            use_attention=params["use_attention"],
-            attention_sizes=params["attention_sizes"],
-            attention_heads=params["attention_heads"],
-            attention_dropout=params["attention_dropout"],
+            use_attention=config["use_attention"],
+            attention_sizes=config["attention_sizes"],
+            attention_heads=config["attention_heads"],
+            attention_dropout=config["attention_dropout"],
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
@@ -92,14 +92,14 @@ class Seq2seq(object):
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
-            scheduler_sampling=self.params["scheduler_sampling"],
+            scheduler_sampling=self.config["scheduler_sampling"],
             encoder_output=encoder_outputs,
         )
 
-        if self.params["skip_connect_circle"]:
+        if self.config["skip_connect_circle"]:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
+        if self.config["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
@@ -144,7 +144,7 @@ class Encoder(tf.keras.layers.Layer):
             state = (state1, state2)
         else:
             raise ValueError("No supported rnn type of {}".format(self.rnn_type))
-        # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
+        # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(config['num_stacked_layers']))
         # outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
 

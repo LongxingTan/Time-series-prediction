@@ -20,8 +20,8 @@ tf.config.run_functions_eagerly(True)
 class InformerTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {"skip_connect_mean": True}
-        model = Informer(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {"skip_connect_mean": True}
+        model = Informer(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 5])
         y = model(x)
@@ -107,14 +107,13 @@ class InformerTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, 50, attention_hidden_sizes))
 
     def test_train(self):
-        params: Dict[str, Any] = {
+        config: Dict[str, Any] = {
             "n_encoder_layers": 1,
             "n_decoder_layers": 1,
             "attention_hidden_sizes": 32 * 1,
             "num_heads": 1,
             "attention_dropout": 0.0,
             "ffn_hidden_sizes": 32 * 1,
-            "ffn_filter_sizes": 32 * 1,
             "ffn_dropout": 0.0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,
@@ -122,8 +121,8 @@ class InformerTest(unittest.TestCase):
             "distil_conv": False,
         }
 
-        custom_params = params.copy()
-        custom_params["prob_attention"] = True
+        custom_config = config.copy()
+        custom_config["prob_attention"] = True
 
         train_length = 49
         predict_length = 10
@@ -145,6 +144,6 @@ class InformerTest(unittest.TestCase):
         )
         y_valid = np.random.rand(batch_size, predict_length, 1)
 
-        model = AutoModel("informer", predict_length, custom_model_params=custom_params)
+        model = AutoModel("informer", predict_length, custom_model_config=custom_config)
         trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)

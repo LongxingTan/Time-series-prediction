@@ -12,7 +12,7 @@ from tfts.layers.deepar_layer import GaussianLayer
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "rnn_size": 64,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -23,19 +23,19 @@ class DeepAR(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
         """DeepAR Network
 
-        :param custom_model_params:
+        :param custom_model_config:
         """
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        cell = tf.keras.layers.GRUCell(units=self.params["rnn_size"])
+        cell = tf.keras.layers.GRUCell(units=self.config["rnn_size"])
         self.rnn = tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
         self.bn = BatchNormalization()
         self.dense = Dense(units=predict_sequence_length, activation="relu")

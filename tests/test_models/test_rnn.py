@@ -11,8 +11,8 @@ from tfts.models.rnn import RNN, RNN2
 class RNNTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = RNN(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {}
+        model = RNN(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -28,8 +28,8 @@ class RNNTest(unittest.TestCase):
 
     def test_model2(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = RNN2(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {}
+        model = RNN2(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)

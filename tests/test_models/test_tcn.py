@@ -11,8 +11,8 @@ from tfts.models.tcn import TCN
 class TCNTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = TCN(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {}
+        model = TCN(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([16, 160, 36])
         y = model(x)

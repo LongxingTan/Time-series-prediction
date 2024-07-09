@@ -58,7 +58,7 @@ class AutoFormerConfig(object):
         self.classifier_dropout = classifier_dropout
 
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "kernel_size": 24,
@@ -66,7 +66,6 @@ params: Dict[str, Any] = {
     "num_heads": 1,
     "attention_dropout": 0.0,
     "ffn_hidden_sizes": 32 * 1,
-    "ffn_filter_sizes": 32 * 1,
     "ffn_dropout": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
@@ -79,34 +78,34 @@ class AutoFormer(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
-        self.series_decomp = SeriesDecomp(params["kernel_size"])
+        # self.encoder_embedding = TokenEmbedding(config['attention_hidden_sizes'])
+        self.series_decomp = SeriesDecomp(config["kernel_size"])
         self.encoder = [
             EncoderLayer(
-                params["kernel_size"],
-                params["attention_hidden_sizes"],
-                params["num_heads"],
-                params["attention_dropout"],
+                config["kernel_size"],
+                config["attention_hidden_sizes"],
+                config["num_heads"],
+                config["attention_dropout"],
             )
-            for _ in range(params["n_encoder_layers"])
+            for _ in range(config["n_encoder_layers"])
         ]
 
         self.decoder = [
             DecoderLayer(
-                params["kernel_size"],
-                params["attention_hidden_sizes"],
-                params["num_heads"],
-                params["attention_dropout"],
+                config["kernel_size"],
+                config["attention_hidden_sizes"],
+                config["num_heads"],
+                config["attention_dropout"],
             )
-            for _ in range(params["n_decoder_layers"])
+            for _ in range(config["n_decoder_layers"])
         ]
 
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)

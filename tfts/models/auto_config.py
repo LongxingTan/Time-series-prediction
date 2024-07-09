@@ -1,53 +1,37 @@
 """AutoConfig to set up models custom config"""
 
+from collections import OrderedDict
+import importlib
 import json
 import os
 from typing import Any, Dict, Union
 
-from tfts.models.autoformer import params as autoformer_params
-from tfts.models.bert import params as bert_params
-from tfts.models.informer import params as informer_params
-from tfts.models.nbeats import params as nbeats_params
-from tfts.models.rnn import params as rnn_params
-from tfts.models.seq2seq import params as seq2seq_params
-from tfts.models.tcn import params as tcn_params
-from tfts.models.transformer import params as transformer_params
-from tfts.models.unet import params as unet_params
-from tfts.models.wavenet import params as wavenet_params
-
 from .base import BaseConfig
 
+CONFIG_MAPPING_NAMES = OrderedDict(
+    [
+        ("seq2seq", "Seq2seqConfig"),
+        ("bert", "BertConfig"),
+    ]
+)
 
-class AutoConfig(BaseConfig):
+
+class AutoConfig(object):
     """AutoConfig for model"""
 
-    def __init__(self, use_model: str) -> None:
+    @classmethod
+    def for_model(cls, model_name: str, *args, **kwargs):
 
-        if use_model.lower() == "seq2seq":
-            self.params = seq2seq_params
-        elif use_model.lower() == "rnn":
-            self.params = rnn_params
-        elif use_model.lower() == "wavenet":
-            self.params = wavenet_params
-        elif use_model.lower() == "tcn":
-            self.params = tcn_params
-        elif use_model.lower() == "transformer":
-            self.params = transformer_params
-        elif use_model.lower() == "bert":
-            self.params = bert_params
-        elif use_model.lower() == "informer":
-            self.params = informer_params
-        elif use_model.lower() == "autoformer":
-            self.params = autoformer_params
-        # elif use_model.lower() == "tft":
-        #     self.params = tf_transformer_params
-        elif use_model.lower() == "unet":
-            self.params = unet_params
-        elif use_model.lower() == "nbeats":
-            self.params = nbeats_params
-        # elif use_model.lower() == "gan":
-        #     self.params = gan_params
-        else:
-            raise ValueError("Unsupported model of {} yet".format(use_model))
+        if model_name in CONFIG_MAPPING_NAMES:
+            class_name = CONFIG_MAPPING_NAMES[model_name]
+            module = importlib.import_module(f".{model_name}", "tfts.models")
+            mapping = getattr(module, class_name)
 
-        super(AutoConfig, self).__init__(**self.params)
+            return mapping
+        raise ValueError(
+            f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
+        )
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+        pass

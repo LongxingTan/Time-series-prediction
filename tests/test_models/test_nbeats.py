@@ -12,8 +12,8 @@ from tfts.models.nbeats import NBeats
 class NBeatsTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = NBeats(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        custom_model_config = {}
+        model = NBeats(predict_sequence_length=predict_sequence_length, custom_model_config=custom_model_config)
 
         x = tf.random.normal([2, 16, 1])
         y = model(x)

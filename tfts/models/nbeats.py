@@ -11,7 +11,7 @@ from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "stack_types": ["trend_block", "seasonality_block"],
     "nb_blocks_per_stack": 3,
     "n_block_layers": 4,
@@ -27,18 +27,18 @@ class NBeats(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        self.stack_types = params["stack_types"]
-        self.nb_blocks_per_stack = params["nb_blocks_per_stack"]
-        self.hidden_size = params["hidden_size"]
-        self.n_block_layers = params["n_block_layers"]
+        self.stack_types = config["stack_types"]
+        self.nb_blocks_per_stack = config["nb_blocks_per_stack"]
+        self.hidden_size = config["hidden_size"]
+        self.n_block_layers = config["n_block_layers"]
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 

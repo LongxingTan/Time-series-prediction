@@ -22,14 +22,13 @@ from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "n_encoder_layers": 1,
     "n_decoder_layers": 1,
     "attention_hidden_sizes": 32 * 1,
     "num_heads": 1,
     "attention_dropout": 0.0,
     "ffn_hidden_sizes": 32 * 1,
-    "ffn_filter_sizes": 32 * 1,
     "ffn_dropout": 0.0,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -44,59 +43,59 @@ class Informer(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
-        self.decoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
-        if not params["prob_attention"]:
+        self.encoder_embedding = DataEmbedding(config["attention_hidden_sizes"])
+        self.decoder_embedding = DataEmbedding(config["attention_hidden_sizes"])
+        if not config["prob_attention"]:
             attn_layer = FullAttention(
-                params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"]
+                config["attention_hidden_sizes"], config["num_heads"], config["attention_dropout"]
             )
         else:
             attn_layer = ProbAttention(
-                params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"]
+                config["attention_hidden_sizes"], config["num_heads"], config["attention_dropout"]
             )
         self.encoder = Encoder(
             layers=[
                 EncoderLayer(
                     attn_layer=attn_layer,
-                    attention_hidden_sizes=params["attention_hidden_sizes"],
-                    ffn_dropout=params["ffn_dropout"],
-                    ffn_hidden_sizes=params["ffn_hidden_sizes"],
+                    attention_hidden_sizes=config["attention_hidden_sizes"],
+                    ffn_dropout=config["ffn_dropout"],
+                    ffn_hidden_sizes=config["ffn_hidden_sizes"],
                 )
-                for _ in range(params["n_encoder_layers"])
+                for _ in range(config["n_encoder_layers"])
             ],
             conv_layers=[
-                DistilConv(filters=params["attention_hidden_sizes"]) for _ in range(params["n_encoder_layers"] - 1)
+                DistilConv(filters=config["attention_hidden_sizes"]) for _ in range(config["n_encoder_layers"] - 1)
             ],
             norm_layer=LayerNormalization(),
         )
 
-        if not params["prob_attention"]:
+        if not config["prob_attention"]:
             attn_layer1 = FullAttention(
-                params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"]
+                config["attention_hidden_sizes"], config["num_heads"], config["attention_dropout"]
             )
         else:
             attn_layer1 = ProbAttention(
-                params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"]
+                config["attention_hidden_sizes"], config["num_heads"], config["attention_dropout"]
             )
 
-        attn_layer2 = FullAttention(params["attention_hidden_sizes"], params["num_heads"], params["attention_dropout"])
+        attn_layer2 = FullAttention(config["attention_hidden_sizes"], config["num_heads"], config["attention_dropout"])
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(
                     attn_layer1=attn_layer1,
                     attn_layer2=attn_layer2,
-                    attention_hidden_sizes=params["attention_hidden_sizes"],
-                    ffn_dropout=params["ffn_dropout"],
-                    ffn_hidden_sizes=params["ffn_hidden_sizes"],
+                    attention_hidden_sizes=config["attention_hidden_sizes"],
+                    ffn_dropout=config["ffn_dropout"],
+                    ffn_hidden_sizes=config["ffn_hidden_sizes"],
                 )
-                for _ in range(params["n_decoder_layers"])
+                for _ in range(config["n_decoder_layers"])
             ]
         )
         self.projection = Dense(1)
@@ -122,16 +121,16 @@ class Informer(object):
         memory = self.encoder(encoder_feature, mask=None)
 
         B, L, _ = tf.shape(decoder_feature)
-        casual_mask = CausalMask(B * self.params["num_heads"], L).mask
+        casual_mask = CausalMask(B * self.config["num_heads"], L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
 
         outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
         outputs = self.projection(outputs)
 
-        if self.params["skip_connect_circle"]:
+        if self.config["skip_connect_circle"]:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             outputs = outputs + x_mean
-        if self.params["skip_connect_mean"]:
+        if self.config["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             outputs = outputs + x_mean
         return outputs

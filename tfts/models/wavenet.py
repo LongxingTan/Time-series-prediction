@@ -15,7 +15,7 @@ from tfts.layers.dense_layer import DenseTemp
 
 from .base import BaseConfig, BaseModel
 
-params: Dict[str, Any] = {
+config: Dict[str, Any] = {
     "dilation_rates": [2**i for i in range(3)],
     "kernel_sizes": [2 for _ in range(3)],
     "filters": 32,
@@ -33,23 +33,23 @@ class WaveNet(object):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
+        custom_model_config: Optional[Dict[str, Any]] = None,
         custom_model_head: Optional[Callable] = None,
     ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        if custom_model_config:
+            config.update(custom_model_config)
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=params["kernel_sizes"],
-            dilation_rates=params["dilation_rates"],
-            filters=params["filters"],
-            dense_hidden_size=params["dense_hidden_size"],
+            kernel_sizes=config["kernel_sizes"],
+            dilation_rates=config["dilation_rates"],
+            filters=config["filters"],
+            dense_hidden_size=config["dense_hidden_size"],
         )
         self.decoder = Decoder1(
-            filters=params["filters"],
-            dilation_rates=params["dilation_rates"],
-            dense_hidden_size=params["dense_hidden_size"],
+            filters=config["filters"],
+            dilation_rates=config["dilation_rates"],
+            dense_hidden_size=config["dense_hidden_size"],
             predict_sequence_length=predict_sequence_length,
         )
 
@@ -94,10 +94,10 @@ class WaveNet(object):
             encoder_outputs=encoder_outputs,
         )
 
-        if self.params["skip_connect_circle"]:
+        if self.config["skip_connect_circle"]:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
+        if self.config["skip_connect_mean"]:
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
