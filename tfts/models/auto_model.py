@@ -1,7 +1,5 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """AutoModel to choose different models"""
+
 from collections import OrderedDict
 import importlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union

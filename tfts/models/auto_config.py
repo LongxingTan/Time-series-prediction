@@ -1,9 +1,8 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """AutoConfig to set up models custom config"""
 
 import json
+import os
+from typing import Any, Dict, Union
 
 from tfts.models.autoformer import params as autoformer_params
 from tfts.models.bert import params as bert_params
@@ -29,7 +28,14 @@ class BaseConfig:
         return {key: getattr(self, key) for key in self.__dict__}
 
     @classmethod
-    def from_dict(cls, config_dict):
+    def from_dict(cls, config_dict: Dict[str, Any]):
+        return cls(**config_dict)
+
+    @classmethod
+    def from_json_file(cls, json_file: Union[str, os.PathLike]):
+        with open(json_file, "r", encoding="utf-8") as reader:
+            text = reader.read()
+        config_dict = json.loads(text)
         return cls(**config_dict)
 
     @classmethod
@@ -43,10 +49,11 @@ class BaseConfig:
             json.dump(self.to_dict(), f, indent=2)
 
 
-class AutoConfig:
+class AutoConfig(BaseConfig):
     """AutoConfig for model"""
 
     def __init__(self, use_model: str) -> None:
+
         if use_model.lower() == "seq2seq":
             self.params = seq2seq_params
         elif use_model.lower() == "rnn":
@@ -74,11 +81,4 @@ class AutoConfig:
         else:
             raise ValueError("Unsupported model of {} yet".format(use_model))
 
-    def get_config(self):
-        return self.params
-
-    def print_config(self) -> None:
-        print(self.params)
-
-    def save_config(self):
-        return
+        super(AutoConfig, self).__init__(**self.params)
