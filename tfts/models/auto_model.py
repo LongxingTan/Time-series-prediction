@@ -32,7 +32,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
 )
 
 
-class AutoModel(object):
+class AutoModel(BaseModel):
     """tftf auto model
     input tensor: [batch_size, sequence_length, num_features]
     output tensor: [batch_size, predict_sequence_length, num_labels]
@@ -44,6 +44,7 @@ class AutoModel(object):
         predict_length: int,
         config=None,
     ):
+        super(AutoModel, self).__init__()
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
         if not config:
@@ -70,14 +71,6 @@ class AutoModel(object):
         # if isinstance(x, (list, tuple)):
         #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
         return self.model(x, return_dict=return_dict)
-
-    def build_model(self, inputs):
-        outputs = self.model(inputs)
-        return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
-
-    @classmethod
-    def from_config(cls, config, predict_length):
-        return
 
 
 class AutoModelForPrediction(BaseModel):

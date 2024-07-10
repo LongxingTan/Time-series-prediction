@@ -5,6 +5,8 @@ import logging
 import os
 from typing import Any, Dict, Union
 
+import tensorflow as tf
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,12 +15,32 @@ class BaseModel(ABC):
         pass
 
     @classmethod
-    def from_config(cls, name: str):
-        return
+    def from_config(cls, config, predict_length):
+        model = cls()
+        model.build_model(config, predict_length)
+        return model
 
     @classmethod
     def from_pretrained(cls, name: str):
-        return
+        model = cls()
+        model.load_pretrained_weights(name)
+        return model
+
+    def build_model(self, inputs):
+        outputs = self.model(inputs)
+        return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
+
+    # def build_model(self, config, predict_length):
+    #     inputs = tf.keras.Input(shape=(config["input_shape"],))
+    #     x = inputs
+    #     for layer_units in config["layers"]:
+    #         x = tf.keras.layers.Dense(layer_units, activation="relu")(x)
+    #     outputs = tf.keras.layers.Dense(predict_length, activation="softmax")(x)
+    #     self.model = tf.keras.Model(inputs, outputs)
+    #     self.model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+
+    def load_pretrained_weights(self, name: str):
+        self.model = tf.keras.models.load_model(name)
 
 
 class BaseConfig(ABC):
