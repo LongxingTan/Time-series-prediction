@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.attention_layer import FullAttention, ProbAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, ProbAttention, SelfAttention
 from tfts.layers.mask_layer import CausalMask
 
 
@@ -11,7 +11,7 @@ class AttentionLayerTest(unittest.TestCase):
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
-        layer = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
+        layer = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         q = tf.random.normal([2, 128, 16])
         k = tf.random.normal([2, 128, 4])

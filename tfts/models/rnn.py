@@ -19,7 +19,7 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 
-from tfts.layers.attention_layer import FullAttention
+from tfts.layers.attention_layer import Attention
 
 from .base import BaseConfig, BaseModel
 

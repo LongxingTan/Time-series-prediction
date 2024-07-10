@@ -16,7 +16,7 @@ from tensorflow.keras.layers import (
     MaxPool1D,
 )
 
-from tfts.layers.attention_layer import FullAttention, ProbAttention
+from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
@@ -79,9 +79,7 @@ class Informer(BaseModel):
         self.encoder_embedding = DataEmbedding(config.hidden_size)
         self.decoder_embedding = DataEmbedding(config.hidden_size)
         if not config.prob_attention:
-            attn_layer = FullAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
-            )
+            attn_layer = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
         else:
             attn_layer = ProbAttention(
                 config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
@@ -101,15 +99,13 @@ class Informer(BaseModel):
         )
 
         if not config.prob_attention:
-            attn_layer1 = FullAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
-            )
+            attn_layer1 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
         else:
             attn_layer1 = ProbAttention(
                 config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
             )
 
-        attn_layer2 = FullAttention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+        attn_layer2 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(

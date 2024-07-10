@@ -12,7 +12,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LSTMCell
 
-from tfts.layers.attention_layer import FullAttention
+from tfts.layers.attention_layer import Attention
 
 from .base import BaseConfig, BaseModel
 
@@ -184,7 +184,7 @@ class DecoderV1(tf.keras.layers.Layer):
             self.rnn_cell = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
-            self.attention = FullAttention(
+            self.attention = Attention(
                 hidden_size=self.attention_size,
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,
@@ -292,7 +292,7 @@ class DecoderV2(tf.keras.layers.Layer):
             self.rnn = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1)
         if self.use_attention:
-            self.attention = FullAttention(
+            self.attention = Attention(
                 hidden_size=self.attention_sizes,
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,

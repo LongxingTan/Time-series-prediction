@@ -12,11 +12,11 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 from tfts.layers.mask_layer import ProbMask
 
 
-class FullAttention(tf.keras.layers.Layer):
+class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
     def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
-        """Initialize the layer.
+        """Initialize the Attention layer.
 
         Parameters:
         -----------
@@ -27,7 +27,7 @@ class FullAttention(tf.keras.layers.Layer):
         attention_probs_dropout_prob : float, optional
             Dropout rate for the attention weights. Defaults to 0.0.
         """
-        super(FullAttention, self).__init__()
+        super(Attention, self).__init__()
         if hidden_size % num_attention_heads:
             raise ValueError(
                 "Hidden size ({}) must be divisible by the number of heads ({}).".format(
@@ -43,7 +43,7 @@ class FullAttention(tf.keras.layers.Layer):
         self.dense_k = Dense(self.hidden_size, use_bias=False)
         self.dense_v = Dense(self.hidden_size, use_bias=False)
         self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
-        super(FullAttention, self).build(input_shape)
+        super(Attention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
@@ -91,7 +91,7 @@ class FullAttention(tf.keras.layers.Layer):
             "num_attention_heads": self.num_attention_heads,
             "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
         }
-        base_config = super(FullAttention, self).get_config()
+        base_config = super(Attention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
@@ -104,7 +104,7 @@ class SelfAttention(tf.keras.layers.Layer):
         **kwargs: Dict[str, Any]
     ) -> None:
         super(SelfAttention, self).__init__()
-        self.attention = FullAttention(
+        self.attention = Attention(
             hidden_size, num_attention_heads, attention_probs_dropout_prob=attention_probs_dropout_prob
         )
 

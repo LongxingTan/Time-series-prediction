@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, TimeDistributed
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
@@ -331,9 +331,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             self_attention_layer = SelfAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            attention_layer = FullAttention(
-                self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
-            )
+            attention_layer = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
             ffn_layer = FeedForwardNetwork(self.ffn_intermediate_size, self.hidden_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -457,7 +455,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
             self_attention_layer = SelfAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            enc_dec_attention_layer = FullAttention(
+            enc_dec_attention_layer = Attention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
             feed_forward_layer = FeedForwardNetwork(

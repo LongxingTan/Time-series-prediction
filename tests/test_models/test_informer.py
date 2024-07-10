@@ -11,7 +11,7 @@ from tensorflow.keras.layers import LayerNormalization
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.layers.attention_layer import FullAttention, ProbAttention
+from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer
 
 tf.config.run_functions_eagerly(True)
@@ -72,7 +72,7 @@ class InformerTest(unittest.TestCase):
         hidden_dropout_prob = 0.1
 
         attn_layer1 = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
-        attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
+        attn_layer2 = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
         layer = DecoderLayer(attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])
@@ -89,8 +89,8 @@ class InformerTest(unittest.TestCase):
         ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         n_decoder_layers = 4
-        attn_layer1 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
-        attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
+        attn_layer1 = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
+        attn_layer2 = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         layers = [
             DecoderLayer(attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
