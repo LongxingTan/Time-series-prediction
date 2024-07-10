@@ -3,7 +3,7 @@ import unittest
 import tensorflow as tf
 
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.wavenet import Decoder1, Decoder2, Decoder3, Encoder, WaveNet, WaveNetConfig
+from tfts.models.wavenet import DecoderV1, DecoderV2, Encoder, WaveNet, WaveNetConfig
 
 
 class WaveNetTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class WaveNetTest(unittest.TestCase):
         dilation_rates = [2]
         dense_hidden_size = 32
         predict_sequence_length = 3
-        layer = Decoder1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
+        layer = DecoderV1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
         x = tf.random.normal([2, 7, 1])
         init = tf.random.normal([2, 1])
@@ -43,7 +43,7 @@ class WaveNetTest(unittest.TestCase):
         dilation_rates = [2]
         dense_hidden_size = 32
         predict_sequence_length = 3
-        layer = Decoder2(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
+        layer = DecoderV2(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
         x = tf.random.normal([2, 7, 1])
         init = tf.random.normal([2, 1])

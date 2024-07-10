@@ -4,7 +4,7 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.seq2seq import Decoder1, Decoder2, Decoder3, Encoder, Seq2seq
+from tfts.models.seq2seq import DecoderV1, DecoderV2, DecoderV3, Encoder, Seq2seq
 
 
 class Seq2seqTest(unittest.TestCase):
@@ -14,7 +14,7 @@ class Seq2seqTest(unittest.TestCase):
     def test_decoder1(self):
         predict_sequence_length = 5
         rnn_size = 32
-        layer = Decoder1(rnn_size=rnn_size, predict_sequence_length=predict_sequence_length)
+        layer = DecoderV1(rnn_size=rnn_size, predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 11, 1])
         init_input = tf.random.normal([2, 1])
@@ -25,7 +25,7 @@ class Seq2seqTest(unittest.TestCase):
     def test_decoder2(self):
         predict_sequence_length = 5
         rnn_size = 32
-        layer = Decoder2(rnn_size=rnn_size, predict_sequence_length=predict_sequence_length)
+        layer = DecoderV2(rnn_size=rnn_size, predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 11, 1])
         init_input = tf.random.normal([2, 1])
@@ -36,7 +36,7 @@ class Seq2seqTest(unittest.TestCase):
     def test_decoder3(self):
         rnn_type = "gru"
         rnn_size = 32
-        layer = Decoder3(rnn_type=rnn_type, rnn_size=rnn_size, predict_sequence_length=1)
+        layer = DecoderV3(rnn_type=rnn_type, rnn_size=rnn_size, predict_sequence_length=1)
         x = tf.random.normal([2, 11, 1])
         init_input = tf.random.normal([2, 1])
         init_state = tf.random.normal([2, rnn_size])
