@@ -72,6 +72,10 @@ class AutoModel(BaseModel):
         #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
         return self.model(x, return_dict=return_dict)
 
+    @classmethod
+    def from_config(cls, config, predict_length, task="prediction"):
+        pass
+
 
 class AutoModelForPrediction(BaseModel):
     """tfts model for prediction"""

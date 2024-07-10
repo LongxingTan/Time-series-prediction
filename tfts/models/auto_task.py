@@ -2,7 +2,17 @@ import numpy as np
 import tensorflow as tf
 
 
-class OdModel(object):
+class PredictionHead(tf.keras.layers.Layer):
+    def __init__(self):
+        super(PredictionHead, self).__init__()
+
+
+class SegmentationHead(tf.keras.layers.Layer):
+    def __init__(self):
+        super(SegmentationHead, self).__init__()
+
+
+class AnomalyHead(tf.keras.layers.Layer):
     """Reconstruct model"""
 
     def __init__(self, model, train_sequence_length) -> None:
@@ -22,13 +32,12 @@ class OdModel(object):
 
         m_dist = [0] * self.train_sequence_length
         for e in errors:
-            m_dist.append(mahala_distance(e, mean, cov))
+            m_dist.append(self._mahala_distance(e, mean, cov))
 
         return m_dist
 
-
-# calculate Mahalanobis distance
-def mahala_distance(x, mean, cov):
-    d = np.dot(x - mean, np.linalg.inv(cov))
-    d = np.dot(d, (x - mean).T)
-    return d
+    def _mahala_distance(self, x, mean, cov):
+        # calculate Mahalanobis distance
+        d = np.dot(x - mean, np.linalg.inv(cov))
+        d = np.dot(d, (x - mean).T)
+        return d
