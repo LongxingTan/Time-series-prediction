@@ -21,7 +21,7 @@ class DemoTest(unittest.TestCase):
         model = AutoModel.from_config(config, predict_length=predict_length)
 
         trainer = Trainer(model)
-        trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
+        trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=2)
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)

@@ -12,7 +12,7 @@ from tfts.trainer import KerasTrainer, Trainer
 class TrainerTest(unittest.TestCase):
     def setUp(self):
         self.fit_config = {
-            "n_epochs": 3,
+            "n_epochs": 2,
             "batch_size": 2,
             "stop_no_improve_epochs": 1,
             "eval_metric": lambda x, y: np.mean(np.abs(x.numpy() - y.numpy())),
@@ -73,7 +73,7 @@ class TrainerTest(unittest.TestCase):
 class KerasTrainerTest(unittest.TestCase):
     def setUp(self):
         self.fit_config = {
-            "n_epochs": 3,
+            "n_epochs": 2,
             "batch_size": 1,
         }
 

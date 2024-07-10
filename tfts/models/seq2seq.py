@@ -24,7 +24,7 @@ class Seq2seqConfig(BaseConfig):
         rnn_hidden_size=64,
         rnn_type="gru",
         bi_direction=False,
-        dense_hidden_size=32,
+        dense_hidden_size=64,
         num_stacked_layers=1,
         scheduled_sampling=0,
         use_attention=False,
@@ -43,6 +43,9 @@ class Seq2seqConfig(BaseConfig):
         self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
+
+        if self.use_attention:
+            assert self.attention_size == self.dense_hidden_size
 
 
 class Seq2seq(BaseModel):
