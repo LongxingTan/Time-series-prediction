@@ -28,7 +28,6 @@ class InformerConfig(BaseConfig):
 
     def __init__(
         self,
-        vocab_size=30522,
         hidden_size=64,
         num_layers=1,
         num_decoder_layers=None,

@@ -30,10 +30,10 @@ class BertConfig(BaseConfig):
 
     def __init__(
         self,
-        hidden_size=768,
-        num_hidden_layers=12,
-        num_attention_heads=12,
-        intermediate_size=3072,
+        hidden_size=64,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        intermediate_size=256,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,

@@ -76,7 +76,7 @@ class AutoModel(object):
         return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
 
     @classmethod
-    def from_config(cls):
+    def from_config(cls, config, predict_length):
         return
 
 

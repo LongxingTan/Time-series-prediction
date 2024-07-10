@@ -26,11 +26,11 @@ class AutoFormerConfig(object):
     def __init__(
         self,
         kernel_size=32,
-        hidden_size=128,
+        hidden_size=64,
         num_layers=1,
         num_decoder_layers=None,
         num_attention_heads=4,
-        intermediate_size=128,
+        intermediate_size=256,
         hidden_act="relu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
@@ -197,18 +197,6 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
         x, _ = self.series_decomp1(self.autocorrelation(x, x, x) + x)
         x, _ = self.series_decomp2(self.drop(self.dense(x)) + x)
         return x

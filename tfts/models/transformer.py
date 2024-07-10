@@ -25,11 +25,11 @@ class TransformerConfig(BaseConfig):
 
     def __init__(
         self,
-        hidden_size=768,
-        num_layers=12,
+        hidden_size=64,
+        num_layers=2,
         num_decoder_layers=None,
-        num_attention_heads=12,
-        intermediate_size=3072,
+        num_attention_heads=4,
+        intermediate_size=256,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,

@@ -13,7 +13,7 @@ class AutoFormerTest(unittest.TestCase):
         predict_sequence_length = 8
         model = AutoFormer(predict_sequence_length=predict_sequence_length)
 
-        x = tf.random.normal([2, 16, 32])
+        x = tf.random.normal([2, 16, 64])
         y = model(x)
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
