@@ -9,9 +9,9 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-logger = logging.getLogger(__name__)
-
 __all__ = ["Trainer", "KerasTrainer", "Seq2SeqKerasTrainer"]
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer(object):

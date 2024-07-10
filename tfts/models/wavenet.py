@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
@@ -14,6 +15,8 @@ from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class WaveNetConfig(BaseConfig):

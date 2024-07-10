@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 import importlib
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -10,6 +11,9 @@ import tensorflow as tf
 
 from .auto_config import AutoConfig
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
+
 
 MODEL_MAPPING_NAMES = OrderedDict(
     [

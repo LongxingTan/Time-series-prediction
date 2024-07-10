@@ -4,6 +4,7 @@
 """
 
 from dataclasses import dataclass, field
+import logging
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
@@ -14,6 +15,8 @@ from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LST
 from tfts.layers.attention_layer import FullAttention
 
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class Seq2seqConfig(BaseConfig):

@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
@@ -15,6 +16,8 @@ from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class TransformerConfig(BaseConfig):
