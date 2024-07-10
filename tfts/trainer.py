@@ -205,11 +205,11 @@ class Trainer(object):
     def export_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
-        logging.info("protobuf model successfully saved in {}".format(model_dir))
+        logging.info("Protobuf model successfully saved in {}".format(model_dir))
 
         if not only_pb:
             self.model.save_weights("{}.ckpt".format(model_dir))
-            logging.info("model weights successfully saved in {}.ckpt".format(model_dir))
+            logging.info("Model weights successfully saved in {}.ckpt".format(model_dir))
 
 
 class KerasTrainer(object):

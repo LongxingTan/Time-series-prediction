@@ -36,11 +36,11 @@ class DemoTest(unittest.TestCase):
         print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
         trainer = Trainer(model)
-        trainer.train((x_train, y_train), n_epochs=3)
+        trainer.train((x_train, y_train), n_epochs=2)
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)
-        print(pred)
+        print(pred.shape)
 
     # def test_auto_model(self):
     #     predict_length = 2
