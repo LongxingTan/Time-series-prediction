@@ -30,7 +30,7 @@ class AutoFormerConfig(object):
         num_layers=1,
         num_decoder_layers=None,
         num_attention_heads=4,
-        intermediate_size=256,
+        ffn_intermediate_size=256,
         hidden_act="relu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
@@ -50,7 +50,7 @@ class AutoFormerConfig(object):
         self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
         self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.max_position_embeddings = max_position_embeddings
@@ -69,7 +69,7 @@ config: Dict[str, Any] = {
     "hidden_size": 32,
     "num_attention_heads": 1,
     "attention_probs_dropout_prob": 0.0,
-    "intermediate_size": 32 * 1,
+    "ffn_intermediate_size": 32 * 1,
     "hidden_dropout_prob": 0.0,
     "layer_postprocess_dropout": 0.0,
     "scheduled_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction

@@ -33,7 +33,7 @@ class InformerConfig(BaseConfig):
         num_decoder_layers=None,
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
-        intermediate_size=128,
+        ffn_intermediate_size=128,
         hidden_dropout_prob=0.0,
         prob_attention=False,
         distil_conv=False,
@@ -44,7 +44,7 @@ class InformerConfig(BaseConfig):
         self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.prob_attention = prob_attention
         self.distil_conv = distil_conv
@@ -56,7 +56,7 @@ config: Dict[str, Any] = {
     "hidden_size": 32 * 1,
     "num_attention_heads": 1,
     "attention_probs_dropout_prob": 0.0,
-    "intermediate_size": 32 * 1,
+    "ffn_intermediate_size": 32 * 1,
     "hidden_dropout_prob": 0.0,
     "skip_connect_circle": False,
     "skip_connect_mean": False,
@@ -92,7 +92,7 @@ class Informer(BaseModel):
                     attn_layer=attn_layer,
                     hidden_size=config.hidden_size,
                     hidden_dropout_prob=config.hidden_dropout_prob,
-                    intermediate_size=config.intermediate_size,
+                    ffn_intermediate_size=config.ffn_intermediate_size,
                 )
                 for _ in range(config.num_layers)
             ],
@@ -117,7 +117,7 @@ class Informer(BaseModel):
                     attn_layer2=attn_layer2,
                     hidden_size=config.hidden_size,
                     hidden_dropout_prob=config.hidden_dropout_prob,
-                    intermediate_size=config.intermediate_size,
+                    ffn_intermediate_size=config.ffn_intermediate_size,
                 )
                 for _ in range(config.num_decoder_layers)
             ]
@@ -179,17 +179,17 @@ class Encoder(tf.keras.layers.Layer):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attn_layer, hidden_size, intermediate_size, hidden_dropout_prob) -> None:
+    def __init__(self, attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob) -> None:
         super().__init__()
         self.attn_layer = attn_layer
         self.hidden_size = hidden_size
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
         self.drop = Dropout(self.hidden_dropout_prob)
         self.norm1 = LayerNormalization()
-        self.conv1 = Conv1D(filters=self.intermediate_size, kernel_size=1)
+        self.conv1 = Conv1D(filters=self.ffn_intermediate_size, kernel_size=1)
         self.conv2 = Conv1D(filters=self.hidden_size, kernel_size=1)
         self.norm2 = LayerNormalization()
         super(EncoderLayer, self).build(input_shape)
@@ -213,7 +213,7 @@ class EncoderLayer(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
-            "intermediate_size": self.intermediate_size,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(EncoderLayer, self).get_config()
@@ -258,16 +258,16 @@ class Decoder(tf.keras.layers.Layer):
 
 
 class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attn_layer1, attn_layer2, hidden_size, intermediate_size, hidden_dropout_prob) -> None:
+    def __init__(self, attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob) -> None:
         super().__init__()
         self.attn1 = attn_layer1
         self.attn2 = attn_layer2
         self.hidden_size = hidden_size
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
-        self.conv1 = Conv1D(filters=self.intermediate_size, kernel_size=1)
+        self.conv1 = Conv1D(filters=self.ffn_intermediate_size, kernel_size=1)
         self.conv2 = Conv1D(filters=self.hidden_size, kernel_size=1)
         self.drop = Dropout(self.hidden_dropout_prob)
         self.norm1 = LayerNormalization()
@@ -301,7 +301,7 @@ class DecoderLayer(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
-            "intermediate_size": self.intermediate_size,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(DecoderLayer, self).get_config()

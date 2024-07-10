@@ -29,7 +29,7 @@ class TransformerConfig(BaseConfig):
         num_layers=2,
         num_decoder_layers=None,
         num_attention_heads=4,
-        intermediate_size=256,
+        ffn_intermediate_size=256,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
@@ -49,7 +49,7 @@ class TransformerConfig(BaseConfig):
         self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
         self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
@@ -83,7 +83,7 @@ class Transformer(BaseModel):
             hidden_size=config.hidden_size,
             num_attention_heads=config.num_attention_heads,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
-            intermediate_size=config.intermediate_size,
+            ffn_intermediate_size=config.ffn_intermediate_size,
             hidden_dropout_prob=config.hidden_dropout_prob,
         )
 
@@ -95,7 +95,7 @@ class Transformer(BaseModel):
                     hidden_size=config.hidden_size,
                     num_attention_heads=config.num_attention_heads,
                     attention_probs_dropout_prob=config.attention_probs_dropout_prob,
-                    intermediate_size=config.intermediate_size,
+                    ffn_intermediate_size=config.ffn_intermediate_size,
                     hidden_dropout_prob=config.hidden_dropout_prob,
                 )
                 for _ in range(config.num_decoder_layers)
@@ -160,7 +160,7 @@ class Encoder(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float,
-        intermediate_size: int,
+        ffn_intermediate_size: int,
         hidden_dropout_prob: float,
     ):
         super(Encoder, self).__init__()
@@ -168,7 +168,7 @@ class Encoder(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.layers: List[tf.keras.layers.Layer] = []
 
@@ -177,7 +177,7 @@ class Encoder(tf.keras.layers.Layer):
             attention_layer = SelfAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            ffn_layer = FeedForwardNetwork(self.hidden_size, self.intermediate_size, self.hidden_dropout_prob)
+            ffn_layer = FeedForwardNetwork(self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
@@ -214,7 +214,7 @@ class Encoder(tf.keras.layers.Layer):
             "hidden_size": self.hidden_size,
             "num_attention_heads": self.num_attention_heads,
             "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
-            "intermediate_size": self.intermediate_size,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(Encoder, self).get_config()
@@ -229,7 +229,7 @@ class Decoder(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float,
-        intermediate_size: int,
+        ffn_intermediate_size: int,
         hidden_dropout_prob: float,
     ) -> None:
         super(Decoder, self).__init__()
@@ -240,7 +240,7 @@ class Decoder(tf.keras.layers.Layer):
             hidden_size,
             num_attention_heads,
             attention_probs_dropout_prob,
-            intermediate_size,
+            ffn_intermediate_size,
             hidden_dropout_prob,
         )
         self.projection = Dense(units=1, name="final_projection")
@@ -312,7 +312,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float,
-        intermediate_size: int,
+        ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         eps: float = 1e-7,
     ) -> None:
@@ -321,7 +321,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.eps = eps
         self.layers: List[tf.keras.layers.Layer] = []
@@ -334,7 +334,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             attention_layer = FullAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            ffn_layer = FeedForwardNetwork(self.intermediate_size, self.hidden_size, self.hidden_dropout_prob)
+            ffn_layer = FeedForwardNetwork(self.ffn_intermediate_size, self.hidden_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -379,7 +379,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             "hidden_size": self.hidden_size,
             "num_attention_heads": self.num_attention_heads,
             "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
-            "intermediate_size": self.intermediate_size,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(DecoderLayer, self).get_config()
@@ -438,7 +438,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
         hidden_size,
         num_attention_heads,
         attention_probs_dropout_prob,
-        intermediate_size,
+        ffn_intermediate_size,
         hidden_dropout_prob,
         eps=1e-7,
     ):
@@ -447,7 +447,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.eps = eps
         self.layers = []
@@ -460,7 +460,9 @@ class DecoderLayer2(tf.keras.layers.Layer):
             enc_dec_attention_layer = FullAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            feed_forward_layer = FeedForwardNetwork(self.hidden_size, self.intermediate_size, self.hidden_dropout_prob)
+            feed_forward_layer = FeedForwardNetwork(
+                self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob
+            )
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -514,7 +516,7 @@ class DecoderLayer2(tf.keras.layers.Layer):
             "hidden_size": self.hidden_size,
             "num_attention_heads": self.num_attention_heads,
             "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
-            "intermediate_size": self.intermediate_size,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(DecoderLayer2, self).get_config()

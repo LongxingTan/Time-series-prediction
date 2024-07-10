@@ -33,7 +33,7 @@ class BertConfig(BaseConfig):
         hidden_size=64,
         num_hidden_layers=2,
         num_attention_heads=4,
-        intermediate_size=256,
+        ffn_intermediate_size=256,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
@@ -54,7 +54,7 @@ class BertConfig(BaseConfig):
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
+        self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.max_position_embeddings = max_position_embeddings
@@ -85,7 +85,7 @@ class Bert(BaseModel):
             hidden_size=config.hidden_size,
             num_attention_heads=config.num_attention_heads,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
-            intermediate_size=config.intermediate_size,
+            ffn_intermediate_size=config.ffn_intermediate_size,
             hidden_dropout_prob=config.hidden_dropout_prob,
         )
 

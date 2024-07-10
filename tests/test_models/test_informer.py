@@ -30,12 +30,12 @@ class InformerTest(unittest.TestCase):
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
-        intermediate_size = 64
+        ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
 
         attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
-        layer = EncoderLayer(attn_layer, hidden_size, intermediate_size, hidden_dropout_prob)
+        layer = EncoderLayer(attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
         x = tf.random.normal([2, 100, hidden_size])  # after embedding
         y = layer(x)
         self.assertEqual(y.shape, (2, 100, hidden_size))
@@ -47,13 +47,13 @@ class InformerTest(unittest.TestCase):
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
-        intermediate_size = 64
+        ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         num_hidden_layers = 4
         attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         layers = [
-            EncoderLayer(attn_layer, hidden_size, intermediate_size, hidden_dropout_prob)
+            EncoderLayer(attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
             for _ in range(num_hidden_layers)
         ]
         conv_layers = [DistilConv(hidden_size) for _ in range(num_hidden_layers - 1)]
@@ -68,12 +68,12 @@ class InformerTest(unittest.TestCase):
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
-        intermediate_size = 64
+        ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
 
         attn_layer1 = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
         attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
-        layer = DecoderLayer(attn_layer1, attn_layer2, hidden_size, intermediate_size, hidden_dropout_prob)
+        layer = DecoderLayer(attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])
         y = layer(x, memory=memory)
@@ -86,14 +86,14 @@ class InformerTest(unittest.TestCase):
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
-        intermediate_size = 64
+        ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         n_decoder_layers = 4
         attn_layer1 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
         attn_layer2 = FullAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         layers = [
-            DecoderLayer(attn_layer1, attn_layer2, hidden_size, intermediate_size, hidden_dropout_prob)
+            DecoderLayer(attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
             for _ in range(n_decoder_layers)
         ]
         norm_layer = LayerNormalization()
@@ -112,7 +112,7 @@ class InformerTest(unittest.TestCase):
             "hidden_size": 32 * 1,
             "num_attention_heads": 1,
             "attention_probs_dropout_prob": 0.0,
-            "intermediate_size": 32 * 1,
+            "ffn_intermediate_size": 32 * 1,
             "hidden_dropout_prob": 0.0,
             "skip_connect_circle": False,
             "skip_connect_mean": False,
