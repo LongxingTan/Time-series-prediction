@@ -60,7 +60,7 @@ class WaveNet(BaseModel):
             filters=config.filters,
             dense_hidden_size=config.dense_hidden_size,
         )
-        self.decoder = Decoder1(
+        self.decoder = DecoderV1(
             filters=config.filters,
             dilation_rates=config.dilation_rates,
             dense_hidden_size=config.dense_hidden_size,
@@ -148,7 +148,7 @@ class Encoder(object):
         return y_hat, conv_inputs[:-1]
 
 
-class Decoder1(object):
+class DecoderV1(object):
     def __init__(
         self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
     ) -> None:
@@ -171,7 +171,7 @@ class Decoder1(object):
         training: Optional[bool] = None,
         **kwargs: Dict
     ):
-        """wavenet decoder1
+        """wavenet decoder_v1
 
         Parameters
         ----------
@@ -234,7 +234,7 @@ class Decoder1(object):
         return tf.expand_dims(decoder_outputs, -1)
 
 
-class Decoder2(object):
+class DecoderV2(object):
     """Decoder need avoid future data leaks"""
 
     def __init__(

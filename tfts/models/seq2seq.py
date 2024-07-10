@@ -61,7 +61,7 @@ class Seq2seq(BaseModel):
         self.encoder = Encoder(
             rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
         )
-        self.decoder = Decoder1(
+        self.decoder = DecoderV1(
             rnn_size=config.rnn_hidden_size,
             rnn_type=config.rnn_type,
             predict_sequence_length=predict_length,
@@ -157,7 +157,7 @@ class Encoder(tf.keras.layers.Layer):
         return outputs, state
 
 
-class Decoder1(tf.keras.layers.Layer):
+class DecoderV1(tf.keras.layers.Layer):
     def __init__(
         self,
         rnn_size=32,
@@ -168,7 +168,7 @@ class Decoder1(tf.keras.layers.Layer):
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
     ):
-        super(Decoder1, self).__init__()
+        super(DecoderV1, self).__init__()
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention
         self.rnn_type = rnn_type
@@ -265,7 +265,7 @@ class Decoder1(tf.keras.layers.Layer):
         return tf.expand_dims(decoder_outputs, -1)
 
 
-class Decoder2(tf.keras.layers.Layer):
+class DecoderV2(tf.keras.layers.Layer):
     def __init__(
         self,
         rnn_size=32,
@@ -276,7 +276,7 @@ class Decoder2(tf.keras.layers.Layer):
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
     ):
-        super(Decoder2, self).__init__()
+        super(DecoderV2, self).__init__()
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
         self.predict_sequence_length = predict_sequence_length
