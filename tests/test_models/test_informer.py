@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization
 
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
+from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer
 
@@ -143,6 +143,7 @@ class InformerTest(unittest.TestCase):
         )
         y_valid = np.random.rand(batch_size, predict_length, 1)
 
-        model = AutoModel("informer", predict_length)
+        config = AutoConfig.for_model("informer")
+        model = AutoModel.from_config(config, predict_length)
         trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)

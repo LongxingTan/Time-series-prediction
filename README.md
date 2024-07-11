@@ -63,8 +63,8 @@ predict_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
 
 model_name_or_path = 'seq2seq'
-config = AutoConfig(model_name_or_path)
-model = AutoModel.from_config(model_name_or_path, predict_length=predict_length, config=config)
+config = AutoConfig.for_model(model_name_or_path)
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
 
@@ -82,6 +82,9 @@ You could train your own data by preparing 3D data as inputs, for both inputs an
 Encoder only model inputs
 
 ```python
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
+
 train_length = 49
 predict_length = 10
 n_feature = 2
@@ -91,7 +94,8 @@ y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel.from_config("rnn", predict_length=predict_length)
+config = AutoConfig.for_model('rnn')
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
 ```
@@ -100,6 +104,8 @@ Encoder-decoder model inputs
 
 ```python
 # option1: np.ndarray
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 train_length = 49
 predict_length = 10
@@ -120,13 +126,16 @@ x_valid = (
 )
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel.from_config("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
 ```python
 # option2: tf.data.Dataset
+import tensorflow as tf
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_length):
@@ -167,7 +176,8 @@ valid_loader = tf.data.Dataset.from_generator(
 )
 valid_loader = valid_loader.batch(batch_size=1)
 
-model = AutoModel.from_config("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
@@ -179,15 +189,11 @@ import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
 
-config = AutoConfig('rnn').get_config()
+config = AutoConfig.for_model('rnn')
 print(config)
+config.rnn_hidden_size = 128
 
-custom_model_config = {
-    "rnn_size": 128,
-    "dense_size": 128,
-}
-
-model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
+model = AutoModel.from_config(config, predict_length=7, )
 ```
 
 **Build your own model**
@@ -212,7 +218,7 @@ You could build the custom model based on tfts, especially
 ```python
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
-from tfts import AutoModel
+from tfts import AutoModel, AutoConfig
 
 
 def build_model():
@@ -221,7 +227,8 @@ def build_model():
     predict_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel.from_config("seq2seq", predict_length=predict_length)
+    config = AutoConfig.for_model("seq2seq")
+    backbone = AutoModel.from_config(config, predict_length=predict_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)

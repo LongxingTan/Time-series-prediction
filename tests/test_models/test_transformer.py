@@ -4,7 +4,7 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
+from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.models.transformer import Decoder, Decoder2, Encoder, Transformer
 
 
@@ -67,7 +67,8 @@ class TransformerTest(unittest.TestCase):
 
     def test_train(self):
         train, valid = tfts.get_data("sine", test_size=0.1)
-        model = AutoModel("rnn", predict_length=8)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_length=8)
         trainer = KerasTrainer(model)
         trainer.train(train, valid, n_epochs=2)
         y_test = trainer.predict(valid[0])

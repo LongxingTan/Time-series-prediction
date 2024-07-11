@@ -25,14 +25,15 @@ class DemoTest(unittest.TestCase):
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)
-        print(pred)
+        print(pred.shape)
 
     def test_demo2(self):
         train_length = 24
         predict_length = 8
 
         (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
-        model = AutoModel("seq2seq", predict_length=predict_length)
+        config = AutoConfig.for_model("seq2seq")
+        model = AutoModel.from_config(config=config, predict_length=predict_length)
         print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
         trainer = Trainer(model)

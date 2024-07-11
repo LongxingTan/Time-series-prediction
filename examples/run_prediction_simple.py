@@ -47,7 +47,8 @@ def run_train(args):
     custom_config = AutoConfig.for_model(args.use_model)
     custom_config.update({"skip_connect_circle": True})
 
-    model = AutoModel(args.use_model, predict_length=args.predict_length)
+    config = AutoConfig.for_model(args.use_model)
+    model = AutoModel.from_config(config, predict_length=args.predict_length)
 
     trainer = KerasTrainer(model, optimizer=optimizer, loss_fn=loss_fn)
     trainer.train(train, valid, n_epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))

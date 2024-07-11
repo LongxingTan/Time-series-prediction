@@ -60,14 +60,15 @@ pip install tfts
 ```python
 import matplotlib.pyplot as plt
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
+from tfts import AutoModel, KerasTrainer, Trainer, AutoConfig
 
 train_length = 24
 predict_length = 8
 
 # 其中，train是包含(x_train, y_train)的tuple, valid包含(x_valid, y_valid)
 train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
-model = AutoModel('seq2seq', predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length)
 
 trainer = KerasTrainer(model)
 trainer.train(train, valid)
@@ -85,6 +86,9 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 编码类模型输入
 
 ```python
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
+
 train_length = 49
 predict_length = 10
 n_feature = 2
@@ -94,7 +98,8 @@ y_train = np.random.rand(1, predict_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("rnn", predict_length=predict_length)
+config = AutoConfig.for_model("rnn")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
 ```
@@ -103,6 +108,8 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 
 ```python
 # option1
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 train_length = 49
 predict_length = 10
@@ -122,13 +129,16 @@ x_valid = (
 )
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
 ```python
 # option2
+import tensorflow as tf
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_length):
@@ -169,7 +179,8 @@ valid_loader = tf.data.Dataset.from_generator(
 )
 valid_loader = valid_loader.batch(batch_size=1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
@@ -181,15 +192,11 @@ import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
 
-config = AutoConfig('rnn').get_config()
+config = AutoConfig.for_model('rnn')
 print(config)
+config.rnn_hidden_size = 128
 
-custom_model_config = {
-    "rnn_size": 128,
-    "dense_size": 128,
-}
-
-model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
+model = AutoModel.from_config(config, predict_length=7, )
 ```
 
 **搭建自己的模型**
@@ -210,7 +217,7 @@ model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_conf
 ```python
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
-from tfts import AutoModel
+from tfts import AutoModel, AutoConfig
 
 
 def build_model():
@@ -219,29 +226,13 @@ def build_model():
     predict_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    config = AutoConfig.for_model("seq2seq")
+    backbone = AutoModel.from_config(config, predict_length=predict_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     model.compile(loss="mse", optimizer="rmsprop")
     return model
-```
-
-**修改自己的模型配置**
-
-```python
-import tensorflow as tf
-import tfts
-from tfts import AutoModel, AutoConfig
-
-config = AutoConfig('rnn').get_config()
-print(config)  # 查看模型可配置参数
-
-custom_model_config = {
-    "rnn_size": 128,
-    "dense_size": 128,
-}
-model = AutoModel('rnn', custom_model_config=custom_model_config)
 ```
 
 

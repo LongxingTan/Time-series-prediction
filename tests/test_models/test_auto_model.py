@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import tensorflow as tf
 
-from tfts.models.auto_model import (
+from tfts import (
+    AutoConfig,
     AutoModel,
     AutoModelForAnomaly,
     AutoModelForClassification,
@@ -17,8 +18,9 @@ class TestAutoModel(unittest.TestCase):
     def test_auto_model_init(
         self,
     ):
+        config = AutoConfig.for_model("seq2seq")
 
-        auto_model = AutoModel("seq2seq", predict_length=5)
+        auto_model = AutoModel.from_config(config, predict_length=5)
         input_data = np.random.rand(1, 10, 3)
         output = auto_model(input_data)
 

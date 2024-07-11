@@ -383,10 +383,10 @@ class DecoderV2(tf.keras.layers.Layer):
         )
 
 
-class Decoder3(tf.keras.layers.Layer):
+class DecoderV3(tf.keras.layers.Layer):
     # multi-steps static decoding
     def __init__(self, rnn_size=32, rnn_type="gru", rnn_dropout=0, dense_size=1, **kwargs) -> None:
-        super(Decoder3, self).__init__()
+        super(DecoderV3, self).__init__()
         if rnn_type.lower() == "gru":
             self.rnn = GRU(
                 units=rnn_size, activation="tanh", return_state=False, return_sequences=True, dropout=rnn_dropout

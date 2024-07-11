@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.models.auto_model import AutoModel
+from tfts import AutoConfig, AutoModel
 from tfts.trainer import KerasTrainer, Trainer
 
 
@@ -36,7 +36,8 @@ class TrainerTest(unittest.TestCase):
 
     def test_trainer_basic(self):
         # 1gpu, no dist
-        model = AutoModel("rnn", predict_length=2)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_length=2)
         trainer = Trainer(model)
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
@@ -53,7 +54,8 @@ class TrainerTest(unittest.TestCase):
 
     def test_trainer_2gpu(self):
         strategy = tf.distribute.MirroredStrategy()
-        model = AutoModel("rnn", predict_length=2)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_length=2)
         trainer = Trainer(model, strategy=strategy)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
 
@@ -86,7 +88,8 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         x_valid = np.random.random((1, 10, 1))
         y_valid = np.random.randint(0, 2, (1, 2, 1))
-        model = AutoModel("rnn", predict_length=2)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_length=2)
 
         trainer = KerasTrainer(model)
         trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), **self.fit_config)
@@ -101,6 +104,7 @@ class KerasTrainerTest(unittest.TestCase):
         train_loader = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(1)
         valid_loader = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(1)
 
-        model = AutoModel("rnn", predict_length=2)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_length=2)
         trainer = KerasTrainer(model)
         trainer.train(train_loader, valid_loader, **self.fit_config)

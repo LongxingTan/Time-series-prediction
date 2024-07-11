@@ -40,16 +40,12 @@ class AutoModel(BaseModel):
 
     def __init__(
         self,
-        model_name: str,
-        predict_length: int,
-        config=None,
+        model,
+        config,
     ):
         super(AutoModel, self).__init__()
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        if not config:
-            config = AutoConfig.for_model(model_name)
-        self.model = getattr(module, class_name)(predict_length, config=config)
+        self.model = model
+        self.config = config
 
     def __call__(
         self,
@@ -74,15 +70,19 @@ class AutoModel(BaseModel):
 
     @classmethod
     def from_config(cls, config, predict_length, task="prediction"):
-        pass
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(predict_length, config=config)
+        return cls(model, config)
 
 
 class AutoModelForPrediction(BaseModel):
     """tfts model for prediction"""
 
-    def __init__(self, model_name):
+    def __init__(self, model, config):
         super(AutoModelForPrediction, self).__init__()
-        self.model = AutoModel(model_name)
+        self.model = AutoModel(model, config)
 
     def __call__(self, x):
 
