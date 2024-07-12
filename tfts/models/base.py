@@ -38,8 +38,13 @@ class BaseModel(ABC):
     def load_pretrained_weights(self, name: str):
         self.model = tf.keras.models.load_model(name)
 
-    def save_model(self, weights_path):
+    def save_weights(self, weights_path):
         self.model.save_weights(weights_path)
+        logging.info("Model weights successfully saved in {}".format(weights_path))
+
+    def save_model(self, weights_path):
+        self.model.save(weights_path)
+        logging.info("Protobuf model successfully saved in {}".format(weights_path))
 
 
 class BaseConfig(ABC):

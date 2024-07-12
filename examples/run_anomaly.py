@@ -59,7 +59,7 @@ def run_train(args):
 
     trainer = KerasTrainer(model)
     trainer.train((x_test, y_test), (x_test, y_test), n_epochs=args.epochs)
-    model.save_model(args.output_dir)
+    model.save_weights(args.output_dir)
     return
 
 
