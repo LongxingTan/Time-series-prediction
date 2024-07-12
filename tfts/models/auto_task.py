@@ -26,12 +26,11 @@ class ClassificationHead(tf.keras.layers.Layer):
 class AnomalyHead(tf.keras.layers.Layer):
     """Anomaly task head layer: Reconstruct style"""
 
-    def __init__(self, model, train_sequence_length) -> None:
-        self.model = model
-        self.train_sequence_length = train_sequence_length
+    def __init__(self) -> None:
+        super(AnomalyHead, self).__init__()
 
-    def detect(self, x_test, y_test):
-        y_pred = self.model(x_test)
+    def call(self, y_pred, y_test):
+
         y_pred = y_pred.numpy()
         errors = y_pred - y_test
 
@@ -48,7 +47,7 @@ class AnomalyHead(tf.keras.layers.Layer):
         return m_dist
 
     def _mahala_distance(self, x, mean, cov):
-        # calculate Mahalanobis distance
+        """calculate Mahalanobis distance"""
         d = np.dot(x - mean, np.linalg.inv(cov))
         d = np.dot(d, (x - mean).T)
         return d

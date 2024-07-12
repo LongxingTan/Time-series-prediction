@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.optimizers.schedules import LearningRateSchedule
 
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer

@@ -115,20 +115,23 @@ class AutoModelForClassification(BaseModel):
         return model_output
 
 
-class AutoModelForAnomaly(BaseModel):
+class AutoModelForAnomaly(AutoModel):
     """tfts model for anomaly detection"""
 
     def __init__(self, model, config):
-        super(AutoModelForAnomaly, self).__init__()
+        super(AutoModelForAnomaly, self).__init__(model, config)
         self.model = AutoModel(model, config)
         self.config = config
+        self.head = AnomalyHead()
 
-    def __call__(
+    def detect(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        labels=None,
     ):
         model_output = self.model(x)
-        return model_output
+        dist = self.head(model_output, labels)
+        return dist
 
 
 class AutoModelForSegmentation(BaseModel):
