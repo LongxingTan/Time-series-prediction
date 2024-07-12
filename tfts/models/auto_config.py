@@ -25,8 +25,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 )
 
 
-class AutoConfig(object):
+class AutoConfig(BaseConfig):
     """AutoConfig for model"""
+
+    def __init__(self, **kwargs):
+        super(AutoConfig, self).__init__(**kwargs)
 
     @classmethod
     def for_model(cls, model_name: str, *args, **kwargs):
@@ -40,7 +43,3 @@ class AutoConfig(object):
         raise ValueError(
             f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
         )
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-        pass
