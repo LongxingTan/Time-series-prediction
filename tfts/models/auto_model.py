@@ -133,7 +133,7 @@ class AutoModelForAnomaly(AutoModel):
         super(AutoModelForAnomaly, self).__init__(model, config)
         self.model = AutoModel(model, config)
         self.config = config
-        self.head = AnomalyHead()
+        self.head = AnomalyHead(config.train_sequence_length)
 
     def detect(
         self,

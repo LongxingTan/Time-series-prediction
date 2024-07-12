@@ -36,8 +36,9 @@ class ClassificationHead(tf.keras.layers.Layer):
 class AnomalyHead(tf.keras.layers.Layer):
     """Anomaly task head layer: Reconstruct style"""
 
-    def __init__(self) -> None:
+    def __init__(self, train_sequence_length) -> None:
         super(AnomalyHead, self).__init__()
+        self.train_sequence_length = train_sequence_length
 
     def call(self, y_pred, y_test):
         y_pred = y_pred.numpy()

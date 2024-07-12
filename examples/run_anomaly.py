@@ -84,6 +84,7 @@ def run_inference(args):
     x_test, y_test, sig = build_data("ecg")
 
     config = AutoConfig.for_model(args.use_model)
+    config.train_sequence_length = args.train_length
 
     model = AutoModelForAnomaly.from_pretrained(config, args.predict_length, args.output_dir)
     det = model.detect(x_test, y_test)
@@ -92,5 +93,5 @@ def run_inference(args):
 
 if __name__ == "__main__":
     args = parse_args()
-    # run_train(args)
+    run_train(args)
     run_inference(args)
