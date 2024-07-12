@@ -17,9 +17,9 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
     parser.add_argument("--use_data", type=str, default="ecg", help="dataset: sine or airpassengers")
-    parser.add_argument("--train_length", type=int, default=24, help="sequence length for train")
-    parser.add_argument("--predict_length", type=int, default=12, help="sequence length for predict")
-    parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
+    parser.add_argument("--train_length", type=int, default=12, help="sequence length for train")
+    parser.add_argument("--predict_length", type=int, default=1, help="sequence length for predict")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
     parser.add_argument("--output_dir", type=str, default="./model.h5", help="saved model weights")
@@ -45,10 +45,7 @@ def build_data(data_name="ecg"):
         std_ecg = scaler.fit_transform(ecg)
         std_ecg = std_ecg[:5000]
 
-        train_length = 10
-        pred_length = 3
-
-        sub_seq, next_values = create_subseq(std_ecg, train_length, pred_length)
+        sub_seq, next_values = create_subseq(std_ecg, args.train_length, args.predict_length)
         return np.array(sub_seq), np.array(next_values), std_ecg
     else:
         raise ValueError()
@@ -61,7 +58,7 @@ def run_train(args):
     model = AutoModelForAnomaly.from_config(config, predict_length=1)
 
     trainer = KerasTrainer(model)
-    trainer.train((x_test, y_test), (x_test, y_test), n_epochs=50)
+    trainer.train((x_test, y_test), (x_test, y_test), n_epochs=args.epochs)
     model.save_model(args.output_dir)
     return
 
@@ -79,19 +76,21 @@ def plot(sig, det):
     y1 = [0] * len(x)
     y2 = [1000] * len(x)
     axes[1].fill_between(x, y1, y2, facecolor="g", alpha=0.3)
-    # plt.savefig('./p.png')
+    # plt.savefig('./anomaly.png')
     plt.show()
 
 
 def run_inference(args):
     x_test, y_test, sig = build_data("ecg")
 
-    model = AutoModelForAnomaly.from_pretrained(args.output_dir)
+    config = AutoConfig.for_model(args.use_model)
+
+    model = AutoModelForAnomaly.from_pretrained(config, args.predict_length, args.output_dir)
     det = model.detect(x_test, y_test)
     plot(sig, det)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    run_train(args)
+    # run_train(args)
     run_inference(args)

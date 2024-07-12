@@ -15,14 +15,12 @@ class BaseModel(ABC):
 
     @classmethod
     def from_config(cls, config, predict_length):
-        model = cls()
-        model.build_model(config, predict_length)
-        return model
+        return cls(predict_sequence_length=predict_length, config=config)
 
     @classmethod
-    def from_pretrained(cls, name_or_path: str):
-        model = cls()
-        model.load_weights(name_or_path)
+    def from_pretrained(cls, config, predict_length, weights_path):
+        model = cls(predict_sequence_length=predict_length, config=config)
+        model.load_weights(weights_path)
         return model
 
     def build_model(self, inputs):

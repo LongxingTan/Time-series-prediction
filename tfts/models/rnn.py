@@ -70,44 +70,60 @@ class RNN(BaseModel):
 
         Parameters
         ----------
-        inputs : _type_
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
+        inputs : Union[list, tuple, dict, tf.Tensor]
+            Input data.
+        teacher : tf.Tensor, optional
+            Teacher signal for training, by default None.
+        return_dict : bool, optional
+            Whether to return a dictionary, by default None.
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            Model output.
+        """
+        x, encoder_feature = self._prepare_inputs(inputs)
+        encoder_outputs, encoder_state = self.encoder(encoder_feature)
+
+        if self.config.rnn_type == "lstm":
+            encoder_output = tf.concat(encoder_state, axis=-1)
+        else:
+            encoder_output = encoder_state
+
+        encoder_output = self.dense1(encoder_output)
+        encoder_output = self.drop1(encoder_output)
+        encoder_output = self.dense2(encoder_output)
+        encoder_output = self.drop2(encoder_output)
+
+        outputs = self.project1(encoder_output)
+        outputs = tf.expand_dims(outputs, -1)
+
+        return outputs
+
+    def _prepare_inputs(self, inputs):
+        """Prepare the inputs for the encoder.
+
+        Parameters
+        ----------
+        inputs : Union[list, tuple, dict, tf.Tensor]
+            Raw inputs.
+
+        Returns
+        -------
+        tuple
+            Prepared inputs.
         """
         if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
+            x, encoder_feature, _ = inputs
             encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         elif isinstance(inputs, dict):
             x = inputs["x"]
             encoder_feature = inputs["encoder_feature"]
             encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         else:
-            encoder_feature = x = inputs
-
-        encoder_outputs, encoder_state = self.encoder(encoder_feature)
-        # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
-        # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
-        if self.config.rnn_type == "lstm":
-            encoder_output = tf.concat(encoder_state, axis=-1)
-        else:
-            encoder_output = encoder_state
-
-        # encoder_output = self.drop1(encoder_output)
-        encoder_output = self.dense1(encoder_output)
-        # encoder_output = self.drop2(encoder_output)
-        encoder_output = self.dense2(encoder_output)
-        # encoder_output = self.drop2(encoder_output)
-
-        outputs = self.project1(encoder_output)
-        outputs = tf.expand_dims(outputs, -1)
-
-        return outputs
+            x = inputs
+            encoder_feature = x
+        return x, encoder_feature
 
 
 class Encoder(tf.keras.layers.Layer):

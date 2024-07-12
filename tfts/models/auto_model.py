@@ -33,7 +33,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
 )
 
 
-class AutoModel(BaseModel):
+class AutoModel(BaseModel, tf.keras.Model):
     """tftf auto model
     input tensor: [batch_size, sequence_length, num_features]
     output tensor: [batch_size, predict_sequence_length, num_labels]
@@ -48,7 +48,7 @@ class AutoModel(BaseModel):
         self.model = model
         self.config = config
 
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
@@ -65,8 +65,8 @@ class AutoModel(BaseModel):
         tf.Tensor
             model output
         """
-        # if isinstance(x, (list, tuple)):
-        #     assert len(x[0].shape) == 3, "The expected inputs dimension is 3, while get {}".format(len(x[0].shape))
+        if isinstance(x, (list, tuple)):
+            assert len(x[0].shape) == 3, "The expected input dimension is 3, but got {}".format(len(x[0].shape))
         return self.model(x, return_dict=return_dict)
 
     @classmethod
@@ -77,12 +77,23 @@ class AutoModel(BaseModel):
         model = getattr(module, class_name)(predict_length, config=config)
         return cls(model, config)
 
+    @classmethod
+    def from_pretrained(cls, config, predict_length, weights_path):
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(predict_length, config=config)
+        m = cls(model, config)
+        m.built = True
+        m.load_weights(weights_path)
+        return m
 
-class AutoModelForPrediction(BaseModel):
+
+class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
     def __init__(self, model, config):
-        super(AutoModelForPrediction, self).__init__()
+        super(AutoModelForPrediction, self).__init__(model, config)
         self.model = AutoModel(model, config)
         self.config = config
 
@@ -99,11 +110,11 @@ class AutoModelForPrediction(BaseModel):
         return model_output
 
 
-class AutoModelForClassification(BaseModel):
+class AutoModelForClassification(AutoModel):
     """tfts model for classification"""
 
     def __init__(self, model, config):
-        super(AutoModelForClassification, self).__init__()
+        super(AutoModelForClassification, self).__init__(model, config)
         self.model = AutoModel(model, config)
         self.config = config
 
@@ -134,11 +145,11 @@ class AutoModelForAnomaly(AutoModel):
         return dist
 
 
-class AutoModelForSegmentation(BaseModel):
+class AutoModelForSegmentation(AutoModel):
     """tfts model for time series segmentation"""
 
     def __init__(self, model, config):
-        super(AutoModelForSegmentation, self).__init__()
+        super(AutoModelForSegmentation, self).__init__(model, config)
         self.model = AutoModel(model, config)
         self.config = config
 
