@@ -3,17 +3,28 @@ import tensorflow as tf
 
 
 class PredictionHead(tf.keras.layers.Layer):
+    """Prediction task head layer"""
+
     def __init__(self):
         super(PredictionHead, self).__init__()
 
 
 class SegmentationHead(tf.keras.layers.Layer):
+    """Segmentation task head layer"""
+
     def __init__(self):
         super(SegmentationHead, self).__init__()
 
 
+class ClassificationHead(tf.keras.layers.Layer):
+    """Classification task head layer"""
+
+    def __init__(self):
+        super(ClassificationHead, self).__init__()
+
+
 class AnomalyHead(tf.keras.layers.Layer):
-    """Anomaly head: Reconstruct model"""
+    """Anomaly task head layer: Reconstruct style"""
 
     def __init__(self, model, train_sequence_length) -> None:
         self.model = model

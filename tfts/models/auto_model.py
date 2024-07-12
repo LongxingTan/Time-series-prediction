@@ -10,6 +10,7 @@ import pandas as pd
 import tensorflow as tf
 
 from .auto_config import AutoConfig
+from .auto_task import AnomalyHead, ClassificationHead, PredictionHead, SegmentationHead
 from .base import BaseConfig, BaseModel
 
 logger = logging.getLogger(__name__)
@@ -108,8 +109,10 @@ class AutoModelForClassification(BaseModel):
 
     def __call__(
         self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
     ):
-        return
+        model_output = self.model(x)
+        return model_output
 
 
 class AutoModelForAnomaly(BaseModel):
@@ -120,8 +123,12 @@ class AutoModelForAnomaly(BaseModel):
         self.model = AutoModel(model, config)
         self.config = config
 
-    def __call__(self, *args, **kwargs):
-        return
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+    ):
+        model_output = self.model(x)
+        return model_output
 
 
 class AutoModelForSegmentation(BaseModel):
@@ -132,5 +139,9 @@ class AutoModelForSegmentation(BaseModel):
         self.model = AutoModel(model, config)
         self.config = config
 
-    def __call__(self, *args, **kwargs):
-        return
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+    ):
+        model_output = self.model(x)
+        return model_output
