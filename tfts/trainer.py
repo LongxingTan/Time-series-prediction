@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-__all__ = ["Trainer", "KerasTrainer", "Seq2SeqKerasTrainer"]
+__all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ class KerasTrainer(object):
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
-        self.run_eargely = run_eagerly
+        self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -303,7 +303,7 @@ class KerasTrainer(object):
 
         # print(self.model.summary())
         self.model.compile(
-            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eargely
+            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eagerly
         )
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
@@ -366,6 +366,6 @@ class KerasTrainer(object):
         plt.legend()
 
 
-class Seq2SeqKerasTrainer(KerasTrainer):
+class Seq2seqKerasTrainer(KerasTrainer):
     def __init__(self, *args, **kwargs):
-        super(Seq2SeqKerasTrainer, self).__init__(*args, **kwargs)
+        super(Seq2seqKerasTrainer, self).__init__(*args, **kwargs)
