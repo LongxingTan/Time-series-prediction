@@ -2,6 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.layers import Dense, GlobalAveragePooling1D
 
 
 class PredictionHead(tf.keras.layers.Layer):
@@ -21,8 +22,15 @@ class SegmentationHead(tf.keras.layers.Layer):
 class ClassificationHead(tf.keras.layers.Layer):
     """Classification task head layer"""
 
-    def __init__(self):
+    def __init__(self, num_labels: int = 1):
         super(ClassificationHead, self).__init__()
+        self.pooling = GlobalAveragePooling1D()
+        self.dense = Dense(num_labels)
+
+    def call(self, inputs):
+        pooled_output = self.pooling(inputs)
+        logits = self.dense(pooled_output)
+        return logits
 
 
 class AnomalyHead(tf.keras.layers.Layer):
@@ -32,7 +40,6 @@ class AnomalyHead(tf.keras.layers.Layer):
         super(AnomalyHead, self).__init__()
 
     def call(self, y_pred, y_test):
-
         y_pred = y_pred.numpy()
         errors = y_pred - y_test
 

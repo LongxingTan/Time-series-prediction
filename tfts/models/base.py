@@ -20,9 +20,9 @@ class BaseModel(ABC):
         return model
 
     @classmethod
-    def from_pretrained(cls, name: str):
+    def from_pretrained(cls, name_or_path: str):
         model = cls()
-        model.load_pretrained_weights(name)
+        model.load_weights(name_or_path)
         return model
 
     def build_model(self, inputs):
@@ -36,10 +36,12 @@ class BaseModel(ABC):
     #         x = tf.keras.layers.Dense(layer_units, activation="relu")(x)
     #     outputs = tf.keras.layers.Dense(predict_length, activation="softmax")(x)
     #     self.model = tf.keras.Model(inputs, outputs)
-    #     self.model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 
     def load_pretrained_weights(self, name: str):
         self.model = tf.keras.models.load_model(name)
+
+    def save_model(self, weights_path):
+        self.model.save_weights(weights_path)
 
 
 class BaseConfig(ABC):

@@ -16,21 +16,21 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
-    parser.add_argument("--use_data", type=str, default="sine", help="dataset: sine or airpassengers")
+    parser.add_argument("--use_data", type=str, default="ecg", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=24, help="sequence length for train")
     parser.add_argument("--predict_length", type=int, default=12, help="sequence length for predict")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
-
+    parser.add_argument("--output_dir", type=str, default="./model.h5", help="saved model weights")
     return parser.parse_args()
 
 
-def create_subseq(ts, look_back, pred_length):
+def create_subseq(ts, train_length, pred_length):
     sub_seq, next_values = [], []
-    for i in range(len(ts) - look_back - pred_length):
-        sub_seq.append(ts[i : i + look_back])
-        next_values.append(ts[i + look_back : i + look_back + pred_length].T[0])
+    for i in range(len(ts) - train_length - pred_length):
+        sub_seq.append(ts[i : i + train_length])
+        next_values.append(ts[i + train_length : i + train_length + pred_length].T[0])
     return sub_seq, next_values
 
 
@@ -41,15 +41,14 @@ def build_data(data_name="ecg"):
         ecg = ecg.reshape(len(ecg), -1)
         print("length of ECG data : ", len(ecg))
 
-        # standardize
         scaler = StandardScaler()
         std_ecg = scaler.fit_transform(ecg)
         std_ecg = std_ecg[:5000]
 
-        look_back = 10
+        train_length = 10
         pred_length = 3
 
-        sub_seq, next_values = create_subseq(std_ecg, look_back, pred_length)
+        sub_seq, next_values = create_subseq(std_ecg, train_length, pred_length)
         return np.array(sub_seq), np.array(next_values), std_ecg
     else:
         raise ValueError()
@@ -63,7 +62,7 @@ def run_train(args):
 
     trainer = KerasTrainer(model)
     trainer.train((x_test, y_test), (x_test, y_test), n_epochs=50)
-    trainer.save_model(model_dir="./weights/lstm.h5")
+    model.save_model(args.output_dir)
     return
 
 
@@ -95,3 +94,4 @@ def run_inference(args):
 if __name__ == "__main__":
     args = parse_args()
     run_train(args)
+    run_inference(args)
