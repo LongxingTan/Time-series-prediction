@@ -23,9 +23,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def build_model():
+def run_train(args):
     return
 
 
-def run_train():
-    return
+if __name__ == "__main__":
+    args = parse_args()
+    run_train(args)

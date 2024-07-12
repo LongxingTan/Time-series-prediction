@@ -18,7 +18,7 @@
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="401" align=center/>
+<img src="./docs/source/_static/logo.svg" width="400" align=center/>
 </h1><br>
 
 [![LICENSE][license-image]][license-url]
@@ -31,9 +31,9 @@
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-**TFTS** (TensorFlow Time Series) is an easy-to-use time series package, supporting the classical and SOTA deep learning methods in TensorFlow or Keras.
-- Flexible and powerful design for time series task
-- Advanced deep learning models for industry, research and competition
+**TFTS** (TensorFlow Time Series) is an easy-to-use time series package, supporting the classical and latest deep learning methods in TensorFlow or Keras.
+- Support sota performance for time series task (prediction, classification, anomaly detection)
+- Provide advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 
@@ -161,7 +161,6 @@ class FakeReader(object):
         for i in range(len(self.x)):
             yield self[i]
 
-
 predict_length = 10
 train_reader = FakeReader(predict_length=predict_length)
 train_loader = tf.data.Dataset.from_generator(
@@ -219,7 +218,6 @@ You could build the custom model based on tfts, especially
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
 from tfts import AutoModel, AutoConfig
-
 
 def build_model():
     train_length = 24

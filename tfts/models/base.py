@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
-    def __init__(self):
-        pass
+    """Base class for tfts model."""
 
     @classmethod
     def from_config(cls, config, predict_length):
@@ -44,6 +43,8 @@ class BaseModel(ABC):
 
 
 class BaseConfig(ABC):
+    """Base class for tfts config."""
+
     attribute_map: Dict[str, str] = {}
 
     def __init__(self, **kwargs):

@@ -18,7 +18,7 @@
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="401" align=center/>
+<img src="./docs/source/_static/logo.svg" width="400" align=center/>
 </h1><br>
 
 [![LICENSE][license-image]][license-url]
@@ -31,20 +31,18 @@
 
 **[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
-**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列框架，基于TensorFlow/ Keras，支持多种深度学习模型。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
+青山遮不住，毕竟东流去。江晚正愁余，山深闻鹧鸪。<br>
+**东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列框架，基于TensorFlow/ Keras。
 
-- 经典与前沿的深度学习模型，用于工业、科研、竞赛
-- 结构灵活，适配多种时间序列任务
-- 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门
-
-中文名“**东流**”，源自辛弃疾“青山遮不住，毕竟**东流**去。江晚正愁余，山深闻鹧鸪”。
+- 为多种时间序列任务提供SOTA的深度学习模型，预测、分类、异常检测
+- 提供经典与前沿的深度学习模型，用于工业、科研、竞赛
+- 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
 
 
 ## 快速使用
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
-
 
 **安装**
 
@@ -164,7 +162,6 @@ class FakeReader(object):
         for i in range(len(self.x)):
             yield self[i]
 
-
 predict_length = 10
 train_reader = FakeReader(predict_length=predict_length)
 train_loader = tf.data.Dataset.from_generator(
@@ -218,7 +215,6 @@ model = AutoModel.from_config(config, predict_length=7, )
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
 from tfts import AutoModel, AutoConfig
-
 
 def build_model():
     train_length = 24

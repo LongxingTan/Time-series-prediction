@@ -1,3 +1,5 @@
+"""Time series task head"""
+
 import numpy as np
 import tensorflow as tf
 

@@ -68,6 +68,8 @@ class BertConfig(BaseConfig):
 
 
 class Bert(BaseModel):
+    """Bert model for time series"""
+
     def __init__(
         self,
         predict_sequence_length: int = 1,

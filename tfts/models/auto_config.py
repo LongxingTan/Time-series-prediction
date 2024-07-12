@@ -26,7 +26,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 
 
 class AutoConfig(BaseConfig):
-    """AutoConfig for model"""
+    """AutoConfig for tfts model"""
 
     def __init__(self, **kwargs):
         super(AutoConfig, self).__init__(**kwargs)
