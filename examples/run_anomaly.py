@@ -56,6 +56,14 @@ def build_data(data_name="ecg"):
 
 
 def run_train(args):
+    x_test, y_test, sig = build_data("ecg")
+
+    config = AutoConfig.for_model(args.use_model)
+    model = AutoModelForAnomaly.from_config(config, predict_length=1)
+
+    trainer = KerasTrainer(model)
+    trainer.train((x_test, y_test), (x_test, y_test), n_epochs=50)
+    trainer.save_model(model_dir="./weights/lstm.h5")
     return
 
 
@@ -77,8 +85,11 @@ def plot(sig, det):
 
 
 def run_inference(args):
+    x_test, y_test, sig = build_data("ecg")
+
     model = AutoModelForAnomaly.from_pretrained(args.output_dir)
-    model.detect()
+    det = model.detect(x_test, y_test)
+    plot(sig, det)
 
 
 if __name__ == "__main__":
