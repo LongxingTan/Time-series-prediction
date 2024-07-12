@@ -13,7 +13,7 @@ class SegmentationHead(tf.keras.layers.Layer):
 
 
 class AnomalyHead(tf.keras.layers.Layer):
-    """Reconstruct model"""
+    """Anomaly head: Reconstruct model"""
 
     def __init__(self, model, train_sequence_length) -> None:
         self.model = model
