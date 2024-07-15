@@ -1,1 +1,1 @@
-"""Two stage feature, like ratio, diff"""
+"""Two stage features, like ratio, diff"""

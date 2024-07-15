@@ -1,3 +1,5 @@
+"""Base class for config and model"""
+
 from abc import ABC, abstractmethod
 import collections
 import json

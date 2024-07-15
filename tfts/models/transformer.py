@@ -29,6 +29,7 @@ class TransformerConfig(BaseConfig):
         num_layers=2,
         num_decoder_layers=None,
         num_attention_heads=4,
+        num_kv_heads=4,
         ffn_intermediate_size=256,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
@@ -48,6 +49,7 @@ class TransformerConfig(BaseConfig):
         self.num_layers = num_layers
         self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
         self.num_attention_heads = num_attention_heads
+        self.num_kv_heads = num_kv_heads
         self.hidden_act = hidden_act
         self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
