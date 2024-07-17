@@ -367,5 +367,8 @@ class KerasTrainer(object):
 
 
 class Seq2seqKerasTrainer(KerasTrainer):
+    """As the transformers forum mentioned: https://discuss.huggingface.co/t/trainer-vs-seq2seqtrainer/3145/2
+    Seq2SeqTrainer is mostly about predict_with_generate."""
+
     def __init__(self, *args, **kwargs):
         super(Seq2seqKerasTrainer, self).__init__(*args, **kwargs)
