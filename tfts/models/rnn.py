@@ -48,7 +48,7 @@ class RNNConfig(BaseConfig):
 
 
 class RNN(BaseModel):
-    """RNN model"""
+    """tfts RNN model"""
 
     def __init__(self, predict_sequence_length: int = 1, config=RNNConfig()):
         super(RNN, self).__init__()
@@ -165,17 +165,17 @@ class Encoder(tf.keras.layers.Layer):
         # self.bn = BatchNormalization()
         super(Encoder, self).build(input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor):
         """RNN encoder call
 
         Parameters
         ----------
-        inputs : _type_
-            _description_
+        inputs : tf.Tensor
+            3d time series input, (batch_size, sequence_length, num_features)
 
         Returns
         -------
-        _type_
+        tf.tensor
             output of encoder, batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
         """
         # inputs = self.bn(inputs)
@@ -185,6 +185,9 @@ class Encoder(tf.keras.layers.Layer):
             output = self.rnn(inputs)
             output, state_memory, state_carry = self.rnn2(output)
             state = (state_memory, state_carry)
+        else:
+            raise ValueError(f"rnn_type should be gru or lstm, while get {self.rnn_type}")
+
         # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(config['num_stacked_layers']))
         # output = self.dense1(output)  # => batch_size * input_seq_length * dense_size
         return output, state

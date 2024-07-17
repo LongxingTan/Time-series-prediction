@@ -47,7 +47,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, max_len: int = 5000):
+    def __init__(self, max_len: int = 10000):
         super(PositionalEncoding, self).__init__()
         self.max_len = max_len
 
@@ -80,7 +80,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
 
             position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
             position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (maxlen, E)
+            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (max_len, E)
 
             outputs = tf.nn.embedding_lookup(position_enc, position_ind)
             if masking:
