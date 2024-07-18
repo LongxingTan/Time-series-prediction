@@ -85,6 +85,10 @@ class Attention(tf.keras.layers.Layer):
         outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
         return outputs
 
+    def compute_output_shape(self, input_shape):
+        output_shape = (input_shape[0][0], input_shape[0][1], self.hidden_size)
+        return output_shape
+
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
@@ -112,19 +116,19 @@ class SelfAttention(tf.keras.layers.Layer):
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
-        """_summary_
+        """Self attention
 
         Parameters
         ----------
         x : tf.Tensor
             input tensor for self-attention
-        mask : _type_, optional
+        mask : tf.Tensor, optional
             masked, by default None
 
         Returns
         -------
         tf.Tensor
-            _description_
+            self attention output
         """
         return self.attention(x, x, x, mask)
 
