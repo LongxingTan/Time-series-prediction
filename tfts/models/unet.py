@@ -10,24 +10,23 @@ from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatena
 
 from tfts.layers.unet_layer import conv_br, re_block
 
-params: Dict[str, Any] = {
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
+from .base import BaseConfig, BaseModel
 
 
-class Unet(object):
+class UnetConfig(BaseConfig):
+    model_type = "unet"
+
+    def __init__(self):
+        super(UnetConfig, self).__init__()
+
+
+class Unet(BaseModel):
     """Unet model"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+    def __init__(self, predict_sequence_length: int = 1, config=UnetConfig()):
+        super(Unet, self).__init__()
+
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
         self.AvgPool1D1 = AveragePooling1D(pool_size=2)
@@ -35,7 +34,7 @@ class Unet(object):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-    def __call__(self, x: tf.Tensor, training: bool = True):
+    def __call__(self, x: tf.Tensor, training: bool = True, return_dict: Optional[bool] = None):
         """_summary_
 
         Parameters
@@ -58,12 +57,6 @@ class Unet(object):
         encoder_output = self.encoder([x, pool1, pool2])
         decoder_outputs = self.decoder(encoder_output, predict_seq_length=self.predict_sequence_length)
 
-        if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
 

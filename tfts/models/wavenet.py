@@ -3,55 +3,71 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
-from tfts.layers.attention_layer import FullAttention
+from tfts.layers.attention_layer import Attention
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-params: Dict[str, Any] = {
-    "dilation_rates": [2**i for i in range(3)],
-    "kernel_sizes": [2 for _ in range(3)],
-    "filters": 32,
-    "dense_hidden_size": 32,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "use_attention": False,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
+from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
-class WaveNet(object):
-    """WaveNet model for time series"""
+class WaveNetConfig(BaseConfig):
+    model_type = "wavenet"
 
     def __init__(
         self,
-        predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        dilation_rates=[2**i for i in range(4)],
+        kernel_sizes=[2 for i in range(4)],
+        filters=128,
+        dense_hidden_size=64,
+        scheduled_sampling=1,
+        use_attention=False,
+        attention_size=64,
+        num_attention_heads=2,
+        attention_probs_dropout_prob=0,
+    ):
+        super(WaveNetConfig, self).__init__()
+        self.dilation_rates = dilation_rates
+        self.kernel_sizes = kernel_sizes
+        self.filters = filters
+        self.dense_hidden_size = dense_hidden_size
+        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
+        self.use_attention = use_attention
+        self.attention_size = attention_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+
+
+class WaveNet(BaseModel):
+    """WaveNet model for time series"""
+
+    def __init__(self, predict_sequence_length: int = 1, config=WaveNetConfig()) -> None:
+        super(WaveNet, self).__init__()
+
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=params["kernel_sizes"],
-            dilation_rates=params["dilation_rates"],
-            filters=params["filters"],
-            dense_hidden_size=params["dense_hidden_size"],
+            kernel_sizes=config.kernel_sizes,
+            dilation_rates=config.dilation_rates,
+            filters=config.filters,
+            dense_hidden_size=config.dense_hidden_size,
         )
-        self.decoder = Decoder1(
-            filters=params["filters"],
-            dilation_rates=params["dilation_rates"],
-            dense_hidden_size=params["dense_hidden_size"],
+        self.decoder = DecoderV1(
+            filters=config.filters,
+            dilation_rates=config.dilation_rates,
+            dense_hidden_size=config.dense_hidden_size,
             predict_sequence_length=predict_sequence_length,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """wavenet call
 
         Parameters
@@ -92,12 +108,6 @@ class WaveNet(object):
             encoder_outputs=encoder_outputs,
         )
 
-        if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
 
@@ -138,7 +148,7 @@ class Encoder(object):
         return y_hat, conv_inputs[:-1]
 
 
-class Decoder1(object):
+class DecoderV1(object):
     def __init__(
         self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
     ) -> None:
@@ -157,11 +167,11 @@ class Decoder1(object):
         decoder_init_input,
         encoder_outputs,
         teacher: Optional[tf.Tensor] = None,
-        scheduler_sampling: float = 0.0,
+        scheduled_sampling: float = 0.0,
         training: Optional[bool] = None,
         **kwargs: Dict
     ):
-        """wavenet decoder1
+        """wavenet decoder_v1
 
         Parameters
         ----------
@@ -173,7 +183,7 @@ class Decoder1(object):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None
@@ -189,7 +199,7 @@ class Decoder1(object):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     this_input = teacher[:, i : i + 1]
                 else:
                     this_input = prev_output
@@ -224,7 +234,7 @@ class Decoder1(object):
         return tf.expand_dims(decoder_outputs, -1)
 
 
-class Decoder2(object):
+class DecoderV2(object):
     """Decoder need avoid future data leaks"""
 
     def __init__(
@@ -320,7 +330,7 @@ class Decoder3(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -336,7 +346,7 @@ class Decoder3(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None

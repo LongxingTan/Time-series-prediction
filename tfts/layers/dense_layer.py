@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union

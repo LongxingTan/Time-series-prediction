@@ -18,25 +18,24 @@
 [codeql-url]: https://github.com/longxingtan/Time-series-prediction/actions/workflows/codeql-analysis.yml
 
 <h1 align="center">
-<img src="./docs/source/_static/logo.svg" width="490" align=center/>
+<img src="./docs/source/_static/logo.svg" width="400" align=center/>
 </h1><br>
 
 [![LICENSE][license-image]][license-url]
 [![PyPI Version][pypi-image]][pypi-url]
-[![Download][pepy-image]][pepy-url]
 [![Build Status][build-image]][build-url]
 [![Lint Status][lint-image]][lint-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
 [![Contributing][contributing-image]][contributing-url]
-[![CodeQL Status][codeql-image]][codeql-url]
 
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
-**TFTS** (TensorFlow Time Series) is an easy-to-use python package for time series, supporting the classical and SOTA deep learning methods in TensorFlow or Keras.
-- Flexible and powerful design for time series task
-- Advanced deep learning models for industry, research and competition
+**TFTS** (TensorFlow Time Series) is an easy-to-use time series package, supporting the classical and latest deep learning methods in TensorFlow or Keras.
+- Support sota performance for time series task (prediction, classification, anomaly detection)
+- Provide advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
+
 
 ## Tutorial
 
@@ -45,16 +44,16 @@
 - python >= 3.7
 - tensorflow >= 2.4
 
-``` bash
-$ pip install tfts
+```shell
+pip install tfts
 ```
 
-**Basic usage**
+**Quick start**
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1LHdbrXmQGBSQuNTsbbM5-lAk5WENWF-Q?usp=sharing)
 [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/tanlongxing/tensorflow-time-series-starter-tfts/notebook)
 
-``` python
+```python
 import matplotlib.pyplot as plt
 import tfts
 from tfts import AutoModel, AutoConfig, KerasTrainer
@@ -63,7 +62,9 @@ train_length = 24
 predict_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_length, test_size=0.2)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+model_name_or_path = 'seq2seq'
+config = AutoConfig.for_model(model_name_or_path)
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=3)
 
@@ -75,13 +76,15 @@ plt.show()
 **Prepare your own data**
 
 You could train your own data by preparing 3D data as inputs, for both inputs and targets
-
 - option1 `np.ndarray`
 - option2 `tf.data.Dataset`
 
 Encoder only model inputs
 
 ```python
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
+
 train_length = 49
 predict_length = 10
 n_feature = 2
@@ -91,16 +94,18 @@ y_train = np.random.rand(1, predict_length, 1)  # target: (batch, predict_length
 x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("rnn", predict_length=predict_length)
+config = AutoConfig.for_model('rnn')
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
-
 ```
 
 Encoder-decoder model inputs
 
 ```python
 # option1: np.ndarray
+import numpy as np
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 train_length = 49
 predict_length = 10
@@ -121,13 +126,16 @@ x_valid = (
 )
 y_valid = np.random.rand(1, predict_length, 1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 ```
 
 ```python
 # option2: tf.data.Dataset
+import tensorflow as tf
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_length):
@@ -153,7 +161,6 @@ class FakeReader(object):
         for i in range(len(self.x)):
             yield self[i]
 
-
 predict_length = 10
 train_reader = FakeReader(predict_length=predict_length)
 train_loader = tf.data.Dataset.from_generator(
@@ -168,27 +175,24 @@ valid_loader = tf.data.Dataset.from_generator(
 )
 valid_loader = valid_loader.batch(batch_size=1)
 
-model = AutoModel("seq2seq", predict_length=predict_length)
+config = AutoConfig.for_model("seq2seq")
+model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 ```
 
-**Prepare custom model params**
+**Prepare custom model config**
 
 ```python
 import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig
 
-config = AutoConfig('rnn').get_config()
+config = AutoConfig.for_model('rnn')
 print(config)
+config.rnn_hidden_size = 128
 
-custom_model_params = {
-    "rnn_size": 128,
-    "dense_size": 128,
-}
-
-model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+model = AutoModel.from_config(config, predict_length=7, )
 ```
 
 **Build your own model**
@@ -213,8 +217,7 @@ You could build the custom model based on tfts, especially
 ```python
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
-from tfts import AutoModel
-
+from tfts import AutoModel, AutoConfig
 
 def build_model():
     train_length = 24
@@ -222,13 +225,15 @@ def build_model():
     predict_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    config = AutoConfig.for_model("seq2seq")
+    backbone = AutoModel.from_config(config, predict_length=predict_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     model.compile(loss="mse", optimizer="rmsprop")
     return model
 ```
+
 
 ## Examples
 
@@ -237,7 +242,7 @@ def build_model():
 
 <!-- ### Performance
 
-[Time series prediction](./examples/run_prediction.py) performance is evaluated by tfts implementation, not official
+[Time series prediction](./examples/run_prediction_simple.py) performance is evaluated by tfts implementation, not official
 
 | Performance | [web traffic<sup>mape</sup>]() | [grocery sales<sup>wrmse</sup>](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data) | [m5 sales<sup>val</sup>]() | [ventilator<sup>val</sup>]() |
 | :-- | :-: | :-: | :-: | :-: |
@@ -263,6 +268,7 @@ def build_model():
 - [Serving by tf-serving](./examples) -->
 
 For other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
+
 
 ## Citation
 

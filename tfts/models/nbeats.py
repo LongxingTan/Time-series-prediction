@@ -9,38 +9,50 @@ import tensorflow as tf
 
 from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 
-params: Dict[str, Any] = {
-    "stack_types": ["trend_block", "seasonality_block"],
-    "nb_blocks_per_stack": 3,
-    "n_block_layers": 4,
-    "hidden_size": 64,
-    "thetas_dims": (4, 8),
-    "share_weights_in_stack": False,
-}
+from .base import BaseConfig, BaseModel
 
 
-class NBeats(object):
+class NbeatsConfig(BaseConfig):
+    model_type = "nbeats"
+
+    def __init__(
+        self,
+        stack_types=["trend_block", "seasonality_block"],
+        nb_blocks_per_stack=3,
+        n_block_layers=4,
+        hidden_size=64,
+        thetas_dims=(4, 8),
+        share_weights_in_stack=False,
+    ):
+        super(NbeatsConfig, self).__init__()
+        self.stack_types = stack_types
+        self.nb_blocks_per_stack = nb_blocks_per_stack
+        self.n_block_layers = n_block_layers
+        self.hidden_size = hidden_size
+        self.thetas_dims = thetas_dims
+        self.share_weights_in_stack = share_weights_in_stack
+
+
+class NBeats(BaseModel):
     """NBeats model"""
 
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
+        config=NbeatsConfig(),
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        super(NBeats, self).__init__()
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        self.stack_types = params["stack_types"]
-        self.nb_blocks_per_stack = params["nb_blocks_per_stack"]
-        self.hidden_size = params["hidden_size"]
-        self.n_block_layers = params["n_block_layers"]
+        self.stack_types = config.stack_types
+        self.nb_blocks_per_stack = config.nb_blocks_per_stack
+        self.hidden_size = config.hidden_size
+        self.n_block_layers = config.n_block_layers
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
-    def __call__(self, inputs: tf.Tensor):
+    def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
         if isinstance(inputs, (list, tuple)):
             print("NBeats only support single variable prediction, so ignore encoder_features and decoder_features")
             x, encoder_features, _ = inputs

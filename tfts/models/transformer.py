@@ -3,84 +3,110 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, TimeDistributed
+from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention, TimeDistributed
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-params: Dict[str, Any] = {
-    "n_encoder_layers": 1,
-    "n_decoder_layers": 1,
-    "use_token_embedding": False,
-    "attention_hidden_sizes": 128 * 1,
-    "num_heads": 1,
-    "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 128 * 1,
-    "ffn_filter_sizes": 128 * 1,
-    "ffn_dropout": 0.0,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
+from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
-class Transformer(object):
-    """Transformer model"""
+class TransformerConfig(BaseConfig):
+    model_type = "transformer"
 
     def __init__(
         self,
-        predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
+        hidden_size=64,
+        num_layers=2,
+        num_decoder_layers=None,
+        num_attention_heads=4,
+        num_kv_heads=4,
+        ffn_intermediate_size=256,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        scheduled_sampling=1,
+        max_position_embeddings=512,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+        pad_token_id=0,
+        position_embedding_type="absolute",
+        use_cache=True,
+        classifier_dropout=None,
+        **kwargs,
+    ):
+        super(TransformerConfig, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
+        self.num_attention_heads = num_attention_heads
+        self.num_kv_heads = num_kv_heads
+        self.hidden_act = hidden_act
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
+        self.max_position_embeddings = max_position_embeddings
+        self.initializer_range = initializer_range
+        self.layer_norm_eps = layer_norm_eps
+        self.position_embedding_type = position_embedding_type
+        self.use_cache = use_cache
+        self.classifier_dropout = classifier_dropout
+        self.pad_token_id = pad_token_id
+
+
+class Transformer(BaseModel):
+    """Transformer model"""
+
+    def __init__(self, predict_sequence_length: int = 1, config=TransformerConfig()) -> None:
         """Transformer for time series
 
-        :param custom_model_params: custom model defined model hyper parameters
-        :type custom_model_params: _dict_
+        :param custom_model_config: custom model defined model hyper parameters
+        :type custom_model_config: _dict_
         :param dynamic_decoding: _description_, defaults to True
         :type dynamic_decoding: bool, optional
         """
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        super(Transformer, self).__init__()
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(params["attention_hidden_sizes"])
+        self.encoder_embedding = DataEmbedding(self.config.hidden_size)
 
         self.encoder = Encoder(
-            params["n_encoder_layers"],
-            params["attention_hidden_sizes"],
-            params["num_heads"],
-            params["attention_dropout"],
-            params["ffn_hidden_sizes"],
-            params["ffn_filter_sizes"],
-            params["ffn_dropout"],
+            num_hidden_layers=config.num_layers,
+            hidden_size=config.hidden_size,
+            num_attention_heads=config.num_attention_heads,
+            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+            ffn_intermediate_size=config.ffn_intermediate_size,
+            hidden_dropout_prob=config.hidden_dropout_prob,
         )
 
         self.decoder = Decoder2(
-            embed_layer=DataEmbedding(params["attention_hidden_sizes"]),
+            embed_layer=DataEmbedding(config.hidden_size),
             att_layers=[
                 DecoderLayer2(
-                    params["n_decoder_layers"],
-                    params["attention_hidden_sizes"],
-                    params["num_heads"],
-                    params["attention_dropout"],
-                    params["ffn_hidden_sizes"],
-                    params["ffn_filter_sizes"],
-                    params["ffn_dropout"],
+                    num_decoder_layers=config.num_decoder_layers,
+                    hidden_size=config.hidden_size,
+                    num_attention_heads=config.num_attention_heads,
+                    attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+                    ffn_intermediate_size=config.ffn_intermediate_size,
+                    hidden_dropout_prob=config.hidden_dropout_prob,
                 )
-                for _ in range(params["n_decoder_layers"])
+                for _ in range(config.num_decoder_layers)
             ],
             # norm_layer = LayerNormalization()
         )
         self.project = Dense(1, activation=None)
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """Time series transformer
 
         Parameters
@@ -88,7 +114,9 @@ class Transformer(object):
         inputs : tf.Tensor
             3D tensor for batch * seq_len * features
         teacher : tf.Tensor, optional
-            _description_, by default None
+            the teacher for decoding, by default None
+        return_dict: bool
+            if return output a dict
 
         Returns
         -------
@@ -119,44 +147,41 @@ class Transformer(object):
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
 
         B, L, _ = tf.shape(decoder_feature)
-        casual_mask = CausalMask(B * self.params["num_heads"], L).mask
+        casual_mask = CausalMask(B * self.config.num_attention_heads, L).mask
         decoder_outputs = self.decoder(decoder_feature, memory, x_mask=casual_mask)
         decoder_outputs = self.project(decoder_outputs)
 
-        if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
+
+    def _shift_right(self, input_ids):
+        return  # shifted_input_ids
 
 
 class Encoder(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_encoder_layers: int,
-        attention_hidden_sizes: int,
-        num_heads: int,
-        attention_dropout: float,
-        ffn_hidden_sizes: int,
-        ffn_filter_sizes: int,
-        ffn_dropout: float,
+        num_hidden_layers: int,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float,
+        ffn_intermediate_size: int,
+        hidden_dropout_prob: float,
     ):
         super(Encoder, self).__init__()
-        self.n_encoder_layers = n_encoder_layers
-        self.attention_hidden_sizes = attention_hidden_sizes
-        self.num_heads = num_heads
-        self.attention_dropout = attention_dropout
-        self.ffn_hidden_sizes = ffn_hidden_sizes
-        self.ffn_filter_sizes = ffn_filter_sizes
-        self.ffn_dropout = ffn_dropout
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
         self.layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape: Tuple[int]) -> None:
-        for _ in range(self.n_encoder_layers):
-            attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            ffn_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
+        for _ in range(self.num_hidden_layers):
+            attention_layer = SelfAttention(
+                self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
+            )
+            ffn_layer = FeedForwardNetwork(self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=1e-6, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=1e-6, dtype="float32")
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
@@ -167,9 +192,9 @@ class Encoder(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        inputs : tf.Tensor
+        encoder_inputs : tf.Tensor
             Transformer encoder inputs, with dimension of (batch, seq_len, features)
-        mask : tf.Tensor, optional
+        encoder_mask : tf.Tensor, optional
             encoder mask to ignore it during attention, by default None
 
         Returns
@@ -189,13 +214,12 @@ class Encoder(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            "n_encoder_layers": self.n_encoder_layers,
-            "attention_hidden_sizes": self.attention_hidden_sizes,
-            "num_heads": self.num_heads,
-            "attention_dropout": self.attention_dropout,
-            "ffn_hidden_sizes": self.ffn_hidden_sizes,
-            "ffn_filter_sizes": self.ffn_filter_sizes,
-            "ffn_dropout": self.ffn_dropout,
+            "num_hidden_layers": self.num_hidden_layers,
+            "hidden_size": self.hidden_size,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(Encoder, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -206,29 +230,27 @@ class Decoder(tf.keras.layers.Layer):
         self,
         predict_sequence_length: int,
         n_decoder_layers: int,
-        attention_hidden_sizes: int,
-        num_heads: int,
-        attention_dropout: float,
-        ffn_hidden_sizes: int,
-        ffn_filter_sizes: int,
-        ffn_dropout: float,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float,
+        ffn_intermediate_size: int,
+        hidden_dropout_prob: float,
     ) -> None:
         super(Decoder, self).__init__()
         self.predict_sequence_length = predict_sequence_length
-        self.decoder_embedding = DataEmbedding(embed_size=attention_hidden_sizes)
+        self.decoder_embedding = DataEmbedding(embed_size=hidden_size)
         self.decoder_layer = DecoderLayer(
             n_decoder_layers,
-            attention_hidden_sizes,
-            num_heads,
-            attention_dropout,
-            ffn_hidden_sizes,
-            ffn_filter_sizes,
-            ffn_dropout,
+            hidden_size,
+            num_attention_heads,
+            attention_probs_dropout_prob,
+            ffn_intermediate_size,
+            hidden_dropout_prob,
         )
         self.projection = Dense(units=1, name="final_projection")
 
     def call(
-        self, decoder_features, init_input, encoder_memory, teacher=None, scheduler_sampling=0, training=None, **kwargs
+        self, decoder_features, init_input, encoder_memory, teacher=None, scheduled_sampling=0, training=None, **kwargs
     ):
         """Transformer decoder
 
@@ -242,7 +264,7 @@ class Decoder(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None
@@ -257,7 +279,7 @@ class Decoder(tf.keras.layers.Layer):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     input = teacher[:, : i + 1]
                 else:
                     input = this_input[:, : i + 1]
@@ -291,37 +313,37 @@ class DecoderLayer(tf.keras.layers.Layer):
     def __init__(
         self,
         n_decoder_layers: int,
-        attention_hidden_sizes: int,
-        num_heads: int,
-        attention_dropout: float,
-        ffn_hidden_sizes: int,
-        ffn_filter_sizes: int,
-        ffn_dropout: float,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float,
+        ffn_intermediate_size: int,
+        hidden_dropout_prob: float,
         eps: float = 1e-7,
     ) -> None:
         super(DecoderLayer, self).__init__()
         self.n_decoder_layers = n_decoder_layers
-        self.attention_hidden_sizes = attention_hidden_sizes
-        self.num_heads = num_heads
-        self.attention_dropout = attention_dropout
-        self.ffn_hidden_sizes = ffn_hidden_sizes
-        self.ffn_filter_sizes = ffn_filter_sizes
-        self.ffn_dropout = ffn_dropout
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
         self.eps = eps
         self.layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape):
         for _ in range(self.n_decoder_layers):
-            self_attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            ffn_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
+            self_attention_layer = SelfAttention(
+                self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
+            )
+            attention_layer = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+            ffn_layer = FeedForwardNetwork(self.ffn_intermediate_size, self.hidden_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
             self.layers.append([self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3])
         super(DecoderLayer, self).build(input_shape)
 
-    def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None):
+    def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None, return_dict: Optional[bool] = None):
         """Decoder layer
 
         Parameters
@@ -356,12 +378,11 @@ class DecoderLayer(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "n_decoder_layers": self.n_decoder_layers,
-            "attention_hidden_sizes": self.attention_hidden_sizes,
-            "num_heads": self.num_heads,
-            "attention_dropout": self.attention_dropout,
-            "ffn_hidden_sizes": self.ffn_hidden_sizes,
-            "ffn_filter_sizes": self.ffn_filter_sizes,
-            "ffn_dropout": self.ffn_dropout,
+            "hidden_size": self.hidden_size,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(DecoderLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -380,7 +401,7 @@ class Decoder2(tf.keras.layers.Layer):
         self.drop2 = TimeDistributed(Dropout(0.1))
         self.proj = TimeDistributed(Dense(1))
 
-    def call(self, x, memory, x_mask=None, memory_mask=None):
+    def call(self, x: tf.Tensor, memory, x_mask=None, memory_mask=None):
         """Transformer decoder2
 
         Parameters
@@ -415,31 +436,35 @@ class Decoder2(tf.keras.layers.Layer):
 class DecoderLayer2(tf.keras.layers.Layer):
     def __init__(
         self,
-        n_decoder_layers,
-        attention_hidden_sizes,
-        num_heads,
-        attention_dropout,
-        ffn_hidden_sizes,
-        ffn_filter_sizes,
-        ffn_dropout,
+        num_decoder_layers,
+        hidden_size,
+        num_attention_heads,
+        attention_probs_dropout_prob,
+        ffn_intermediate_size,
+        hidden_dropout_prob,
         eps=1e-7,
     ):
         super(DecoderLayer2, self).__init__()
-        self.n_decoder_layers = n_decoder_layers
-        self.attention_hidden_sizes = attention_hidden_sizes
-        self.num_heads = num_heads
-        self.attention_dropout = attention_dropout
-        self.ffn_hidden_sizes = ffn_hidden_sizes
-        self.ffn_filter_sizes = ffn_filter_sizes
-        self.ffn_dropout = ffn_dropout
+        self.num_decoder_layers = num_decoder_layers
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
         self.eps = eps
         self.layers = []
 
     def build(self, input_shape):
-        for _ in range(self.n_decoder_layers):
-            self_attention_layer = SelfAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            enc_dec_attention_layer = FullAttention(self.attention_hidden_sizes, self.num_heads, self.attention_dropout)
-            feed_forward_layer = FeedForwardNetwork(self.ffn_hidden_sizes, self.ffn_filter_sizes, self.ffn_dropout)
+        for _ in range(self.num_decoder_layers):
+            self_attention_layer = SelfAttention(
+                self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
+            )
+            enc_dec_attention_layer = Attention(
+                self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
+            )
+            feed_forward_layer = FeedForwardNetwork(
+                self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob
+            )
             ln_layer1 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.eps, dtype="float32")
@@ -448,16 +473,22 @@ class DecoderLayer2(tf.keras.layers.Layer):
             )
         super(DecoderLayer2, self).build(input_shape)
 
-    def call(self, decoder_inputs, encoder_memory, decoder_mask=None, memory_mask=None):
+    def call(
+        self,
+        decoder_inputs: tf.Tensor,
+        encoder_memory: tf.Tensor,
+        decoder_mask: Optional[tf.Tensor] = None,
+        memory_mask: Optional[tf.Tensor] = None,
+    ) -> tf.Tensor:
         """Decoder layer2
 
         Parameters
         ----------
-        decoder_inputs : _type_
+        decoder_inputs : tf.Tensor
             _description_
         encoder_memory : _type_
             _description_
-        tgt_mask : _type_, optional
+        decoder_mask : _type_, optional
             _description_, by default None
         memory_mask : _type_, optional
             _description_, by default None
@@ -484,12 +515,47 @@ class DecoderLayer2(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "n_decoder_layers": self.n_decoder_layers,
-            "attention_hidden_sizes": self.attention_hidden_sizes,
-            "num_heads": self.num_heads,
-            "attention_dropout": self.attention_dropout,
-            "ffn_hidden_sizes": self.ffn_hidden_sizes,
-            "ffn_filter_sizes": self.ffn_filter_sizes,
-            "ffn_dropout": self.ffn_dropout,
+            "hidden_size": self.hidden_size,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(DecoderLayer2, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+class TransformerBlock(tf.keras.layers.Layer):
+    def __init__(self, embed_dim, feat_dim, num_heads, ffn_intermediate_size, rate=0.1):
+        super(TransformerBlock, self).__init__()
+        self.att = MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+        self.ffn = tf.keras.Sequential(
+            [
+                Dense(ffn_intermediate_size, activation="gelu"),
+                Dense(feat_dim),
+            ]
+        )
+        self.layernorm1 = LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = LayerNormalization(epsilon=1e-6)
+        self.dropout1 = Dropout(rate)
+        self.dropout2 = Dropout(rate)
+
+    def call(self, inputs, training):
+        """Time series transformer block
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            3D tensor for batch * seq_len * features
+
+        Returns
+        -------
+        tf.Tensor
+            3D tensor for output, batch * output_seq * attention_hidden_sizes
+        """
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)

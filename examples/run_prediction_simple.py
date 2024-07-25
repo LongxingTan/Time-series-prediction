@@ -1,5 +1,5 @@
 """Demo of time series prediction by tfts
-python run_prediction.py --use_model rnn
+python run_prediction_simple.py --use_model rnn
 """
 
 import argparse
@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.optimizers.schedules import LearningRateSchedule
 
-sys.path.insert(0, "../")
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
@@ -45,19 +45,20 @@ def run_train(args):
     loss_fn = tf.keras.losses.MeanSquaredError()
 
     # for strong seasonality data like sine or air passengers, set up skip_connect_circle True
-    custom_params = AutoConfig(args.use_model).get_config()
-    custom_params.update({"skip_connect_circle": True})
+    custom_config = AutoConfig.for_model(args.use_model)
+    custom_config.update({"skip_connect_circle": True})
 
-    model = AutoModel(args.use_model, predict_length=args.predict_length)
+    config = AutoConfig.for_model(args.use_model)
+    model = AutoModel.from_config(config, predict_length=args.predict_length)
 
     trainer = KerasTrainer(model, optimizer=optimizer, loss_fn=loss_fn)
     trainer.train(train, valid, n_epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))
 
     pred = trainer.predict(valid[0])
     trainer.plot(history=valid[0], true=valid[1], pred=pred)
+    plt.show()
 
 
 if __name__ == "__main__":
     args = parse_args()
     run_train(args)
-    plt.show()

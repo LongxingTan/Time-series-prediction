@@ -1,0 +1,14 @@
+package:
+  name: tfts
+  version: 0.0.3
+
+build:
+  number: 3
+
+requirements:
+  run:
+    - python
+about:
+  home: https://github.com/longxingtan/time-series-prediction
+  summary: Time series deep learning models in TensorFlow-TFTS
+  license: MIT

@@ -3,66 +3,108 @@
 <https://arxiv.org/abs/2106.13008>`_
 """
 
+import collections
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
-params: Dict[str, Any] = {
-    "n_encoder_layers": 1,
+
+class AutoFormerConfig(object):
+    r"""
+    This is the configuration class to store the configuration of a [`AutoFormer`]
+    """
+
+    model_type = "autoformer"
+
+    def __init__(
+        self,
+        kernel_size=32,
+        hidden_size=64,
+        num_layers=1,
+        num_decoder_layers=None,
+        num_attention_heads=4,
+        ffn_intermediate_size=256,
+        hidden_act="relu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=2,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+        pad_token_id=0,
+        position_embedding_type="absolute",
+        use_cache=True,
+        classifier_dropout=None,
+        **kwargs,
+    ):
+        self.kernel_size = kernel_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
+        self.num_attention_heads = num_attention_heads
+        self.hidden_act = hidden_act
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = type_vocab_size
+        self.initializer_range = initializer_range
+        self.layer_norm_eps = layer_norm_eps
+        self.position_embedding_type = position_embedding_type
+        self.use_cache = use_cache
+        self.classifier_dropout = classifier_dropout
+
+
+config: Dict[str, Any] = {
+    "num_hidden_layers": 1,
     "n_decoder_layers": 1,
     "kernel_size": 24,
-    "attention_hidden_sizes": 32,
-    "num_heads": 1,
-    "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 32 * 1,
-    "ffn_filter_sizes": 32 * 1,
-    "ffn_dropout": 0.0,
+    "hidden_size": 32,
+    "num_attention_heads": 1,
+    "attention_probs_dropout_prob": 0.0,
+    "ffn_intermediate_size": 32 * 1,
+    "hidden_dropout_prob": 0.0,
     "layer_postprocess_dropout": 0.0,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
+    "scheduled_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
     "skip_connect_circle": False,
     "skip_connect_mean": False,
 }
 
 
 class AutoFormer(object):
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
-    ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+    """AutoFormer model"""
+
+    def __init__(self, predict_sequence_length: int = 1, config=AutoFormerConfig()) -> None:
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        # self.encoder_embedding = TokenEmbedding(params['attention_hidden_sizes'])
-        self.series_decomp = SeriesDecomp(params["kernel_size"])
+        # self.encoder_embedding = TokenEmbedding(config['hidden_size'])
+        self.series_decomp = SeriesDecomp(config.kernel_size)
         self.encoder = [
             EncoderLayer(
-                params["kernel_size"],
-                params["attention_hidden_sizes"],
-                params["num_heads"],
-                params["attention_dropout"],
+                config.kernel_size,
+                config.hidden_size,
+                config.num_attention_heads,
+                config.attention_probs_dropout_prob,
             )
-            for _ in range(params["n_encoder_layers"])
+            for _ in range(config.num_layers)
         ]
 
         self.decoder = [
             DecoderLayer(
-                params["kernel_size"],
-                params["attention_hidden_sizes"],
-                params["num_heads"],
-                params["attention_dropout"],
+                config.kernel_size,
+                config.hidden_size,
+                config.num_attention_heads,
+                config.attention_probs_dropout_prob,
             )
-            for _ in range(params["n_decoder_layers"])
+            for _ in range(config.num_decoder_layers)
         ]
 
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)
@@ -73,19 +115,19 @@ class AutoFormer(object):
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """autoformer call
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             _description_
-        teacher : _type_, optional
+        teacher : tf.Tensor, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if isinstance(inputs, (list, tuple)):
@@ -146,28 +188,28 @@ class AutoFormer(object):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, kernel_size: int, d_model: int, num_heads: int, dropout_rate: float = 0.1) -> None:
+    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
         super().__init__()
         self.series_decomp1 = SeriesDecomp(kernel_size)
         self.series_decomp2 = SeriesDecomp(kernel_size)
-        self.autocorrelation = AutoCorrelation(d_model, num_heads)
+        self.autocorrelation = AutoCorrelation(d_model, num_attention_heads)
         self.drop = Dropout(dropout_rate)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense = Dense(input_shape[-1])
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
-        """_summary_
+        """autoformer encoder call
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            3D tensor
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            encoder output
         """
         x, _ = self.series_decomp1(self.autocorrelation(x, x, x) + x)
         x, _ = self.series_decomp2(self.drop(self.dense(x)) + x)
@@ -175,15 +217,15 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, kernel_size, d_model, num_heads, drop_rate=0.1) -> None:
+    def __init__(self, kernel_size, d_model, num_attention_heads, drop_rate=0.1) -> None:
         super().__init__()
         self.d_model = d_model
         self.drop_rate = drop_rate
         self.series_decomp1 = SeriesDecomp(kernel_size)
         self.series_decomp2 = SeriesDecomp(kernel_size)
         self.series_decomp3 = SeriesDecomp(kernel_size)
-        self.autocorrelation1 = AutoCorrelation(d_model, num_heads)
-        self.autocorrelation2 = AutoCorrelation(d_model, num_heads)
+        self.autocorrelation1 = AutoCorrelation(d_model, num_attention_heads)
+        self.autocorrelation2 = AutoCorrelation(d_model, num_attention_heads)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding="same")
@@ -194,7 +236,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.activation = ReLU()
 
     def call(self, x, cross, init_trend):
-        """_summary_
+        """autoformer decoder block
 
         Parameters
         ----------
@@ -208,7 +250,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         Returns
         -------
         _type_
-            _description_
+            decoder output
         """
         x, trend1 = self.series_decomp1(self.drop(self.autocorrelation1(x, x, x)) + x)
         x, trend2 = self.series_decomp2(self.drop(self.autocorrelation2(x, cross, cross)) + x)

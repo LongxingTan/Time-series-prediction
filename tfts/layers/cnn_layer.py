@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.wavenet`"""
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
@@ -7,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, SelfAttention
 
 
 class ConvTemp(tf.keras.layers.Layer):

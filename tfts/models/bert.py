@@ -17,55 +17,81 @@ from tensorflow.keras.layers import (
     SpatialDropout1D,
 )
 
-from tfts.layers.attention_layer import FullAttention, SelfAttention
+from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
-params: Dict[str, Any] = {
-    "n_encoder_layers": 1,
-    "use_token_embedding": False,
-    "attention_hidden_sizes": 32 * 1,
-    "num_heads": 2,
-    "attention_dropout": 0.0,
-    "ffn_hidden_sizes": 32 * 1,
-    "ffn_filter_sizes": 32 * 1,
-    "ffn_dropout": 0.0,
-    "layer_postprocess_dropout": 0.0,
-    "scheduler_sampling": 1,  # 0 means teacher forcing, 1 means use last prediction
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
+from .base import BaseConfig, BaseModel
 
 
-class Bert(object):
+class BertConfig(BaseConfig):
+    model_type = "bert"
+
+    def __init__(
+        self,
+        hidden_size=64,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        ffn_intermediate_size=256,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=2,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+        pad_token_id=0,
+        position_embedding_type="absolute",
+        use_cache=True,
+        classifier_dropout=None,
+        **kwargs,
+    ):
+
+        super(BertConfig, self).__init__(**kwargs)
+
+        self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
+        self.num_attention_heads = num_attention_heads
+        self.hidden_act = hidden_act
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = type_vocab_size
+        self.initializer_range = initializer_range
+        self.layer_norm_eps = layer_norm_eps
+        self.position_embedding_type = position_embedding_type
+        self.use_cache = use_cache
+        self.classifier_dropout = classifier_dropout
+        self.pad_token_id = pad_token_id
+
+
+class Bert(BaseModel):
+    """Bert model for time series"""
+
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
+        config=BertConfig(),
     ) -> None:
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
+        super(Bert, self).__init__()
+        self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-        # DataEmbedding(params['attention_hidden_sizes'])
-        self.encoder_embedding = TokenEmbedding(params["attention_hidden_sizes"])
+        self.encoder_embedding = TokenEmbedding(config.hidden_size)
         # self.spatial_drop = SpatialDropout1D(0.1)
         # self.tcn = ConvTemporal(kernel_size=2, filters=32, dilation_rate=6)
         self.encoder = Encoder(
-            params["n_encoder_layers"],
-            params["attention_hidden_sizes"],
-            params["num_heads"],
-            params["attention_dropout"],
-            params["ffn_hidden_sizes"],
-            params["ffn_filter_sizes"],
-            params["ffn_dropout"],
+            num_hidden_layers=config.num_hidden_layers,
+            hidden_size=config.hidden_size,
+            num_attention_heads=config.num_attention_heads,
+            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+            ffn_intermediate_size=config.ffn_intermediate_size,
+            hidden_dropout_prob=config.hidden_dropout_prob,
         )
 
         self.project1 = Dense(predict_sequence_length, activation=None)
-        # self.project1 = Dense(48, activation=None)
 
         # self.bn1 = BatchNormalization()
         self.drop1 = Dropout(0.25)
@@ -75,7 +101,7 @@ class Bert(object):
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-        # self.forecasting = Forecasting(predict_sequence_length, self.params)
+        # self.forecasting = Forecasting(predict_sequence_length, self.config)
         # self.pool1 = AveragePooling1D(pool_size=6)
         # self.rnn1 = GRU(units=1, activation='tanh', return_state=False, return_sequences=True, dropout=0)
         # self.rnn2 = GRU(units=32, activation='tanh', return_state=False, return_sequences=True, dropout=0)
@@ -85,14 +111,16 @@ class Bert(object):
         # self.dense_se = Dense(16, activation='relu')
         # self.dense_se2 = Dense(1, activation='sigmoid')
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None) -> tf.Tensor:
+    def __call__(
+        self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None
+    ) -> tf.Tensor:
         """Bert model call
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             BERT model input
-        teacher : _type_, optional
+        teacher : tf.Tensor, optional
             teacher forcing for autoregression, by default None
 
         Returns
@@ -115,7 +143,8 @@ class Bert(object):
         # encoder_features_res = self.tcn(encoder_features)
         # encoder_features += encoder_features_res
 
-        memory = self.encoder(encoder_feature, encoder_mask=None)  # batch * train_sequence * (hidden * heads)
+        # batch * train_sequence * (hidden * heads)
+        memory = self.encoder(encoder_feature, encoder_mask=None)
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)
@@ -150,10 +179,4 @@ class Bert(object):
         # base = decoder_features[:, :, -1:]
         # outputs += base
 
-        if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            outputs = outputs + x_mean
-        if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            outputs = outputs + x_mean
         return outputs

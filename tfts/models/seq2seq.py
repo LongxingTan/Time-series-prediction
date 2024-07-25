@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1409.3215>`_
 """
 
+from dataclasses import dataclass, field
+import logging
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import numpy as np
@@ -10,52 +12,67 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LSTMCell
 
-from tfts.layers.attention_layer import FullAttention
+from tfts.layers.attention_layer import Attention
 
-params: Dict[str, Any] = {
-    "rnn_type": "gru",
-    "bi_direction": False,
-    "rnn_size": 64,
-    "dense_size": 64,
-    "num_stacked_layers": 1,
-    "scheduler_sampling": 0,  # teacher forcing
-    "use_attention": False,
-    "attention_sizes": 64,
-    "attention_heads": 2,
-    "attention_dropout": 0,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
+from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
-class Seq2seq(object):
-    """Seq2seq model"""
+class Seq2seqConfig(BaseConfig):
+    model_type = "seq2seq"
 
     def __init__(
         self,
-        predict_sequence_length: int = 1,
-        custom_model_params: Optional[Dict[str, Any]] = None,
-        custom_model_head: Optional[Callable] = None,
+        rnn_hidden_size=64,
+        rnn_type="gru",
+        bi_direction=False,
+        dense_hidden_size=64,
+        num_stacked_layers=1,
+        scheduled_sampling=0,
+        use_attention=False,
+        attention_size=64,
+        num_attention_heads=2,
+        attention_probs_dropout_prob=0,
     ):
-        if custom_model_params:
-            params.update(custom_model_params)
-        self.params = params
-        self.predict_sequence_length = predict_sequence_length
+        super(Seq2seqConfig, self).__init__()
+        self.rnn_hidden_size = rnn_hidden_size
+        self.rnn_type = rnn_type
+        self.bi_direction = bi_direction
+        self.dense_hidden_size = dense_hidden_size
+        self.num_stacked_layers = num_stacked_layers
+        self.scheduled_sampling = scheduled_sampling  # 0: teacher forcing
+        self.use_attention = use_attention
+        self.attention_size = attention_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+
+        if self.use_attention:
+            assert self.attention_size == self.dense_hidden_size
+
+
+class Seq2seq(BaseModel):
+    """Seq2seq model"""
+
+    def __init__(self, predict_length: int = 1, config=Seq2seqConfig()):
+        super(Seq2seq, self).__init__()
+        self.config = config
+        self.predict_sequence_length = predict_length
         self.encoder = Encoder(
-            rnn_type=params["rnn_type"], rnn_size=params["rnn_size"], dense_size=params["dense_size"]
+            rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
         )
-        self.decoder = Decoder1(
-            rnn_type=params["rnn_type"],
-            rnn_size=params["rnn_size"],
-            predict_sequence_length=predict_sequence_length,
-            use_attention=params["use_attention"],
-            attention_sizes=params["attention_sizes"],
-            attention_heads=params["attention_heads"],
-            attention_dropout=params["attention_dropout"],
+        self.decoder = DecoderV1(
+            rnn_size=config.rnn_hidden_size,
+            rnn_type=config.rnn_type,
+            predict_sequence_length=predict_length,
+            use_attention=config.use_attention,
+            attention_size=config.attention_size,
+            num_attention_heads=config.num_attention_heads,
+            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
-        """A RNN seq2seq structure for time series
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+        """An RNN seq2seq structure for time series
 
         :param inputs: _description_
         :type inputs: _type_
@@ -89,21 +106,15 @@ class Seq2seq(object):
             decoder_init_input=x[:, -1, 0:1],
             init_state=encoder_state,
             teacher=teacher,
-            scheduler_sampling=self.params["scheduler_sampling"],
+            scheduled_sampling=self.config.scheduled_sampling,
             encoder_output=encoder_outputs,
         )
 
-        if self.params["skip_connect_circle"]:
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            decoder_outputs = decoder_outputs + x_mean
-        if self.params["skip_connect_mean"]:
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            decoder_outputs = decoder_outputs + x_mean
         return decoder_outputs
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, rnn_type, rnn_size, rnn_dropout=0, dense_size=32, **kwargs):
+    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, **kwargs):
         super(Encoder, self).__init__(**kwargs)
         self.rnn_type = rnn_type
         if rnn_type.lower() == "gru":
@@ -141,30 +152,30 @@ class Encoder(tf.keras.layers.Layer):
             state = (state1, state2)
         else:
             raise ValueError("No supported rnn type of {}".format(self.rnn_type))
-        # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(params['num_stacked_layers']))
+        # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(config['num_stacked_layers']))
         # outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
 
 
-class Decoder1(tf.keras.layers.Layer):
+class DecoderV1(tf.keras.layers.Layer):
     def __init__(
         self,
-        rnn_type="gru",
         rnn_size=32,
+        rnn_type="gru",
         predict_sequence_length=3,
         use_attention=False,
-        attention_sizes=32,
-        attention_heads=1,
-        attention_dropout=0.0,
+        attention_size=32,
+        num_attention_heads=1,
+        attention_probs_dropout_prob=0.0,
     ):
-        super(Decoder1, self).__init__()
+        super(DecoderV1, self).__init__()
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
-        self.attention_sizes = attention_sizes
-        self.attention_heads = attention_heads
-        self.attention_dropout = attention_dropout
+        self.attention_size = attention_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
         if self.rnn_type.lower() == "gru":
@@ -173,10 +184,10 @@ class Decoder1(tf.keras.layers.Layer):
             self.rnn_cell = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
-            self.attention = FullAttention(
-                hidden_size=self.attention_sizes,
-                num_heads=self.attention_heads,
-                attention_dropout=self.attention_dropout,
+            self.attention = Attention(
+                hidden_size=self.attention_size,
+                num_attention_heads=self.num_attention_heads,
+                attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
         super().build(input_shape)
 
@@ -186,7 +197,7 @@ class Decoder1(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -200,8 +211,8 @@ class Decoder1(tf.keras.layers.Layer):
         :type init_state: _type_
         :param teacher: _description_, defaults to None
         :type teacher: _type_, optional
-        :param scheduler_sampling: _description_, defaults to 0
-        :type scheduler_sampling: int, optional
+        :param scheduled_sampling: _description_, defaults to 0
+        :type scheduled_sampling: int, optional
         :param training: _description_, defaults to None
         :type training: _type_, optional
         :return: _description_
@@ -217,7 +228,7 @@ class Decoder1(tf.keras.layers.Layer):
         for i in range(self.predict_sequence_length):
             if training:
                 p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduler_sampling:
+                if teacher is not None and p > scheduled_sampling:
                     this_input = teachers[i]
                 else:
                     this_input = prev_output
@@ -254,25 +265,25 @@ class Decoder1(tf.keras.layers.Layer):
         return tf.expand_dims(decoder_outputs, -1)
 
 
-class Decoder2(tf.keras.layers.Layer):
+class DecoderV2(tf.keras.layers.Layer):
     def __init__(
         self,
-        rnn_type="gru",
         rnn_size=32,
+        rnn_type="gru",
         predict_sequence_length=3,
         use_attention=False,
         attention_sizes=32,
-        attention_heads=1,
-        attention_dropout=0.0,
+        num_attention_heads=1,
+        attention_probs_dropout_prob=0.0,
     ):
-        super(Decoder2, self).__init__()
+        super(DecoderV2, self).__init__()
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention
         self.attention_sizes = attention_sizes
-        self.attention_heads = attention_heads
-        self.attention_dropout = attention_dropout
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
         if self.rnn_type.lower() == "gru":
@@ -281,10 +292,10 @@ class Decoder2(tf.keras.layers.Layer):
             self.rnn = LSTMCell(units=self.rnn_size)
         self.dense = Dense(units=1)
         if self.use_attention:
-            self.attention = FullAttention(
+            self.attention = Attention(
                 hidden_size=self.attention_sizes,
-                num_heads=self.attention_heads,
-                attention_dropout=self.attention_dropout,
+                num_attention_heads=self.num_attention_heads,
+                attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
         super().build(input_shape)
 
@@ -294,7 +305,7 @@ class Decoder2(tf.keras.layers.Layer):
         decoder_init_value,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -342,7 +353,7 @@ class Decoder2(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -372,10 +383,10 @@ class Decoder2(tf.keras.layers.Layer):
         )
 
 
-class Decoder3(tf.keras.layers.Layer):
+class DecoderV3(tf.keras.layers.Layer):
     # multi-steps static decoding
-    def __init__(self, rnn_type="gru", rnn_size=32, rnn_dropout=0, dense_size=1, **kwargs) -> None:
-        super(Decoder3, self).__init__()
+    def __init__(self, rnn_size=32, rnn_type="gru", rnn_dropout=0, dense_size=1, **kwargs) -> None:
+        super(DecoderV3, self).__init__()
         if rnn_type.lower() == "gru":
             self.rnn = GRU(
                 units=rnn_size, activation="tanh", return_state=False, return_sequences=True, dropout=rnn_dropout
@@ -397,7 +408,7 @@ class Decoder3(tf.keras.layers.Layer):
         decoder_init_input,
         init_state,
         teacher=None,
-        scheduler_sampling=0,
+        scheduled_sampling=0,
         training=None,
         **kwargs
     ):
@@ -413,7 +424,7 @@ class Decoder3(tf.keras.layers.Layer):
             _description_
         teacher : _type_, optional
             _description_, by default None
-        scheduler_sampling : int, optional
+        scheduled_sampling : int, optional
             _description_, by default 0
         training : _type_, optional
             _description_, by default None

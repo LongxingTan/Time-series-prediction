@@ -88,7 +88,7 @@ After you prepare the raw data, maybe you need preprocess the data.
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 4. Serve the model
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 
 .. currentmodule:: tfts

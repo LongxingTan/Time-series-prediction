@@ -4,15 +4,14 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
+from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.models.tcn import TCN
 
 
 class TCNTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = TCN(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        model = TCN(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([16, 160, 36])
         y = model(x)
@@ -20,9 +19,10 @@ class TCNTest(unittest.TestCase):
 
     def test_train(self):
         train, valid = tfts.get_data("sine", test_size=0.1)
-        model = AutoModel("tcn", predict_length=8)
+        config = AutoConfig.for_model("tcn")
+        model = AutoModel.from_config(config, predict_length=8)
         trainer = KerasTrainer(model)
-        trainer.train(train, valid, n_epochs=3)
+        trainer.train(train, valid, n_epochs=2)
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)
 

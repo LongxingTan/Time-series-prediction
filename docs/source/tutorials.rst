@@ -68,7 +68,7 @@ Train the models
 Custom-defined configuration
 ----------------------------------------
 
-Change the model parameters. If you want touch more parameters in model params, please raise an issue in github.
+Change the model parameters. If you want touch more parameters in model config, please raise an issue in github.
 
 .. code-block:: python
 
@@ -79,11 +79,11 @@ Change the model parameters. If you want touch more parameters in model params, 
     config = AutoConfig('rnn').get_config()
     print(config)
 
-    custom_model_params = {
+    custom_model_config = {
         "rnn_size": 128,
         "dense_size": 128,
     }
-    model = AutoModel('rnn', custom_model_params=custom_model_params)
+    model = AutoModel('rnn', custom_model_config=custom_model_config)
 
 
 Multi-variables and multi-steps prediction
@@ -98,12 +98,12 @@ Multi-variables and multi-steps prediction
 	config = AutoConfig('rnn').get_config()
 	print(config)
 
-	custom_model_params = {
+	custom_model_config = {
 		"rnn_size": 128,
     	"dense_size": 128,
 	}
 
-	model = AutoModel('rnn', predict_length=7, custom_model_params=custom_model_params)
+	model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
 
 	x = tf.random.normal([1, 14, 1])
 	encoder_features = tf.random.normal([1, 14, 10])
@@ -140,7 +140,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
     custom_model_head = tf.keras.Sequential(
         Dense(1)
     )
-    model = AutoModel('rnn', custom_model_params=custom_model_params, custom_model_head=custom_model_head)
+    model = AutoModel('rnn', custom_model_config=custom_model_config, custom_model_head=custom_model_head)
 
 
 Custom-defined trainer

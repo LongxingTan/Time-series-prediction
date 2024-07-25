@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.transformer`"""
 
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
@@ -29,7 +27,7 @@ class ProbMask:
     """ProbMask for informer"""
 
     def __init__(self, B, H, L, index, scores):
-        # B: batch_size, H: num_heads, L: seq_length
+        # B: batch_size, H: num_attention_heads, L: seq_length
         mask = tf.ones([L, scores.shape[-1]], tf.float32)
 
         mask = 1 - tf.linalg.band_part(mask, -1, 0)

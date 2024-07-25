@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from tfts import AutoModel, KerasTrainer
+from tfts import AutoConfig, AutoModel, KerasTrainer
 
 
 class InputsTest(unittest.TestCase):
@@ -21,7 +21,9 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_length, 1)
 
         for m in self.test_models:
-            model = AutoModel(m, predict_length=predict_length)
+            print(f"Test model {m}")
+            config = AutoConfig.for_model(m)
+            model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
             trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
 
@@ -44,7 +46,8 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_length, 1)
 
         for m in self.test_models:
-            model = AutoModel(m, predict_length=predict_length)
+            config = AutoConfig.for_model(m)
+            model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
             trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 
@@ -68,7 +71,8 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_length, 1)
 
         for m in self.test_models:
-            model = AutoModel(m, predict_length=predict_length)
+            config = AutoConfig.for_model(m)
+            model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
             trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
 
@@ -105,7 +109,8 @@ class InputsTest(unittest.TestCase):
         valid_loader = valid_loader.batch(batch_size=1)
 
         for m in self.test_models:
-            model = AutoModel(m, predict_length=predict_length)
+            config = AutoConfig.for_model(m)
+            model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
             trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
 

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.autoformer`"""
 
 import math
@@ -45,18 +43,18 @@ class SeriesDecomp(tf.keras.layers.Layer):
 class AutoCorrelation(tf.keras.layers.Layer):
     """Self-Attention layer that computes time-delayed autocorrelation between queries and keys"""
 
-    def __init__(self, d_model: int, num_heads: int, attention_dropout: float = 0.0) -> None:
+    def __init__(self, d_model: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
         super().__init__()
         self.d_model = d_model
-        self.num_heads = num_heads
-        self.depth = d_model // num_heads
-        self.attention_dropout = attention_dropout
+        self.num_attention_heads = num_attention_heads
+        self.depth = d_model // num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         self.wq = Dense(self.d_model, name="q")
         self.wk = Dense(self.d_model, name="k")
         self.wv = Dense(self.d_model, name="v")
-        self.drop = Dropout(self.attention_dropout)
+        self.drop = Dropout(self.attention_probs_dropout_prob)
         self.dense = Dense(self.d_model, name="project")
         super().build(input_shape)
 
@@ -65,16 +63,16 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        q : Tensor of shape (batch_size, num_heads, timesteps, depth)
+        q : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
             Queries.
-        k : Tensor of shape (batch_size, num_heads, timesteps, depth)
+        k : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
             Keys.
-        v : Tensor of shape (batch_size, num_heads, timesteps, depth)
+        v : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
             Values.
 
         Returns
         -------
-        Tensor of shape (batch_size, num_heads, timesteps, depth)
+        Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
             Time-delayed autocorrelation between queries and keys.
         """
         batch_size = tf.shape(q)[0]
@@ -85,7 +83,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         R_qk = tf.signal.irfft(S_qk)
 
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
-        init_index = tf.tile(init_index, [batch_size, self.num_heads, self.depth, 1])
+        init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.depth, 1])
         top_k = int(2 * tf.math.log(tf.cast(time_steps, tf.float32)))
         # mean_value = tf.reduce_mean(R_qk, axis=1)
         weights, indices = tf.math.top_k(R_qk, top_k)
@@ -103,8 +101,8 @@ class AutoCorrelation(tf.keras.layers.Layer):
         return delays_agg
 
     def split_heads(self, x, batch_size):
-        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
-        return tf.transpose(x, perm=[0, 2, 1, 3])  # (batch_size, num_heads, timesteps, depth)
+        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.depth))
+        return tf.transpose(x, perm=[0, 2, 1, 3])  # (batch_size, num_attention_heads, timesteps, depth)
 
     def call(self, q, k, v, dynamic=True):
         """_summary_

@@ -9,7 +9,9 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-__all__ = ["Trainer", "KerasTrainer"]
+__all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer(object):
@@ -125,7 +127,7 @@ class Trainer(object):
 
             logging.info(log_str)
 
-        self.export_model(model_dir, only_pb=True)  # save the model
+        # self.export_model(model_dir, only_pb=True)  # save the model
 
     def train_loop(self, train_loader):
         train_loss = 0.0
@@ -203,11 +205,11 @@ class Trainer(object):
     def export_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
-        logging.info("protobuf model successfully saved in {}".format(model_dir))
+        logging.info("Protobuf model successfully saved in {}".format(model_dir))
 
         if not only_pb:
             self.model.save_weights("{}.ckpt".format(model_dir))
-            logging.info("model weights successfully saved in {}.ckpt".format(model_dir))
+            logging.info("Model weights successfully saved in {}.ckpt".format(model_dir))
 
 
 class KerasTrainer(object):
@@ -227,14 +229,14 @@ class KerasTrainer(object):
         model: tf.keras.Model instance
         loss: loss function
         optimizer: tf.keras.Optimizer instance
-        run_eargely: it depends which one is much faster
+        run_eagerly: it depends on which one is much faster
         """
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.strategy = strategy
-        self.run_eargely = run_eagerly
+        self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -301,7 +303,7 @@ class KerasTrainer(object):
 
         # print(self.model.summary())
         self.model.compile(
-            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eargely
+            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eagerly
         )
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
@@ -362,3 +364,11 @@ class KerasTrainer(object):
         plt.plot(range(train_length, train_length + pred_length), true[example, :, 0], label="true")
         plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="pred")
         plt.legend()
+
+
+class Seq2seqKerasTrainer(KerasTrainer):
+    """As the transformers forum mentioned: https://discuss.huggingface.co/t/trainer-vs-seq2seqtrainer/3145/2
+    Seq2SeqTrainer is mostly about predict_with_generate."""
+
+    def __init__(self, *args, **kwargs):
+        super(Seq2seqKerasTrainer, self).__init__(*args, **kwargs)

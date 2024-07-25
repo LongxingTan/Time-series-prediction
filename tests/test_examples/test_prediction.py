@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import tensorflow as tf
 
-from examples.run_prediction import parse_args, run_train, set_seed
+from examples.run_prediction_simple import parse_args, run_train, set_seed
 
 
 class PredictionTest(unittest.TestCase):

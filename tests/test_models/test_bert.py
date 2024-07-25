@@ -4,14 +4,18 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.bert import Bert
+from tfts.models.bert import Bert, BertConfig
 
 
 class AutoFormerTest(unittest.TestCase):
+    def test_config(self):
+        config = BertConfig
+        print(config)
+
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {"attention_hidden_sizes": 32}
-        model = Bert(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+
+        model = Bert(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 32])
         y = model(x)

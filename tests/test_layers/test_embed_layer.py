@@ -2,7 +2,8 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.embed_layer import DataEmbedding, PositionalEmbedding, PositionalEncoding, TokenEmbedding
+from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.position_layer import PositionalEmbedding, PositionalEncoding
 
 
 class EmbedLayerTest(unittest.TestCase):

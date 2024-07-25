@@ -98,4 +98,3 @@ coverage.xml
 /weights/checkpoint
 /weights/checkpoint.data-00000-of-00001
 /weights/checkpoint.index
-/conda/*

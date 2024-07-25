@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan, tanlongxing888@163.com
 """Layer for :py:class:`~tfts.models.nbeats`"""
 
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
@@ -164,17 +162,17 @@ class SeasonalityBlock(tf.keras.layers.Layer):
             x = layer(x)
         x = self.theta(x)
 
-        params_per_harmonic = self.theta_size // 4
+        config_per_harmonic = self.theta_size // 4
 
         backcast_harmonics_cos = tf.einsum(
-            "bp,pt->bt", inputs[:, 2 * params_per_harmonic : 3 * params_per_harmonic], self.backcast_cos_template
+            "bp,pt->bt", inputs[:, 2 * config_per_harmonic : 3 * config_per_harmonic], self.backcast_cos_template
         )
-        backcast_harmonics_sin = tf.einsum("bp,pt->bt", x[:, 3 * params_per_harmonic :], self.backcast_sin_template)
+        backcast_harmonics_sin = tf.einsum("bp,pt->bt", x[:, 3 * config_per_harmonic :], self.backcast_sin_template)
         backcast = backcast_harmonics_sin + backcast_harmonics_cos
 
-        forecast_harmonics_cos = tf.einsum("bp,pt->bt", x[:, :params_per_harmonic], self.forecast_cos_template)
+        forecast_harmonics_cos = tf.einsum("bp,pt->bt", x[:, :config_per_harmonic], self.forecast_cos_template)
         forecast_harmonics_sin = tf.einsum(
-            "bp,pt->bt", x[:, params_per_harmonic : 2 * params_per_harmonic], self.forecast_sin_template
+            "bp,pt->bt", x[:, config_per_harmonic : 2 * config_per_harmonic], self.forecast_sin_template
         )
         forecast = forecast_harmonics_sin + forecast_harmonics_cos
 

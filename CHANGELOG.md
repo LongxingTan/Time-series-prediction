@@ -1,8 +1,20 @@
 # Release notes
 
-## v0.0.6 Add models
+## v0.0.12
+### Changed
+- transformers style API
+
+### Fixed
+- pandas version conflict
+
+
+## v0.0.4 Add models support (21/11/2022)
 
 ### Added
+- input support
+    - tf.Data or array
+    - single item or three items
+-
 - function support
     - serving
 
@@ -12,17 +24,6 @@
     - unet
     - informer
     - deepar
-
-### Changed
-
-### Fixed
-
-## v0.0.4 Add models support (21/11/2022)
-
-### Added
-- input support
-    - tf.Data or array
-    - single item or three items
 
 ## v0.0.3 Add models support (21/10/2022)
 

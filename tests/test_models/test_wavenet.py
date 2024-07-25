@@ -3,10 +3,15 @@ import unittest
 import tensorflow as tf
 
 from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.wavenet import Decoder1, Decoder2, Decoder3, Encoder, WaveNet
+from tfts.models.wavenet import DecoderV1, DecoderV2, Encoder, WaveNet, WaveNetConfig
 
 
 class WaveNetTest(unittest.TestCase):
+    def test_config(self):
+        config = WaveNetConfig()
+        print(config.dense_hidden_size)
+        print(config.kernel_sizes)
+
     def test_encoder(self):
         kernel_sizes = [2]
         filters = 32
@@ -24,7 +29,7 @@ class WaveNetTest(unittest.TestCase):
         dilation_rates = [2]
         dense_hidden_size = 32
         predict_sequence_length = 3
-        layer = Decoder1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
+        layer = DecoderV1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
         x = tf.random.normal([2, 7, 1])
         init = tf.random.normal([2, 1])
@@ -38,7 +43,7 @@ class WaveNetTest(unittest.TestCase):
         dilation_rates = [2]
         dense_hidden_size = 32
         predict_sequence_length = 3
-        layer = Decoder2(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
+        layer = DecoderV2(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
         x = tf.random.normal([2, 7, 1])
         init = tf.random.normal([2, 1])
@@ -52,8 +57,7 @@ class WaveNetTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        custom_model_params = {}
-        model = WaveNet(predict_sequence_length=predict_sequence_length, custom_model_params=custom_model_params)
+        model = WaveNet(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)

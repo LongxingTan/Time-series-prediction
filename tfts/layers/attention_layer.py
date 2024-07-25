@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
 import math
@@ -12,36 +10,36 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 from tfts.layers.mask_layer import ProbMask
 
 
-class FullAttention(tf.keras.layers.Layer):
+class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0) -> None:
-        """Initialize the layer.
+    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
+        """Initialize the Attention layer.
 
         Parameters:
         -----------
         hidden_size : int
             The number of hidden units in each attention head.
-        num_heads : int
+        num_attention_heads : int
             The number of attention heads.
-        attention_dropout : float, optional
+        attention_probs_dropout_prob : float, optional
             Dropout rate for the attention weights. Defaults to 0.0.
         """
-        super(FullAttention, self).__init__()
-        if hidden_size % num_heads:
+        super(Attention, self).__init__()
+        if hidden_size % num_attention_heads:
             raise ValueError(
-                "Hidden size ({}) must be divisible by the number of heads ({}).".format(hidden_size, num_heads)
+                f"Hidden size {hidden_size} must be divisible by the number of heads {num_attention_heads}."
             )
         self.hidden_size = hidden_size
-        self.num_heads = num_heads
-        self.attention_dropout = attention_dropout
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
         self.dense_k = Dense(self.hidden_size, use_bias=False)
         self.dense_v = Dense(self.hidden_size, use_bias=False)
-        self.dropout = Dropout(rate=self.attention_dropout)
-        super(FullAttention, self).build(input_shape)
+        self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
+        super(Attention, self).build(input_shape)
 
     def call(self, q, k, v, mask=None):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
@@ -60,15 +58,15 @@ class FullAttention(tf.keras.layers.Layer):
         Returns
         -------
         tf.Tensor
-            tensor with shape batch * seq_q * (units * num_heads)
+            tensor with shape batch * seq_q * (units * num_attention_heads)
         """
-        q = self.dense_q(q)  # project the query/key/value to num_heads * units
+        q = self.dense_q(q)  # project the query/key/value to num_attention_heads * units
         k = self.dense_k(k)
         v = self.dense_v(v)
 
-        q_ = tf.concat(tf.split(q, self.num_heads, axis=2), axis=0)  # multi-heads transfer to multi-sample
-        k_ = tf.concat(tf.split(k, self.num_heads, axis=2), axis=0)
-        v_ = tf.concat(tf.split(v, self.num_heads, axis=2), axis=0)
+        q_ = tf.concat(tf.split(q, self.num_attention_heads, axis=2), axis=0)  # multi-heads transfer to multi-sample
+        k_ = tf.concat(tf.split(k, self.num_attention_heads, axis=2), axis=0)
+        v_ = tf.concat(tf.split(v, self.num_attention_heads, axis=2), axis=0)
 
         score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
         score /= tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
@@ -80,43 +78,53 @@ class FullAttention(tf.keras.layers.Layer):
         score = self.dropout(score)
 
         outputs = tf.linalg.matmul(score, v_)  # (batch * heads) * seq_q * units
-        outputs = tf.concat(tf.split(outputs, self.num_heads, axis=0), axis=2)
+        outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
         return outputs
+
+    def compute_output_shape(self, input_shape):
+        output_shape = (input_shape[0][0], input_shape[0][1], self.hidden_size)
+        return output_shape
 
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
-            "num_heads": self.num_heads,
-            "attention_dropout": self.attention_dropout,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
         }
-        base_config = super(FullAttention, self).get_config()
+        base_config = super(Attention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class SelfAttention(tf.keras.layers.Layer):
     def __init__(
-        self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs: Dict[str, Any]
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float = 0.0,
+        **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
-        self.attention = FullAttention(hidden_size, num_heads, attention_dropout=attention_dropout)
+        self.attention = Attention(
+            hidden_size, num_attention_heads, attention_probs_dropout_prob=attention_probs_dropout_prob
+        )
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
-        """_summary_
+        """Self attention layer
 
         Parameters
         ----------
         x : tf.Tensor
-            input tensor for self-attention
-        mask : _type_, optional
+            3D input tensor for self-attention, (batch_size, sequence_length, feature_size)
+        mask : tf.Tensor, optional
             masked, by default None
 
         Returns
         -------
         tf.Tensor
-            _description_
+            3D self attention output, (batch_size, sequence_length, attention_hidden_size)
         """
         return self.attention(x, x, x, mask)
 
@@ -126,11 +134,13 @@ class SelfAttention(tf.keras.layers.Layer):
 
 
 class ProbAttention(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int = 128, num_heads: int = 1, attention_dropout: float = 0.0, **kwargs):
+    def __init__(
+        self, hidden_size: int = 128, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
+    ):
         super().__init__()
         self.mask_flag = True
         self.hidden_size = hidden_size
-        self.num_heads = num_heads
+        self.num_attention_heads = num_attention_heads
         self.factor = 5
         self.scale = None
 
@@ -197,7 +207,7 @@ class ProbAttention(tf.keras.layers.Layer):
     # @tf.function
     def call(self, q, k, v, mask=None):
         """Prob attention"""
-        q = self.dense_q(q)  # project the query/key/value to num_heads * units
+        q = self.dense_q(q)  # project the query/key/value to num_attention_heads * units
         k = self.dense_k(k)
         v = self.dense_v(v)
 
@@ -205,9 +215,9 @@ class ProbAttention(tf.keras.layers.Layer):
         B = tf.shape(q)[0]
         _, S, _ = k.shape
 
-        q_ = tf.reshape(q, (-1, self.num_heads, L, self.hidden_size // self.num_heads))
-        k_ = tf.reshape(k, (-1, self.num_heads, S, self.hidden_size // self.num_heads))
-        v_ = tf.reshape(v, (-1, self.num_heads, S, self.hidden_size // self.num_heads))
+        q_ = tf.reshape(q, (-1, self.num_attention_heads, L, self.hidden_size // self.num_attention_heads))
+        k_ = tf.reshape(k, (-1, self.num_attention_heads, S, self.hidden_size // self.num_attention_heads))
+        v_ = tf.reshape(v, (-1, self.num_attention_heads, S, self.hidden_size // self.num_attention_heads))
 
         u_q = self.factor * np.ceil(np.log(L)).astype("int").item()
         u_k = self.factor * np.ceil(np.log(S)).astype("int").item()
@@ -215,7 +225,7 @@ class ProbAttention(tf.keras.layers.Layer):
         u_k = u_k if u_k < S else S
 
         scores_top, index = self._prob_qk(q_, k_, u_k, u_q)
-        scores_top = scores_top * 1.0 / np.sqrt(D // self.num_heads)
+        scores_top = scores_top * 1.0 / np.sqrt(D // self.num_attention_heads)
 
         context = self._get_initial_context(v_, L)
         context = self._update_context(context, v_, scores_top, index, L)
@@ -226,7 +236,7 @@ class ProbAttention(tf.keras.layers.Layer):
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
-            "num_heads": self.num_heads,
+            "num_attention_heads": self.num_attention_heads,
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -237,7 +247,7 @@ class SparseAttention(tf.keras.layers.Layer):
     SparseAttention implementation
     """
 
-    def __init__(self, hidden_size: int, num_heads: int, attention_dropout: float = 0.0, **kwargs):
+    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0, **kwargs):
         super().__init__()
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
