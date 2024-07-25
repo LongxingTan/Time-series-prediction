@@ -106,7 +106,7 @@ class Transformer(BaseModel):
         )
         self.project = Dense(1, activation=None)
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
+    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """Time series transformer
 
         Parameters
@@ -114,7 +114,9 @@ class Transformer(BaseModel):
         inputs : tf.Tensor
             3D tensor for batch * seq_len * features
         teacher : tf.Tensor, optional
-            _description_, by default None
+            the teacher for decoding, by default None
+        return_dict: bool
+            if return output a dict
 
         Returns
         -------

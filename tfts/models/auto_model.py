@@ -59,6 +59,8 @@ class AutoModel(BaseModel, tf.keras.Model):
         ----------
         x : tf.data.Dataset, np.array
             model inputs
+        return_dict: bool
+            if return output a dict
 
         Returns
         -------

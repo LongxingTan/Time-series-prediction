@@ -14,16 +14,20 @@ class PositionalEmbedding(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super(PositionalEmbedding, self).build(input_shape)
 
-    def call(self, x, masking=True):
-        """
-        Applies positional encoding to the input tensor.
+    def call(self, x, masking: bool = True):
+        """Applies positional encoding to the input tensor.
 
-        Parameters:
-        x (tf.Tensor): Input tensor of shape (batch_size, sequence_length, embedding_dim).
-        masking (bool, optional): If True, applies masking to the output tensor, by default True.
+        Parameters
+        ----------
+        x : tf.Tensor
+            A tensor of shape (batch_size, train_sequence_length, input_size)
+        masking :  bool, optional
+            If True, applies masking to the output tensor, by default True.
 
-        Returns:
-        tf.Tensor: Output tensor of the same shape as the input tensor, after applying positional encoding.
+        Returns
+        -------
+        outputs: tf.Tensor
+            Output tensor of the same shape as the input tensor, after applying positional encoding.
         """
         E = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
@@ -112,8 +116,14 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
         )
 
     def call(self, inputs):
-        q, v = inputs
+        """relative position embedding
 
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
+        """
+        q, v = inputs
         q_idx = tf.range(0, tf.shape(q)[1], dtype=tf.int32)
         q_idx = tf.expand_dims(q_idx, 1)
         v_idx = tf.range(0, tf.shape(v)[1], dtype=tf.int32)
@@ -135,5 +145,5 @@ class RotaryPositionEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.dim = dim
 
-    def call(self, t, cache_key=None):
-        return
+    # def call(self, t, cache_key=None):
+    #     return

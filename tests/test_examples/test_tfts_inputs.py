@@ -21,6 +21,7 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_length, 1)
 
         for m in self.test_models:
+            print(f"Test model {m}")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
