@@ -199,6 +199,18 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
+        """autoformer encoder call
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            3D tensor
+
+        Returns
+        -------
+        tf.Tensor
+            encoder output
+        """
         x, _ = self.series_decomp1(self.autocorrelation(x, x, x) + x)
         x, _ = self.series_decomp2(self.drop(self.dense(x)) + x)
         return x
@@ -224,7 +236,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.activation = ReLU()
 
     def call(self, x, cross, init_trend):
-        """_summary_
+        """autoformer decoder block
 
         Parameters
         ----------
@@ -238,7 +250,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         Returns
         -------
         _type_
-            _description_
+            decoder output
         """
         x, trend1 = self.series_decomp1(self.drop(self.autocorrelation1(x, x, x)) + x)
         x, trend2 = self.series_decomp2(self.drop(self.autocorrelation2(x, cross, cross)) + x)
