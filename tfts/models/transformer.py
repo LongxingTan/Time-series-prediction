@@ -192,9 +192,9 @@ class Encoder(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        inputs : tf.Tensor
+        encoder_inputs : tf.Tensor
             Transformer encoder inputs, with dimension of (batch, seq_len, features)
-        mask : tf.Tensor, optional
+        encoder_mask : tf.Tensor, optional
             encoder mask to ignore it during attention, by default None
 
         Returns
@@ -541,6 +541,18 @@ class TransformerBlock(tf.keras.layers.Layer):
         self.dropout2 = Dropout(rate)
 
     def call(self, inputs, training):
+        """Time series transformer block
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            3D tensor for batch * seq_len * features
+
+        Returns
+        -------
+        tf.Tensor
+            3D tensor for output, batch * output_seq * attention_hidden_sizes
+        """
         attn_output = self.att(inputs, inputs)
         attn_output = self.dropout1(attn_output, training=training)
         out1 = self.layernorm1(inputs + attn_output)
