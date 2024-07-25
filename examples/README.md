@@ -1,5 +1,6 @@
 # TFTS examples
 
+[time series prediction](./run_prediction_simple.py)
 
 ## kaggle datasets
 - [web traffic prediction]()
@@ -7,6 +8,5 @@
 
 
 ## more time series examples
-- [classification]()
-- [anomaly detection]()
-- [uncertainty]()
+
+- [time series anomaly detection](./run_anomaly.py)

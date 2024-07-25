@@ -1,3 +1,5 @@
+"""Layer for :py:class:`~tfts.models.transformer`"""
+
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import numpy as np

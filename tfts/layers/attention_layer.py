@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# @author: Longxing Tan
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
 import math
@@ -30,9 +28,7 @@ class Attention(tf.keras.layers.Layer):
         super(Attention, self).__init__()
         if hidden_size % num_attention_heads:
             raise ValueError(
-                "Hidden size ({}) must be divisible by the number of heads ({}).".format(
-                    hidden_size, num_attention_heads
-                )
+                f"Hidden size {hidden_size} must be divisible by the number of heads {num_attention_heads}."
             )
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -105,7 +101,7 @@ class SelfAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
-        **kwargs: Dict[str, Any]
+        **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
         self.attention = Attention(
@@ -116,19 +112,19 @@ class SelfAttention(tf.keras.layers.Layer):
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
-        """Self attention
+        """Self attention layer
 
         Parameters
         ----------
         x : tf.Tensor
-            input tensor for self-attention
+            3D input tensor for self-attention, (batch_size, sequence_length, feature_size)
         mask : tf.Tensor, optional
             masked, by default None
 
         Returns
         -------
         tf.Tensor
-            self attention output
+            3D self attention output, (batch_size, sequence_length, attention_hidden_size)
         """
         return self.attention(x, x, x, mask)
 
