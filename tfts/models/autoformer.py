@@ -120,14 +120,14 @@ class AutoFormer(object):
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             _description_
-        teacher : _type_, optional
+        teacher : tf.Tensor, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if isinstance(inputs, (list, tuple)):

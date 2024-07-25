@@ -53,7 +53,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, max_len: int = 10000):
+    def __init__(self, max_len: int = 5000):
         super(PositionalEncoding, self).__init__()
         self.max_len = max_len
 

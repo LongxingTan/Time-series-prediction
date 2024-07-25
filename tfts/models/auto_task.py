@@ -28,6 +28,18 @@ class ClassificationHead(tf.keras.layers.Layer):
         self.dense = Dense(num_labels)
 
     def call(self, inputs):
+        """classification task head
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            model backbone output as task input
+
+        Returns
+        -------
+        tf.Tensor
+            _description_
+        """
         pooled_output = self.pooling(inputs)
         logits = self.dense(pooled_output)
         return logits
@@ -41,6 +53,20 @@ class AnomalyHead(tf.keras.layers.Layer):
         self.train_sequence_length = train_sequence_length
 
     def call(self, y_pred, y_test):
+        """anomaly task head
+
+        Parameters
+        ----------
+        y_pred : tf.Tensor
+            model predict
+        y_test: tf.Tensor
+            model truth
+
+        Returns
+        -------
+        tf.Tensor
+            distance
+        """
         y_pred = y_pred.numpy()
         errors = y_pred - y_test
 

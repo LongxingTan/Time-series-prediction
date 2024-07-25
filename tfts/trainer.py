@@ -127,7 +127,7 @@ class Trainer(object):
 
             logging.info(log_str)
 
-        self.export_model(model_dir, only_pb=True)  # save the model
+        # self.export_model(model_dir, only_pb=True)  # save the model
 
     def train_loop(self, train_loader):
         train_loss = 0.0

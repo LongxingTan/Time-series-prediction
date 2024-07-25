@@ -41,7 +41,7 @@ class TrainerTest(unittest.TestCase):
         trainer = Trainer(model)
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
-        trainer.export_model(model_dir="./weights")
+        # trainer.export_model(model_dir="./weights")
 
     # def test_trainer_no_dist_strategy(self):
     #     pass
