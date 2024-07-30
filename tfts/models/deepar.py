@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropout
 
-from tfts.layers.deepar_layer import GaussianLayer
+from tfts.layers.auto_task import GaussianHead
 
 from .base import BaseConfig, BaseModel
 
@@ -48,7 +48,7 @@ class DeepAR(BaseModel):
         self.rnn = tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
         self.bn = BatchNormalization()
         self.dense = Dense(units=predict_sequence_length, activation="relu")
-        self.gauss = GaussianLayer(units=1)
+        self.gauss = GaussianHead(units=1)
 
     def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
         """DeepAR

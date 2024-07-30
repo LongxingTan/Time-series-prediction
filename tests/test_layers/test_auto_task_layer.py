@@ -2,13 +2,13 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.deepar_layer import GaussianLayer
+from tfts.layers.auto_task import GaussianHead
 
 
 class DeepARLayerTest(unittest.TestCase):
     def test_gaussian_layer(self):
         hidden_size = 32
-        layer = GaussianLayer(hidden_size)
+        layer = GaussianHead(hidden_size)
 
         x = tf.random.normal([2, 10, 1])
         mu, sig = layer(x)
