@@ -1,3 +1,4 @@
+import logging
 import unittest
 
 import numpy as np
@@ -5,6 +6,8 @@ import pandas as pd
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer
+
+logger = logging.getLogger(__name__)
 
 
 class InputsTest(unittest.TestCase):
@@ -21,7 +24,7 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_length, 1)
 
         for m in self.test_models:
-            print(f"Test model {m}")
+            logger.info(f"Test model {m}")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
