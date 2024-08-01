@@ -214,7 +214,7 @@ class RNN2(object):
         self.dense2 = Dense(1)
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None):
-        """_summary_
+        """Another RNN model
 
         Parameters
         ----------

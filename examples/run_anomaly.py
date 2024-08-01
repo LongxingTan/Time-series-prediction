@@ -88,10 +88,11 @@ def run_inference(args):
 
     model = AutoModelForAnomaly.from_pretrained(config, args.predict_length, args.output_dir)
     det = model.detect(x_test, y_test)
-    plot(sig, det)
+    return sig, det
 
 
 if __name__ == "__main__":
     args = parse_args()
     run_train(args)
-    run_inference(args)
+    sig, det = run_inference(args)
+    plot(sig, det)

@@ -56,9 +56,9 @@ def run_train(args):
 
     pred = trainer.predict(valid[0])
     trainer.plot(history=valid[0], true=valid[1], pred=pred)
-    plt.show()
 
 
 if __name__ == "__main__":
     args = parse_args()
     run_train(args)
+    plt.show()

@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from tfts.layers.auto_task import AnomalyHead, ClassificationHead, PredictionHead, SegmentationHead
+
 from .auto_config import AutoConfig
-from .auto_task import AnomalyHead, ClassificationHead, PredictionHead, SegmentationHead
 from .base import BaseConfig, BaseModel
 
 logger = logging.getLogger(__name__)
