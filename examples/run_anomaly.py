@@ -58,7 +58,7 @@ def run_train(args):
     model = AutoModelForAnomaly.from_config(config, predict_length=1)
 
     trainer = KerasTrainer(model)
-    trainer.train((x_test, y_test), (x_test, y_test), n_epochs=args.epochs)
+    trainer.train((x_test, y_test), (x_test, y_test), epochs=args.epochs)
     model.save_weights(args.output_dir)
     return
 

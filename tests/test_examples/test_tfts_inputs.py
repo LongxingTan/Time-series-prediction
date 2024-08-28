@@ -28,7 +28,7 @@ class InputsTest(unittest.TestCase):
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
-            trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
+            trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 
     def test_encoder_decoder_array(self):
         train_length = 49
@@ -52,7 +52,7 @@ class InputsTest(unittest.TestCase):
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
-            trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
+            trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
     def test_encoder_decoder_array2(self):
         train_length = 49
@@ -77,7 +77,7 @@ class InputsTest(unittest.TestCase):
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
-            trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
+            trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
     # def test_encoder_tfdata(self):
     #     train_length = 20
@@ -94,7 +94,7 @@ class InputsTest(unittest.TestCase):
     #     for m in self.test_models:
     #         model = AutoModel(m, predict_length=predict_length)
     #         trainer = KerasTrainer(model)
-    #         trainer.train(train_dataset=train_dataset, valid_dataset=valid_dataset, n_epochs=1)
+    #         trainer.train(train_dataset=train_dataset, valid_dataset=valid_dataset, epochs=1)
 
     def test_encoder_decoder_tfdata(self):
         predict_length = 10
@@ -115,7 +115,7 @@ class InputsTest(unittest.TestCase):
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_length=predict_length)
             trainer = KerasTrainer(model)
-            trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
+            trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 
 
 class FakeReader(object):

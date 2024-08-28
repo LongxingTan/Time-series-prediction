@@ -9,12 +9,12 @@ TFTS Documentation
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-TFTS (TensorFlow Time Series) supports state-of-the-art deep learning
-time series models for both business cases and data competitions. The package provides
+TFTS (TensorFlow Time Series) supports state-of-the-art deep learning time series models for both business cases and data competitions. The package provides:
 
 * Flexible and powerful design for time series task
 * Advanced SOTA deep learning models
 * TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
+
 
 Quick Start
 ---------------

@@ -48,6 +48,12 @@ class BaseModel(ABC):
         self.model.save(weights_path)
         logging.info("Protobuf model successfully saved in {}".format(weights_path))
 
+    def summary(self):
+        if hasattr(self, "model"):
+            self.model.summary()
+        else:
+            raise RuntimeError("Model has not been built yet. Please build the model first.")
+
 
 class BaseConfig(ABC):
     """Base class for tfts config."""

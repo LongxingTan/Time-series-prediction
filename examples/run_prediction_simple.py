@@ -52,7 +52,7 @@ def run_train(args):
     model = AutoModel.from_config(config, predict_length=args.predict_length)
 
     trainer = KerasTrainer(model, optimizer=optimizer, loss_fn=loss_fn)
-    trainer.train(train, valid, n_epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))
+    trainer.train(train, valid, epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))
 
     pred = trainer.predict(valid[0])
     trainer.plot(history=valid[0], true=valid[1], pred=pred)

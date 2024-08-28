@@ -67,7 +67,7 @@ Simple Example
     opt = tf.keras.optimizers.Adam(0.003)
     loss_fn = tf.keras.losses.MeanSquaredError()
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-    trainer.train(train, valid, n_epochs=10, batch_size=32)
+    trainer.train(train, valid, epochs=10, batch_size=32)
 
     # test
     trainer.predict(valid[0])

@@ -39,7 +39,7 @@ class Trainer(object):
         self,
         train_loader: Union[tf.data.Dataset, Generator],
         valid_loader: Union[tf.data.Dataset, Generator, None] = None,
-        n_epochs: int = 10,
+        epochs: int = 10,
         batch_size: int = 8,
         learning_rate: float = 3e-4,
         verbose: int = 1,
@@ -57,7 +57,7 @@ class Trainer(object):
             tf.data.Dataset instance
         valid_loader : _type_
             tf.data.Dataset instance
-        n_epochs : int, optional
+        epochs : int, optional
             _description_, by default 10
         batch_size : int, optional
             _description_, by default 8
@@ -106,7 +106,7 @@ class Trainer(object):
                 inputs = Input(x.shape[1:])
             self.model = self.model.build_model(inputs=inputs)
 
-        for epoch in range(n_epochs):
+        for epoch in range(epochs):
             train_loss, train_scores = self.train_loop(train_loader)
             log_str = "Epoch: {}, Train Loss: {:.4f}".format(epoch + 1, train_loss)
 
@@ -245,7 +245,7 @@ class KerasTrainer(object):
         self,
         train_dataset,
         valid_dataset=None,
-        n_epochs: int = 20,
+        epochs: int = 20,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
         callback_metrics: Optional[List] = None,
@@ -313,7 +313,7 @@ class KerasTrainer(object):
                 y_train,
                 validation_data=valid_dataset,
                 steps_per_epoch=steps_per_epoch,
-                epochs=n_epochs,
+                epochs=epochs,
                 batch_size=batch_size,
                 verbose=verbose,
                 callbacks=callbacks,
@@ -323,7 +323,7 @@ class KerasTrainer(object):
                 train_dataset,
                 validation_data=valid_dataset,
                 steps_per_epoch=steps_per_epoch,
-                epochs=n_epochs,
+                epochs=epochs,
                 batch_size=batch_size,
                 verbose=verbose,
                 callbacks=callbacks,
