@@ -43,10 +43,9 @@ The general setup for training and testing a model is
 #. Tune the hyper-parameters of the model and training
 #. Load the model from the model checkpoint and apply it to new data
 
-If you prefer other DL frameworks, try `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_, `gluonts <https://github.com/awslabs/gluonts>`_, `paddlets <https://github.com/PaddlePaddle/PaddleTS>`_
 
 Simple Example
-----------------
+-----------------
 
 .. code-block:: python
 
@@ -80,6 +79,7 @@ Train your first model
 After you prepare the raw data, maybe you need preprocess the data.
 
 
+
 2. Train the model
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -87,8 +87,9 @@ After you prepare the raw data, maybe you need preprocess the data.
 3. Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+
 4. Serve the model
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 
 .. currentmodule:: tfts
