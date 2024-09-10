@@ -5,8 +5,8 @@ Quick start
 
 .. _installation:
 
-Installation
---------------
+1. Installation
+--------------------
 
 Install `time series tfts <https://github.com/LongxingTan/Time-series-prediction>`_, follow the installation instructions first
 
@@ -29,8 +29,8 @@ You can run it in docker, download the Dockerfile to host server
 
 .. _usage:
 
-Usage
--------------
+2. Basic Usage
+-----------------------
 
 .. currentmodule:: tfts
 
@@ -43,9 +43,6 @@ The general setup for training and testing a model is
 #. Tune the hyper-parameters of the model and training
 #. Load the model from the model checkpoint and apply it to new data
 
-
-Simple Example
------------------
 
 .. code-block:: python
 
@@ -71,24 +68,24 @@ Simple Example
     # test
     trainer.predict(valid[0])
 
-Train your first model
----------------------------
+3. Train your first model
+------------------------------
 
-1. Prepare the data
+3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
 After you prepare the raw data, maybe you need preprocess the data.
 
 
 
-2. Train the model
+3.2 Train the model
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
-3. Evaluate the model
+3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
-4. Serve the model
+3.4 Serve the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 

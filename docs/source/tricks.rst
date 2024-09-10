@@ -3,8 +3,8 @@ Tricks
 
 .. _tricks:
 
-Flexible tfts usage in competition
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Use tfts in competition flexible
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want a better performance, you can import tfts source code to modify it directly. That's how I use it in competitions.
 

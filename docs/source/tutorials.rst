@@ -24,16 +24,14 @@ tfts supports multi-type time series prediction:
 
 - multi-value multi-steps prediction
 
-the input data feed into the model
+Feed the input data into the model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 input 1
 
 .. code-block:: python
 
-	"""
-	tf.data.Dataset
-	"""
+	# tf.data.Dataset
 	batch_size = 1
 	train_length = 10
 	predict_length = 5
