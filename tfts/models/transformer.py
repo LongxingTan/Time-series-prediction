@@ -147,7 +147,7 @@ class Transformer(BaseModel):
         # decoder_outputs = self.decoder(decoder_features, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
 
         B, L, _ = tf.shape(decoder_feature)
-        casual_mask = CausalMask(B * self.config.num_attention_heads, L).mask
+        casual_mask = CausalMask(B, L).mask
         decoder_outputs = self.decoder(decoder_feature, memory, x_mask=casual_mask)
         decoder_outputs = self.project(decoder_outputs)
 
@@ -344,23 +344,26 @@ class DecoderLayer(tf.keras.layers.Layer):
         super(DecoderLayer, self).build(input_shape)
 
     def call(self, decoder_inputs, encoder_memory, tgt_mask=None, cross_mask=None, return_dict: Optional[bool] = None):
-        """Decoder layer
+        """
+        Forward pass for the decoder layer.
 
         Parameters
         ----------
-        decoder_inputs : _type_
-            _description_
-        encoder_memory : _type_
-            _description_
-        tgt_mask : _type_, optional
-            _description_, by default None
-        cross_mask : _type_, optional
-            _description_, by default None
+        decoder_inputs : tf.Tensor
+            Input tensor for the decoder.
+        encoder_memory : tf.Tensor
+            Memory tensor from the encoder.
+        tgt_mask : tf.Tensor, optional
+            Mask for the target sequence, by default None.
+        cross_mask : tf.Tensor, optional
+            Mask for the cross-attention, by default None.
+        return_dict : bool, optional
+            Whether to return a dictionary, by default None.
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            Output tensor from the decoder layer.
         """
         x = decoder_inputs
 

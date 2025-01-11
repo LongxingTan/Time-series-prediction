@@ -21,7 +21,7 @@ class DemoTest(unittest.TestCase):
         model = AutoModel.from_config(config, predict_length=predict_length)
 
         trainer = Trainer(model)
-        trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=2)
+        trainer.train((x_train, y_train), (x_valid, y_valid), epochs=2)
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)
@@ -37,7 +37,7 @@ class DemoTest(unittest.TestCase):
         print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
         trainer = Trainer(model)
-        trainer.train((x_train, y_train), n_epochs=2)
+        trainer.train((x_train, y_train), epochs=2)
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)
@@ -77,6 +77,6 @@ class DemoTest(unittest.TestCase):
     #         train, valid = tfts.get_data("sine", test_size=0.1)
     #         model = AutoModel(m, predict_length=8)
     #         trainer = Trainer(model)
-    #         trainer.train(train, valid, n_epochs=3)
+    #         trainer.train(train, valid, epochs=3)
     #         y_test = trainer.predict(valid[0])
     #         self.assertEqual(y_test.shape, valid[1].shape)

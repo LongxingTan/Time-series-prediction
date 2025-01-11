@@ -5,8 +5,8 @@ Quick start
 
 .. _installation:
 
-Installation
---------------
+1. Installation
+--------------------
 
 Install `time series tfts <https://github.com/LongxingTan/Time-series-prediction>`_, follow the installation instructions first
 
@@ -29,8 +29,8 @@ You can run it in docker, download the Dockerfile to host server
 
 .. _usage:
 
-Usage
--------------
+2. Basic Usage
+-----------------------
 
 .. currentmodule:: tfts
 
@@ -43,10 +43,6 @@ The general setup for training and testing a model is
 #. Tune the hyper-parameters of the model and training
 #. Load the model from the model checkpoint and apply it to new data
 
-If you prefer other DL frameworks, try `pytorch-forecasting <https://github.com/jdb78/pytorch-forecasting>`_, `gluonts <https://github.com/awslabs/gluonts>`_, `paddlets <https://github.com/PaddlePaddle/PaddleTS>`_
-
-Simple Example
-----------------
 
 .. code-block:: python
 
@@ -67,28 +63,31 @@ Simple Example
     opt = tf.keras.optimizers.Adam(0.003)
     loss_fn = tf.keras.losses.MeanSquaredError()
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-    trainer.train(train, valid, n_epochs=10, batch_size=32)
+    trainer.train(train, valid, epochs=10, batch_size=32)
 
     # test
     trainer.predict(valid[0])
 
-Train your first model
----------------------------
+3. Train your first model
+------------------------------
 
-1. Prepare the data
+3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
 After you prepare the raw data, maybe you need preprocess the data.
 
 
-2. Train the model
+
+3.2 Train the model
 ~~~~~~~~~~~~~~~~~~~~~~
+Always ensure that the input and output data of model layer has been reshaped to a 3-D matrix
 
 
-3. Evaluate the model
+3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-4. Serve the model
-~~~~~~~~~~~~~~~~~~~~
+
+3.4 Serve the model
+~~~~~~~~~~~~~~~~~~~~~~~
 
 
 .. currentmodule:: tfts

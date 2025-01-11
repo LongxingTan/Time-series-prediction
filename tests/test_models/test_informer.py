@@ -146,4 +146,4 @@ class InformerTest(unittest.TestCase):
         config = AutoConfig.for_model("informer")
         model = AutoModel.from_config(config, predict_length)
         trainer = KerasTrainer(model)
-        trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
+        trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)

@@ -14,7 +14,7 @@
 - input support
     - tf.Data or array
     - single item or three items
--
+
 - function support
     - serving
 

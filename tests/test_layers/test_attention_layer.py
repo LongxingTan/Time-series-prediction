@@ -21,7 +21,7 @@ class AttentionLayerTest(unittest.TestCase):
         config = layer.get_config()
         self.assertEqual(config["hidden_size"], hidden_size)
 
-        mask = CausalMask(2 * num_attention_heads, 128).mask
+        mask = CausalMask(2, 128).mask
         y2 = layer(q, k, v, mask=mask)
         self.assertEqual(y2.shape, (2, 128, hidden_size))
 

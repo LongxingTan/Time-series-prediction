@@ -48,6 +48,12 @@ class BaseModel(ABC):
         self.model.save(weights_path)
         logging.info("Protobuf model successfully saved in {}".format(weights_path))
 
+    def summary(self):
+        if hasattr(self, "model"):
+            self.model.summary()
+        else:
+            raise RuntimeError("Model has not been built yet. Please build the model first.")
+
 
 class BaseConfig(ABC):
     """Base class for tfts config."""
@@ -82,12 +88,17 @@ class BaseConfig(ABC):
         # return flatten_dict(output_dict)
         return {key: getattr(self, key) for key in self.__dict__}
 
+    def to_json(self, json_file):
+        config_dict = self.to_dict()
+        with open(json_file, "w") as json_file:
+            json.dump(config_dict, json_file, indent=4)
+
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]):
         return cls(**config_dict)
 
     @classmethod
-    def from_json_file(cls, json_file: Union[str, os.PathLike]):
+    def from_json(cls, json_file: Union[str, os.PathLike]):
         with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
         config_dict = json.loads(text)

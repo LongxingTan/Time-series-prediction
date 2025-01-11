@@ -26,7 +26,7 @@ class Attention(tf.keras.layers.Layer):
             Dropout rate for the attention weights. Defaults to 0.0.
         """
         super(Attention, self).__init__()
-        if hidden_size % num_attention_heads:
+        if hidden_size % num_attention_heads != 0:
             raise ValueError(
                 f"Hidden size {hidden_size} must be divisible by the number of heads {num_attention_heads}."
             )
@@ -41,7 +41,7 @@ class Attention(tf.keras.layers.Layer):
         self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
         super(Attention, self).build(input_shape)
 
-    def call(self, q, k, v, mask=None):
+    def call(self, q, k, v, mask=None, training=None, return_attention_scores=False, use_causal_mask=False):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
 
         Parameters
@@ -69,20 +69,24 @@ class Attention(tf.keras.layers.Layer):
         v_ = tf.concat(tf.split(v, self.num_attention_heads, axis=2), axis=0)
 
         score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
-        score /= tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
+        score = score / tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
 
         if mask is not None:
-            score = score * tf.cast(mask, tf.float32)
+            mask = tf.repeat(mask, repeats=self.num_attention_heads, axis=0)
+            score = score * tf.cast(mask, score.dtype)
 
-        score = tf.nn.softmax(score)
-        score = self.dropout(score)
+        score = tf.nn.softmax(score, axis=-1)
+        score = self.dropout(score, training=training)
 
         outputs = tf.linalg.matmul(score, v_)  # (batch * heads) * seq_q * units
         outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
+
+        if return_attention_scores:
+            return outputs, score
         return outputs
 
     def compute_output_shape(self, input_shape):
-        output_shape = (input_shape[0][0], input_shape[0][1], self.hidden_size)
+        output_shape = (*input_shape[0][:-1], self.hidden_size)
         return output_shape
 
     def get_config(self):
@@ -111,7 +115,7 @@ class SelfAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
 
-    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training=None):
         """Self attention layer
 
         Parameters
@@ -126,7 +130,7 @@ class SelfAttention(tf.keras.layers.Layer):
         tf.Tensor
             3D self attention output, (batch_size, sequence_length, attention_hidden_size)
         """
-        return self.attention(x, x, x, mask)
+        return self.attention(x, x, x, mask, training=training)
 
     def get_config(self):
         base_config = super(SelfAttention, self).get_config()

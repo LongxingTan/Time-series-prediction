@@ -99,7 +99,7 @@ y_valid = np.random.rand(1, predict_length, 1)
 config = AutoConfig.for_model("rnn")
 model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
-trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), n_epochs=1)
+trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 ```
 
 编码-解码类模型输入
@@ -130,7 +130,7 @@ y_valid = np.random.rand(1, predict_length, 1)
 config = AutoConfig.for_model("seq2seq")
 model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
-trainer.train((x_train, y_train), (x_valid, y_valid), n_epochs=1)
+trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 ```
 
 ```python
@@ -179,7 +179,7 @@ valid_loader = valid_loader.batch(batch_size=1)
 config = AutoConfig.for_model("seq2seq")
 model = AutoModel.from_config(config, predict_length=predict_length)
 trainer = KerasTrainer(model)
-trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, n_epochs=1)
+trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 ```
 
 **修改模型配置参数**

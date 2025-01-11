@@ -9,16 +9,20 @@ TFTS Documentation
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-TFTS (TensorFlow Time Series) supports state-of-the-art deep learning
-time series models for both business cases and data competitions. The package provides
+TFTS (TensorFlow Time Series) supports state-of-the-art deep learning time series models for both business cases and data competitions. The package provides:
 
 * Flexible and powerful design for time series task
 * Advanced SOTA deep learning models
 * TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
 
+
 Quick Start
----------------
-Visit :ref:`Quick start <quick-start>` to learn more about the package and .
+-----------------
+The tfts could accept any time series data of 3D data format as model input: ``(num_examples, train_sequence_length, num_features)``,
+and the model supported by tfts outputs 3D data as model output: ``(num_examples, predict_sequence_length, num_outputs)``
+
+
+Visit :ref:`Quick start <quick-start>` to learn more about the package.
 
 - :ref:`detailed installation instructions<installation>`
 - :ref:`how to use it<usage>`
@@ -44,6 +48,22 @@ The tfts library supports the SOTA deep learning models for time series.
 Tricks
 -------
 Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the prediction performance.
+
+
+Citation
+------------
+If you find tfts project useful in your research, please consider cite:
+
+.. code-block:: text
+
+   @misc{tfts2020,
+     author = {Longxing Tan},
+     title = {Time series prediction},
+     year = {2020},
+     publisher = {GitHub},
+     journal = {GitHub repository},
+     howpublished = {\url{https://github.com/longxingtan/time-series-prediction}},
+   }
 
 
 .. toctree::

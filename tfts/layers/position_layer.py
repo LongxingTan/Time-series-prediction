@@ -76,18 +76,18 @@ class PositionalEncoding(tf.keras.layers.Layer):
             The output tensor of shape (batch_size, seq_length, embed_dim) with positional encoding applied.
         """
 
-        E = x.get_shape().as_list()[-1]  # static
+        d_model = x.get_shape().as_list()[-1]  # static
         batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
         with tf.name_scope("position_encode"):
-            # # => batch_size * seq_length
+            # => batch_size * seq_length
             position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])
             position_enc = np.array(
-                [[pos / np.power(10000, (i - i % 2) / E) for i in range(E)] for pos in range(self.max_len)]
+                [[pos / np.power(10000, (i - i % 2) / d_model) for i in range(d_model)] for pos in range(self.max_len)]
             )
 
             position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
             position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (max_len, E)
+            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (max_len, d_model)
 
             outputs = tf.nn.embedding_lookup(position_enc, position_ind)
             if masking:
@@ -139,6 +139,7 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
 class RotaryPositionEmbedding(tf.keras.layers.Layer):
     """
     RoFormer: Enhanced Transformer with Rotary Position Embedding
+    - https://github.com/keras-team/keras-nlp/blob/master/keras_nlp/src/layers/modeling/rotary_embedding.py
     """
 
     def __init__(self, dim):

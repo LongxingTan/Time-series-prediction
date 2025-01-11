@@ -19,10 +19,11 @@ Bert         soon         soon           False      False
 Transformer  soon         soon           False      False
 ===========  ===========  =============  ========  ==========
 
+
 Models supported
 ------------------
 
-you can you below models in ``AutoModel()``
+you can you below models in ``AutoModel``
 
 * RNN
 * Seq2seq
