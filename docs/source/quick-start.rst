@@ -79,6 +79,7 @@ After you prepare the raw data, maybe you need preprocess the data.
 
 3.2 Train the model
 ~~~~~~~~~~~~~~~~~~~~~~
+Always ensure that the input and output data of model layer has been reshaped to a 3-D matrix
 
 
 3.3 Evaluate the model

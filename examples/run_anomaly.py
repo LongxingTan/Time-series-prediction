@@ -1,4 +1,6 @@
-"""Demo of time series anomaly detection"""
+"""Demo of time series anomaly detection
+- https://keras.io/examples/timeseries/timeseries_anomaly_detection/
+"""
 
 import argparse
 
