@@ -54,7 +54,7 @@ Citation
 ------------
 If you find tfts project useful in your research, please consider cite:
 
-.. citetool::
+.. code-block:: text
 
    @misc{tfts2020,
      author = {Longxing Tan},
