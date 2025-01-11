@@ -11,20 +11,21 @@ from tensorflow.keras.layers import Input
 
 __all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
 
+
 logger = logging.getLogger(__name__)
 
 
 class Trainer(object):
-    """Custom trainer for tensorflow"""
+    """Custom trainer for tensorflow with support for CPU, GPU, and multi-GPU."""
 
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.legacy.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
-        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
-        **kwargs: Dict[str, Any]
+        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.legacy.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        strategy: Optional[tf.distribute.Strategy] = None,
+        **kwargs: Dict[str, Any],
     ) -> None:
         self.model = model
         self.loss_fn = loss_fn
@@ -47,43 +48,43 @@ class Trainer(object):
         model_dir: Optional[str] = None,
         use_ema: bool = False,
         stop_no_improve_epochs: Optional[int] = None,
+        max_grad_norm: float = 5.0,
         transform: Optional[Callable] = None,
     ) -> None:
-        """train function
+        """
+        Trains the model using the provided data loaders.
 
         Parameters
         ----------
-        train_loader : _type_
-            tf.data.Dataset instance
-        valid_loader : _type_
-            tf.data.Dataset instance
+        train_loader : Union[tf.data.Dataset, Generator]
+            The training data loader, which can be a `tf.data.Dataset` or a Python generator.
+        valid_loader : Union[tf.data.Dataset, Generator, None], optional
+            The validation data loader, by default None.
         epochs : int, optional
-            _description_, by default 10
+            The number of epochs to train the model, by default 10.
         batch_size : int, optional
-            _description_, by default 8
-        learning_rate : _type_, optional
-            _description_, by default 3e-4
+            The batch size to use for training, by default 8.
+        learning_rate : float, optional
+            The initial learning rate for the optimizer, by default 3e-4.
         verbose : int, optional
-            _description_, by default 1
-        eval_metric : tuple, optional
-            _description_, by default ()
-        model_dir : _type_, optional
-            _description_, by default None
+            The verbosity level (0 = silent, 1 = progress bar, 2 = one line per epoch), by default 1.
+        eval_metric : Union[Callable, List[Callable], None], optional
+            The evaluation metric(s) to use for validation, by default None.
+        model_dir : Optional[str], optional
+            The directory to save the model weights, by default "../weights".
         use_ema : bool, optional
-            _description_, by default False
-        stop_no_improve_epochs : _type_, optional
-            if None, no early stop; otherwise, training will stop after no_improve_epochs, by default None
-        transform : _type_, optional
-            _description_, by default None
+            Whether to use exponential moving average (EMA) for the model weights, by default False.
+        stop_no_improve_epochs : Optional[int], optional
+            If provided, training will stop if the validation metric does not improve for the specified
+            number of epochs, by default None.
+        transform : Optional[Callable], optional
+            A function to transform the data before feeding it to the model, by default None.
         """
         self.learning_rate = learning_rate
-        if eval_metric:
-            if isinstance(eval_metric, Iterable):
-                self.eval_metric = eval_metric
-            else:
-                self.eval_metric = [eval_metric]
+        self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
         self.use_ema = use_ema
         self.transform = transform
+        self.max_grad_norm = max_grad_norm
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
 
         if use_ema:
@@ -108,20 +109,20 @@ class Trainer(object):
 
         for epoch in range(epochs):
             train_loss, train_scores = self.train_loop(train_loader)
-            log_str = "Epoch: {}, Train Loss: {:.4f}".format(epoch + 1, train_loss)
+            log_str = f"Epoch: {epoch + 1}, Train Loss: {train_loss:.4f}"
 
             if valid_loader is not None:
                 valid_loss, valid_scores = self.valid_loop(valid_loader)
-                log_str += ", Valid Loss: {:.4f}".format(valid_loss)
+                log_str += f", Valid Loss: {valid_loss:.4f}"
                 log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
 
-                if (stop_no_improve_epochs is not None) & (eval_metric is not None):
+                if (stop_no_improve_epochs is not None) and (eval_metric is not None):
                     if valid_scores[0] >= best_metric:
                         best_metric = valid_scores[0]
                         no_improve_epochs = 0
                     else:
                         no_improve_epochs += 1
-                    if no_improve_epochs >= stop_no_improve_epochs and epoch >= 4:
+                    if no_improve_epochs >= stop_no_improve_epochs:
                         logging.info("Tried the best, no improved and stop training")
                         break
 
@@ -154,11 +155,12 @@ class Trainer(object):
             loss = self.loss_fn(y_train, y_pred)
 
         gradients = tape.gradient(loss, self.model.trainable_variables)
-        gradients = [(tf.clip_by_value(grad, -5.0, 5.0)) for grad in gradients]
+        gradients = [(tf.clip_by_value(grad, -self.max_grad_norm, self.max_grad_norm)) for grad in gradients]
         _ = self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.global_step)
+            self.optimizer.lr.assign(lr)
         else:
             lr = self.learning_rate
         self.optimizer.lr.assign(lr)
@@ -205,11 +207,11 @@ class Trainer(object):
     def export_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
-        logging.info("Protobuf model successfully saved in {}".format(model_dir))
+        logging.info(f"Protobuf model successfully saved in {model_dir}")
 
         if not only_pb:
-            self.model.save_weights("{}.ckpt".format(model_dir))
-            logging.info("Model weights successfully saved in {}.ckpt".format(model_dir))
+            self.model.save_weights(f"{model_dir}.ckpt")
+            logging.info(f"Model weights successfully saved in {model_dir}.ckpt")
 
 
 class KerasTrainer(object):
@@ -223,7 +225,7 @@ class KerasTrainer(object):
         lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
         strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         run_eagerly: bool = True,
-        **kwargs: Dict
+        **kwargs: Dict,
     ) -> None:
         """
         model: tf.keras.Model instance
@@ -252,7 +254,7 @@ class KerasTrainer(object):
         early_stopping: Optional[bool] = None,
         checkpoint=None,
         verbose: int = 2,
-        **kwargs: Dict
+        **kwargs: Dict,
     ):
         """
         train_dataset: tf.data.Dataset instance, or [x_train, y_train]

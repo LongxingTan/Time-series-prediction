@@ -45,7 +45,7 @@ class AutoModel(BaseModel, tf.keras.Model):
         model,
         config,
     ):
-        super(AutoModel, self).__init__()
+        super().__init__()
         self.model = model
         self.config = config
 
@@ -69,7 +69,8 @@ class AutoModel(BaseModel, tf.keras.Model):
             model output
         """
         if isinstance(x, (list, tuple)):
-            assert len(x[0].shape) == 3, "The expected input dimension is 3, but got {}".format(len(x[0].shape))
+            if len(x[0].shape) != 3:
+                raise ValueError(f"Expected input dimension is 3, but got {len(x[0].shape)}")
         return self.model(x, return_dict=return_dict)
 
     @classmethod
@@ -82,27 +83,18 @@ class AutoModel(BaseModel, tf.keras.Model):
 
     @classmethod
     def from_pretrained(cls, config, predict_length, weights_path):
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(predict_length, config=config)
-        m = cls(model, config)
-        m.built = True
-        m.load_weights(weights_path)
-        return m
+        instance = cls.from_config(config, predict_length)
+        instance.built = True
+        instance.load_weights(weights_path)
+        return instance
 
 
 class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
-    def __init__(self, model, config):
-        super(AutoModelForPrediction, self).__init__(model, config)
-        self.model = AutoModel(model, config)
-        self.config = config
-
     def __call__(self, x):
 
-        model_output = self.model(x)
+        model_output = super().__call__(x)
 
         if self.config.skip_connect_circle:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
@@ -116,26 +108,19 @@ class AutoModelForPrediction(AutoModel):
 class AutoModelForClassification(AutoModel):
     """tfts model for classification"""
 
-    def __init__(self, model, config):
-        super(AutoModelForClassification, self).__init__(model, config)
-        self.model = AutoModel(model, config)
-        self.config = config
-
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
     ):
-        model_output = self.model(x)
-        return model_output
+        return super().__call__(x)
 
 
 class AutoModelForAnomaly(AutoModel):
     """tfts model for anomaly detection"""
 
     def __init__(self, model, config):
-        super(AutoModelForAnomaly, self).__init__(model, config)
-        self.model = AutoModel(model, config)
-        self.config = config
+        super().__init__(model, config)
+
         self.head = AnomalyHead(config.train_sequence_length)
 
     def detect(
@@ -150,11 +135,6 @@ class AutoModelForAnomaly(AutoModel):
 
 class AutoModelForSegmentation(AutoModel):
     """tfts model for time series segmentation"""
-
-    def __init__(self, model, config):
-        super(AutoModelForSegmentation, self).__init__(model, config)
-        self.model = AutoModel(model, config)
-        self.config = config
 
     def __call__(
         self,
