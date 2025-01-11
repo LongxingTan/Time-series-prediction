@@ -17,8 +17,8 @@ from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 
 
 class AutoFormerConfig(object):
-    r"""
-    This is the configuration class to store the configuration of a [`AutoFormer`]
+    """
+    Configuration class to store the configuration of a [`AutoFormer`]
     """
 
     model_type = "autoformer"

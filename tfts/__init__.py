@@ -8,6 +8,7 @@ from tfts.models.auto_model import (
     AutoModelForClassification,
     AutoModelForPrediction,
     AutoModelForSegmentation,
+    AutoModelForUncertainty,
 )
 from tfts.trainer import KerasTrainer, Trainer
 from tfts.tuner import AutoTuner
@@ -18,7 +19,7 @@ __all__ = [
     "AutoModelForClassification",
     "AutoModelForSegmentation",
     "AutoModelForAnomaly",
-    "AutoConfig",
+    "AutoModelForUncertainty" "AutoConfig",
     "AutoTuner",
     "Trainer",
     "KerasTrainer",

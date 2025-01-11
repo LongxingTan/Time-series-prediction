@@ -142,3 +142,14 @@ class AutoModelForSegmentation(AutoModel):
     ):
         model_output = self.model(x)
         return model_output
+
+
+class AutoModelForUncertainty(AutoModel):
+    """tfts model for time series uncertainty prediction"""
+
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+    ):
+        model_output = self.model(x)
+        return model_output

@@ -115,15 +115,6 @@ class BaseConfig(ABC):
             json.dump(self.to_dict(), f, indent=2)
 
 
-class GenerationMixin:
-    """
-    A class containing all functions for auto-regressive generation, to be used as a mixin.
-    """
-
-    def generate(self, inputs, generation_config):
-        return
-
-
 def flatten_dict(nested, sep="/"):
     """Flatten dictionary and concatenate nested keys with separator."""
 
