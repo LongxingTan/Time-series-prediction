@@ -37,7 +37,7 @@ class RNNConfig(BaseConfig):
         scheduled_sampling=0,
         use_attention=False,
     ):
-        super(RNNConfig, self).__init__()
+        super().__init__()
         self.rnn_hidden_size = rnn_hidden_size
         self.rnn_type = rnn_type
         self.bi_direction = bi_direction
@@ -50,8 +50,10 @@ class RNNConfig(BaseConfig):
 class RNN(BaseModel):
     """tfts RNN model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=RNNConfig()):
-        super(RNN, self).__init__()
+    def __init__(self, predict_sequence_length: int = 1, config=None):
+        super().__init__()
+        if config is None:
+            config = RNNConfig
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
@@ -127,42 +129,55 @@ class RNN(BaseModel):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, **kwargs):
-        super(Encoder, self).__init__(**kwargs)
-        self.rnn_type = rnn_type
+    def __init__(
+        self,
+        rnn_size: int,
+        rnn_type: str = "gru",
+        rnn_dropout: float = 0,
+        dense_size: int = 32,
+        num_stacked_layers: int = 1,
+        bi_direction: bool = False,
+        return_state: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.rnn_type = rnn_type.lower()
         self.rnn_size = rnn_size
         self.rnn_dropout = rnn_dropout
         self.dense_size = dense_size
+        self.num_stacked_layers = num_stacked_layers
+        self.bi_direction = bi_direction
+        self.return_state = return_state
 
     def build(self, input_shape):
-        if self.rnn_type.lower() == "gru":
-            self.rnn = GRU(
-                units=self.rnn_size,
-                activation="tanh",
-                return_state=True,
-                return_sequences=True,
-                dropout=self.rnn_dropout,
-            )
-        elif self.rnn_type.lower() == "lstm":
-            self.rnn = LSTM(
-                units=self.rnn_size,
-                activation="tanh",
-                return_state=False,
-                return_sequences=True,
-                dropout=self.rnn_dropout,
-            )
-            self.rnn = Bidirectional(self.rnn)
-            self.rnn2 = LSTM(
-                units=self.rnn_size,
-                activation="tanh",
-                return_state=True,
-                return_sequences=True,
-                dropout=self.rnn_dropout,
-            )
-            # self.rnn2 = Bidirectional(self.rnn2)
+        self.rnns = []
+        return_state = False if self.bi_direction else True
 
-        # self.dense1 = Dense(self.dense_size, activation='relu')
-        # self.bn = BatchNormalization()
+        for _ in range(self.num_stacked_layers):
+            if self.rnn_type == "gru":
+                rnn = GRU(
+                    units=self.rnn_size,
+                    activation="tanh",
+                    return_state=return_state,
+                    return_sequences=True,
+                    dropout=self.rnn_dropout,
+                )
+            elif self.rnn_type == "lstm":
+                rnn = LSTM(
+                    units=self.rnn_size,
+                    activation="tanh",
+                    return_state=return_state,
+                    return_sequences=True,
+                    dropout=self.rnn_dropout,
+                )
+            else:
+                raise ValueError(f"No supported RNN type: {self.rnn_type}")
+
+            if self.bi_direction:
+                rnn = Bidirectional(rnn)
+
+            self.rnns.append(rnn)
+
         super(Encoder, self).build(input_shape)
 
     def call(self, inputs: tf.Tensor):
@@ -175,22 +190,41 @@ class Encoder(tf.keras.layers.Layer):
 
         Returns
         -------
-        tf.tensor
-            output of encoder, batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
+        tf.Tensor or tuple
+            If return_state is False:
+                output tensor: (batch_size, sequence_length, rnn_size)
+            If return_state is True:
+                For GRU: (output, state)
+                    output: (batch_size, sequence_length, rnn_size)
+                    state: (batch_size, rnn_size)
+                For LSTM: (output, state_h, state_c)
+                    output: (batch_size, sequence_length, rnn_size)
+                    state_h: (batch_size, rnn_size)
+                    state_c: (batch_size, rnn_size)
         """
-        # inputs = self.bn(inputs)
-        if self.rnn_type.lower() == "gru":
-            output, state = self.rnn(inputs)  # state is equal to outputs[:, -1]
-        elif self.rnn_type.lower() == "lstm":
-            output = self.rnn(inputs)
-            output, state_memory, state_carry = self.rnn2(output)
-            state = (state_memory, state_carry)
-        else:
-            raise ValueError(f"rnn_type should be gru or lstm, while get {self.rnn_type}")
+        x = inputs
 
-        # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(config['num_stacked_layers']))
-        # output = self.dense1(output)  # => batch_size * input_seq_length * dense_size
-        return output, state
+        for i, layer in enumerate(self.rnns):
+            is_last_layer = i == len(self.rnns) - 1
+
+            if is_last_layer and self.return_state:
+                if self.bi_direction:
+                    if self.rnn_type == "gru":
+                        x = layer(x)
+                    else:  # lstm
+                        x = layer(x)
+                else:
+                    if self.rnn_type == "gru":
+                        x, state = layer(x)
+                        return x, state
+                    else:  # lstm
+                        x, state_h, state_c = layer(x)
+                        state = (state_h, state_c)
+                        return x, state
+            else:
+                x = layer(x)
+
+        return x
 
     def get_config(self):
         config = {

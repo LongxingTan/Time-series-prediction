@@ -70,11 +70,14 @@ class AutoModel(BaseModel, tf.keras.Model):
         """
         if isinstance(x, (list, tuple)):
             if len(x[0].shape) != 3:
-                raise ValueError(f"Expected input dimension is 3, but got {len(x[0].shape)}")
+                raise ValueError(
+                    f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
+                    f"but got {len(x[0].shape)}"
+                )
         return self.model(x, return_dict=return_dict)
 
     @classmethod
-    def from_config(cls, config, predict_length, task="prediction"):
+    def from_config(cls, config, predict_length=1, task="prediction"):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
