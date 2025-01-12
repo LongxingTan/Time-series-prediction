@@ -184,15 +184,13 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 **Prepare custom model config**
 
 ```python
-import tensorflow as tf
-import tfts
 from tfts import AutoModel, AutoConfig
 
 config = AutoConfig.for_model('rnn')
 print(config)
 config.rnn_hidden_size = 128
 
-model = AutoModel.from_config(config, predict_sequence_length=7, )
+model = AutoModel.from_config(config, predict_sequence_length=7)
 ```
 
 **Build your own model**
