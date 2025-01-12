@@ -99,7 +99,9 @@ class RNN(BaseModel):
         encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
-        outputs = tf.expand_dims(outputs, -1)
+        expand_dims_layer = tf.keras.layers.Reshape((outputs.shape[1], 1))
+        outputs = expand_dims_layer(outputs)
+        # outputs = tf.expand_dims(outputs, -1)
 
         return outputs
 
