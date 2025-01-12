@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
     parser.add_argument("--use_data", type=str, default="ecg", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for train")
-    parser.add_argument("--predict_length", type=int, default=1, help="sequence length for predict")
+    parser.add_argument("--predict_sequence_length", type=int, default=1, help="sequence length for predict")
     parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
@@ -47,7 +47,7 @@ def build_data(data_name="ecg"):
         std_ecg = scaler.fit_transform(ecg)
         std_ecg = std_ecg[:5000]
 
-        sub_seq, next_values = create_subseq(std_ecg, args.train_length, args.predict_length)
+        sub_seq, next_values = create_subseq(std_ecg, args.train_length, args.predict_sequence_length)
         return np.array(sub_seq), np.array(next_values), std_ecg
     else:
         raise ValueError()
@@ -57,7 +57,7 @@ def run_train(args):
     x_test, y_test, sig = build_data("ecg")
 
     config = AutoConfig.for_model(args.use_model)
-    model = AutoModelForAnomaly.from_config(config, predict_length=1)
+    model = AutoModelForAnomaly.from_config(config, predict_sequence_length=1)
 
     trainer = KerasTrainer(model)
     trainer.train((x_test, y_test), (x_test, y_test), epochs=args.epochs)
@@ -88,7 +88,7 @@ def run_inference(args):
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
 
-    model = AutoModelForAnomaly.from_pretrained(config, args.predict_length, args.output_dir)
+    model = AutoModelForAnomaly.from_pretrained(config, args.predict_sequence_length, args.output_dir)
     det = model.detect(x_test, y_test)
     return sig, det
 

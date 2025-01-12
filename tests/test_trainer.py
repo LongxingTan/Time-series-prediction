@@ -13,7 +13,6 @@ class TrainerTest(unittest.TestCase):
     def setUp(self):
         self.fit_config = {
             "epochs": 2,
-            "batch_size": 2,
             "stop_no_improve_epochs": 1,
             "eval_metric": lambda x, y: np.mean(np.abs(x.numpy() - y.numpy())),
             "model_dir": "./weights",
@@ -37,8 +36,8 @@ class TrainerTest(unittest.TestCase):
     def test_trainer_basic(self):
         # 1gpu, no dist
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
-        trainer = Trainer(model)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
+        trainer = Trainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
         # trainer.export_model(model_dir="./weights")
@@ -55,7 +54,7 @@ class TrainerTest(unittest.TestCase):
     def test_trainer_2gpu(self):
         strategy = tf.distribute.MirroredStrategy()
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = Trainer(model, strategy=strategy)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
 
@@ -89,9 +88,9 @@ class KerasTrainerTest(unittest.TestCase):
         x_valid = np.random.random((1, 10, 1))
         y_valid = np.random.randint(0, 2, (1, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
 
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), **self.fit_config)
         y_valid_pred = trainer.predict(x_valid)
         self.assertEqual(y_valid_pred.shape, (1, 2, 1))
@@ -105,6 +104,6 @@ class KerasTrainerTest(unittest.TestCase):
         valid_loader = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(1)
 
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
-        trainer = KerasTrainer(model)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader, valid_loader, **self.fit_config)

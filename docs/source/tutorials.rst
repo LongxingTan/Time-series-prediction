@@ -34,7 +34,7 @@ input 1
 	# tf.data.Dataset
 	batch_size = 1
 	train_length = 10
-	predict_length = 5
+	predict_sequence_length = 5
 	x = tf.random.normal([batch_size, train_length, 1])
 	encoder_feature
 
@@ -55,12 +55,20 @@ Train the models
 
 	import tensorflow as tf
 	import tfts
-	from tfts import AutoModel
+	from tfts import AutoModel, AutoConfig, kerasTrainer
 
+	model_name = 'seq2seq
 	loss_fn = tf.keras.losses.MeanSquaredError()
 	optimizer = tf.keras.optimizers.Adam(0.003)
-	lr_scheduler=None
-	model = AutoModel('seq2seq', loss_fn=loss_fn, optimizer=optimizer, lr_scheduler=lf_scheduler)
+
+    config = AutoConfig.for_model(model_name_or_path)
+	model = AutoModel.from_config(config=config, predict_sequence_length=12)
+
+    trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=optimizer)
+
+    history = trainer.train(
+        dataset_train, dataset_val, epochs=10, batch_size=32,
+    )
 
 
 Custom-defined configuration
@@ -74,7 +82,7 @@ Change the model parameters. If you want touch more parameters in model config, 
     import tfts
     from tfts import AutoModel, AutoConfig
 
-    config = AutoConfig('rnn').get_config()
+    config = AutoConfig.for_model('rnn')
     print(config)
 
     custom_model_config = {
@@ -93,15 +101,16 @@ Multi-variables and multi-steps prediction
 	import tfts
 	from tfts import AutoModel, AutoConfig
 
-	config = AutoConfig('rnn').get_config()
+	config = AutoConfig.for_model('rnn')
 	print(config)
 
-	custom_model_config = {
-		"rnn_size": 128,
+	config.update({
+	"rnn_size": 128,
     	"dense_size": 128,
-	}
+	})
+	print(config)
 
-	model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
+	model = AutoModel.from_config(config, predict_sequence_length=7)
 
 	x = tf.random.normal([1, 14, 1])
 	encoder_features = tf.random.normal([1, 14, 10])
@@ -118,7 +127,7 @@ Auto-tuned configuration
     import tfts
     from tfts import AutoModel, AutoConfig, AutoTuner
 
-    config = AutoConfig('rnn').get_config()
+    config = AutoConfig.for_model('rnn')
     tuner = AutoTuner('rnn')
     tuner.run(config)
 
@@ -134,11 +143,11 @@ Set up the custom-defined head layer to do the classification task or anomaly de
     import tfts
     from tfts import AutoModel, AutoConfig, AutoTuner
 
-    AutoConfig('rnn').print_config()
+    config = AutoConfig.for_model('rnn')
     custom_model_head = tf.keras.Sequential(
         Dense(1)
     )
-    model = AutoModel('rnn', custom_model_config=custom_model_config, custom_model_head=custom_model_head)
+    model = AutoModel.from_config(config, custom_model_head=custom_model_head)
 
 
 Custom-defined trainer
@@ -154,10 +163,11 @@ You could use tfts trainer, a custom trainer or use keras to train directly.
     from tfts import AutoModel, AutoConfig
     train_length = 24
     train_features = 15
-    predict_length = 16
+    predict_sequence_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    config = AutoConfig.for_model('seq2seq')
+    backbone = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)

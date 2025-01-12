@@ -34,7 +34,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
 )
 
 
-class AutoModel(BaseModel, tf.keras.Model):
+class AutoModel(BaseModel):
     """tftf auto model
     input tensor: [batch_size, sequence_length, num_features]
     output tensor: [batch_size, predict_sequence_length, num_labels]
@@ -49,7 +49,7 @@ class AutoModel(BaseModel, tf.keras.Model):
         self.model = model
         self.config = config
 
-    def call(
+    def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
@@ -70,20 +70,23 @@ class AutoModel(BaseModel, tf.keras.Model):
         """
         if isinstance(x, (list, tuple)):
             if len(x[0].shape) != 3:
-                raise ValueError(f"Expected input dimension is 3, but got {len(x[0].shape)}")
+                raise ValueError(
+                    f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
+                    f"but got {len(x[0].shape)}"
+                )
         return self.model(x, return_dict=return_dict)
 
     @classmethod
-    def from_config(cls, config, predict_length, task="prediction"):
+    def from_config(cls, config, predict_sequence_length=1, task="prediction"):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(predict_length, config=config)
+        model = getattr(module, class_name)(predict_sequence_length, config=config)
         return cls(model, config)
 
     @classmethod
-    def from_pretrained(cls, config, predict_length, weights_path):
-        instance = cls.from_config(config, predict_length)
+    def from_pretrained(cls, config, predict_sequence_length, weights_path):
+        instance = cls.from_config(config, predict_sequence_length)
         instance.built = True
         instance.load_weights(weights_path)
         return instance
@@ -135,6 +138,17 @@ class AutoModelForAnomaly(AutoModel):
 
 class AutoModelForSegmentation(AutoModel):
     """tfts model for time series segmentation"""
+
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+    ):
+        model_output = self.model(x)
+        return model_output
+
+
+class AutoModelForUncertainty(AutoModel):
+    """tfts model for time series uncertainty prediction"""
 
     def __call__(
         self,

@@ -54,17 +54,17 @@ class Seq2seqConfig(BaseConfig):
 class Seq2seq(BaseModel):
     """Seq2seq model"""
 
-    def __init__(self, predict_length: int = 1, config=Seq2seqConfig()):
+    def __init__(self, predict_sequence_length: int = 1, config=Seq2seqConfig()):
         super(Seq2seq, self).__init__()
         self.config = config
-        self.predict_sequence_length = predict_length
+        self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
         )
         self.decoder = DecoderV1(
             rnn_size=config.rnn_hidden_size,
             rnn_type=config.rnn_type,
-            predict_sequence_length=predict_length,
+            predict_sequence_length=predict_sequence_length,
             use_attention=config.use_attention,
             attention_size=config.attention_size,
             num_attention_heads=config.num_attention_heads,
@@ -114,14 +114,15 @@ class Seq2seq(BaseModel):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, **kwargs):
-        super(Encoder, self).__init__(**kwargs)
-        self.rnn_type = rnn_type
-        if rnn_type.lower() == "gru":
+    def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, return_state=False, **kwargs):
+        super().__init__(**kwargs)
+        self.rnn_type = rnn_type.lower()
+        self.return_state = return_state
+        if rnn_type == "gru":
             self.rnn = GRU(
                 units=rnn_size, activation="tanh", return_state=True, return_sequences=True, dropout=rnn_dropout
             )
-        elif rnn_type.lower() == "lstm":
+        elif rnn_type == "lstm":
             self.rnn = LSTM(
                 units=rnn_size,
                 activation="tanh",
@@ -129,29 +130,39 @@ class Encoder(tf.keras.layers.Layer):
                 return_sequences=True,
                 dropout=rnn_dropout,
             )
+        else:
+            raise ValueError(f"No supported RNN type: {rnn_type}")
+
         self.dense = Dense(units=dense_size, activation="tanh")
 
     def call(self, inputs):
-        """Seq2seq encoder
+        """
+        Seq2seq encoder.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            _description_
+            3D input tensor: (batch_size, input_sequence_length, num_features)
 
         Returns
         -------
-        tf.Tensor
-            batch_size * input_seq_length * rnn_size, state: batch_size * rnn_size
+        outputs : tf.Tensor
+            (batch_size, input_sequence_length, rnn_size)
+        state : tf.Tensor or tuple of tf.Tensor
+            Processed state(s) from the RNN:
+            - For GRU: (batch_size, dense_size)
+            - For LSTM: tuple of (batch_size, dense_size), (batch_size, dense_size)
         """
-        if self.rnn_type.lower() == "gru":
+        if self.rnn_type == "gru":
             outputs, state = self.rnn(inputs)
             state = self.dense(state)
-        elif self.rnn_type.lower() == "lstm":
-            outputs, state1, state2 = self.rnn(inputs)
-            state = (state1, state2)
+        elif self.rnn_type == "lstm":
+            outputs, state_h, state_c = self.rnn(inputs)
+            state_h = self.dense(state_h)
+            state_c = self.dense(state_c)
+            state = (state_h, state_c)
         else:
-            raise ValueError("No supported rnn type of {}".format(self.rnn_type))
+            raise ValueError(f"No supported rnn type of {self.rnn_type}")
         # encoder_hidden_state = tuple(self.dense(hidden_state) for _ in range(config['num_stacked_layers']))
         # outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
@@ -167,21 +178,25 @@ class DecoderV1(tf.keras.layers.Layer):
         attention_size=32,
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
+        **kwargs,
     ):
-        super(DecoderV1, self).__init__()
+        super().__init__(**kwargs)
         self.predict_sequence_length = predict_sequence_length
         self.use_attention = use_attention
-        self.rnn_type = rnn_type
+        self.rnn_type = rnn_type.lower()
         self.rnn_size = rnn_size
         self.attention_size = attention_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
-        if self.rnn_type.lower() == "gru":
+        if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
-        elif self.rnn_type.lower() == "lstm":
+        elif self.rnn_type == "lstm":
             self.rnn_cell = LSTMCell(units=self.rnn_size)
+        else:
+            raise ValueError(f"No supported rnn type of {self.rnn_type}")
+
         self.dense = Dense(units=1, activation=None)
         if self.use_attention:
             self.attention = Attention(
@@ -199,7 +214,7 @@ class DecoderV1(tf.keras.layers.Layer):
         teacher=None,
         scheduled_sampling=0,
         training=None,
-        **kwargs
+        **kwargs,
     ):
         """Seq2seq decoder1: step by step
 
@@ -307,7 +322,7 @@ class DecoderV2(tf.keras.layers.Layer):
         teacher=None,
         scheduled_sampling=0,
         training=None,
-        **kwargs
+        **kwargs,
     ):
         def cond_fn(time, prev_output, prev_state, decoder_output_ta):
             return time < self.predict_sequence_length
@@ -355,7 +370,7 @@ class DecoderV2(tf.keras.layers.Layer):
         teacher=None,
         scheduled_sampling=0,
         training=None,
-        **kwargs
+        **kwargs,
     ):
         """Decoder model2
 
@@ -410,7 +425,7 @@ class DecoderV3(tf.keras.layers.Layer):
         teacher=None,
         scheduled_sampling=0,
         training=None,
-        **kwargs
+        **kwargs,
     ):
         """Decoder3: just simple
 

@@ -61,18 +61,19 @@ import tfts
 from tfts import AutoModel, KerasTrainer, Trainer, AutoConfig
 
 train_length = 24
-predict_length = 8
+predict_sequence_length = 8
 
 # 其中，train是包含(x_train, y_train)的tuple, valid包含(x_valid, y_valid)
-train, valid = tfts.get_data('sine', train_length, predict_length, test_size=0.2)
-config = AutoConfig.for_model("seq2seq")
-model = AutoModel.from_config(config, predict_length)
+train, valid = tfts.get_data('sine', train_length, predict_sequence_length, test_size=0.2)
+config = AutoConfig.for_model("seq2seq")  # 'wavenet', 'transformer'
+model = AutoModel.from_config(config, predict_sequence_length)
 
 trainer = KerasTrainer(model)
-trainer.train(train, valid)
+trainer.train(train, valid, epochs=15)
 
 pred = trainer.predict(valid[0])
 trainer.plot(history=valid[0], true=valid[1], pred=pred)
+plt.show()
 ```
 
 **训练自己的数据**
@@ -87,17 +88,17 @@ trainer.plot(history=valid[0], true=valid[1], pred=pred)
 import numpy as np
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
-train_length = 49
-predict_length = 10
+train_length = 24
+predict_sequence_length = 8
 n_feature = 2
 
 x_train = np.random.rand(1, train_length, n_feature)
-y_train = np.random.rand(1, predict_length, 1)
+y_train = np.random.rand(1, predict_sequence_length, 1)
 x_valid = np.random.rand(1, train_length, n_feature)
-y_valid = np.random.rand(1, predict_length, 1)
+y_valid = np.random.rand(1, predict_sequence_length, 1)
 
 config = AutoConfig.for_model("rnn")
-model = AutoModel.from_config(config, predict_length=predict_length)
+model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 ```
@@ -109,44 +110,45 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 import numpy as np
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
-train_length = 49
-predict_length = 10
+train_length = 24
+predict_sequence_length = 8
 n_encoder_feature = 2
 n_decoder_feature = 3
 
 x_train = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
-    np.random.rand(1, predict_length, n_decoder_feature),
+    np.random.rand(1, predict_sequence_length, n_decoder_feature),
 )
-y_train = np.random.rand(1, predict_length, 1)
+y_train = np.random.rand(1, predict_sequence_length, 1)
 x_valid = (
     np.random.rand(1, train_length, 1),
     np.random.rand(1, train_length, n_encoder_feature),
-    np.random.rand(1, predict_length, n_decoder_feature),
+    np.random.rand(1, predict_sequence_length, n_decoder_feature),
 )
-y_valid = np.random.rand(1, predict_length, 1)
+y_valid = np.random.rand(1, predict_sequence_length, 1)
 
 config = AutoConfig.for_model("seq2seq")
-model = AutoModel.from_config(config, predict_length=predict_length)
+model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 ```
 
 ```python
 # option2
+import numpy as np
 import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
 class FakeReader(object):
-    def __init__(self, predict_length):
-        train_length = 49
+    def __init__(self, predict_sequence_length):
+        train_length = 24
         n_encoder_feature = 2
         n_decoder_feature = 3
         self.x = np.random.rand(15, train_length, 1)
         self.encoder_feature = np.random.rand(15, train_length, n_encoder_feature)
-        self.decoder_feature = np.random.rand(15, predict_length, n_decoder_feature)
-        self.target = np.random.rand(15, predict_length, 1)
+        self.decoder_feature = np.random.rand(15, predict_sequence_length, n_decoder_feature)
+        self.target = np.random.rand(15, predict_sequence_length, 1)
 
     def __len__(self):
         return len(self.x)
@@ -162,14 +164,14 @@ class FakeReader(object):
         for i in range(len(self.x)):
             yield self[i]
 
-predict_length = 10
-train_reader = FakeReader(predict_length=predict_length)
+predict_sequence_length = 10
+train_reader = FakeReader(predict_sequence_length=predict_sequence_length)
 train_loader = tf.data.Dataset.from_generator(
     train_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
 )
 train_loader = train_loader.batch(batch_size=1)
-valid_reader = FakeReader(predict_length=predict_length)
+valid_reader = FakeReader(predict_sequence_length=predict_sequence_length)
 valid_loader = tf.data.Dataset.from_generator(
     valid_reader.iter,
     ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
@@ -177,7 +179,7 @@ valid_loader = tf.data.Dataset.from_generator(
 valid_loader = valid_loader.batch(batch_size=1)
 
 config = AutoConfig.for_model("seq2seq")
-model = AutoModel.from_config(config, predict_length=predict_length)
+model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 ```
@@ -185,15 +187,13 @@ trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 **修改模型配置参数**
 
 ```python
-import tensorflow as tf
-import tfts
 from tfts import AutoModel, AutoConfig
 
 config = AutoConfig.for_model('rnn')
 print(config)
 config.rnn_hidden_size = 128
 
-model = AutoModel.from_config(config, predict_length=7, )
+model = AutoModel.from_config(config, predict_sequence_length=7)
 ```
 
 **搭建自己的模型**
@@ -219,11 +219,11 @@ from tfts import AutoModel, AutoConfig
 def build_model():
     train_length = 24
     train_features = 15
-    predict_length = 16
+    predict_sequence_length = 8
 
     inputs = Input([train_length, train_features])
     config = AutoConfig.for_model("seq2seq")
-    backbone = AutoModel.from_config(config, predict_length=predict_length)
+    backbone = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)

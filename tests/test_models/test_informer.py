@@ -124,7 +124,7 @@ class InformerTest(unittest.TestCase):
         custom_config["prob_attention"] = True
 
         train_length = 49
-        predict_length = 10
+        predict_sequence_length = 10
         n_encoder_feature = 2
         n_decoder_feature = 3
         batch_size = 1
@@ -132,18 +132,18 @@ class InformerTest(unittest.TestCase):
         x_train = (
             np.random.rand(batch_size, train_length, 1),
             np.random.rand(batch_size, train_length, n_encoder_feature),
-            np.random.rand(batch_size, predict_length, n_decoder_feature),
+            np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
         )
-        y_train = np.random.rand(batch_size, predict_length, 1)  # target: (batch, predict_length, 1)
+        y_train = np.random.rand(batch_size, predict_sequence_length, 1)  # target: (batch, predict_sequence_length, 1)
 
         x_valid = (
             np.random.rand(batch_size, train_length, 1),
             np.random.rand(batch_size, train_length, n_encoder_feature),
-            np.random.rand(batch_size, predict_length, n_decoder_feature),
+            np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
         )
-        y_valid = np.random.rand(batch_size, predict_length, 1)
+        y_valid = np.random.rand(batch_size, predict_sequence_length, 1)
 
         config = AutoConfig.for_model("informer")
-        model = AutoModel.from_config(config, predict_length)
-        trainer = KerasTrainer(model)
+        model = AutoModel.from_config(config, predict_sequence_length)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)

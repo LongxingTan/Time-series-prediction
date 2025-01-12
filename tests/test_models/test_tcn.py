@@ -20,8 +20,8 @@ class TCNTest(unittest.TestCase):
     def test_train(self):
         train, valid = tfts.get_data("sine", test_size=0.1)
         config = AutoConfig.for_model("tcn")
-        model = AutoModel.from_config(config, predict_length=8)
-        trainer = KerasTrainer(model)
+        model = AutoModel.from_config(config, predict_sequence_length=8)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train, valid, epochs=2)
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)
