@@ -20,7 +20,7 @@ class TestAutoModel(unittest.TestCase):
     ):
         config = AutoConfig.for_model("seq2seq")
 
-        auto_model = AutoModel.from_config(config, predict_length=5)
+        auto_model = AutoModel.from_config(config, predict_sequence_length=5)
         input_data = np.random.rand(1, 10, 3)
         output = auto_model(input_data)
 

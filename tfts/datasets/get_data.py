@@ -46,15 +46,15 @@ def download_data(
 def get_data(
     name: str = "sine",
     train_length: int = 24,
-    predict_length: int = 8,
+    predict_sequence_length: int = 8,
     test_size: float = 0.1,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], None]:
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
-        return get_sine(train_length, predict_length, test_size=test_size)
+        return get_sine(train_length, predict_sequence_length, test_size=test_size)
 
     elif name == "airpassengers":
-        return get_air_passengers(train_length, predict_length, test_size=test_size)
+        return get_air_passengers(train_length, predict_sequence_length, test_size=test_size)
 
     else:
         raise ValueError("unsupported data of {} yet, try 'sine', 'airpassengers'".format(name))

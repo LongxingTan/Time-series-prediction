@@ -37,7 +37,7 @@ class TrainerTest(unittest.TestCase):
     def test_trainer_basic(self):
         # 1gpu, no dist
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = Trainer(model)
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
@@ -55,7 +55,7 @@ class TrainerTest(unittest.TestCase):
     def test_trainer_2gpu(self):
         strategy = tf.distribute.MirroredStrategy()
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = Trainer(model, strategy=strategy)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
 
@@ -89,7 +89,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_valid = np.random.random((1, 10, 1))
         y_valid = np.random.randint(0, 2, (1, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
 
         trainer = KerasTrainer(model)
         trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), **self.fit_config)
@@ -105,6 +105,6 @@ class KerasTrainerTest(unittest.TestCase):
         valid_loader = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(1)
 
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_length=2)
+        model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = KerasTrainer(model)
         trainer.train(train_loader, valid_loader, **self.fit_config)

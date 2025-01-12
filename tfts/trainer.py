@@ -4,10 +4,13 @@ from collections.abc import Iterable
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from h5py.h5f import mount
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
+
+from .constants import TFTS_HUB_CACHE
 
 __all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
 
@@ -41,7 +44,6 @@ class Trainer(object):
         train_loader: Union[tf.data.Dataset, Generator],
         valid_loader: Union[tf.data.Dataset, Generator, None] = None,
         epochs: int = 10,
-        batch_size: int = 8,
         learning_rate: float = 3e-4,
         verbose: int = 1,
         eval_metric: Union[Callable, List[Callable], None] = None,
@@ -91,7 +93,7 @@ class Trainer(object):
             self.ema = tf.train.ExponentialMovingAverage(0.9).apply(self.model.trainable_variables)
 
         if model_dir is None:
-            model_dir = "../weights"
+            model_dir = TFTS_HUB_CACHE
 
         if stop_no_improve_epochs is not None:
             no_improve_epochs: int = 0
@@ -247,13 +249,13 @@ class KerasTrainer(object):
         self,
         train_dataset,
         valid_dataset=None,
-        epochs: int = 20,
+        epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
         callback_metrics: Optional[List] = None,
         early_stopping: Optional[bool] = None,
         checkpoint=None,
-        verbose: int = 2,
+        verbose: int = 1,
         **kwargs: Dict,
     ):
         """
@@ -301,7 +303,10 @@ class KerasTrainer(object):
             else:
                 raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
 
-            self.model = self.model.build_model(inputs=inputs)
+            if hasattr(self.model, "build_model"):
+                self.model = self.model.build_model(inputs=inputs)
+            else:
+                raise ValueError("tfts model should have build_model func")
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         # print(self.model.summary())

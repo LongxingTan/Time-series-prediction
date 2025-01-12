@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
     parser.add_argument("--use_data", type=str, default="sine", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=24, help="sequence length for train")
-    parser.add_argument("--predict_length", type=int, default=12, help="sequence length for predict")
+    parser.add_argument("--predict_sequence_length", type=int, default=12, help="sequence length for predict")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
@@ -40,7 +40,7 @@ def set_seed(seed):
 
 def run_train(args):
     set_seed(args.seed)
-    train, valid = tfts.get_data(args.use_data, args.train_length, args.predict_length, test_size=0.2)
+    train, valid = tfts.get_data(args.use_data, args.train_length, args.predict_sequence_length, test_size=0.2)
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
     loss_fn = tf.keras.losses.MeanSquaredError()
 
@@ -49,7 +49,7 @@ def run_train(args):
     custom_config.update({"skip_connect_circle": True})
 
     config = AutoConfig.for_model(args.use_model)
-    model = AutoModel.from_config(config, predict_length=args.predict_length)
+    model = AutoModel.from_config(config, predict_sequence_length=args.predict_sequence_length)
 
     trainer = KerasTrainer(model, optimizer=optimizer, loss_fn=loss_fn)
     trainer.train(train, valid, epochs=args.epochs, early_stopping=EarlyStopping("val_loss", patience=5))

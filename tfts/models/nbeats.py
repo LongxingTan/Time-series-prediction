@@ -60,7 +60,7 @@ class NBeats(BaseModel):
             x = inputs
 
         x = tf.squeeze(x, 2)  # 3 dim for all models
-        # Todo: if train_length and predict_length is both 12, train fail
+        # Todo: if train_length and predict_sequence_length is both 12, train fail
         self.train_sequence_length = x.get_shape().as_list()[1]
 
         self.stacks = []

@@ -54,17 +54,17 @@ class Seq2seqConfig(BaseConfig):
 class Seq2seq(BaseModel):
     """Seq2seq model"""
 
-    def __init__(self, predict_length: int = 1, config=Seq2seqConfig()):
+    def __init__(self, predict_sequence_length: int = 1, config=Seq2seqConfig()):
         super(Seq2seq, self).__init__()
         self.config = config
-        self.predict_sequence_length = predict_length
+        self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
         )
         self.decoder = DecoderV1(
             rnn_size=config.rnn_hidden_size,
             rnn_type=config.rnn_type,
-            predict_sequence_length=predict_length,
+            predict_sequence_length=predict_sequence_length,
             use_attention=config.use_attention,
             attention_size=config.attention_size,
             num_attention_heads=config.num_attention_heads,

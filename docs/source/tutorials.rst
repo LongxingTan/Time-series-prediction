@@ -34,7 +34,7 @@ input 1
 	# tf.data.Dataset
 	batch_size = 1
 	train_length = 10
-	predict_length = 5
+	predict_sequence_length = 5
 	x = tf.random.normal([batch_size, train_length, 1])
 	encoder_feature
 
@@ -101,7 +101,7 @@ Multi-variables and multi-steps prediction
     	"dense_size": 128,
 	}
 
-	model = AutoModel('rnn', predict_length=7, custom_model_config=custom_model_config)
+	model = AutoModel('rnn', predict_sequence_length=7, custom_model_config=custom_model_config)
 
 	x = tf.random.normal([1, 14, 1])
 	encoder_features = tf.random.normal([1, 14, 10])
@@ -154,10 +154,10 @@ You could use tfts trainer, a custom trainer or use keras to train directly.
     from tfts import AutoModel, AutoConfig
     train_length = 24
     train_features = 15
-    predict_length = 16
+    predict_sequence_length = 16
 
     inputs = Input([train_length, train_features])
-    backbone = AutoModel("seq2seq", predict_length=predict_length)
+    backbone = AutoModel("seq2seq", predict_sequence_length=predict_sequence_length)
     outputs = backbone(inputs)
     outputs = Dense(1, activation="sigmoid")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)

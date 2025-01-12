@@ -52,13 +52,13 @@ The general setup for training and testing a model is
 
     # load data
     train_length = 36
-    predict_length = 12
-    train, valid = tfts.get_data('sine', train_length, predict_length)
+    predict_sequence_length = 12
+    train, valid = tfts.get_data('sine', train_length, predict_sequence_length)
 
     # build model
     model_name_or_path = 'seq2seq'
     config = AutoConfig.for_model(model_name_or_path)
-    model = AutoModel.from_config(config, predict_length=predict_length)
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 
     # train
     opt = tf.keras.optimizers.Adam(0.003)

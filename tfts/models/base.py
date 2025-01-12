@@ -16,37 +16,40 @@ class BaseModel(ABC):
     """Base class for tfts model."""
 
     @classmethod
-    def from_config(cls, config, predict_length):
-        return cls(predict_sequence_length=predict_length, config=config)
+    def from_config(cls, config: "BaseConfig", predict_sequence_length: int = 1):
+        return cls(predict_sequence_length=predict_sequence_length, config=config)
 
     @classmethod
-    def from_pretrained(cls, config, predict_length, weights_path):
-        model = cls(predict_sequence_length=predict_length, config=config)
-        model.load_weights(weights_path)
+    def from_pretrained(cls, weights_dir: str, predict_sequence_length: int = 1):
+        config_path = os.path.join(weights_dir, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
+        config = BaseConfig.from_json(config_path)  # Load config from JSON
+        model = cls.from_config(
+            config, predict_sequence_length=predict_sequence_length
+        )  # Use from_config to create the model
+        weights_dir = os.path.join(weights_dir, "model.h5")
+        model.load_pretrained_weights(weights_dir)  # Load weights
         return model
 
     def build_model(self, inputs):
         outputs = self.model(inputs)
-        return tf.keras.Model([inputs], [outputs])  # to handles the Keras symbolic tensors for tf2.3.1
+        # to handles the Keras symbolic tensors for tf2.3.1
+        return tf.keras.Model([inputs], [outputs])
 
-    # def build_model(self, config, predict_length):
-    #     inputs = tf.keras.Input(shape=(config["input_shape"],))
-    #     x = inputs
-    #     for layer_units in config["layers"]:
-    #         x = tf.keras.layers.Dense(layer_units, activation="relu")(x)
-    #     outputs = tf.keras.layers.Dense(predict_length, activation="softmax")(x)
-    #     self.model = tf.keras.Model(inputs, outputs)
+    def load_pretrained_weights(self, weights_dir: str):
+        if not os.path.exists(weights_dir):
+            raise FileNotFoundError(f"Weights file not found at {weights_dir}")
+        self.model = tf.keras.models.load_model(weights_dir)
 
-    def load_pretrained_weights(self, name: str):
-        self.model = tf.keras.models.load_model(name)
+    def save_weights(self, weights_dir: str):
+        self.model.save_weights(weights_dir)
+        logging.info(f"Model weights successfully saved in {weights_dir}")
 
-    def save_weights(self, weights_path):
-        self.model.save_weights(weights_path)
-        logging.info("Model weights successfully saved in {}".format(weights_path))
-
-    def save_model(self, weights_path):
-        self.model.save(weights_path)
-        logging.info("Protobuf model successfully saved in {}".format(weights_path))
+    def save_model(self, weights_dir: str):
+        self.model.save(weights_dir)
+        logging.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
         if hasattr(self, "model"):
@@ -64,9 +67,8 @@ class BaseConfig(ABC):
         self.update(kwargs)
 
     def __setattr__(self, key, value):
-        if key in super().__getattribute__("attribute_map"):
-            key = super().__getattribute__("attribute_map")[key]
-        super().__setattr__(key, value)
+        mapped_key = self.attribute_map.get(key, key)
+        super().__setattr__(mapped_key, value)
 
     def __getattribute__(self, key):
         if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
@@ -82,16 +84,12 @@ class BaseConfig(ABC):
                 raise err
 
     def to_dict(self):
-        # output_dict = {}
-        # for key, value in self.__dict__.items():
-        #     output_dict[key] = value
-        # return flatten_dict(output_dict)
-        return {key: getattr(self, key) for key in self.__dict__}
+        return {key: getattr(self, key) for key in self.__dict__ if not key.startswith("_")}
 
-    def to_json(self, json_file):
+    def to_json(self, json_file: Union[str, os.PathLike]):
         config_dict = self.to_dict()
-        with open(json_file, "w") as json_file:
-            json.dump(config_dict, json_file, indent=4)
+        with open(json_file, "w", encoding="utf-8") as file:
+            json.dump(config_dict, file, indent=4)
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]):
@@ -111,8 +109,8 @@ class BaseConfig(ABC):
         return cls.from_dict(config_dict)
 
     def save_pretrained(self, save_path):
-        with open(save_path, "w") as f:
-            json.dump(self.to_dict(), f, indent=2)
+        with open(save_path, "w") as file:
+            json.dump(self.to_dict(), file, indent=4)
 
     def __str__(self):
         """Convert config to string representation in dictionary format"""

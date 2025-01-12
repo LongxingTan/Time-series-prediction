@@ -18,7 +18,7 @@ class PredictionTest(unittest.TestCase):
             use_data = "sine"
             use_model = "rnn"
             train_length = 10
-            predict_length = 5
+            predict_sequence_length = 5
             epochs = 2
             batch_size = 32
             learning_rate = 0.003
