@@ -53,7 +53,7 @@ class RNN(BaseModel):
     def __init__(self, predict_sequence_length: int = 1, config=None):
         super().__init__()
         if config is None:
-            config = RNNConfig
+            config = RNNConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(

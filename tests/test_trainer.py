@@ -37,7 +37,7 @@ class TrainerTest(unittest.TestCase):
         # 1gpu, no dist
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = Trainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
         # trainer.export_model(model_dir="./weights")
@@ -90,7 +90,7 @@ class KerasTrainerTest(unittest.TestCase):
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
 
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), **self.fit_config)
         y_valid_pred = trainer.predict(x_valid)
         self.assertEqual(y_valid_pred.shape, (1, 2, 1))
@@ -105,5 +105,5 @@ class KerasTrainerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader, valid_loader, **self.fit_config)
