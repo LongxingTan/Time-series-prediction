@@ -1,19 +1,53 @@
 """Generate the example data script"""
 
 import logging
+import os
 import random
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
+from tfts.constants import TFTS_ASSETS_CACHE
+
 air_passenger_url = (
     "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
 )
 
 
+def download_data(
+    origin=None,
+    untar=False,
+    md5_hash=None,
+    file_hash=None,
+    cache_subdir="datasets",
+    hash_algorithm="auto",
+    extract=False,
+    archive_format="auto",
+    cache_dir=None,
+    force_download=False,
+):
+    # https://github.com/keras-team/keras/blob/v3.3.3/keras/src/utils/file_utils.py#L130-L327
+    if origin is None:
+        raise ValueError('Please specify the "origin" argument (URL of the file ' "to download).")
+    if cache_dir is None:
+        cache_dir = TFTS_ASSETS_CACHE
+    datadir_base = os.path.expanduser(cache_dir)
+    datadir = os.path.join(datadir_base, cache_subdir)
+    os.makedirs(datadir, exist_ok=True)
+
+    # if md5_hash is not None and file_hash is None:
+    # file_hash = md5_hash
+    # hash_algorithm = "md5"
+
+    return
+
+
 def get_data(
-    name: str = "sine", train_length: int = 24, predict_length: int = 8, test_size: float = 0.1
+    name: str = "sine",
+    train_length: int = 24,
+    predict_length: int = 8,
+    test_size: float = 0.1,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], None]:
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":

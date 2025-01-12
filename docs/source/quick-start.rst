@@ -8,7 +8,7 @@ Quick start
 1. Installation
 --------------------
 
-Install `time series tfts <https://github.com/LongxingTan/Time-series-prediction>`_, follow the installation instructions first
+Install `tfts <https://github.com/LongxingTan/Time-series-prediction>`_, follow the installation instructions first
 
 * Python 3.7+
 * `TensorFlow 2.x <https://www.tensorflow.org/install/pip>`_ installation instructions
@@ -37,7 +37,7 @@ You can run it in docker, download the Dockerfile to host server
 The general setup for training and testing a model is
 
 #. Build time series 3D training dataset and valid dataset. The shape of input and label are (examples, train_sequence_length, features) and (examples, predict_sequence_length, 1)
-#. Instantiate a model using the the ``AutoModel()`` method
+#. Instantiate a model using the the ``AutoModel`` method
 #. Create a ``Trainer()`` or ``KerasTrainer()`` object. Define the optimizer and loss function in trainer
 #. Train the model on the training dataset and check if it has converged with acceptable accuracy
 #. Tune the hyper-parameters of the model and training
@@ -73,13 +73,13 @@ The general setup for training and testing a model is
 
 3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
-After you prepare the raw data, maybe you need preprocess the data.
+Before training, ensure your raw data is preprocessed into a 3D format with the shape `(batch_size, train_steps, features)`. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
 
 
 
-3.2 Train the model
-~~~~~~~~~~~~~~~~~~~~~~
-Always ensure that the input and output data of model layer has been reshaped to a 3-D matrix
+3.2 Train the Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+When training the model, use appropriate loss functions, optimizers, and hyperparameters to achieve the best results.
 
 
 3.3 Evaluate the model
@@ -88,6 +88,7 @@ Always ensure that the input and output data of model layer has been reshaped to
 
 3.4 Serve the model
 ~~~~~~~~~~~~~~~~~~~~~~~
+Once the model is trained and evaluated, deploy it for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel, ONNX, etc.). Set up an API or service to handle incoming requests, preprocess input data, and return predictions in real-time.
 
 
 .. currentmodule:: tfts
