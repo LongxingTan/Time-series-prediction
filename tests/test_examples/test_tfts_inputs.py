@@ -27,7 +27,7 @@ class InputsTest(unittest.TestCase):
             logger.info(f"Test model {m}")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model)
+            trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
             trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 
     def test_encoder_decoder_array(self):
@@ -93,7 +93,7 @@ class InputsTest(unittest.TestCase):
     #
     #     for m in self.test_models:
     #         model = AutoModel(m, predict_sequence_length=predict_sequence_length)
-    #         trainer = KerasTrainer(model)
+    #         trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
     #         trainer.train(train_dataset=train_dataset, valid_dataset=valid_dataset, epochs=1)
 
     def test_encoder_decoder_tfdata(self):
