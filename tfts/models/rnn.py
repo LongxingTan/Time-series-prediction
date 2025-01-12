@@ -88,7 +88,8 @@ class RNN(BaseModel):
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         if self.config.rnn_type == "lstm":
-            encoder_output = tf.concat(encoder_state, axis=-1)
+            concat_layer = tf.keras.layers.Concatenate(axis=-1)
+            encoder_output = concat_layer(encoder_state)
         else:
             encoder_output = encoder_state
 
