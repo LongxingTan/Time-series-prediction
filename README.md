@@ -62,11 +62,11 @@ train_length = 24
 predict_sequence_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_sequence_length, test_size=0.2)
 
-model_name_or_path = 'seq2seq'
+model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer'
 config = AutoConfig.for_model(model_name_or_path)
 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 trainer = KerasTrainer(model)
-trainer.train((x_train, y_train), (x_valid, y_valid), epochs=3)
+trainer.train((x_train, y_train), (x_valid, y_valid), epochs=15)
 
 pred = trainer.predict(x_valid)
 trainer.plot(history=x_valid, true=y_valid, pred=pred)
@@ -85,8 +85,8 @@ Encoder only model inputs
 import numpy as np
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
-train_length = 49
-predict_sequence_length = 10
+train_length = 24
+predict_sequence_length = 8
 n_feature = 2
 
 x_train = np.random.rand(1, train_length, n_feature)  # inputs: (batch, train_length, feature)
@@ -107,8 +107,8 @@ Encoder-decoder model inputs
 import numpy as np
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
-train_length = 49
-predict_sequence_length = 10
+train_length = 24
+predict_sequence_length = 8
 n_encoder_feature = 2
 n_decoder_feature = 3
 
@@ -134,12 +134,13 @@ trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
 ```python
 # option2: tf.data.Dataset
+import numpy as np
 import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_sequence_length):
-        train_length = 49
+        train_length = 24
         n_encoder_feature = 2
         n_decoder_feature = 3
         self.x = np.random.rand(15, train_length, 1)
@@ -220,7 +221,7 @@ from tfts import AutoModel, AutoConfig
 def build_model():
     train_length = 24
     train_features = 15
-    predict_sequence_length = 16
+    predict_sequence_length = 8
 
     inputs = Input([train_length, train_features])
     config = AutoConfig.for_model("seq2seq")
