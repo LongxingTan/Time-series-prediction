@@ -47,17 +47,18 @@ The general setup for training and testing a model is
 .. code-block:: python
 
     import tensorflow as tf
-    import matplotlib.pyplot as plt
     import tfts
-    from tfts import AutoModel, KerasTrainer
+    from tfts import AutoConfig, AutoModel, KerasTrainer
 
     # load data
     train_length = 36
     predict_length = 12
-    train, valid = tfts.load_data('sine', train_length, predict_length)
+    train, valid = tfts.get_data('sine', train_length, predict_length)
 
     # build model
-    model = AutoModel('seq2seq', predict_length=predict_length)
+    model_name_or_path = 'seq2seq'
+    config = AutoConfig.for_model(model_name_or_path)
+    model = AutoModel.from_config(config, predict_length=predict_length)
 
     # train
     opt = tf.keras.optimizers.Adam(0.003)
@@ -67,6 +68,7 @@ The general setup for training and testing a model is
 
     # test
     trainer.predict(valid[0])
+
 
 3. Train your first model
 ------------------------------

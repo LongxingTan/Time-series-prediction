@@ -114,6 +114,10 @@ class BaseConfig(ABC):
         with open(save_path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
+    def __str__(self):
+        """Convert config to string representation in dictionary format"""
+        return str({k: v for k, v in self.__dict__.items() if not k.startswith("_")})
+
 
 def flatten_dict(nested, sep="/"):
     """Flatten dictionary and concatenate nested keys with separator."""

@@ -43,3 +43,7 @@ class AutoConfig(BaseConfig):
         raise ValueError(
             f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
         )
+
+    @classmethod
+    def from_pretrained(cls, pretrained_path, **kwargs):
+        return
