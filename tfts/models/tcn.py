@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten, Lambda
 
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
@@ -127,7 +127,9 @@ class Encoder(object):
         conv_inputs = [inputs]
         for conv_time in self.conv_times:
             dilated_conv = conv_time(inputs)
-            conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=2)
+
+            split_layer = Lambda(lambda x: tf.split(x, 2, axis=2))
+            conv_filter, conv_gate = split_layer(dilated_conv)
             dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
             outputs = self.dense_time2(inputs=dilated_conv)
             skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
