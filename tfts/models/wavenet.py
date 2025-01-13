@@ -90,14 +90,14 @@ class WaveNet(BaseModel):
 
         Parameters
         ----------
-        inputs : _type_
+        inputs : tf.Tensor
             _description_
-        teacher : _type_, optional
+        teacher : tf.Tensor, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         if isinstance(inputs, (list, tuple)):
@@ -194,7 +194,7 @@ class DecoderV1(object):
 
         Parameters
         ----------
-        decoder_features : _type_
+        decoder_features : tf.Tensor
             _description_
         decoder_init_input : _type_
             _description_
@@ -209,7 +209,7 @@ class DecoderV1(object):
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
         decoder_outputs = []
@@ -283,20 +283,16 @@ class DecoderV2(object):
 
         Parameters
         ----------
-        x : _type_
+        decoder_features : tf.Tensor
             _description_
-        decoder_feature : _type_
-            _description_
-        encoder_states : _type_
-            _description_
-        predict_seq_length : _type_
+        encoder_states : tf.Tensor
             _description_
         teacher : _type_, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
 
@@ -381,7 +377,7 @@ class Decoder3(tf.keras.layers.Layer):
 
         Returns
         -------
-        _type_
+        tf.Tensor
             _description_
         """
 

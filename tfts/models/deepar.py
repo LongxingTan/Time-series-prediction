@@ -18,7 +18,7 @@ class DeepARConfig(BaseConfig):
 
     def __init__(
         self,
-        rnn_hidden_size=64,
+        rnn_hidden_size: int = 64,
     ):
         super().__init__()
         self.rnn_hidden_size = rnn_hidden_size
@@ -55,12 +55,12 @@ class DeepAR(BaseModel):
 
         Parameters
         ----------
-        x : tf.Tensor
-            _description_
+        inputs : tf.Tensor
+            3D input tensor for time series
 
         Returns
         -------
-        _type_
+        distribution of prediction
             _description_
         """
         x, _ = self.rnn(inputs)
