@@ -30,6 +30,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("tft", "TFTransformer"),
         ("unet", "Unet"),
         ("nbeats", "NBeats"),
+        ("dlinear", "DLinear"),
     ]
 )
 

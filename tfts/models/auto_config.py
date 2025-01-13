@@ -21,6 +21,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("tft", "TFTransformerConfig"),
         ("unet", "UnetConfig"),
         ("nbeats", "NBeatsConfig"),
+        ("dlinear", "DLinearConfig"),
     ]
 )
 

@@ -5,10 +5,8 @@
 
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (
-    GRU,
     AveragePooling1D,
     BatchNormalization,
     Dense,
