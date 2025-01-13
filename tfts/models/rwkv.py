@@ -18,32 +18,32 @@ class RWKVConfig(BaseConfig):
 
     def __init__(
         self,
-        rnn_hidden_size: int = 64,
+        block_size: int = 1024,
+        vocab_size: int = 50304,
         num_stacked_layers: int = 1,
-        use_attention: bool = True,
         attention_heads: int = 8,
         attention_size: int = 64,
         dense_hidden_size: int = 32,
+        dropout: float = 0.0,
     ) -> None:
         """
         Initializes the configuration for the RWKV model with the specified parameters.
 
         Args:
-            rnn_hidden_size: The number of units in the RWKV hidden layer.
             num_stacked_layers: The number of stacked RWKV layers.
-            use_attention: Whether to use an attention mechanism.
             attention_heads: Number of attention heads for the mechanism.
             attention_size: Size of each attention head.
             dense_hidden_size: The size of the dense hidden layer following the RWKV.
         """
         super().__init__()
 
-        self.rnn_hidden_size: int = rnn_hidden_size
+        self.block_size: int = block_size
+        self.vocab_size: int = vocab_size
         self.num_stacked_layers: int = num_stacked_layers
-        self.use_attention: bool = use_attention
         self.attention_heads: int = attention_heads
         self.attention_size: int = attention_size
         self.dense_hidden_size: int = dense_hidden_size
+        self.dropout: float = dropout
 
 
 class RWKV(BaseModel):

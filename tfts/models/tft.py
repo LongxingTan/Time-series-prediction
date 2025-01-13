@@ -30,7 +30,7 @@ class TFTransformer(BaseModel):
 
         Parameters
         ----------
-        x : _type_
+        x : tf.Tensor
             _description_
         """
         return

@@ -106,6 +106,11 @@ class TemporalEmbedding(tf.keras.layers.Layer):
         return
 
 
+class PatchEmbedding(tf.keras.layers.Layer):
+    def __init__(self):
+        super().__init__()
+
+
 class DataEmbedding(tf.keras.layers.Layer):
     def __init__(self, embed_size: int, dropout: float = 0.0):
         """
