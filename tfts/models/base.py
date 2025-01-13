@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 class BaseModel(ABC):
     """Base class for tfts model."""
 
+    def __init__(self, config=None, predict_sequence_length=1):
+        self.config = config
+        self.predict_sequence_length = predict_sequence_length
+        self.model = None  # Model should be defined later
+
     @classmethod
     def from_config(cls, config: "BaseConfig", predict_sequence_length: int = 1):
         return cls(predict_sequence_length=predict_sequence_length, config=config)
@@ -29,19 +34,19 @@ class BaseModel(ABC):
         model = cls.from_config(
             config, predict_sequence_length=predict_sequence_length
         )  # Use from_config to create the model
-        weights_dir = os.path.join(weights_dir, "model.h5")
+        # weights_dir = os.path.join(weights_dir, "model.h5")
         model.load_pretrained_weights(weights_dir)  # Load weights
         return model
 
     def build_model(self, inputs):
         outputs = self.model(inputs)
         # to handles the Keras symbolic tensors for tf2.3.1
-        return tf.keras.Model([inputs], [outputs])
+        self.model = tf.keras.Model([inputs], [outputs])
+        return self.model
 
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
-        self.model = self.build_model(inputs)
-        return self.model
+        return self.build_model(inputs)
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
@@ -50,11 +55,11 @@ class BaseModel(ABC):
 
     def save_weights(self, weights_dir: str):
         self.model.save_weights(weights_dir)
-        logging.info(f"Model weights successfully saved in {weights_dir}")
+        logger.info(f"Model weights successfully saved in {weights_dir}")
 
     def save_model(self, weights_dir: str):
         self.model.save(weights_dir)
-        logging.info(f"Protobuf model successfully saved in {weights_dir}")
+        logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
         if hasattr(self, "model"):

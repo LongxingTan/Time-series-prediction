@@ -3,6 +3,7 @@
 from collections import OrderedDict
 import importlib
 import logging
+import os
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -81,15 +82,22 @@ class AutoModel(BaseModel):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(predict_sequence_length, config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
     @classmethod
-    def from_pretrained(cls, config, predict_sequence_length, weights_path):
-        instance = cls.from_config(config, predict_sequence_length)
-        instance.built = True
-        instance.load_weights(weights_path)
-        return instance
+    def from_pretrained(cls, weights_dir, predict_sequence_length: int = 1):
+        config_path = os.path.join(weights_dir, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
+        config = BaseConfig.from_json(config_path)  # Load config from JSON
+        model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
+        model.load_pretrained_weights(weights_dir)  # Load weights
+        return model
+
+    def save_pretrained(self):
+        pass
 
 
 class AutoModelForPrediction(AutoModel):

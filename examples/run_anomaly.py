@@ -87,7 +87,9 @@ def run_inference(args):
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
 
-    model = AutoModelForAnomaly.from_pretrained(config, args.predict_sequence_length, args.output_dir)
+    model = AutoModelForAnomaly.from_pretrained(
+        weights_dir=args.output_dir, predict_sequence_length=args.predict_sequence_length
+    )
     det = model.detect(x_test, y_test)
     return sig, det
 
