@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class TransformerConfig(BaseConfig):
-    model_type = "transformer"
+    model_type: str = "transformer"
 
     def __init__(
         self,

@@ -9,7 +9,7 @@ from .base import BaseConfig, BaseModel
 
 
 class TFTransformerConfig(BaseConfig):
-    model_type = "tft"
+    model_type: str = "tft"
 
     def __init__(self):
         super(TFTransformerConfig, self).__init__()

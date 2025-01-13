@@ -13,7 +13,7 @@ from .base import BaseConfig, BaseModel
 
 
 class NbeatsConfig(BaseConfig):
-    model_type = "nbeats"
+    model_type: str = "nbeats"
 
     def __init__(
         self,

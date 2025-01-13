@@ -15,7 +15,7 @@ from .base import BaseConfig, BaseModel
 
 
 class TCNConfig(BaseConfig):
-    model_type = "tcn"
+    model_type: str = "tcn"
 
     def __init__(
         self,

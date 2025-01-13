@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class TimesFmConfig(BaseConfig):
-    model_type = "timesfm"
+    model_type: str = "timesfm"
 
     def __init__(self):
         super().__init__()

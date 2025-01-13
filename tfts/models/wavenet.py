@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 class WaveNetConfig(BaseConfig):
-    model_type = "wavenet"
+    model_type: str = "wavenet"
 
     def __init__(
         self,
-        dilation_rates: Tuple[int] = [2**i for i in range(4)],
-        kernel_sizes: Tuple[int] = [2 for i in range(4)],
+        dilation_rates: List[int] = [2**i for i in range(4)],
+        kernel_sizes: List[int] = [2 for i in range(4)],
         filters: int = 128,
         dense_hidden_size: int = 64,
         scheduled_sampling: float = 1.0,
@@ -51,8 +51,8 @@ class WaveNetConfig(BaseConfig):
         """
         super(WaveNetConfig, self).__init__()
 
-        self.dilation_rates: Tuple[int] = dilation_rates
-        self.kernel_sizes: Tuple[int] = kernel_sizes
+        self.dilation_rates: List[int] = dilation_rates
+        self.kernel_sizes: List[int] = kernel_sizes
         self.filters: int = filters
         self.dense_hidden_size: int = dense_hidden_size
         self.scheduled_sampling: float = scheduled_sampling

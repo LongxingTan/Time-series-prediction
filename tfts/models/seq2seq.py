@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Seq2seqConfig(BaseConfig):
-    model_type = "seq2seq"
+    model_type: str = "seq2seq"
 
     def __init__(
         self,

@@ -25,7 +25,7 @@ from .base import BaseConfig, BaseModel
 
 
 class RNNConfig(BaseConfig):
-    model_type = "rnn"
+    model_type: str = "rnn"
 
     def __init__(
         self,
