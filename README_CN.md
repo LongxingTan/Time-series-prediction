@@ -238,6 +238,7 @@ def build_model():
 
 - [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022-百度风机功率预测第3名
 - [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
+- 更多示例参考[examples](./examples)
 
 <!-- - [RNN]()
 - [DeepAR]()

@@ -238,6 +238,8 @@ def build_model():
 
 - [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022-wind power forecasting
 - [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Tianchi-ENSO index prediction 2021
+- [More examples ...](./examples)
+
 
 <!-- ### Performance
 
@@ -265,8 +267,6 @@ def build_model():
 - [Uncertainty prediction](examples/run_uncertainty.py)
 - [Parameters tuning by optuna](examples/run_optuna_tune.py)
 - [Serving by tf-serving](./examples) -->
-
-For other DL frameworks, try [pytorch-forecasting](https://github.com/jdb78/pytorch-forecasting), [gluonts](https://github.com/awslabs/gluonts), [paddlets](https://github.com/PaddlePaddle/PaddleTS)
 
 
 ## Citation
