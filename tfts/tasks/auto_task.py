@@ -76,7 +76,7 @@ class AnomalyHead(tf.keras.layers.Layer):
 
         errors = y_pred - y_test
 
-        mean = np.mean(errors)
+        mean = sum(errors) / len(errors)
         cov = 0  # Initialize covariance matrix
 
         # Calculate covariance using NumPy operations
