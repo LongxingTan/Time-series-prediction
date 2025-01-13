@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 import logging
 import os
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ class Trainer(object):
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential],
+        model,
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
         optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
@@ -64,8 +64,6 @@ class Trainer(object):
             The validation data loader, by default None.
         epochs : int, optional
             The number of epochs to train the model, by default 10.
-        batch_size : int, optional
-            The batch size to use for training, by default 8.
         learning_rate : float, optional
             The initial learning rate for the optimizer, by default 3e-4.
         verbose : int, optional
@@ -79,6 +77,8 @@ class Trainer(object):
         stop_no_improve_epochs : Optional[int], optional
             If provided, training will stop if the validation metric does not improve for the specified
             number of epochs, by default None.
+        max_grad_norm : float, optional
+            the max gradient while backprop.
         transform : Optional[Callable], optional
             A function to transform the data before feeding it to the model, by default None.
         """
@@ -133,7 +133,7 @@ class Trainer(object):
         # self.export_model(model_dir, only_pb=True)  # save the model
 
     def train_loop(self, train_loader):
-        train_loss = 0.0
+        train_loss: float = 0.0
         y_trues, y_preds = [], []
 
         for step, (x_train, y_train) in enumerate(train_loader):
@@ -222,18 +222,24 @@ class KerasTrainer(object):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
-        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        loss_fn: Union[Callable, tf.keras.losses.Loss] = tf.keras.losses.MeanSquaredError(),
         optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.Optimizer] = None,
-        strategy: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        strategy: Optional[tf.distribute.Strategy] = None,
         run_eagerly: bool = True,
-        **kwargs: Dict,
+        **kwargs: Dict[str, object],
     ) -> None:
         """
-        model: tf.keras.Model instance
-        loss: loss function
-        optimizer: tf.keras.Optimizer instance
-        run_eagerly: it depends on which one is much faster
+        Initializes the trainer with the model, loss function, optimizer, and other optional parameters.
+
+        Args:
+            model: A Keras Model or Sequential instance to train.
+            loss_fn: A callable or Keras loss function. Default is MeanSquaredError.
+            optimizer: A Keras optimizer instance. Default is Adam with learning rate 0.003.
+            lr_scheduler: Optional learning rate scheduler.
+            strategy: Optional distribution strategy for multi-GPU or multi-node training.
+            run_eagerly: Whether to run eagerly. Default is True.
+            **kwargs: Additional arguments that are passed to the instance as attributes.
         """
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
@@ -248,30 +254,44 @@ class KerasTrainer(object):
 
     def train(
         self,
-        train_dataset,
-        valid_dataset=None,
+        train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
+        valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
-        callback_metrics: Optional[List] = None,
-        early_stopping: Optional[bool] = None,
-        checkpoint=None,
+        callback_metrics: Optional[List[tf.keras.metrics.Metric]] = None,
+        early_stopping: Optional[tf.keras.callbacks.Callback] = None,
+        checkpoint: Optional[tf.keras.callbacks.Callback] = None,
         verbose: int = 1,
-        **kwargs: Dict,
-    ):
+        **kwargs: Dict[str, object],
+    ) -> tf.keras.callbacks.History:
         """
-        train_dataset: tf.data.Dataset instance, or [x_train, y_train]
-        valid_dataset: None or tf.data.Dataset instance, or [x_valid, y_valid]
-        transform2label: transform function from logit to label
+        Trains the model on the provided dataset.
+
+        Args:
+            train_dataset: A tf.data.Dataset or list/tuple of tensors (x_train, y_train).
+            valid_dataset: A tf.data.Dataset or list/tuple of tensors (x_valid, y_valid), optional.
+            epochs: Number of epochs to train for. Default is 10.
+            batch_size: Number of samples per batch. Default is 64.
+            steps_per_epoch: Number of steps per epoch. Optional.
+            callback_metrics: List of metrics for monitoring during training. Optional.
+            early_stopping: Early stopping callback, optional.
+            checkpoint: Checkpoint callback, optional.
+            verbose: Verbosity level. Default is 1.
+            **kwargs: Additional keyword arguments for callbacks.
+
+        Returns:
+            A History object containing training logs.
         """
-        callbacks = []
+
+        callbacks: List[tf.keras.callbacks.Callback] = []
         if early_stopping is not None:
             callbacks.append(early_stopping)
         if checkpoint is not None:
             callbacks.append(checkpoint)
         if "callbacks" in kwargs:
             callbacks += kwargs.get("callbacks")
-            logger.info("callback", callbacks)
+            logger.info("Callbacks: ", callbacks)
 
         # if self.strategy is None:
         #     self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
@@ -287,10 +307,8 @@ class KerasTrainer(object):
             if isinstance(train_dataset, tf.data.Dataset):
                 # first 0 choose the batch, second 0 choose the x
                 x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
-                if isinstance(x, dict):
-                    inputs = {key: Input(item.shape[1:]) for key, item in x.items()}
-                else:
-                    inputs = Input(x.shape[1:])
+                inputs = self._prepare_inputs(x)
+
             elif isinstance(train_dataset, (list, tuple)):
                 # for encoder only model, single array inputs
                 if isinstance(train_dataset[0], (np.ndarray, pd.DataFrame)):
@@ -310,15 +328,15 @@ class KerasTrainer(object):
                 raise ValueError("tfts model should have build_model func")
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
-        # print(self.model.summary())
         logger.info(f"Trainable parameters: {trainable_params}")
+
         self.model.compile(
             loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eagerly
         )
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
 
-            self.history = self.model.fit(
+            history = self.model.fit(
                 x_train,
                 y_train,
                 validation_data=valid_dataset,
@@ -329,7 +347,7 @@ class KerasTrainer(object):
                 callbacks=callbacks,
             )
         else:
-            self.history = self.model.fit(
+            history = self.model.fit(
                 train_dataset,
                 validation_data=valid_dataset,
                 steps_per_epoch=steps_per_epoch,
@@ -338,16 +356,16 @@ class KerasTrainer(object):
                 verbose=verbose,
                 callbacks=callbacks,
             )
-        return self.history
+        return history
 
-    def predict(self, x_test, batch_size: int = 1):
+    def predict(self, x_test: tf.Tensor) -> tf.Tensor:
         y_test_pred = self.model(x_test)
         return y_test_pred
 
-    def get_model(self):
+    def get_model(self) -> tf.keras.Model:
         return self.model
 
-    def save_model(self, model_dir, save_weights_only: bool = True, checkpoint_dir: Optional[str] = None):
+    def save_model(self, model_dir: str, save_weights_only: bool = True, checkpoint_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
             logger.info("checkpoint Loaded", checkpoint_dir)
@@ -361,21 +379,38 @@ class KerasTrainer(object):
         logger.info("protobuf model successfully saved in {}".format(model_dir))
 
         if not save_weights_only:
-            self.model.save_weights("{}.ckpt".format(model_dir))
-            logger.info("model weights successfully saved in {}.ckpt".format(model_dir))
+            self.model.save_weights(f"{model_dir}.ckpt")
+            logger.info(f"model weights successfully saved in {model_dir}.ckpt")
         return
 
-    def plot(self, history, true, pred):
+    def plot(self, history, true: np.ndarray, pred: np.ndarray):
         import matplotlib.pyplot as plt
 
         train_length = history.shape[1]
         pred_length = true.shape[1]
         example = np.random.choice(range(history.shape[0]))
 
-        plt.plot(range(train_length), history[example, :, 0], label="history")
-        plt.plot(range(train_length, train_length + pred_length), true[example, :, 0], label="true")
-        plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="pred")
+        plt.plot(range(train_length), history[example, :, 0], label="History")
+        plt.plot(range(train_length, train_length + pred_length), true[example, :, 0], label="True")
+        plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="Predicted")
         plt.legend()
+
+    def _prepare_inputs(
+        self, x: Union[np.ndarray, pd.DataFrame]
+    ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
+        """
+        Prepares the input layer(s) based on the shape of the provided data.
+
+        Args:
+            x: Input data (either a NumPy array or a Pandas DataFrame).
+
+        Returns:
+            The corresponding Keras Input layers.
+        """
+        if isinstance(x, dict):
+            return {key: Input(item.shape[1:]) for key, item in x.items()}
+        else:
+            return Input(x.shape[1:])
 
 
 class Seq2seqKerasTrainer(KerasTrainer):

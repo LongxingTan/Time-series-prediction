@@ -18,7 +18,7 @@ class AutoFormerTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
     def test_encoder(self):
-        kernel_size = 32
+        kernel_size = 25
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1
@@ -29,7 +29,7 @@ class AutoFormerTest(unittest.TestCase):
         self.assertEqual(y.shape, (2, 100, hidden_size))
 
     def test_decoder_layer(self):
-        kernel_size = 32
+        kernel_size = 25
         hidden_size = 64
         num_attention_heads = 4
         attention_probs_dropout_prob = 0.1

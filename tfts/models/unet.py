@@ -14,7 +14,7 @@ from .base import BaseConfig, BaseModel
 
 
 class UnetConfig(BaseConfig):
-    model_type = "unet"
+    model_type: str = "unet"
 
     def __init__(self):
         super(UnetConfig, self).__init__()
@@ -23,9 +23,10 @@ class UnetConfig(BaseConfig):
 class Unet(BaseModel):
     """Unet model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=UnetConfig()):
+    def __init__(self, predict_sequence_length: int = 1, config=None):
         super(Unet, self).__init__()
-
+        if config is None:
+            config = UnetConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 
@@ -40,8 +41,6 @@ class Unet(BaseModel):
         Parameters
         ----------
         x : _type_
-            _description_
-        predict_seq_length : _type_
             _description_
         training : bool, optional
             _description_, by default True

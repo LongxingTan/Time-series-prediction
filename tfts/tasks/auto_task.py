@@ -29,9 +29,9 @@ class ClassificationHead(tf.keras.layers.Layer):
     def __init__(self, num_labels: int = 1):
         super(ClassificationHead, self).__init__()
         self.pooling = GlobalAveragePooling1D()
-        self.dense = Dense(num_labels)
+        self.dense = Dense(num_labels, activateion="softmax")
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor):
         """classification task head
 
         Parameters
@@ -42,7 +42,7 @@ class ClassificationHead(tf.keras.layers.Layer):
         Returns
         -------
         tf.Tensor
-            _description_
+            logits of the classification
         """
         pooled_output = self.pooling(inputs)
         logits = self.dense(pooled_output)

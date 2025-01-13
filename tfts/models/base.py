@@ -7,6 +7,7 @@ import logging
 import os
 from typing import Any, Dict, Union
 
+from flatbuffers.flexbuffers import Object
 import tensorflow as tf
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class BaseModel(ABC):
     """Base class for tfts model."""
 
-    def __init__(self, config=None, predict_sequence_length=1):
+    def __init__(self, predict_sequence_length: int = 1, config=None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later
@@ -37,7 +38,7 @@ class BaseModel(ABC):
         model.load_weights(weights_dir, os.path.join(weights_dir, "model.h5"))  # Load weights
         return model
 
-    def build_model(self, inputs):
+    def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
         outputs = self.model(inputs)
         # to handles the Keras symbolic tensors for tf2.3.1
         self.model = tf.keras.Model([inputs], [outputs])
@@ -89,16 +90,16 @@ class BaseConfig(ABC):
     def __init__(self, **kwargs):
         self.update(kwargs)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Object):
         mapped_key = self.attribute_map.get(key, key)
         super().__setattr__(mapped_key, value)
 
-    def __getattribute__(self, key):
+    def __getattribute__(self, key: str):
         if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
         return super().__getattribute__(key)
 
-    def update(self, config_dict):
+    def update(self, config_dict: Dict[str, Object]):
         for key, value in config_dict.items():
             try:
                 setattr(self, key, value)
@@ -130,12 +131,12 @@ class BaseConfig(ABC):
         return cls(**config_dict)
 
     @classmethod
-    def from_pretrained(cls, pretrained_path):
+    def from_pretrained(cls, pretrained_path: Union[str, os.PathLike]):
         with open(pretrained_path, "r") as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
-    def save_pretrained(self, save_path):
+    def save_pretrained(self, save_path: Union[str, os.PathLike]):
         with open(save_path, "w") as file:
             json.dump(self.to_dict(), file, indent=4)
 
