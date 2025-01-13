@@ -23,7 +23,7 @@ class Trainer(object):
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential],
+        model,
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
         optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
