@@ -60,7 +60,8 @@ def run_train(args):
 
     trainer = KerasTrainer(model)
     trainer.train((x_test, y_test), (x_test, y_test), epochs=args.epochs)
-    model.save_weights(args.output_dir)
+    # model.save_weights(args.output_dir)
+    trainer.save_model(args.output_dir)
     return
 
 
@@ -87,9 +88,7 @@ def run_inference(args):
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
 
-    model = AutoModelForAnomaly.from_pretrained(
-        weights_dir=args.output_dir, predict_sequence_length=args.predict_sequence_length
-    )
+    model = AutoModelForAnomaly.from_pretrained(weights_dir=args.output_dir)
     det = model.detect(x_test, y_test)
     return sig, det
 

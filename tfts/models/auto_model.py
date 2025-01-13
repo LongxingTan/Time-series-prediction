@@ -90,9 +90,10 @@ class AutoModel(BaseModel):
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at {config_path}")
 
-        config = BaseConfig.from_json(config_path)  # Load config from JSON
-        model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
-        model.load_weights(os.path.join(weights_dir, "weights.h5"))  # Load weights
+        # config = BaseConfig.from_json(config_path)  # Load config from JSON
+        # model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
+        # model.load_weights(os.path.join(weights_dir, "weights.h5"))  # Load weights
+        model = tf.keras.models.load_model(weights_dir)
         return model
 
     def save_pretrained(self):
@@ -102,9 +103,13 @@ class AutoModel(BaseModel):
 class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
-    def __call__(self, x):
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        return_dict: Optional[bool] = None,
+    ):
 
-        model_output = super().__call__(x)
+        model_output = super().__call__(x, return_dict=return_dict)
 
         if self.config.skip_connect_circle:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
@@ -121,8 +126,9 @@ class AutoModelForClassification(AutoModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        return_dict: Optional[bool] = None,
     ):
-        return super().__call__(x)
+        return super().__call__(x, return_dict=return_dict)
 
 
 class AutoModelForAnomaly(AutoModel):
@@ -141,6 +147,17 @@ class AutoModelForAnomaly(AutoModel):
         dist = self.head(model_output, labels)
         return dist
 
+    @classmethod
+    def from_pretrained(cls, weights_dir: str):
+        model = tf.keras.models.load_model(weights_dir)
+        logger.info(f"Load model from {weights_dir}")
+        config_path = os.path.join(weights_dir, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
+        config = BaseConfig.from_json(config_path)  # Load config from JSON
+        return cls(model, config)
+
 
 class AutoModelForSegmentation(AutoModel):
     """tfts model for time series segmentation"""
@@ -148,8 +165,9 @@ class AutoModelForSegmentation(AutoModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        return_dict: Optional[bool] = None,
     ):
-        model_output = self.model(x)
+        model_output = self.model(x, return_dict=return_dict)
         return model_output
 
 
@@ -159,6 +177,7 @@ class AutoModelForUncertainty(AutoModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        return_dict: Optional[bool] = None,
     ):
-        model_output = self.model(x)
+        model_output = self.model(x, return_dict=return_dict)
         return model_output
