@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, Flatten, Lambda
+from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Flatten, Lambda, ReLU
 
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
@@ -130,14 +130,21 @@ class Encoder(object):
 
             split_layer = Lambda(lambda x: tf.split(x, 2, axis=2))
             conv_filter, conv_gate = split_layer(dilated_conv)
-            dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
+            # dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
+            dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
             outputs = self.dense_time2(inputs=dilated_conv)
-            skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
+            # skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
+            split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
+            skips, residuals = split_layer(outputs)
             inputs += residuals
             conv_inputs.append(inputs)  # batch_size * time_sequence_length * filters
             skip_outputs.append(skips)
 
-        skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
+        # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
+        concat_layer = Concatenate(axis=2)
+        concatenated = concat_layer(skip_outputs)
+        relu_layer = ReLU()
+        skip_outputs = relu_layer(concatenated)
         h = self.dense_time3(skip_outputs)
         # y_hat = self.dense_time4(h)
         return conv_inputs[:-1], h
