@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Flatten, Lambda, ReLU
@@ -19,23 +19,34 @@ class TCNConfig(BaseConfig):
 
     def __init__(
         self,
-        dilation_rates=[2**i for i in range(4)],
-        kernel_sizes=[2 for i in range(4)],
-        filters=128,
-        dense_hidden_size=64,
+        dilation_rates: Tuple[int] = [2**i for i in range(4)],
+        kernel_sizes: Tuple[int] = [2 for _ in range(4)],
+        filters: int = 128,
+        dense_hidden_size: int = 64,
     ):
-        super(TCNConfig, self).__init__()
-        self.dilation_rates = dilation_rates
-        self.kernel_sizes = kernel_sizes
-        self.filters = filters
-        self.dense_hidden_size = dense_hidden_size
+        """
+        Initializes the configuration for the Temporal Convolutional Network (TCN) model with the specified parameters.
+
+        Args:
+            dilation_rates: List of dilation rates for each layer.
+            kernel_sizes: List of kernel sizes for each convolutional layer.
+            filters: The number of filters (channels) in each convolutional layer.
+            dense_hidden_size: The size of the dense hidden layer.
+        """
+        super().__init__()
+        self.dilation_rates: Tuple[int] = dilation_rates
+        self.kernel_sizes: Tuple[int] = kernel_sizes
+        self.filters: int = filters
+        self.dense_hidden_size: int = dense_hidden_size
 
 
 class TCN(BaseModel):
     """Temporal convolutional network"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=TCNConfig()) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
         super(TCN, self).__init__()
+        if config is None:
+            config = TCNConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
@@ -122,7 +133,7 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
-    def __call__(self, x):
+    def __call__(self, x: tf.Tensor):
         inputs = self.dense_time1(inputs=x)  # batch_size * time_sequence_length * filters
 
         skip_outputs = []

@@ -26,56 +26,75 @@ from .base import BaseConfig, BaseModel
 
 
 class BertConfig(BaseConfig):
-    model_type = "bert"
+
+    model_type: str = "bert"
 
     def __init__(
         self,
-        hidden_size=64,
-        num_hidden_layers=2,
-        num_attention_heads=4,
-        ffn_intermediate_size=256,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        max_position_embeddings=512,
-        type_vocab_size=2,
-        initializer_range=0.02,
-        layer_norm_eps=1e-12,
-        pad_token_id=0,
-        position_embedding_type="absolute",
-        use_cache=True,
-        classifier_dropout=None,
-        **kwargs,
-    ):
+        hidden_size: int = 64,
+        num_hidden_layers: int = 2,
+        num_attention_heads: int = 4,
+        ffn_intermediate_size: int = 256,
+        hidden_act: str = "gelu",
+        hidden_dropout_prob: float = 0.1,
+        attention_probs_dropout_prob: float = 0.1,
+        max_position_embeddings: int = 512,
+        type_vocab_size: int = 2,
+        initializer_range: float = 0.02,
+        layer_norm_eps: float = 1e-12,
+        pad_token_id: int = 0,
+        position_embedding_type: str = "absolute",
+        use_cache: bool = True,
+        classifier_dropout: Optional[float] = None,
+        **kwargs: Dict[str, object]
+    ) -> None:
+        """Configuration class for BERT model, inheriting from BaseConfig.
 
-        super(BertConfig, self).__init__(**kwargs)
+        Args:
+            hidden_size: The size of the hidden layers. Default is 64.
+            num_hidden_layers: The number of hidden layers in the transformer encoder. Default is 2.
+            num_attention_heads: The number of attention heads in each attention layer. Default is 4.
+            ffn_intermediate_size: The size of the intermediate (feed-forward) layer. Default is 256.
+            hidden_act: The activation function for hidden layers. Default is "gelu".
+            hidden_dropout_prob: The dropout probability for hidden layers. Default is 0.1.
+            attention_probs_dropout_prob: The dropout probability for attention probabilities. Default is 0.1.
+            max_position_embeddings: The maximum length of the input sequences. Default is 512.
+            type_vocab_size: The vocabulary size for token types (usually 2). Default is 2.
+            initializer_range: The standard deviation for weight initialization. Default is 0.02.
+            layer_norm_eps: The epsilon value for layer normalization. Default is 1e-12.
+            pad_token_id: The ID for the padding token. Default is 0.
+            position_embedding_type: The type of position embedding ("absolute" or "relative"). Default is "absolute".
+            use_cache: Whether to use the cache during inference. Default is True.
+            classifier_dropout: Dropout probability for the classifier layer. Default is None.
+            **kwargs: Additional keyword arguments passed to the parent `BaseConfig` class.
+        """
 
-        self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
-        self.num_attention_heads = num_attention_heads
-        self.hidden_act = hidden_act
-        self.ffn_intermediate_size = ffn_intermediate_size
-        self.hidden_dropout_prob = hidden_dropout_prob
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.max_position_embeddings = max_position_embeddings
-        self.type_vocab_size = type_vocab_size
-        self.initializer_range = initializer_range
-        self.layer_norm_eps = layer_norm_eps
-        self.position_embedding_type = position_embedding_type
-        self.use_cache = use_cache
-        self.classifier_dropout = classifier_dropout
-        self.pad_token_id = pad_token_id
+        super().__init__(**kwargs)
+
+        self.hidden_size: int = hidden_size
+        self.num_hidden_layers: int = num_hidden_layers
+        self.num_attention_heads: int = num_attention_heads
+        self.ffn_intermediate_size: int = ffn_intermediate_size
+        self.hidden_act: str = hidden_act
+        self.hidden_dropout_prob: float = hidden_dropout_prob
+        self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
+        self.max_position_embeddings: int = max_position_embeddings
+        self.type_vocab_size: int = type_vocab_size
+        self.initializer_range: float = initializer_range
+        self.layer_norm_eps: float = layer_norm_eps
+        self.position_embedding_type: str = position_embedding_type
+        self.use_cache: bool = use_cache
+        self.classifier_dropout: Optional[float] = classifier_dropout
+        self.pad_token_id: int = pad_token_id
 
 
 class Bert(BaseModel):
     """Bert model for time series"""
 
-    def __init__(
-        self,
-        predict_sequence_length: int = 1,
-        config=BertConfig(),
-    ) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
         super(Bert, self).__init__()
+        if config is None:
+            config = BertConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

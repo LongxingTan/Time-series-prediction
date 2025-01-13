@@ -3,7 +3,7 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -29,28 +29,41 @@ class RNNConfig(BaseConfig):
 
     def __init__(
         self,
-        rnn_hidden_size=64,
-        rnn_type="gru",
-        bi_direction=False,
-        dense_hidden_size=32,
-        num_stacked_layers=1,
-        scheduled_sampling=0,
-        use_attention=False,
-    ):
+        rnn_hidden_size: int = 64,
+        rnn_type: Literal["gru", "lstm"] = "gru",
+        bi_direction: bool = False,
+        dense_hidden_size: int = 32,
+        num_stacked_layers: int = 1,
+        scheduled_sampling: float = 0.0,
+        use_attention: bool = False,
+    ) -> None:
+        """
+        Initializes the configuration for the RNN model with the specified parameters.
+
+        Args:
+            rnn_hidden_size: The number of units in the RNN hidden layer.
+            rnn_type: Type of RNN ('gru' or 'lstm').
+            bi_direction: Whether to use bidirectional RNN.
+            dense_hidden_size: The size of the dense hidden layer following the RNN.
+            num_stacked_layers: The number of stacked RNN layers.
+            scheduled_sampling: Scheduled sampling ratio.
+            use_attention: Whether to use attention mechanism.
+        """
         super().__init__()
-        self.rnn_hidden_size = rnn_hidden_size
-        self.rnn_type = rnn_type
-        self.bi_direction = bi_direction
-        self.dense_hidden_size = dense_hidden_size
-        self.num_stacked_layers = num_stacked_layers
-        self.scheduled_sampling = scheduled_sampling
-        self.use_attention = use_attention
+
+        self.rnn_hidden_size: int = rnn_hidden_size
+        self.rnn_type: Literal["gru", "lstm"] = rnn_type
+        self.bi_direction: bool = bi_direction
+        self.dense_hidden_size: int = dense_hidden_size
+        self.num_stacked_layers: int = num_stacked_layers
+        self.scheduled_sampling: float = scheduled_sampling
+        self.use_attention: bool = use_attention
 
 
 class RNN(BaseModel):
     """tfts RNN model"""
 
-    def __init__(self, config=None, predict_sequence_length: int = 1):
+    def __init__(self, predict_sequence_length: int = 1, config=None):
         super().__init__(config)
         if config is None:
             config = RNNConfig()

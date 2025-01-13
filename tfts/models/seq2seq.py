@@ -54,8 +54,10 @@ class Seq2seqConfig(BaseConfig):
 class Seq2seq(BaseModel):
     """Seq2seq model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=Seq2seqConfig()):
+    def __init__(self, predict_sequence_length: int = 1, config=None):
         super(Seq2seq, self).__init__()
+        if config is None:
+            config = Seq2seqConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(

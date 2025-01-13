@@ -81,7 +81,9 @@ config: Dict[str, Any] = {
 class AutoFormer(object):
     """AutoFormer model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=AutoFormerConfig()) -> None:
+    def __init__(self, config=None, predict_sequence_length: int = 1) -> None:
+        if config is None:
+            config = AutoFormerConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

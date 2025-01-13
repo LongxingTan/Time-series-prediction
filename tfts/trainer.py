@@ -358,8 +358,8 @@ class KerasTrainer(object):
             )
         return history
 
-    def predict(self, x_test: tf.Tensor, batch_size: int = 1) -> tf.Tensor:
-        y_test_pred = self.model(x_test, batch_size=batch_size)
+    def predict(self, x_test: tf.Tensor) -> tf.Tensor:
+        y_test_pred = self.model(x_test)
         return y_test_pred
 
     def get_model(self) -> tf.keras.Model:
