@@ -20,7 +20,16 @@ class MovingAvg(tf.keras.layers.Layer):
         self.stride = stride
         self.avg = AveragePooling1D(pool_size=kernel_size, strides=stride, padding="valid")
 
-    def call(self, inputs: tf.Tensor):
+    def call(self, inputs):
+        """
+        Perform moving average for sequence
+
+        Args:
+            inputs: Input tensor.
+
+        Returns:
+            Output tensor.
+        """
         front = tf.tile(inputs[:, :1, :], [1, (self.kernel_size - 1) // 2, 1])
         end = tf.tile(inputs[:, -1:, :], [1, (self.kernel_size - 1) // 2, 1])
         x = tf.concat([front, inputs, end], axis=1)

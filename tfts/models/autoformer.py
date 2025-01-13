@@ -25,7 +25,7 @@ class AutoFormerConfig(object):
 
     def __init__(
         self,
-        kernel_size=32,
+        kernel_size=25,
         hidden_size=64,
         num_layers=1,
         num_decoder_layers=None,
