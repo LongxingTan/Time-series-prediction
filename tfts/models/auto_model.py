@@ -85,7 +85,7 @@ class AutoModel(BaseModel):
         return cls(model, config)
 
     @classmethod
-    def from_pretrained(cls, weights_dir, predict_sequence_length: int = 1):
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
         config_path = os.path.join(weights_dir, "config.json")
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at {config_path}")
@@ -148,7 +148,7 @@ class AutoModelForAnomaly(AutoModel):
         return dist
 
     @classmethod
-    def from_pretrained(cls, weights_dir: str):
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike]):
         model = tf.keras.models.load_model(weights_dir)
         logger.info(f"Load model from {weights_dir}")
         config_path = os.path.join(weights_dir, "config.json")

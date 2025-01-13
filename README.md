@@ -237,7 +237,7 @@ def build_model():
 ## Examples
 
 - [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022-wind power forecasting
-- [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Tianchi-ENSO prediction 2021
+- [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Tianchi-ENSO index prediction 2021
 
 <!-- ### Performance
 

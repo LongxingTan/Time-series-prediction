@@ -28,11 +28,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 class AutoConfig(BaseConfig):
     """AutoConfig for tfts model"""
 
-    def __init__(self, **kwargs):
-        super(AutoConfig, self).__init__(**kwargs)
+    def __init__(self, **kwargs: Dict[str, object]):
+        super().__init__(**kwargs)
 
     @classmethod
-    def for_model(cls, model_name: str, *args, **kwargs):
+    def for_model(cls, model_name: str):
 
         if model_name in CONFIG_MAPPING_NAMES:
             class_name = CONFIG_MAPPING_NAMES[model_name]
@@ -45,5 +45,5 @@ class AutoConfig(BaseConfig):
         )
 
     @classmethod
-    def from_pretrained(cls, pretrained_path, **kwargs):
+    def from_pretrained(cls, pretrained_path: Union[str, os.PathLike], **kwargs):
         return
