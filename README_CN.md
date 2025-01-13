@@ -34,9 +34,9 @@
 青山遮不住，毕竟东流去。江晚正愁余，山深闻鹧鸪。<br>
 **东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列框架，基于TensorFlow/ Keras。
 
-- 为多种时间序列任务提供SOTA的深度学习模型，预测、分类、异常检测
-- 提供经典与前沿的深度学习模型，用于工业、科研、竞赛
-- 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
+- 为多种时间序列任务(单步与多步预测、分类、异常检测等)提供SOTA的深度学习模型
+- 提供经典与前沿的深度学习模型，可用于工业、科研、竞赛
+- 查阅[文档](https://time-series-prediction.readthedocs.io)，快速入门。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
 
 
 ## 快速使用

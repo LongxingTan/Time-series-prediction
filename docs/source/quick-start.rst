@@ -78,7 +78,6 @@ The general setup for training and testing a model is
 Before training, ensure your raw data is preprocessed into a 3D format with the shape `(batch_size, train_steps, features)`. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
 
 
-
 3.2 Train the Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training the model, use appropriate loss functions, optimizers, and hyperparameters to achieve the best results.
