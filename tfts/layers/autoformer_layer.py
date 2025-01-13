@@ -45,9 +45,11 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
     def __init__(self, d_model: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
         super().__init__()
+        if d_model % num_attention_heads != 0:
+            raise ValueError(f"Hidden size {d_model} must be divisible by the number of heads {num_attention_heads}.")
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads
-        self.depth = d_model // num_attention_heads
+        self.hidden_size = d_model // num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
@@ -63,16 +65,16 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        q : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        q : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Queries.
-        k : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        k : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Keys.
-        v : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        v : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Values.
 
         Returns
         -------
-        Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Time-delayed autocorrelation between queries and keys.
         """
         batch_size = tf.shape(q)[0]
@@ -96,7 +98,6 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
         for i in range(top_k):
             pattern = tf.gather(tmp_values, init_index + tf.expand_dims(indices[..., i], -1), axis=-1, batch_dims=-1)
-            # print(pattern.shape, tmp_corr.shape)
             delays_agg = delays_agg + pattern * (tf.expand_dims(tmp_corr[..., i], axis=-1))
         return delays_agg
 
