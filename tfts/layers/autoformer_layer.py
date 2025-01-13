@@ -85,7 +85,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         R_qk = tf.signal.irfft(S_qk)
 
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
-        init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.depth, 1])
+        init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.hidden_size, 1])
         top_k = int(2 * tf.math.log(tf.cast(time_steps, tf.float32)))
         # mean_value = tf.reduce_mean(R_qk, axis=1)
         weights, indices = tf.math.top_k(R_qk, top_k)
@@ -102,7 +102,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         return delays_agg
 
     def split_heads(self, x, batch_size):
-        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.depth))
+        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.hidden_size))
         return tf.transpose(x, perm=[0, 2, 1, 3])  # (batch_size, num_attention_heads, timesteps, depth)
 
     def call(self, q, k, v, dynamic=True):
