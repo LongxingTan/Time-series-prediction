@@ -1,10 +1,13 @@
 # Release notes
 
-## v0.0.12
-### Changed
-- transformers style API
+## v.0.0.14
+- support training style of transformers
 
-### Fixed
+## v0.0.13
+- support cnn/rnn model for keras3
+
+## v0.0.12
+- transformers style API
 - pandas version conflict
 
 

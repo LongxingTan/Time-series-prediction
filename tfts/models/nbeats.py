@@ -13,7 +13,7 @@ from .base import BaseConfig, BaseModel
 
 
 class NbeatsConfig(BaseConfig):
-    model_type = "nbeats"
+    model_type: str = "nbeats"
 
     def __init__(
         self,
@@ -39,9 +39,11 @@ class NBeats(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=NbeatsConfig(),
+        config=None,
     ):
-        super(NBeats, self).__init__()
+        if config is None:
+            config = NbeatsConfig()
+        super(NBeats, self).__init__(config)
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

@@ -21,7 +21,7 @@ class AutoFormerConfig(object):
     Configuration class to store the configuration of a [`AutoFormer`]
     """
 
-    model_type = "autoformer"
+    model_type: str = "autoformer"
 
     def __init__(
         self,
@@ -81,7 +81,9 @@ config: Dict[str, Any] = {
 class AutoFormer(object):
     """AutoFormer model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=AutoFormerConfig()) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
+        if config is None:
+            config = AutoFormerConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 

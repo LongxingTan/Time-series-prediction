@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
 from tfts.layers.attention_layer import Attention
 from tfts.layers.cnn_layer import ConvTemp
@@ -20,37 +20,55 @@ logger = logging.getLogger(__name__)
 
 
 class WaveNetConfig(BaseConfig):
-    model_type = "wavenet"
+    model_type: str = "wavenet"
 
     def __init__(
         self,
-        dilation_rates=[2**i for i in range(4)],
-        kernel_sizes=[2 for i in range(4)],
-        filters=128,
-        dense_hidden_size=64,
-        scheduled_sampling=1,
-        use_attention=False,
-        attention_size=64,
-        num_attention_heads=2,
-        attention_probs_dropout_prob=0,
-    ):
+        dilation_rates: List[int] = [2**i for i in range(4)],
+        kernel_sizes: List[int] = [2 for i in range(4)],
+        filters: int = 128,
+        dense_hidden_size: int = 64,
+        scheduled_sampling: float = 1.0,
+        use_attention: bool = False,
+        attention_size: int = 64,
+        num_attention_heads: int = 2,
+        attention_probs_dropout_prob: float = 0.0,
+        **kwargs,
+    ) -> None:
+        """
+        Initializes the configuration for the WaveNet model with the specified parameters.
+
+        Args:
+            dilation_rates: List of dilation rates for the convolutional layers.
+            kernel_sizes: List of kernel sizes for the convolutional layers.
+            filters: The number of filters in the convolutional layers.
+            dense_hidden_size: The size of the dense hidden layer following the convolutional layers.
+            scheduled_sampling: Scheduled sampling ratio. 0 means teacher forcing, 1 means use last prediction
+            use_attention: Whether to use attention mechanism in the model.
+            attention_size: The size of the attention mechanism.
+            num_attention_heads: The number of attention heads.
+            attention_probs_dropout_prob: Dropout probability for attention probabilities.
+        """
         super(WaveNetConfig, self).__init__()
-        self.dilation_rates = dilation_rates
-        self.kernel_sizes = kernel_sizes
-        self.filters = filters
-        self.dense_hidden_size = dense_hidden_size
-        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
-        self.use_attention = use_attention
-        self.attention_size = attention_size
-        self.num_attention_heads = num_attention_heads
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+
+        self.dilation_rates: List[int] = dilation_rates
+        self.kernel_sizes: List[int] = kernel_sizes
+        self.filters: int = filters
+        self.dense_hidden_size: int = dense_hidden_size
+        self.scheduled_sampling: float = scheduled_sampling
+        self.use_attention: bool = use_attention
+        self.attention_size: int = attention_size
+        self.num_attention_heads: int = num_attention_heads
+        self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
 
 
 class WaveNet(BaseModel):
     """WaveNet model for time series"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=WaveNetConfig()) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
         super(WaveNet, self).__init__()
+        if config is None:
+            config = WaveNetConfig()
 
         self.config = config
         self.predict_sequence_length = predict_sequence_length
@@ -152,6 +170,7 @@ class DecoderV1(object):
     def __init__(
         self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
     ) -> None:
+        self.filters: int = filters
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
         self.dense1 = Dense(filters, activation="tanh")
@@ -169,7 +188,7 @@ class DecoderV1(object):
         teacher: Optional[tf.Tensor] = None,
         scheduled_sampling: float = 0.0,
         training: Optional[bool] = None,
-        **kwargs: Dict
+        **kwargs: Dict,
     ):
         """wavenet decoder_v1
 
@@ -216,16 +235,25 @@ class DecoderV1(object):
                 state = encoder_outputs[i][:, -dilation, :]
                 # use 2 dense layer to calculate a kernel=2 convolution
                 dilated_conv = self.dense2(state) + self.dense3(x)
-                conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
-                dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
-                out = self.dense4(dilated_conv)
-                skip, residual = tf.split(out, 2, axis=1)
-                x += residual
-                # x = residual
-                encoder_outputs[i] = tf.concat([encoder_outputs[i], tf.expand_dims(x, 1)], axis=1)
-                skip_outputs.append(skip)
+                # conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
+                split_layer = Lambda(lambda x: tf.split(x, 2, axis=1))
+                conv_filter, conv_gate = split_layer(dilated_conv)
+                # dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
+                dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
 
-            skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
+                out = self.dense4(dilated_conv)
+                # skip, residual = tf.split(out, 2, axis=1)
+                split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=1))
+                skips, residuals = split_layer(out)
+                x += residuals
+                encoder_outputs[i] = tf.concat([encoder_outputs[i], tf.expand_dims(x, 1)], axis=1)
+                skip_outputs.append(skips)
+
+            # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
+            concat_layer = Concatenate(axis=1)
+            concatenated = concat_layer(skip_outputs)
+            relu_layer = ReLU()
+            skip_outputs = relu_layer(concatenated)
             skip_outputs = self.dense5(skip_outputs)
             this_output = self.dense6(skip_outputs)
             decoder_outputs.append(this_output)
@@ -332,7 +360,7 @@ class Decoder3(tf.keras.layers.Layer):
         teacher=None,
         scheduled_sampling=0,
         training=None,
-        **kwargs
+        **kwargs,
     ):
         """_summary_
 

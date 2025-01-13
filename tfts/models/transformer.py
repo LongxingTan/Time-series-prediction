@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -21,61 +21,81 @@ logger = logging.getLogger(__name__)
 
 
 class TransformerConfig(BaseConfig):
-    model_type = "transformer"
+    model_type: str = "transformer"
 
     def __init__(
         self,
-        hidden_size=64,
-        num_layers=2,
-        num_decoder_layers=None,
-        num_attention_heads=4,
-        num_kv_heads=4,
-        ffn_intermediate_size=256,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        scheduled_sampling=1,
-        max_position_embeddings=512,
-        initializer_range=0.02,
-        layer_norm_eps=1e-12,
-        pad_token_id=0,
-        position_embedding_type="absolute",
-        use_cache=True,
-        classifier_dropout=None,
-        **kwargs,
-    ):
+        hidden_size: int = 64,
+        num_layers: int = 2,
+        num_decoder_layers: Optional[int] = None,
+        num_attention_heads: int = 4,
+        num_kv_heads: int = 4,
+        ffn_intermediate_size: int = 256,
+        hidden_act: str = "gelu",
+        hidden_dropout_prob: float = 0.1,
+        attention_probs_dropout_prob: float = 0.1,
+        scheduled_sampling: float = 1,
+        max_position_embeddings: int = 512,
+        initializer_range: float = 0.02,
+        layer_norm_eps: float = 1e-12,
+        pad_token_id: int = 0,
+        position_embedding_type: str = "absolute",
+        use_cache: bool = True,
+        classifier_dropout: Optional[float] = None,
+        **kwargs: Dict[str, object]
+    ) -> None:
+        """
+        Initializes the configuration for the Transformer model with the specified parameters.
+
+        Args:
+            hidden_size: The size of the hidden layers.
+            num_layers: The number of encoder layers.
+            num_decoder_layers: The number of decoder layers.
+            num_attention_heads: The number of attention heads.
+            num_kv_heads: The number of key-value heads.
+            ffn_intermediate_size: The size of the intermediate feed-forward layers.
+            hidden_act: The activation function for hidden layers.
+            hidden_dropout_prob: The dropout probability for hidden layers.
+            attention_probs_dropout_prob: The dropout probability for attention probabilities.
+            scheduled_sampling: Controls the use of teacher forcing vs. last prediction.
+            max_position_embeddings: The maximum length of input sequences.
+            initializer_range: The standard deviation for weight initialization.
+            layer_norm_eps: The epsilon for layer normalization.
+            pad_token_id: The ID for the padding token.
+            position_embedding_type: The type of position embeddings (absolute or relative).
+            use_cache: Whether to use cache during inference.
+            classifier_dropout: Dropout rate for classifier layers.
+            **kwargs: Additional parameters for further customization passed to the parent class.
+        """
         super(TransformerConfig, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.num_decoder_layers = num_decoder_layers if num_decoder_layers is not None else self.num_layers
-        self.num_attention_heads = num_attention_heads
-        self.num_kv_heads = num_kv_heads
-        self.hidden_act = hidden_act
-        self.ffn_intermediate_size = ffn_intermediate_size
-        self.hidden_dropout_prob = hidden_dropout_prob
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.scheduled_sampling = scheduled_sampling  # 0 means teacher forcing, 1 means use last prediction
-        self.max_position_embeddings = max_position_embeddings
-        self.initializer_range = initializer_range
-        self.layer_norm_eps = layer_norm_eps
-        self.position_embedding_type = position_embedding_type
-        self.use_cache = use_cache
-        self.classifier_dropout = classifier_dropout
-        self.pad_token_id = pad_token_id
+
+        self.hidden_size: int = hidden_size
+        self.num_layers: int = num_layers
+        self.num_decoder_layers: int = num_decoder_layers if num_decoder_layers is not None else self.num_layers
+        self.num_attention_heads: int = num_attention_heads
+        self.num_kv_heads: int = num_kv_heads
+        self.ffn_intermediate_size: int = ffn_intermediate_size
+        self.hidden_act: str = hidden_act
+        self.hidden_dropout_prob: float = hidden_dropout_prob
+        self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
+        self.scheduled_sampling: float = scheduled_sampling
+        self.max_position_embeddings: int = max_position_embeddings
+        self.initializer_range: float = initializer_range
+        self.layer_norm_eps: float = layer_norm_eps
+        self.position_embedding_type: str = position_embedding_type
+        self.use_cache: bool = use_cache
+        self.classifier_dropout: Optional[float] = classifier_dropout
+        self.pad_token_id: int = pad_token_id
 
 
 class Transformer(BaseModel):
     """Transformer model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=TransformerConfig()) -> None:
-        """Transformer for time series
-
-        :param custom_model_config: custom model defined model hyper parameters
-        :type custom_model_config: _dict_
-        :param dynamic_decoding: _description_, defaults to True
-        :type dynamic_decoding: bool, optional
-        """
+    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
+        """Transformer for time series"""
         super(Transformer, self).__init__()
+        if config is None:
+            config = TransformerConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(self.config.hidden_size)

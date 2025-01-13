@@ -24,7 +24,7 @@ from .base import BaseConfig, BaseModel
 
 
 class InformerConfig(BaseConfig):
-    model_type = "informer"
+    model_type: str = "informer"
 
     def __init__(
         self,

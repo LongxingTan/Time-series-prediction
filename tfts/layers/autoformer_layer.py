@@ -45,9 +45,11 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
     def __init__(self, d_model: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
         super().__init__()
+        if d_model % num_attention_heads != 0:
+            raise ValueError(f"Hidden size {d_model} must be divisible by the number of heads {num_attention_heads}.")
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads
-        self.depth = d_model // num_attention_heads
+        self.hidden_size = d_model // num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
@@ -63,16 +65,16 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
         Parameters
         ----------
-        q : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        q : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Queries.
-        k : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        k : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Keys.
-        v : Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        v : Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Values.
 
         Returns
         -------
-        Tensor of shape (batch_size, num_attention_heads, timesteps, depth)
+        Tensor of shape (batch_size, num_attention_heads, time_steps, hidden_size)
             Time-delayed autocorrelation between queries and keys.
         """
         batch_size = tf.shape(q)[0]
@@ -83,7 +85,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
         R_qk = tf.signal.irfft(S_qk)
 
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
-        init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.depth, 1])
+        init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.hidden_size, 1])
         top_k = int(2 * tf.math.log(tf.cast(time_steps, tf.float32)))
         # mean_value = tf.reduce_mean(R_qk, axis=1)
         weights, indices = tf.math.top_k(R_qk, top_k)
@@ -96,12 +98,11 @@ class AutoCorrelation(tf.keras.layers.Layer):
 
         for i in range(top_k):
             pattern = tf.gather(tmp_values, init_index + tf.expand_dims(indices[..., i], -1), axis=-1, batch_dims=-1)
-            # print(pattern.shape, tmp_corr.shape)
             delays_agg = delays_agg + pattern * (tf.expand_dims(tmp_corr[..., i], axis=-1))
         return delays_agg
 
     def split_heads(self, x, batch_size):
-        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.depth))
+        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.hidden_size))
         return tf.transpose(x, perm=[0, 2, 1, 3])  # (batch_size, num_attention_heads, timesteps, depth)
 
     def call(self, q, k, v, dynamic=True):

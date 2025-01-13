@@ -45,7 +45,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model(self):
         predict_sequence_length = 8
-        model = Seq2seq(predict_sequence_length)
+        model = Seq2seq(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -53,7 +53,7 @@ class Seq2seqTest(unittest.TestCase):
 
     def test_model_gru_attn(self):
         predict_sequence_length = 8
-        model = Seq2seq(predict_sequence_length)
+        model = Seq2seq(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -62,7 +62,7 @@ class Seq2seqTest(unittest.TestCase):
     def test_model_lstm(self):
         predict_sequence_length = 8
 
-        model = Seq2seq(predict_sequence_length)
+        model = Seq2seq(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
@@ -71,7 +71,7 @@ class Seq2seqTest(unittest.TestCase):
     def test_model_lstm_gru(self):
         predict_sequence_length = 8
 
-        model = Seq2seq(predict_sequence_length)
+        model = Seq2seq(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
         y = model(x)
