@@ -53,22 +53,23 @@ Train the models
 
 .. code-block:: python
 
-	import tensorflow as tf
-	import tfts
-	from tfts import AutoModel, AutoConfig, kerasTrainer
+    import tensorflow as tf
+    import tfts
+    from tfts import AutoModel, AutoConfig, kerasTrainer
 
-	model_name = 'seq2seq
-	loss_fn = tf.keras.losses.MeanSquaredError()
-	optimizer = tf.keras.optimizers.Adam(0.003)
+    model_name = 'seq2seq
+    loss_fn = tf.keras.losses.MeanSquaredError()
+    optimizer = tf.keras.optimizers.Adam(0.003)
 
     config = AutoConfig.for_model(model_name_or_path)
-	model = AutoModel.from_config(config=config, predict_sequence_length=12)
+    model = AutoModel.from_config(config=config, predict_sequence_length=12)
 
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=optimizer)
 
     history = trainer.train(
         dataset_train, dataset_val, epochs=10, batch_size=32,
     )
+
 
 
 Custom-defined configuration

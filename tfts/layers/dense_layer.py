@@ -32,8 +32,8 @@ class DenseTemp(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[int]):
         inputs_units: int = int(input_shape[-1])  # input.get_shape().as_list()[-1]
         self.kernel = self.add_weight(
-            "kernel",
-            shape=[inputs_units, self.hidden_size],
+            name="kernel",
+            shape=(inputs_units, self.hidden_size),
             initializer=self.kernel_initializer,
             regularizer=self.kernel_regularizer,
             constraint=self.kernel_constraint,
@@ -42,7 +42,11 @@ class DenseTemp(tf.keras.layers.Layer):
         )
         if self.use_bias:
             self.bias = self.add_weight(
-                "bias", shape=[self.hidden_size], initializer=self.bias_initializer, dtype=self.dtype, trainable=True
+                name="bias",
+                shape=(self.hidden_size,),
+                initializer=self.bias_initializer,
+                dtype=self.dtype,
+                trainable=True,
             )
         super(DenseTemp, self).build(input_shape)
 
