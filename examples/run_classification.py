@@ -2,9 +2,6 @@
 
 import argparse
 
-import numpy as np
-import tensorflow as tf
-
 import tfts
 from tfts import AutoConfig, AutoModel, AutoModelForClassification, KerasTrainer
 
@@ -24,6 +21,10 @@ def parse_args():
 
 
 def run_train(args):
+    return
+
+
+def run_inference(args):
     return
 
 

@@ -8,9 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-import tensorflow as tf
 
-import tfts
 from tfts import AutoConfig, AutoModel, AutoModelForAnomaly, KerasTrainer
 
 
@@ -21,7 +19,7 @@ def parse_args():
     parser.add_argument("--use_data", type=str, default="ecg", help="dataset: sine or airpassengers")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for train")
     parser.add_argument("--predict_sequence_length", type=int, default=1, help="sequence length for predict")
-    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
     parser.add_argument("--output_dir", type=str, default="./model.h5", help="saved model weights")
@@ -57,6 +55,7 @@ def run_train(args):
     x_test, y_test, sig = build_data("ecg")
 
     config = AutoConfig.for_model(args.use_model)
+    config.train_sequence_length = args.train_length
     model = AutoModelForAnomaly.from_config(config, predict_sequence_length=1)
 
     trainer = KerasTrainer(model)

@@ -38,6 +38,11 @@ class BaseModel(ABC):
         # to handles the Keras symbolic tensors for tf2.3.1
         return tf.keras.Model([inputs], [outputs])
 
+    def to_model(self):
+        inputs = tf.keras.Input(shape=(self.config.input_shape))
+        self.model = self.build_model(inputs)
+        return self.model
+
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
             raise FileNotFoundError(f"Weights file not found at {weights_dir}")
