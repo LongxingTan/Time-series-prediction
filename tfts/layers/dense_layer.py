@@ -43,7 +43,7 @@ class DenseTemp(tf.keras.layers.Layer):
         if self.use_bias:
             self.bias = self.add_weight(
                 name="bias",
-                shape=(self.hidden_size),
+                shape=(self.hidden_size,),
                 initializer=self.bias_initializer,
                 dtype=self.dtype,
                 trainable=True,
