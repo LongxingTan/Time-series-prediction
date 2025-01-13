@@ -65,6 +65,17 @@ def run_train(args):
     return
 
 
+def run_inference(args):
+    x_test, y_test, sig = build_data("ecg")
+
+    config = AutoConfig.for_model(args.use_model)
+    config.train_sequence_length = args.train_length
+
+    model = AutoModelForAnomaly.from_pretrained(weights_dir=args.output_dir)
+    det = model.detect(x_test, y_test)
+    return sig, det
+
+
 def plot(sig, det):
     fig, axes = plt.subplots(nrows=2, figsize=(15, 10))
     axes[0].plot(sig, color="b", label="original data")
@@ -80,17 +91,6 @@ def plot(sig, det):
     axes[1].fill_between(x, y1, y2, facecolor="g", alpha=0.3)
     # plt.savefig('./anomaly.png')
     plt.show()
-
-
-def run_inference(args):
-    x_test, y_test, sig = build_data("ecg")
-
-    config = AutoConfig.for_model(args.use_model)
-    config.train_sequence_length = args.train_length
-
-    model = AutoModelForAnomaly.from_pretrained(weights_dir=args.output_dir)
-    det = model.detect(x_test, y_test)
-    return sig, det
 
 
 if __name__ == "__main__":
