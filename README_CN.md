@@ -208,6 +208,7 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 - wavenet
 - transformer
 - informer
+- dlinear
 
 </details>
 

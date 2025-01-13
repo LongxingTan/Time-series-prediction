@@ -7,11 +7,32 @@ import tensorflow as tf
 from tensorflow.keras.layers import AveragePooling1D, Conv1D, Dense, Dropout
 
 
+class MovingAvg(tf.keras.layers.Layer):
+    """
+    Moving average block to highlight the trend of time series
+    """
+
+    def __init__(self, kernel_size: int, stride: int = 1):
+        super().__init__()
+        if kernel_size % 2 != 1:
+            raise ValueError("Moving average kernel size must be an odd number")
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.avg = AveragePooling1D(pool_size=kernel_size, strides=stride, padding="valid")
+
+    def call(self, inputs: tf.Tensor):
+        front = tf.tile(inputs[:, :1, :], [1, (self.kernel_size - 1) // 2, 1])
+        end = tf.tile(inputs[:, -1:, :], [1, (self.kernel_size - 1) // 2, 1])
+        x = tf.concat([front, inputs, end], axis=1)
+        x = self.avg(x)
+        return x
+
+
 class SeriesDecomp(tf.keras.layers.Layer):
     def __init__(self, kernel_size: int) -> None:
         super().__init__()
         self.kernel_size = kernel_size
-        self.moving_avg = AveragePooling1D(pool_size=kernel_size, strides=1, padding="same")
+        self.moving_avg = MovingAvg(kernel_size, stride=1)
 
     def call(self, x: tf.Tensor):
         """
@@ -29,8 +50,10 @@ class SeriesDecomp(tf.keras.layers.Layer):
             - The residual tensor, shape (batch_size, sequence_length, input_dim).
             - The moving average tensor, which is a smoothed version of the input tensor.
         """
-        x_ma = self.moving_avg(x)
-        return x - x_ma, x_ma
+        moving_mean = self.moving_avg(x)
+        print(x.shape, moving_mean.shape)
+        trend = x - moving_mean
+        return trend, moving_mean
 
     def get_config(self):
         config = {

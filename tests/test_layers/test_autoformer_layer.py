@@ -2,21 +2,29 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
+from tfts.layers.autoformer_layer import AutoCorrelation, MovingAvg, SeriesDecomp
 
 
 class AutoFormerLayerTest(unittest.TestCase):
+    def test_moving_avg(self):
+        # Define the kernel size and stride
+        kernel_size = 25
+        stride = 1
+        x_input = tf.random.normal([2, 100, 3])
+        moving_avg_layer = MovingAvg(kernel_size=kernel_size, stride=stride)
+
+        output = moving_avg_layer(x_input)
+        self.assertEqual(output.shape, x_input.shape)
+
     def test_series_decomp(self):
         kernel_size = 3
         layer = SeriesDecomp(kernel_size)
 
-        x = tf.random.normal([2, 100, 1])
+        x = tf.random.normal([2, 100, 3])
         y1, y2 = layer(x)
-        self.assertEqual(y1.shape, (2, 100, 1))
-        self.assertEqual(y2.shape, (2, 100, 1))
-
-        config = layer.get_config()
-        self.assertEqual(config["kernel_size"], kernel_size)
+        self.assertEqual(y1.shape, x.shape)
+        self.assertEqual(y2.shape, x.shape)
+        self.assertEqual(layer.kernel_size, kernel_size)
 
     def test_auto_correlation(self):
         d_model = 64
