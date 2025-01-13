@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.layers.auto_task import GaussianHead
+from tfts.tasks.auto_task import GaussianHead
 
 
 class DeepARLayerTest(unittest.TestCase):

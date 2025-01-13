@@ -4,15 +4,14 @@ from collections import OrderedDict
 import importlib
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from tfts.layers.auto_task import AnomalyHead, ClassificationHead, PredictionHead, SegmentationHead
+from tfts.tasks.auto_task import AnomalyHead
 
-from .auto_config import AutoConfig
 from .base import BaseConfig, BaseModel
 
 logger = logging.getLogger(__name__)

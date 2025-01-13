@@ -3,12 +3,12 @@
 <https://arxiv.org/abs/1704.04110>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import Activation, BatchNormalization, Dense, Dropout
+from tensorflow.keras.layers import Activation, BatchNormalization, Dense
 
-from tfts.layers.auto_task import GaussianHead
+from tfts.tasks.auto_task import GaussianHead
 
 from .base import BaseConfig, BaseModel
 

@@ -6,15 +6,17 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D
 
+from .base import BaseTask
 
-class PredictionHead(tf.keras.layers.Layer):
+
+class PredictionHead(tf.keras.layers.Layer, BaseTask):
     """Prediction task head layer"""
 
     def __init__(self):
         super(PredictionHead, self).__init__()
 
 
-class SegmentationHead(tf.keras.layers.Layer):
+class SegmentationHead(tf.keras.layers.Layer, BaseTask):
     """Segmentation task head layer"""
 
     def __init__(self):
