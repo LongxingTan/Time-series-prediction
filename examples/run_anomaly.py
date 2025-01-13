@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
-    parser.add_argument("--output_dir", type=str, default="./model.h5", help="saved model weights")
+    parser.add_argument("--output_dir", type=str, default="./weights", help="saved model weights")
     return parser.parse_args()
 
 
@@ -97,5 +97,6 @@ def run_inference(args):
 if __name__ == "__main__":
     args = parse_args()
     run_train(args)
+
     sig, det = run_inference(args)
     plot(sig, det)

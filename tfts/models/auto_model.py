@@ -93,7 +93,7 @@ class AutoModel(BaseModel):
 
         config = BaseConfig.from_json(config_path)  # Load config from JSON
         model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
-        model.load_pretrained_weights(weights_dir)  # Load weights
+        model.load_weights(os.path.join(weights_dir, "weights.h5"))  # Load weights
         return model
 
     def save_pretrained(self):
