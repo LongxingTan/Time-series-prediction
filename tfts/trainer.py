@@ -10,8 +10,6 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-from reference.gan import config
-
 from .constants import TFTS_HUB_CACHE
 
 __all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
