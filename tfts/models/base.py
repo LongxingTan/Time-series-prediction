@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 class BaseModel(ABC):
     """Base class for tfts model."""
 
+    def __init__(self, config=None, predict_sequence_length=1):
+        self.config = config
+        self.predict_sequence_length = predict_sequence_length
+        self.model = None  # Model should be defined later
+
     @classmethod
     def from_config(cls, config: "BaseConfig", predict_sequence_length: int = 1):
         return cls(predict_sequence_length=predict_sequence_length, config=config)
@@ -29,27 +34,44 @@ class BaseModel(ABC):
         model = cls.from_config(
             config, predict_sequence_length=predict_sequence_length
         )  # Use from_config to create the model
-        weights_dir = os.path.join(weights_dir, "model.h5")
-        model.load_pretrained_weights(weights_dir)  # Load weights
+        model.load_weights(weights_dir, os.path.join(weights_dir, "model.h5"))  # Load weights
         return model
 
     def build_model(self, inputs):
         outputs = self.model(inputs)
         # to handles the Keras symbolic tensors for tf2.3.1
-        return tf.keras.Model([inputs], [outputs])
+        self.model = tf.keras.Model([inputs], [outputs])
+        return self.model
+
+    def to_model(self):
+        inputs = tf.keras.Input(shape=(self.config.input_shape))
+        return self.build_model(inputs)
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
             raise FileNotFoundError(f"Weights file not found at {weights_dir}")
         self.model = tf.keras.models.load_model(weights_dir)
+        # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
     def save_weights(self, weights_dir: str):
+        if os.path.isdir(weights_dir):
+            os.makedirs(weights_dir, exist_ok=True)
+            parent_dir = os.path.dirname(weights_dir)
+            weights_dir = os.path.join(parent_dir, "weights.h5")
+            config_dir = os.path.join(parent_dir, "config.json")
+        else:
+            parent_dir = os.path.normpath(weights_dir)  # Get the parent directory
+            os.makedirs(parent_dir, exist_ok=True)
+            weights_dir = os.path.join(parent_dir, "weights.h5")  # Save weights in the same directory
+            config_dir = os.path.join(parent_dir, "config.json")
+
         self.model.save_weights(weights_dir)
-        logging.info(f"Model weights successfully saved in {weights_dir}")
+        self.config.to_json(config_dir)
+        logger.info(f"Model weights successfully saved in {weights_dir}")
 
     def save_model(self, weights_dir: str):
         self.model.save(weights_dir)
-        logging.info(f"Protobuf model successfully saved in {weights_dir}")
+        logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
         if hasattr(self, "model"):
@@ -62,6 +84,7 @@ class BaseConfig(ABC):
     """Base class for tfts config."""
 
     attribute_map: Dict[str, str] = {}
+    model_type: str
 
     def __init__(self, **kwargs):
         self.update(kwargs)
@@ -84,7 +107,11 @@ class BaseConfig(ABC):
                 raise err
 
     def to_dict(self):
-        return {key: getattr(self, key) for key in self.__dict__ if not key.startswith("_")}
+        instance_attributes = {key: getattr(self, key) for key in self.__dict__ if not key.startswith("_")}
+
+        if hasattr(self, "model_type"):
+            instance_attributes["model_type"] = self.model_type
+        return instance_attributes
 
     def to_json(self, json_file: Union[str, os.PathLike]):
         config_dict = self.to_dict()

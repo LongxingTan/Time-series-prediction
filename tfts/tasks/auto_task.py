@@ -6,15 +6,17 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D
 
+from .base import BaseTask
 
-class PredictionHead(tf.keras.layers.Layer):
+
+class PredictionHead(tf.keras.layers.Layer, BaseTask):
     """Prediction task head layer"""
 
     def __init__(self):
         super(PredictionHead, self).__init__()
 
 
-class SegmentationHead(tf.keras.layers.Layer):
+class SegmentationHead(tf.keras.layers.Layer, BaseTask):
     """Segmentation task head layer"""
 
     def __init__(self):
@@ -50,8 +52,8 @@ class ClassificationHead(tf.keras.layers.Layer):
 class AnomalyHead(tf.keras.layers.Layer):
     """Anomaly task head layer: Reconstruct style"""
 
-    def __init__(self, train_sequence_length) -> None:
-        super(AnomalyHead, self).__init__()
+    def __init__(self, train_sequence_length: int) -> None:
+        super().__init__()
         self.train_sequence_length = train_sequence_length
 
     def call(self, y_pred, y_test):
@@ -69,11 +71,15 @@ class AnomalyHead(tf.keras.layers.Layer):
         tf.Tensor
             distance
         """
-        y_pred = y_pred.numpy()
+        y_pred = y_pred.numpy() if isinstance(y_pred, tf.Tensor) else y_pred
+        y_test = y_test.numpy() if isinstance(y_test, tf.Tensor) else y_test
+
         errors = y_pred - y_test
 
         mean = sum(errors) / len(errors)
-        cov = 0
+        cov = 0  # Initialize covariance matrix
+
+        # Calculate covariance using NumPy operations
         for e in errors:
             cov += np.dot((e - mean).reshape(len(e), 1), (e - mean).reshape(1, len(e)))
         cov /= len(errors)
@@ -86,6 +92,10 @@ class AnomalyHead(tf.keras.layers.Layer):
 
     def _mahala_distance(self, x, mean, cov):
         """calculate Mahalanobis distance"""
+        x = np.array(x)
+        mean = np.array(mean)
+        cov = np.array(cov)
+
         d = np.dot(x - mean, np.linalg.inv(cov))
         d = np.dot(d, (x - mean).T)
         return d

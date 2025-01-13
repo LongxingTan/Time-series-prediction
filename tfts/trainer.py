@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 import logging
+import os
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -124,10 +125,10 @@ class Trainer(object):
                     else:
                         no_improve_epochs += 1
                     if no_improve_epochs >= stop_no_improve_epochs:
-                        logging.info("Tried the best, no improved and stop training")
+                        logger.info("Tried the best, no improved and stop training")
                         break
 
-            logging.info(log_str)
+            logger.info(log_str)
 
         # self.export_model(model_dir, only_pb=True)  # save the model
 
@@ -166,7 +167,7 @@ class Trainer(object):
             lr = self.learning_rate
         self.optimizer.lr.assign(lr)
         self.global_step.assign_add(1)
-        # logging.info('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
+        # logger.info('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
         return y_pred, loss
 
     def valid_loop(self, valid_loader):
@@ -208,11 +209,11 @@ class Trainer(object):
     def export_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
-        logging.info(f"Protobuf model successfully saved in {model_dir}")
+        logger.info(f"Protobuf model successfully saved in {model_dir}")
 
         if not only_pb:
             self.model.save_weights(f"{model_dir}.ckpt")
-            logging.info(f"Model weights successfully saved in {model_dir}.ckpt")
+            logger.info(f"Model weights successfully saved in {model_dir}.ckpt")
 
 
 class KerasTrainer(object):
@@ -235,6 +236,7 @@ class KerasTrainer(object):
         run_eagerly: it depends on which one is much faster
         """
         self.model = model
+        self.config = model.config if hasattr(model, "config") else None
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -269,7 +271,7 @@ class KerasTrainer(object):
             callbacks.append(checkpoint)
         if "callbacks" in kwargs:
             callbacks += kwargs.get("callbacks")
-            logging.info("callback", callbacks)
+            logger.info("callback", callbacks)
 
         # if self.strategy is None:
         #     self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
@@ -309,7 +311,7 @@ class KerasTrainer(object):
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         # print(self.model.summary())
-        logging.info(f"Trainable parameters: {trainable_params}")
+        logger.info(f"Trainable parameters: {trainable_params}")
         self.model.compile(
             loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eagerly
         )
@@ -345,20 +347,22 @@ class KerasTrainer(object):
     def get_model(self):
         return self.model
 
-    def save_model(self, model_dir, only_pb: bool = True, checkpoint_dir: Optional[str] = None):
+    def save_model(self, model_dir, save_weights_only: bool = True, checkpoint_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
         if checkpoint_dir is not None:
-            logging.info("checkpoint Loaded", checkpoint_dir)
+            logger.info("checkpoint Loaded", checkpoint_dir)
             self.model.load_weights(checkpoint_dir)
         else:
-            logging.info("No checkpoint Loaded")
+            logger.info("No checkpoint Loaded")
 
         self.model.save(model_dir)
-        logging.info("protobuf model successfully saved in {}".format(model_dir))
+        if self.config is not None:
+            self.config.to_json(os.path.join(model_dir, "config.json"))
+        logger.info("protobuf model successfully saved in {}".format(model_dir))
 
-        if not only_pb:
+        if not save_weights_only:
             self.model.save_weights("{}.ckpt".format(model_dir))
-            logging.info("model weights successfully saved in {}.ckpt".format(model_dir))
+            logger.info("model weights successfully saved in {}.ckpt".format(model_dir))
         return
 
     def plot(self, history, true, pred):

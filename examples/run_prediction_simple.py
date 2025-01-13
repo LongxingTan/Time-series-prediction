@@ -45,9 +45,6 @@ def run_train(args):
     loss_fn = tf.keras.losses.MeanSquaredError()
 
     # for strong seasonality data like sine or air passengers, set up skip_connect_circle True
-    custom_config = AutoConfig.for_model(args.use_model)
-    custom_config.update({"skip_connect_circle": True})
-
     config = AutoConfig.for_model(args.use_model)
     model = AutoModel.from_config(config, predict_sequence_length=args.predict_sequence_length)
 

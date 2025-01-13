@@ -9,7 +9,7 @@ from tfts.models.bert import Bert, BertConfig
 
 class AutoFormerTest(unittest.TestCase):
     def test_config(self):
-        config = BertConfig
+        config = BertConfig()
         print(config)
 
     def test_model(self):
