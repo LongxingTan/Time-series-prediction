@@ -65,9 +65,7 @@ class RWKV(BaseModel):
 
         self.dense1 = Dense(128, activation="relu")
         self.bn = BatchNormalization()
-        self.drop1 = Dropout(0.25)
         self.dense2 = Dense(128, activation="relu")
-        self.drop2 = Dropout(0.25)
 
     def __call__(self, inputs, teacher=None, return_dict: Optional[bool] = None):
         """RWKV model call"""
@@ -76,9 +74,7 @@ class RWKV(BaseModel):
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         encoder_output = self.dense1(encoder_state)
-        encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
 

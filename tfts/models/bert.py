@@ -34,8 +34,8 @@ class BertConfig(BaseConfig):
         num_attention_heads: int = 4,
         ffn_intermediate_size: int = 256,
         hidden_act: str = "gelu",
-        hidden_dropout_prob: float = 0.1,
-        attention_probs_dropout_prob: float = 0.1,
+        hidden_dropout_prob: float = 0.0,
+        attention_probs_dropout_prob: float = 0.0,
         max_position_embeddings: int = 512,
         type_vocab_size: int = 2,
         initializer_range: float = 0.02,
@@ -111,11 +111,11 @@ class Bert(BaseModel):
         self.project1 = Dense(predict_sequence_length, activation=None)
 
         # self.bn1 = BatchNormalization()
-        self.drop1 = Dropout(0.25)
+        # self.drop1 = Dropout(0.25)
         self.dense1 = Dense(512, activation="relu")
 
         # self.bn2 = BatchNormalization()
-        self.drop2 = Dropout(0.25)
+        # self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
         # self.forecasting = Forecasting(predict_sequence_length, self.config)
@@ -165,12 +165,12 @@ class Bert(BaseModel):
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)
-        encoder_output = self.drop1(encoder_output)
+        # encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense1(encoder_output)
         # encoder_output = self.bn2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
         outputs = tf.expand_dims(outputs, -1)

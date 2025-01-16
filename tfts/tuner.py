@@ -25,7 +25,6 @@ class AutoTuner(object):
         # Suggest model configuration parameters
         hidden_units = trial.suggest_int("hidden_units", 16, 128, step=16)
         num_layers = trial.suggest_int("num_layers", 1, 4)
-        dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
 
         # Suggest training parameters
         learning_rate = trial.suggest_loguniform("learning_rate", 1e-4, 1e-2)
@@ -36,7 +35,6 @@ class AutoTuner(object):
             self.use_model,
             hidden_units=hidden_units,
             num_layers=num_layers,
-            dropout=dropout,
         )
 
         # Create model and trainer
