@@ -63,7 +63,7 @@ train_length = 24
 predict_sequence_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_sequence_length, test_size=0.2)
 
-model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert'
+model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
 config = AutoConfig.for_model(model_name_or_path)
 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
@@ -203,11 +203,12 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 - tcn
 - bert
 - nbeats
+- dlinear
 - seq2seq
 - wavenet
 - transformer
 - informer
-- dlinear
+- autoformer
 
 </details>
 

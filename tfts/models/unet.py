@@ -16,137 +16,140 @@ from .base import BaseConfig, BaseModel
 class UnetConfig(BaseConfig):
     model_type: str = "unet"
 
-    def __init__(self):
+    def __init__(
+        self,
+        units: int = 64,
+        kernel_size: int = 2,
+        depth: int = 2,
+        pool_sizes: Tuple[int, int] = (2, 4),
+        upsampling_factors: Tuple[int, int, int] = (4, 2, 2),
+    ):
         super(UnetConfig, self).__init__()
+        self.units = units
+        self.kernel_size = kernel_size
+        self.depth = depth
+        self.pool_sizes = pool_sizes
+        self.upsampling_factors = upsampling_factors
 
 
 class Unet(BaseModel):
-    """Unet model"""
+    """Unet model for sequence-to-sequence prediction tasks."""
 
     def __init__(self, predict_sequence_length: int = 1, config=None):
         super(Unet, self).__init__()
-        if config is None:
-            config = UnetConfig()
-        self.config = config
+        self.config = config if config else UnetConfig()
         self.predict_sequence_length = predict_sequence_length
 
-        self.AvgPool1D1 = AveragePooling1D(pool_size=2)
-        self.AvgPool1D2 = AveragePooling1D(pool_size=4)
-        self.encoder = Encoder()
-        self.decoder = Decoder()
+        self.avg_pool1 = AveragePooling1D(pool_size=self.config.pool_sizes[0])
+        self.avg_pool2 = AveragePooling1D(pool_size=self.config.pool_sizes[1])
+        self.encoder = Encoder(units=self.config.units, kernel_size=self.config.kernel_size, depth=self.config.depth)
+        self.decoder = Decoder(
+            upsampling_factors=self.config.upsampling_factors,
+            units=self.config.units,
+            kernel_size=self.config.kernel_size,
+            predict_seq_length=predict_sequence_length,
+        )
 
     def __call__(self, x: tf.Tensor, training: bool = True, return_dict: Optional[bool] = None):
-        """_summary_
+        """Forward pass through the model.
 
-        Parameters
-        ----------
-        x : _type_
-            _description_
-        training : bool, optional
-            _description_, by default True
+        Args:
+            x: Input tensor of shape (batch_size, sequence_length, num_features).
+            training: Boolean flag for training mode.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Returns:
+            Tensor: Output predictions.
         """
-        pool1 = self.AvgPool1D1(x)
-        pool2 = self.AvgPool1D2(x)
+        pool1 = self.avg_pool1(x)
+        pool2 = self.avg_pool2(x)
 
         encoder_output = self.encoder([x, pool1, pool2])
-        decoder_outputs = self.decoder(encoder_output, predict_seq_length=self.predict_sequence_length)
+        decoder_outputs = self.decoder(encoder_output)
 
         return decoder_outputs
 
 
-class Encoder(object):
-    def __init__(self):
-        pass
+class Encoder(tf.keras.layers.Layer):
+    """Encoder component for the Unet model."""
 
-    def __call__(self, input_tensor: tf.Tensor, units: int = 64, kernel_size: int = 2, depth: int = 2):
-        """_summary_
+    def __init__(self, units: int = 64, kernel_size: int = 2, depth: int = 2):
+        super().__init__()
+        self.units = units
+        self.kernel_size = kernel_size
+        self.depth = depth
 
-        Parameters
-        ----------
-        input_tensor : _type_
-            _description_
-        units : int, optional
-            _description_, by default 64
-        kernel_size : int, optional
-            _description_, by default 2
-        depth : int, optional
-            _description_, by default 2
+    def call(self, inputs: tf.Tensor):
+        """Forward pass through the encoder.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Args:
+            inputs: Tuple containing the input tensor and pooled tensors.
+
+        Returns:
+            Tuple: Encoder outputs.
         """
-        x, pool1, pool2 = input_tensor
+        x, pool1, pool2 = inputs
 
-        x = conv_br(x, units, kernel_size, 1, 1)  # => batch_size * sequence_length * units
-        for i in range(depth):
-            x = re_block(x, units, kernel_size, 1, 1)
+        x = conv_br(x, self.units, self.kernel_size, 1, 1)  # => batch_size * sequence_length * units
+        for i in range(self.depth):
+            x = re_block(x, self.units, self.kernel_size, 1, 1)
         out_0 = x  # => batch_size * sequence_length * units
 
-        x = conv_br(x, units * 2, kernel_size, 2, 1)
-        for i in range(depth):
-            x = re_block(x, units * 2, kernel_size, 1, 1)
+        x = conv_br(x, self.units * 2, self.kernel_size, 2, 1)
+        for i in range(self.depth):
+            x = re_block(x, self.units * 2, self.kernel_size, 1, 1)
         out_1 = x  # => batch_size * sequence/2 * units*2
 
         x = Concatenate()([x, pool1])
-        x = conv_br(x, units * 3, kernel_size, 2, 1)
-        for i in range(depth):
-            x = re_block(x, units * 3, kernel_size, 1, 1)
+        x = conv_br(x, self.units * 3, self.kernel_size, 2, 1)
+        for i in range(self.depth):
+            x = re_block(x, self.units * 3, self.kernel_size, 1, 1)
         out_2 = x  # => batch_size * sequence/2, units*3
 
         x = Concatenate()([x, pool2])
-        x = conv_br(x, units * 4, kernel_size, 4, 1)
-        for i in range(depth):
-            x = re_block(x, units * 4, kernel_size, 1, 1)
+        x = conv_br(x, self.units * 4, self.kernel_size, 4, 1)
+        for i in range(self.depth):
+            x = re_block(x, self.units * 4, self.kernel_size, 1, 1)
         return [out_0, out_1, out_2, x]
 
 
-class Decoder(object):
-    def __init__(self):
-        pass
+class Decoder(tf.keras.layers.Layer):
+    """Decoder component for the Unet model."""
 
-    def __call__(self, input_tensor: tf.Tensor, units: int = 64, kernel_size: int = 2, predict_seq_length: int = 1):
-        """_summary_
+    def __init__(self, upsampling_factors, units: int = 64, kernel_size: int = 2, predict_seq_length: int = 1):
+        super().__init__()
+        self.upsampling_factors = upsampling_factors
+        self.units = units
+        self.kernel_size = kernel_size
+        self.predict_seq_length = predict_seq_length
 
-        Parameters
-        ----------
-        input_tensor : _type_
-            _description_
-        units : int, optional
-            _description_, by default 64
-        kernel_size : int, optional
-            _description_, by default 2
-        predict_seq_length : int, optional
-            _description_, by default 1
+    def call(self, inputs: Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]) -> tf.Tensor:
+        """Forward pass through the decoder.
 
-        Returns
-        -------
-        _type_
-            _description_
+        Args:
+            inputs: Tuple containing encoder outputs.
+
+        Returns:
+            Tensor: Decoder output.
         """
-        out_0, out_1, out_2, x = input_tensor
-        x = UpSampling1D(4)(x)
+        out_0, out_1, out_2, x = inputs
+
+        x = UpSampling1D(self.upsampling_factors[0])(x)
         x = Concatenate()([x, out_2])
-        x = conv_br(x, units * 3, kernel_size, 1, 1)
+        x = conv_br(x, self.units * 3, self.kernel_size, 1, 1)
 
-        x = UpSampling1D(2)(x)
+        x = UpSampling1D(self.upsampling_factors[1])(x)
         x = Concatenate()([x, out_1])
-        x = conv_br(x, units * 2, kernel_size, 1, 1)
+        x = conv_br(x, self.units * 2, self.kernel_size, 1, 1)
 
-        x = UpSampling1D(2)(x)
+        x = UpSampling1D(self.upsampling_factors[2])(x)
         x = Concatenate()([x, out_0])
-        x = conv_br(x, units, kernel_size, 1, 1)
+        x = conv_br(x, self.units, self.kernel_size, 1, 1)
 
-        # regression
-        x = Conv1D(1, kernel_size=kernel_size, strides=1, padding="same")(x)
-        out = Activation("sigmoid")(x)
-        out = Lambda(lambda x: 12 * x)(out)
-        # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way
-        out = AveragePooling1D(strides=4)(out)
-        return out
+        x = Conv1D(1, kernel_size=self.kernel_size, strides=1, padding="same")(x)
+        x = Activation("sigmoid")(x)
+
+        x = Lambda(lambda x: 12 * x)(x)
+        # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way for time
+        x = AveragePooling1D(strides=4)(x)
+
+        return x
