@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, BatchNormalization, Dense, Dropout
 
-from tfts.layers.attention_layer import Attention
+from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
 
 from .base import BaseConfig, BaseModel
 
@@ -18,11 +18,9 @@ class RWKVConfig(BaseConfig):
 
     def __init__(
         self,
-        block_size: int = 1024,
+        num_layers: int = 25,
+        hidden_size: int = 64,
         vocab_size: int = 50304,
-        num_stacked_layers: int = 1,
-        attention_heads: int = 8,
-        attention_size: int = 64,
         dense_hidden_size: int = 32,
         dropout: float = 0.0,
     ) -> None:
@@ -30,18 +28,15 @@ class RWKVConfig(BaseConfig):
         Initializes the configuration for the RWKV model with the specified parameters.
 
         Args:
-            num_stacked_layers: The number of stacked RWKV layers.
-            attention_heads: Number of attention heads for the mechanism.
-            attention_size: Size of each attention head.
+            num_layers: The number of stacked RWKV layers.
+            hidden_size: Size of each attention head.
             dense_hidden_size: The size of the dense hidden layer following the RWKV.
         """
         super().__init__()
 
-        self.block_size: int = block_size
         self.vocab_size: int = vocab_size
-        self.num_stacked_layers: int = num_stacked_layers
-        self.attention_heads: int = attention_heads
-        self.attention_size: int = attention_size
+        self.num_layers: int = num_layers
+        self.hidden_size: int = hidden_size
         self.dense_hidden_size: int = dense_hidden_size
         self.dropout: float = dropout
 
@@ -55,33 +50,47 @@ class RWKV(BaseModel):
             config = RWKVConfig()
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.encoder = RWKVEncoder(
-            rnn_size=config.rnn_hidden_size,
-            attention_heads=config.attention_heads,
-            attention_size=config.attention_size,
-            dense_size=config.dense_hidden_size,
-        )
-        self.project1 = Dense(predict_sequence_length, activation=None)
 
-        self.dense1 = Dense(128, activation="relu")
-        self.bn = BatchNormalization()
-        self.dense2 = Dense(128, activation="relu")
+        self.emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
+        self.ln0 = tf.keras.layers.LayerNormalization()
 
-    def __call__(self, inputs, teacher=None, return_dict: Optional[bool] = None):
+        self.blocks = [RWKVBlock(config) for _ in range(config.n_layer)]
+
+        self.ln_out = tf.keras.layers.LayerNormalization()
+        self.head = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+
+    def init_state(self, batch_size=1):
+        states = []
+        for _ in range(self.config.n_layer):
+            # States for attention
+            att_states = [
+                tf.zeros((batch_size, self.config.n_embd)),  # aa
+                tf.zeros((batch_size, self.config.n_embd)),  # bb
+                tf.zeros((batch_size, self.config.n_embd)) - 1e30,  # pp
+            ]
+            # State for FFN
+            ffn_state = tf.zeros((batch_size, self.config.n_embd))
+            states.append((att_states, ffn_state))
+        return states
+
+    def __call__(self, x, states=None, teacher=None, return_dict: Optional[bool] = None):
         """RWKV model call"""
 
-        x, encoder_feature = self._prepare_inputs(inputs)
-        encoder_outputs, encoder_state = self.encoder(encoder_feature)
+        if states is None:
+            states = self.init_state()
 
-        encoder_output = self.dense1(encoder_state)
-        encoder_output = self.dense2(encoder_output)
+        x = self.emb(x)
+        x = self.ln0(x)
 
-        outputs = self.project1(encoder_output)
+        new_states = []
+        for i, block in enumerate(self.blocks):
+            x, block_states = block(x, states[i])
+            new_states.append(block_states)
 
-        expand_dims_layer = tf.keras.layers.Reshape((outputs.shape[1], 1))
-        outputs = expand_dims_layer(outputs)
+        x = self.ln_out(x)
+        x = self.head(x)
 
-        return outputs
+        return x, new_states
 
     def _prepare_inputs(self, inputs):
         """Prepare the inputs for the encoder."""
@@ -99,43 +108,23 @@ class RWKV(BaseModel):
         return x, encoder_feature
 
 
-class RWKVEncoder(tf.keras.layers.Layer):
-    def __init__(
-        self,
-        rnn_size: int,
-        attention_heads: int,
-        attention_size: int,
-        dense_size: int,
-        num_stacked_layers: int = 1,
-        **kwargs,
-    ):
+class RWKVBlock(tf.keras.layers.Layer):
+    def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.rnn_size = rnn_size
-        self.attention_heads = attention_heads
-        self.attention_size = attention_size
-        self.dense_size = dense_size
-        self.num_stacked_layers = num_stacked_layers
+        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.attention = TimeMixing(config)
+        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.feed_forward = ChannelMixing(config)
 
-        self.attention_layers = [
-            Attention(hidden_size=self.attention_size, num_attention_heads=self.attention_heads)
-            for _ in range(self.num_stacked_layers)
-        ]
+    def call(self, x, states):
+        att_states, ffn_state = states
 
-    def call(self, inputs: tf.Tensor):
-        """RWKV Encoder call"""
+        # Attention
+        h, new_att_states = self.attention(self.ln1(x), att_states)
+        x = x + h
 
-        x = inputs
-        for layer in self.attention_layers:
-            x = layer(x)
+        # Feed-forward
+        h, new_ffn_state = self.feed_forward(self.ln2(x), ffn_state)
+        x = x + h
 
-        return x, x  # Placeholder for encoder state (could be modified for your use case)
-
-    def get_config(self):
-        config = {
-            "rnn_size": self.rnn_size,
-            "attention_heads": self.attention_heads,
-            "attention_size": self.attention_size,
-            "dense_size": self.dense_size,
-        }
-        base_config = super(RWKVEncoder, self).get_config()
-        return {**base_config, **config}
+        return x, (new_att_states, new_ffn_state)
