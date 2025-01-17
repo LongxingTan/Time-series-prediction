@@ -23,7 +23,7 @@ class DemoTest(unittest.TestCase):
         model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 
         trainer = Trainer(model)
-        trainer.train((x_train, y_train), (x_valid, y_valid), epochs=2)
+        trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
         pred = trainer.predict(x_valid)
         # trainer.plot(history=x_valid, true=y_valid, pred=pred)
@@ -40,7 +40,7 @@ class DemoTest(unittest.TestCase):
         model = AutoModel.from_config(config=config, predict_sequence_length=predict_sequence_length)
         print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
-        trainer = Trainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
+        trainer = Trainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.001))
         trainer.train((x_train, y_train), epochs=2)
 
         pred = trainer.predict(x_valid)

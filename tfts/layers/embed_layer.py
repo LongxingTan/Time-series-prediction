@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding, LayerNormalization, SpatialDropout1D
 
-from .position_layer import PositionalEmbedding, PositionalEncoding
+from .position_layer import PositionalEmbedding, PositionalEncoding, RelativePositionEmbedding
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
@@ -106,8 +106,13 @@ class TemporalEmbedding(tf.keras.layers.Layer):
         return
 
 
+class PatchEmbedding(tf.keras.layers.Layer):
+    def __init__(self):
+        super().__init__()
+
+
 class DataEmbedding(tf.keras.layers.Layer):
-    def __init__(self, embed_size: int, dropout: float = 0.0):
+    def __init__(self, embed_size: int, dropout: float = 0.0, position_embedding_type: Optional[str] = None):
         """
         Data Embedding layer.
 
@@ -118,7 +123,14 @@ class DataEmbedding(tf.keras.layers.Layer):
         super(DataEmbedding, self).__init__()
         self.embed_size = embed_size
         self.value_embedding = TokenEmbedding(embed_size)
-        self.positional_embedding = PositionalEncoding()
+        if position_embedding_type == "positional encoding":
+            self.positional_embedding = PositionalEncoding()
+        elif position_embedding_type == "positional embedding":
+            self.positional_embedding = PositionalEmbedding()
+        elif position_embedding_type == "relative encoding":
+            self.positional_embedding = RelativePositionEmbedding()
+        else:
+            self.positional_embedding = None
         self.dropout = Dropout(dropout)
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
@@ -135,8 +147,10 @@ class DataEmbedding(tf.keras.layers.Layer):
             tf.Tensor: Output tensor of shape (batch_size, seq_length, embed_size).
         """
         ve = self.value_embedding(x)
-        pe = self.positional_embedding(ve)
-        return self.dropout(ve + pe)
+        if self.positional_embedding is not None:
+            pe = self.positional_embedding(ve)
+            return self.dropout(ve + pe)
+        return ve
 
     def get_config(self):
         config = {"embed_size": self.embed_size}

@@ -34,9 +34,9 @@
 青山遮不住，毕竟东流去。江晚正愁余，山深闻鹧鸪。<br>
 **东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列框架，基于TensorFlow/ Keras。
 
-- 为多种时间序列任务提供SOTA的深度学习模型，预测、分类、异常检测
-- 提供经典与前沿的深度学习模型，用于工业、科研、竞赛
-- 查阅[英文文档](https://time-series-prediction.readthedocs.io)，快速入门。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
+- 为多种时间序列任务(单步与多步预测、分类、异常检测等)提供SOTA的深度学习模型
+- 提供经典与前沿的深度学习模型，可用于工业、科研、竞赛
+- 查阅[文档](https://time-series-prediction.readthedocs.io)，快速入门。欢迎移步[时序讨论区](https://github.com/LongxingTan/Time-series-prediction/discussions)
 
 
 ## 快速使用
@@ -57,22 +57,23 @@ pip install tfts
 
 ```python
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer, AutoConfig
+from tfts import AutoModel, AutoConfig, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
-
 # 其中，train是包含(x_train, y_train)的tuple, valid包含(x_valid, y_valid)
-train, valid = tfts.get_data('sine', train_length, predict_sequence_length, test_size=0.2)
-config = AutoConfig.for_model("seq2seq")  # 'wavenet', 'transformer'
-model = AutoModel.from_config(config, predict_sequence_length)
+(x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_sequence_length, test_size=0.2)
 
-trainer = KerasTrainer(model)
-trainer.train(train, valid, epochs=15)
+model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
+config = AutoConfig.for_model(model_name_or_path)
+model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
+trainer.train((x_train, y_train), (x_valid, y_valid), epochs=30)
 
-pred = trainer.predict(valid[0])
-trainer.plot(history=valid[0], true=valid[1], pred=pred)
+pred = trainer.predict(x_valid)
+trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
 
@@ -203,12 +204,13 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 - rnn
 - tcn
 - bert
+- dlinear
 - nbeats
 - seq2seq
 - wavenet
 - transformer
 - informer
-- dlinear
+- autoformer
 
 </details>
 

@@ -74,7 +74,7 @@ class TrainerTest(unittest.TestCase):
 class KerasTrainerTest(unittest.TestCase):
     def setUp(self):
         self.fit_config = {
-            "epochs": 2,
+            "epochs": 1,
             "batch_size": 1,
         }
 

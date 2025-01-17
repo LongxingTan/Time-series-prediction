@@ -19,8 +19,6 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 
-from tfts.layers.attention_layer import Attention
-
 from .base import BaseConfig, BaseModel
 
 
@@ -76,9 +74,9 @@ class RNN(BaseModel):
 
         self.dense1 = Dense(128, activation="relu")
         self.bn = BatchNormalization()
-        self.drop1 = Dropout(0.25)
+        # self.drop1 = Dropout(0.25)
         self.dense2 = Dense(128, activation="relu")
-        self.drop2 = Dropout(0.25)
+        # self.drop2 = Dropout(0.25)
 
     def __call__(self, inputs, teacher=None, return_dict: Optional[bool] = None):
         """RNN model call
@@ -107,9 +105,9 @@ class RNN(BaseModel):
             encoder_output = encoder_state
 
         encoder_output = self.dense1(encoder_output)
-        encoder_output = self.drop1(encoder_output)
+        # encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
 
@@ -177,7 +175,6 @@ class Encoder(tf.keras.layers.Layer):
                     activation="tanh",
                     return_state=return_state,
                     return_sequences=True,
-                    dropout=self.rnn_dropout,
                 )
             elif self.rnn_type == "lstm":
                 rnn = LSTM(
@@ -185,7 +182,6 @@ class Encoder(tf.keras.layers.Layer):
                     activation="tanh",
                     return_state=return_state,
                     return_sequences=True,
-                    dropout=self.rnn_dropout,
                 )
             else:
                 raise ValueError(f"No supported RNN type: {self.rnn_type}")

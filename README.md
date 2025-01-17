@@ -32,7 +32,7 @@
 **[Documentation](https://time-series-prediction.readthedocs.io)** | **[Tutorials](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[Release Notes](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[中文](https://github.com/LongxingTan/Time-series-prediction/blob/master/README_CN.md)**
 
 **TFTS** (TensorFlow Time Series) is an easy-to-use time series package, supporting the classical and latest deep learning methods in TensorFlow or Keras.
-- Support sota performance for time series task (prediction, classification, anomaly detection)
+- Support sota models for time series tasks (prediction, classification, anomaly detection)
 - Provide advanced deep learning models for industry, research and competition
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
@@ -55,6 +55,7 @@ pip install tfts
 
 ```python
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import tfts
 from tfts import AutoModel, AutoConfig, KerasTrainer
 
@@ -62,11 +63,11 @@ train_length = 24
 predict_sequence_length = 8
 (x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_sequence_length, test_size=0.2)
 
-model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer'
+model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
 config = AutoConfig.for_model(model_name_or_path)
 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-trainer = KerasTrainer(model)
-trainer.train((x_train, y_train), (x_valid, y_valid), epochs=15)
+trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
+trainer.train((x_train, y_train), (x_valid, y_valid), epochs=30)
 
 pred = trainer.predict(x_valid)
 trainer.plot(history=x_valid, true=y_valid, pred=pred)
@@ -202,11 +203,12 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 - tcn
 - bert
 - nbeats
+- dlinear
 - seq2seq
 - wavenet
 - transformer
 - informer
-- dlinear
+- autoformer
 
 </details>
 

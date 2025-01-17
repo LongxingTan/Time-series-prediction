@@ -118,7 +118,7 @@ class GaussianHead(tf.keras.layers.Layer):
         self.bias2 = self.add_weight(name="gauss_b2", shape=(self.units,), initializer=tf.keras.initializers.Zeros())
         super().build(input_shape)
 
-    def call(self, x):
+    def call(self, x: tf.Tensor):
         """Returns mean and standard deviation tensors.
 
         Args:

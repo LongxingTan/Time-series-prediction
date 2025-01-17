@@ -6,14 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 import tensorflow as tf
-from tensorflow.keras.layers import (
-    AveragePooling1D,
-    BatchNormalization,
-    Dense,
-    Dropout,
-    LayerNormalization,
-    SpatialDropout1D,
-)
+from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
@@ -30,12 +23,12 @@ class BertConfig(BaseConfig):
     def __init__(
         self,
         hidden_size: int = 64,
-        num_hidden_layers: int = 2,
+        num_layers: int = 2,
         num_attention_heads: int = 4,
         ffn_intermediate_size: int = 256,
         hidden_act: str = "gelu",
-        hidden_dropout_prob: float = 0.1,
-        attention_probs_dropout_prob: float = 0.1,
+        hidden_dropout_prob: float = 0.0,
+        attention_probs_dropout_prob: float = 0.0,
         max_position_embeddings: int = 512,
         type_vocab_size: int = 2,
         initializer_range: float = 0.02,
@@ -70,7 +63,7 @@ class BertConfig(BaseConfig):
         super().__init__(**kwargs)
 
         self.hidden_size: int = hidden_size
-        self.num_hidden_layers: int = num_hidden_layers
+        self.num_layers: int = num_layers
         self.num_attention_heads: int = num_attention_heads
         self.ffn_intermediate_size: int = ffn_intermediate_size
         self.hidden_act: str = hidden_act
@@ -97,10 +90,8 @@ class Bert(BaseModel):
         self.predict_sequence_length = predict_sequence_length
 
         self.encoder_embedding = TokenEmbedding(config.hidden_size)
-        # self.spatial_drop = SpatialDropout1D(0.1)
-        # self.tcn = ConvTemporal(kernel_size=2, filters=32, dilation_rate=6)
         self.encoder = Encoder(
-            num_hidden_layers=config.num_hidden_layers,
+            num_hidden_layers=config.num_layers,
             hidden_size=config.hidden_size,
             num_attention_heads=config.num_attention_heads,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
@@ -108,15 +99,9 @@ class Bert(BaseModel):
             hidden_dropout_prob=config.hidden_dropout_prob,
         )
 
-        self.project1 = Dense(predict_sequence_length, activation=None)
-
-        # self.bn1 = BatchNormalization()
-        self.drop1 = Dropout(0.25)
         self.dense1 = Dense(512, activation="relu")
-
-        # self.bn2 = BatchNormalization()
-        self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
+        self.project1 = Dense(predict_sequence_length, activation=None)
 
         # self.forecasting = Forecasting(predict_sequence_length, self.config)
         # self.pool1 = AveragePooling1D(pool_size=6)
@@ -165,12 +150,12 @@ class Bert(BaseModel):
         encoder_output = memory[:, -1]
 
         # encoder_output = self.bn1(encoder_output)
-        encoder_output = self.drop1(encoder_output)
+        # encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense1(encoder_output)
         # encoder_output = self.bn2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        # encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
         outputs = tf.expand_dims(outputs, -1)

@@ -32,8 +32,8 @@ class AutoFormerConfig(object):
         num_attention_heads=4,
         ffn_intermediate_size=256,
         hidden_act="relu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
         max_position_embeddings=512,
         type_vocab_size=2,
         initializer_range=0.02,
@@ -112,9 +112,9 @@ class AutoFormer(object):
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)
 
         self.project1 = Dense(predict_sequence_length, activation=None)
-        self.drop1 = Dropout(0.25)
+        self.drop1 = Dropout(0.0)
         self.dense1 = Dense(512, activation="relu")
-        self.drop2 = Dropout(0.25)
+        self.drop2 = Dropout(0.0)
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):

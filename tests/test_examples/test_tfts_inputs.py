@@ -15,8 +15,8 @@ class InputsTest(unittest.TestCase):
         self.test_models = ["seq2seq", "wavenet", "transformer", "rnn", "tcn", "bert", "informer"]
 
     def test_encoder_array(self):
-        train_length = 49
-        predict_sequence_length = 10
+        train_length = 32
+        predict_sequence_length = 9
         n_feature = 2
         x_train = np.random.rand(1, train_length, n_feature)
         y_train = np.random.rand(1, predict_sequence_length, 1)
@@ -31,8 +31,8 @@ class InputsTest(unittest.TestCase):
             trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 
     def test_encoder_decoder_array(self):
-        train_length = 49
-        predict_sequence_length = 10
+        train_length = 32
+        predict_sequence_length = 9
         n_encoder_feature = 2
         n_decoder_feature = 3
         x_train = {
@@ -55,8 +55,8 @@ class InputsTest(unittest.TestCase):
             trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
     def test_encoder_decoder_array2(self):
-        train_length = 49
-        predict_sequence_length = 10
+        train_length = 32
+        predict_sequence_length = 9
         n_encoder_feature = 2
         n_decoder_feature = 3
 

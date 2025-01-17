@@ -50,21 +50,20 @@ The general setup for training and testing a model is
     import tfts
     from tfts import AutoConfig, AutoModel, KerasTrainer
 
-    # load data
     train_length = 36
     predict_sequence_length = 12
     train, valid = tfts.get_data('sine', train_length, predict_sequence_length)
 
-    # build model
+    # build model: 'seq2seq', 'wavenet', 'transformer', 'rnn', 'tcn', 'bert'
     model_name_or_path = 'seq2seq'
     config = AutoConfig.for_model(model_name_or_path)
     model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 
     # train
-    opt = tf.keras.optimizers.Adam(0.003)
+    opt = tf.keras.optimizers.Adam(0.001)
     loss_fn = tf.keras.losses.MeanSquaredError()
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-    trainer.train(train, valid, epochs=10, batch_size=32)
+    trainer.train(train, valid, epochs=30, batch_size=32)
 
     # test
     trainer.predict(valid[0])
@@ -76,7 +75,6 @@ The general setup for training and testing a model is
 3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Before training, ensure your raw data is preprocessed into a 3D format with the shape `(batch_size, train_steps, features)`. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
-
 
 
 3.2 Train the Model

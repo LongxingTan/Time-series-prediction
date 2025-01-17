@@ -1,10 +1,10 @@
 """Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
-from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 
 
 class DenseTemp(tf.keras.layers.Layer):
@@ -86,7 +86,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]):
         self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
-        self.drop = Dropout(self.relu_dropout)
+        # self.drop = Dropout(self.relu_dropout)
         super(FeedForwardNetwork, self).build(input_shape)
 
     def call(self, x):
@@ -103,7 +103,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
             _description_
         """
         output = self.filter_dense_layer(x)
-        output = self.drop(output)
+        # output = self.drop(output)
         output = self.output_dense_layer(output)
         return output
 

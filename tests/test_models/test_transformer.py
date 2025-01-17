@@ -5,7 +5,7 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
-from tfts.models.transformer import Decoder, Decoder2, Encoder, Transformer
+from tfts.models.transformer import Decoder, Encoder, Transformer
 
 
 class TransformerTest(unittest.TestCase):
@@ -70,6 +70,6 @@ class TransformerTest(unittest.TestCase):
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=8)
         trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
-        trainer.train(train, valid, epochs=2)
+        trainer.train(train, valid, epochs=1)
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)

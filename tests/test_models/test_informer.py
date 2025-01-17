@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import LayerNormalization
 
-import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer

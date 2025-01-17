@@ -60,7 +60,6 @@ class SeriesDecomp(tf.keras.layers.Layer):
             - The moving average tensor, which is a smoothed version of the input tensor.
         """
         moving_mean = self.moving_avg(x)
-        print(x.shape, moving_mean.shape)
         trend = x - moving_mean
         return trend, moving_mean
 

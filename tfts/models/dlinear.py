@@ -20,7 +20,7 @@ class DLinearConfig(BaseConfig):
         self,
         kernel_size: int = 25,
         channels: int = 3,
-        individual: bool = True,
+        individual: bool = False,
     ):
         super().__init__()
         self.kernel_size = kernel_size

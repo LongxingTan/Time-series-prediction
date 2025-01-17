@@ -12,7 +12,7 @@ from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 from .base import BaseConfig, BaseModel
 
 
-class NbeatsConfig(BaseConfig):
+class NBeatsConfig(BaseConfig):
     model_type: str = "nbeats"
 
     def __init__(
@@ -24,7 +24,7 @@ class NbeatsConfig(BaseConfig):
         thetas_dims=(4, 8),
         share_weights_in_stack=False,
     ):
-        super(NbeatsConfig, self).__init__()
+        super(NBeatsConfig, self).__init__()
         self.stack_types = stack_types
         self.nb_blocks_per_stack = nb_blocks_per_stack
         self.n_block_layers = n_block_layers
@@ -42,7 +42,7 @@ class NBeats(BaseModel):
         config=None,
     ):
         if config is None:
-            config = NbeatsConfig()
+            config = NBeatsConfig()
         super(NBeats, self).__init__(config)
         self.config = config
         self.predict_sequence_length = predict_sequence_length
