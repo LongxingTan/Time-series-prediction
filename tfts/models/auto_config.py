@@ -44,6 +44,5 @@ class AutoConfig(BaseConfig):
             f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
         )
 
-    @classmethod
-    def from_pretrained(cls, pretrained_path: Union[str, os.PathLike], **kwargs):
-        return
+    def __call__(self, model_name: str):
+        return self.for_model(model_name)
