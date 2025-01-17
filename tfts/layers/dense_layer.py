@@ -1,10 +1,10 @@
 """Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
-from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 
 
 class DenseTemp(tf.keras.layers.Layer):

@@ -101,7 +101,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
 
 
 class RelativePositionEmbedding(tf.keras.layers.Layer):
-    def __init__(self, max_len, output_dim):
+    def __init__(self, max_len=512, output_dim=512):
         super(RelativePositionEmbedding, self).__init__()
         self.max_len = max_len
         self.output_dim = output_dim
@@ -146,5 +146,5 @@ class RotaryPositionEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.dim = dim
 
-    # def call(self, t, cache_key=None):
-    #     return
+    def call(self, t, cache_key=None):
+        return t
