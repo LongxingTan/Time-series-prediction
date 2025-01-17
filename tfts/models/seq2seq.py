@@ -52,14 +52,13 @@ class Seq2seqConfig(BaseConfig):
 
 
 class Seq2seq(BaseModel):
-    """Seq2seq model"""
+    """Seq2seq model for time series prediction with configurable encoder-decoder architectures."""
 
     def __init__(self, predict_sequence_length: int = 1, config=None):
         super(Seq2seq, self).__init__()
-        if config is None:
-            config = Seq2seqConfig()
-        self.config = config
+        self.config = config if config else Seq2seqConfig()
         self.predict_sequence_length = predict_sequence_length
+
         self.encoder = Encoder(
             rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
         )
@@ -74,14 +73,12 @@ class Seq2seq(BaseModel):
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
-        """An RNN seq2seq structure for time series
+        """Forward pass of the Seq2seq model.
 
-        :param inputs: _description_
-        :type inputs: _type_
-        :param teacher: teacher forcing decoding, defaults to None
-        :type teacher: _type_, optional
-        :return: _description_
-        :type: _type_
+        :param inputs: Input tensor.
+        :param teacher: Ground truth for teacher forcing.
+        :param return_dict: Whether to return outputs in a dict format.
+        :return: Decoder outputs.
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -138,16 +135,11 @@ class Encoder(tf.keras.layers.Layer):
         self.dense = Dense(units=dense_size, activation="tanh")
 
     def call(self, inputs):
-        """
-        Seq2seq encoder.
+        """Process input through the encoder RNN and dense layers.
 
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            3D input tensor: (batch_size, input_sequence_length, num_features)
+        :param inputs: 3D Input tensor with shape (batch_size, seq_len, num_features)
+        :return: Encoder outputs and state.
 
-        Returns
-        -------
         outputs : tf.Tensor
             (batch_size, input_sequence_length, rnn_size)
         state : tf.Tensor or tuple of tf.Tensor
@@ -218,22 +210,15 @@ class DecoderV1(tf.keras.layers.Layer):
         training=None,
         **kwargs,
     ):
-        """Seq2seq decoder1: step by step
+        """Seq2seq decoder with attention mechanism.
 
-        :param decoder_features: _description_
-        :type decoder_features: _type_
-        :param decoder_init_input: _description_
-        :type decoder_init_input: _type_
-        :param init_state: _description_
-        :type init_state: _type_
-        :param teacher: _description_, defaults to None
-        :type teacher: _type_, optional
-        :param scheduled_sampling: _description_, defaults to 0
-        :type scheduled_sampling: int, optional
-        :param training: _description_, defaults to None
-        :type training: _type_, optional
-        :return: _description_
-        :rtype: _type_
+        :param decoder_features: Decoder input features.
+        :param decoder_init_input: Initial input for the decoder.
+        :param init_state: Initial state from the encoder.
+        :param teacher: Ground truth for teacher forcing.
+        :param scheduled_sampling: Probability of using teacher forcing.
+        :param training: Whether the model is in training mode.
+        :return: Decoder output.
         """
         decoder_outputs = []
         prev_output = decoder_init_input
@@ -398,60 +383,3 @@ class DecoderV2(tf.keras.layers.Layer):
             init_state=[init_state],  # for tf2
             teacher=teacher,
         )
-
-
-class DecoderV3(tf.keras.layers.Layer):
-    # multi-steps static decoding
-    def __init__(self, rnn_size=32, rnn_type="gru", rnn_dropout=0, dense_size=1, **kwargs) -> None:
-        super(DecoderV3, self).__init__()
-        if rnn_type.lower() == "gru":
-            self.rnn = GRU(
-                units=rnn_size, activation="tanh", return_state=False, return_sequences=True, dropout=rnn_dropout
-            )
-        elif rnn_type.lower() == "lstm":
-            self.rnn = LSTM(
-                units=rnn_size,
-                activation="tanh",
-                return_state=False,
-                return_sequences=True,
-                dropout=rnn_dropout,
-            )
-        self.dense = Dense(units=dense_size, activation=None)
-        self.drop = Dropout(0.1)
-
-    def call(
-        self,
-        decoder_features,
-        decoder_init_input,
-        init_state,
-        teacher=None,
-        scheduled_sampling=0,
-        training=None,
-        **kwargs,
-    ):
-        """Decoder3: just simple
-
-        Parameters
-        ----------
-        decoder_features : _type_
-            _description_
-        decoder_init_input : _type_
-            _description_
-        init_state : _type_
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
-        scheduled_sampling : int, optional
-            _description_, by default 0
-        training : _type_, optional
-            _description_, by default None
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-        x = self.rnn(decoder_features, initial_state=init_state)
-        # x = self.drop(x)
-        x = self.dense(x)
-        return x

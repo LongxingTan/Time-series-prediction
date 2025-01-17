@@ -10,7 +10,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
-from tfts.layers.attention_layer import Attention
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
@@ -24,8 +23,8 @@ class WaveNetConfig(BaseConfig):
 
     def __init__(
         self,
-        dilation_rates: List[int] = [2**i for i in range(4)],
-        kernel_sizes: List[int] = [2 for i in range(4)],
+        dilation_rates: List[int] = None,
+        kernel_sizes: List[int] = None,
         filters: int = 128,
         dense_hidden_size: int = 64,
         scheduled_sampling: float = 1.0,
@@ -51,8 +50,8 @@ class WaveNetConfig(BaseConfig):
         """
         super(WaveNetConfig, self).__init__()
 
-        self.dilation_rates: List[int] = dilation_rates
-        self.kernel_sizes: List[int] = kernel_sizes
+        self.dilation_rates: List[int] = dilation_rates or [2**i for i in range(4)]
+        self.kernel_sizes: List[int] = kernel_sizes or [2] * 4
         self.filters: int = filters
         self.dense_hidden_size: int = dense_hidden_size
         self.scheduled_sampling: float = scheduled_sampling
@@ -65,12 +64,16 @@ class WaveNetConfig(BaseConfig):
 class WaveNet(BaseModel):
     """WaveNet model for time series"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
-        super(WaveNet, self).__init__()
-        if config is None:
-            config = WaveNetConfig()
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[WaveNetConfig] = None) -> None:
+        """
+        Initializes the WaveNet model.
 
-        self.config = config
+        Args:
+            predict_sequence_length: Length of the prediction sequence.
+            config: Configuration object containing model parameters.
+        """
+        super(WaveNet, self).__init__()
+        self.config = config or WaveNetConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             kernel_sizes=config.kernel_sizes,
@@ -86,19 +89,16 @@ class WaveNet(BaseModel):
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
-        """wavenet call
+        """
+        Forward pass for the WaveNet model.
 
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            _description_
-        teacher : tf.Tensor, optional
-            _description_, by default None
+        Args:
+            inputs: Input tensor for the model.
+            teacher: Teacher tensor used for scheduled sampling.
+            return_dict: Flag to control the return type.
 
-        Returns
-        -------
-        tf.Tensor
-            _description_
+        Returns:
+            Tensor containing the model output.
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -130,9 +130,20 @@ class WaveNet(BaseModel):
 
 
 class Encoder(object):
+    """Encoder block for the WaveNet model."""
+
     def __init__(
         self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int
     ) -> None:
+        """
+        Initializes the encoder block.
+
+        Args:
+            kernel_sizes: List of kernel sizes for convolutional layers.
+            filters: Number of filters for convolutional layers.
+            dilation_rates: Dilation rates for the convolutions.
+            dense_hidden_size: Hidden size for the dense layers.
+        """
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -167,9 +178,20 @@ class Encoder(object):
 
 
 class DecoderV1(object):
+    """Decoder block for WaveNet V1."""
+
     def __init__(
         self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
     ) -> None:
+        """
+        Initializes the decoder block.
+
+        Args:
+            filters: Number of filters for convolutional layers.
+            dilation_rates: Dilation rates for convolutions.
+            dense_hidden_size: Size of the dense hidden layer.
+            predict_sequence_length: Length of the predicted sequence.
+        """
         self.filters: int = filters
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
@@ -190,27 +212,19 @@ class DecoderV1(object):
         training: Optional[bool] = None,
         **kwargs: Dict,
     ):
-        """wavenet decoder_v1
+        """
+        Forward pass for the decoder block.
 
-        Parameters
-        ----------
-        decoder_features : tf.Tensor
-            _description_
-        decoder_init_input : _type_
-            _description_
-        encoder_outputs : _type_
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
-        scheduled_sampling : int, optional
-            _description_, by default 0
-        training : _type_, optional
-            _description_, by default None
+        Args:
+            decoder_features: Tensor containing decoder features.
+            decoder_init_input: Initial input for the decoder.
+            encoder_outputs: List of encoder outputs.
+            teacher: Optional tensor for teacher forcing.
+            scheduled_sampling: Probability of using teacher forcing.
+            training: Whether the model is in training mode.
 
-        Returns
-        -------
-        tf.Tensor
-            _description_
+        Returns:
+            Decoder output tensor.
         """
         decoder_outputs = []
         prev_output = decoder_init_input  # the initial input for decoder
@@ -339,48 +353,3 @@ class DecoderV2(object):
         decoder_outputs = decoder_outputs_ta.stack()
         decoder_outputs = tf.transpose(decoder_outputs, [1, 0, 2])
         return decoder_outputs
-
-
-class Decoder3(tf.keras.layers.Layer):
-    """Multi-steps static decoding"""
-
-    def __init__(self, kernel_sizes, dilation_rates, filters, dense_size, **kwargs) -> None:
-        super(Decoder3, self).__init__()
-        self.dense = Dense(units=dense_size, activation=None)
-
-    def call(
-        self,
-        decoder_features,
-        decoder_init_input,
-        init_state,
-        teacher=None,
-        scheduled_sampling=0,
-        training=None,
-        **kwargs,
-    ):
-        """_summary_
-
-        Parameters
-        ----------
-        decoder_features : _type_
-            _description_
-        decoder_init_input : _type_
-            _description_
-        init_state : _type_
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
-        scheduled_sampling : int, optional
-            _description_, by default 0
-        training : _type_, optional
-            _description_, by default None
-
-        Returns
-        -------
-        tf.Tensor
-            _description_
-        """
-
-        x = self.rnn(decoder_features, initial_state=init_state)
-        x = self.dense(x)
-        return x
