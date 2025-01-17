@@ -108,7 +108,7 @@ Multi-variables and multi-steps prediction
 
 	config.update({
 	    "rnn_size": 128,
-    	"dense_size": 128,
+        "dense_size": 128,
 	})
 	print(config)
 

@@ -292,22 +292,24 @@ class DecoderV2(object):
         self.dense_5 = Dense(dense_hidden_size, activation="relu", name="decoder_dense_5")
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
-    def __call__(self, decoder_features: tf.Tensor, decoder_init_input, encoder_states, teacher=None):
-        """_summary_
+    def __call__(
+        self,
+        decoder_features: tf.Tensor,
+        decoder_init_input: tf.Tensor,
+        encoder_states: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+    ):
+        """
+        Forward pass for the decoder block v2.
 
-        Parameters
-        ----------
-        decoder_features : tf.Tensor
-            _description_
-        encoder_states : tf.Tensor
-            _description_
-        teacher : _type_, optional
-            _description_, by default None
+        Args:
+            decoder_features: Tensor containing decoder features.
+            decoder_init_input: Initial input for the decoder.
+            encoder_states: List of encoder outputs.
+            teacher: Optional tensor for teacher forcing.
 
-        Returns
-        -------
-        tf.Tensor
-            _description_
+        Returns:
+            Decoder output tensor.
         """
 
         def cond_fn(time, prev_output, decoder_output_ta):

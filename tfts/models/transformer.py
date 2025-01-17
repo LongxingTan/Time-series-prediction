@@ -12,7 +12,7 @@ from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHea
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
-from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
