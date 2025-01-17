@@ -139,12 +139,19 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
 class RotaryPositionEmbedding(tf.keras.layers.Layer):
     """
     RoFormer: Enhanced Transformer with Rotary Position Embedding
-    - https://github.com/keras-team/keras-nlp/blob/master/keras_nlp/src/layers/modeling/rotary_embedding.py
+    https://github.com/keras-team/keras-nlp/blob/master/keras_nlp/src/layers/modeling/rotary_embedding.py
     """
 
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
 
-    def call(self, t, cache_key=None):
-        return t
+    def call(self, inputs, cache_key=None):
+        """rotary position embedding
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
+        """
+        return inputs

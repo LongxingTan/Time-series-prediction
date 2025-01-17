@@ -2,6 +2,8 @@ import tensorflow as tf
 
 
 class TimeMixing(tf.keras.layers.Layer):
+    """TensorFlow RWKV time mixing"""
+
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.n_embd = config.n_embd
@@ -19,6 +21,13 @@ class TimeMixing(tf.keras.layers.Layer):
         self.output = tf.keras.layers.Dense(self.n_embd, use_bias=False)
 
     def call(self, x, state):
+        """time mixing
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
+        """
         aa, bb, pp = state
 
         # Mix with previous timestep
@@ -55,6 +64,8 @@ class TimeMixing(tf.keras.layers.Layer):
 
 
 class ChannelMixing(tf.keras.layers.Layer):
+    """TensorFlow RWKV channel mixing"""
+
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.n_embd = config.n_embd
@@ -67,6 +78,13 @@ class ChannelMixing(tf.keras.layers.Layer):
         self.receptance = tf.keras.layers.Dense(self.n_embd, use_bias=False)
 
     def call(self, x, state):
+        """channel mixing
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
+        """
         xk = x * self.time_mix_k + state * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + state * (1 - self.time_mix_r)
 

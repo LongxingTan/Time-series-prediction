@@ -109,6 +109,8 @@ class RWKV(BaseModel):
 
 
 class RWKVBlock(tf.keras.layers.Layer):
+    """TensorFlow RWKV block"""
+
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.ln1 = tf.keras.layers.LayerNormalization()
@@ -117,6 +119,13 @@ class RWKVBlock(tf.keras.layers.Layer):
         self.feed_forward = ChannelMixing(config)
 
     def call(self, x, states):
+        """block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            The input tensor of shape (batch_size, seq_length, embed_dim).
+        """
         att_states, ffn_state = states
 
         # Attention
