@@ -2,8 +2,7 @@
 
 from collections import OrderedDict
 import importlib
-import os
-from typing import Any, Dict, Union
+from typing import Dict
 
 from .base import BaseConfig
 

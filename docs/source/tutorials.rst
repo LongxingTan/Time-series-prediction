@@ -7,7 +7,7 @@ Tutorials
 
     <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-The following tutorials can be also found as `notebooks on GitHub <https://github.com/longxingtan/time-series-prediction/tree/master/notebooks>`_.
+The following tutorials can be also found as `notebooks on GitHub <https://github.com/longxingtan/time-series-prediction/tree/master/examples/notebooks>`_.
 
 .. _prepare_data:
 
@@ -90,7 +90,8 @@ Change the model parameters. If you want touch more parameters in model config, 
         "rnn_size": 128,
         "dense_size": 128,
     }
-    model = AutoModel('rnn', custom_model_config=custom_model_config)
+    config.update(custom_model_config)
+    model = AutoModel('rnn', config=config)
 
 
 Multi-variables and multi-steps prediction
@@ -106,7 +107,7 @@ Multi-variables and multi-steps prediction
 	print(config)
 
 	config.update({
-	"rnn_size": 128,
+	    "rnn_size": 128,
     	"dense_size": 128,
 	})
 	print(config)
@@ -154,7 +155,7 @@ Set up the custom-defined head layer to do the classification task or anomaly de
 Custom-defined trainer
 ----------------------------------------
 
-You could use tfts trainer, a custom trainer or use keras to train directly.
+You could use `tfts trainer`, `custom trainer` or use keras to train directly.
 
 .. code-block:: python
 
