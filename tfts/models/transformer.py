@@ -119,8 +119,6 @@ class Transformer(BaseModel):
             hidden_dropout_prob=config.hidden_dropout_prob,
         )
 
-        self.project = Dense(1, activation=None)
-
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
         """Time series transformer
 
@@ -164,7 +162,8 @@ class Transformer(BaseModel):
         # B, L, _ = tf.shape(decoder_feature)
         # casual_mask = CausalMask(B, L).mask
         # decoder_outputs = self.decoder(decoder_feature, memory, x_mask=casual_mask)
-        decoder_outputs = self.project(decoder_outputs)
+        # decoder_outputs = self.project(decoder_outputs)
+
         return decoder_outputs
 
     def _shift_right(self, input_ids):
@@ -276,25 +275,30 @@ class Decoder(tf.keras.layers.Layer):
         **kwargs
     ):
         """Transformer decoder"""
-        input_tensor = init_input
+        input_x = init_input
+        if teacher is not None:
+            teacher = tf.squeeze(teacher, 2)
+            teachers = tf.split(teacher, self.predict_sequence_length, axis=1)
+        else:
+            teachers = None
 
         for i in range(self.predict_sequence_length):
             input_tensor = self._get_input_for_step(
-                input_tensor, decoder_features, i, teacher, scheduled_sampling, training
+                input_x, decoder_features, i, teachers, scheduled_sampling, training
             )
             embed_input = self.decoder_embedding(input_tensor)
             decoder_output = self.decoder_layer(embed_input, encoder_memory)
             projected_output = self.projection(decoder_output)
-            input_tensor = tf.concat([input_tensor, projected_output[:, -1:, :]], axis=1)
+            input_x = tf.concat([input_x, projected_output[:, -1:, :]], axis=1)
 
-        return input_tensor[:, 1:]  # Exclude the first token
+        return input_x[:, 1:]  # Exclude the first token
 
     def _get_input_for_step(
         self,
-        input_tensor: tf.Tensor,
+        input_x: tf.Tensor,
         decoder_features: tf.Tensor,
         step: int,
-        teacher: Optional[tf.Tensor],
+        teachers: Optional[tf.Tensor],
         scheduled_sampling: float,
         training: bool,
     ) -> tf.Tensor:
@@ -302,10 +306,19 @@ class Decoder(tf.keras.layers.Layer):
 
         if training:
             p = np.random.uniform(low=0, high=1)
-            if teacher is not None and p > scheduled_sampling:
-                return teacher[:, : step + 1]
-            return input_tensor[:, : step + 1]
-        return input_tensor[:, : step + 1]
+            if teachers is not None and p > scheduled_sampling:
+                this_input = teachers[step]
+            else:
+                this_input = input_x[:, : step + 1]
+        else:
+            this_input = input_x[:, : step + 1]
+
+        if decoder_features is not None:
+            input_tensor = tf.concat([this_input, decoder_features[:, : step + 1, :]], axis=-1)
+        else:
+            input_tensor = this_input
+
+        return input_tensor
 
     def get_causal_attention_mask(self, sequence_length: int) -> tf.Tensor:
         """Generate a causal attention mask to ensure each token only attends to previous tokens."""
