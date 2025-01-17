@@ -57,22 +57,23 @@ pip install tfts
 
 ```python
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import tfts
-from tfts import AutoModel, KerasTrainer, Trainer, AutoConfig
+from tfts import AutoModel, AutoConfig, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
-
 # 其中，train是包含(x_train, y_train)的tuple, valid包含(x_valid, y_valid)
-train, valid = tfts.get_data('sine', train_length, predict_sequence_length, test_size=0.2)
-config = AutoConfig.for_model("seq2seq")  # 'wavenet', 'transformer'
-model = AutoModel.from_config(config, predict_sequence_length)
+(x_train, y_train), (x_valid, y_valid) = tfts.get_data("sine", train_length, predict_sequence_length, test_size=0.2)
 
-trainer = KerasTrainer(model)
-trainer.train(train, valid, epochs=15)
+model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert'
+config = AutoConfig.for_model(model_name_or_path)
+model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
+trainer.train((x_train, y_train), (x_valid, y_valid), epochs=30)
 
-pred = trainer.predict(valid[0])
-trainer.plot(history=valid[0], true=valid[1], pred=pred)
+pred = trainer.predict(x_valid)
+trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
 
