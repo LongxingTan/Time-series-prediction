@@ -60,16 +60,18 @@ class Seq2seq(BaseModel):
         self.predict_sequence_length = predict_sequence_length
 
         self.encoder = Encoder(
-            rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
+            rnn_size=self.config.rnn_hidden_size,
+            rnn_type=self.config.rnn_type,
+            dense_size=self.config.dense_hidden_size,
         )
         self.decoder = DecoderV1(
-            rnn_size=config.rnn_hidden_size,
-            rnn_type=config.rnn_type,
+            rnn_size=self.config.rnn_hidden_size,
+            rnn_type=self.config.rnn_type,
             predict_sequence_length=predict_sequence_length,
-            use_attention=config.use_attention,
-            attention_size=config.attention_size,
-            num_attention_heads=config.num_attention_heads,
-            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+            use_attention=self.config.use_attention,
+            attention_size=self.config.attention_size,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):

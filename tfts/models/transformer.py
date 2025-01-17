@@ -157,7 +157,9 @@ class Transformer(BaseModel):
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, encoder_mask=None)
 
-        decoder_outputs = self.decoder(decoder_feature, init_input=x[:, -1:], encoder_memory=memory, teacher=teacher)
+        decoder_outputs = self.decoder(
+            decoder_feature, init_input=x[:, -1:, 0:1], encoder_memory=memory, teacher=teacher
+        )
 
         # B, L, _ = tf.shape(decoder_feature)
         # casual_mask = CausalMask(B, L).mask

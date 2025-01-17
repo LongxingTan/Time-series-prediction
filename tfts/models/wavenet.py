@@ -76,16 +76,16 @@ class WaveNet(BaseModel):
         self.config = config or WaveNetConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=config.kernel_sizes,
-            dilation_rates=config.dilation_rates,
-            filters=config.filters,
-            dense_hidden_size=config.dense_hidden_size,
+            kernel_sizes=self.config.kernel_sizes,
+            dilation_rates=self.config.dilation_rates,
+            filters=self.config.filters,
+            dense_hidden_size=self.config.dense_hidden_size,
         )
         self.decoder = DecoderV1(
-            filters=config.filters,
-            dilation_rates=config.dilation_rates,
-            dense_hidden_size=config.dense_hidden_size,
-            predict_sequence_length=predict_sequence_length,
+            filters=self.config.filters,
+            dilation_rates=self.config.dilation_rates,
+            dense_hidden_size=self.config.dense_hidden_size,
+            predict_sequence_length=self.predict_sequence_length,
         )
 
     def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
