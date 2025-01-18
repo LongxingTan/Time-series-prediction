@@ -17,7 +17,7 @@ class DenseTemp(tf.keras.layers.Layer):
         kernel_constraint: Optional[str] = None,
         use_bias: bool = True,
         bias_initializer="zeros",
-        trainable=True,
+        trainable: bool = True,
         name=None,
     ):
         super(DenseTemp, self).__init__(trainable=trainable, name=name)
@@ -84,26 +84,24 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.relu_dropout = relu_dropout
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
+        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="gelu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
-        # self.drop = Dropout(self.relu_dropout)
         super(FeedForwardNetwork, self).build(input_shape)
 
-    def call(self, x):
-        """Feed Forward Network
+    def call(self, x: tf.Tensor):
+        """Feed Forward Network of Transformer
 
         Parameters
         ----------
-        x : _type_
-            _description_
+        x : tf.Tensor
+            FFN 3D inputs
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            FFN 3D outputs
         """
         output = self.filter_dense_layer(x)
-        # output = self.drop(output)
         output = self.output_dense_layer(output)
         return output
 
