@@ -3,22 +3,10 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
-from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type
+from typing import Dict, Literal, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import (
-    GRU,
-    LSTM,
-    AveragePooling1D,
-    BatchNormalization,
-    Bidirectional,
-    Dense,
-    Dropout,
-    GRUCell,
-    LSTMCell,
-    Reshape,
-    TimeDistributed,
-)
+from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Dense, Reshape, TimeDistributed
 
 from .base import BaseConfig, BaseModel
 
