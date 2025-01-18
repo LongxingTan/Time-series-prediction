@@ -51,6 +51,10 @@ input 1
 Train the models
 -----------------
 
+- Multi-GPU training with `tf.distribute <https://www.tensorflow.org/guide/keras/distributed_training>`_
+- Mixed precision with `tf.keras.mixed_precision <https://www.tensorflow.org/guide/mixed_precision>`_
+
+
 .. code-block:: python
 
     import tensorflow as tf

@@ -69,7 +69,7 @@ class Attention(tf.keras.layers.Layer):
         v_ = tf.concat(tf.split(v, self.num_attention_heads, axis=2), axis=0)
 
         score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
-        score = score / tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
+        score = score / tf.cast(tf.shape(q_)[-1], q_.dtype) ** 0.5
 
         if mask is not None:
             mask = tf.repeat(mask, repeats=self.num_attention_heads, axis=0)
