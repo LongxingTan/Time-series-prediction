@@ -13,7 +13,13 @@ from tfts.layers.mask_layer import ProbMask
 class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
+    def __init__(
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float = 0.0,
+        position_embedding_type=None,
+    ) -> None:
         """Initialize the Attention layer.
 
         Parameters:
@@ -33,6 +39,7 @@ class Attention(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.position_embedding_type = position_embedding_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
@@ -41,7 +48,17 @@ class Attention(tf.keras.layers.Layer):
         self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
         super(Attention, self).build(input_shape)
 
-    def call(self, q, k, v, mask=None, training=None, return_attention_scores=False, use_causal_mask=False):
+    def call(
+        self,
+        q: tf.Tensor,
+        k: tf.Tensor,
+        v: tf.Tensor,
+        past_key_value=None,
+        mask: Optional[tf.Tensor] = None,
+        training: Optional[bool] = None,
+        return_attention_scores: bool = False,
+        use_causal_mask: bool = False,
+    ):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
 
         Parameters
@@ -51,9 +68,9 @@ class Attention(tf.keras.layers.Layer):
         k : tf.Tensor
             Key with shape batch * seq_k * fea
         v : tf.Tensor
-            value with shape batch * seq_v * fea
-        mask : _type_, optional
-            important to avoid the leaks, defaults to None, by default None
+            Value with shape batch * seq_v * fea
+        mask :tf.Tensor, optional
+            important to avoid the leaks, by default None
 
         Returns
         -------
