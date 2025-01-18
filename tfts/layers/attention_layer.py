@@ -77,16 +77,19 @@ class Attention(tf.keras.layers.Layer):
         tf.Tensor
             tensor with shape batch * seq_q * (units * num_attention_heads)
         """
-        q = self.dense_q(q)  # project the query/key/value to num_attention_heads * units
+        # project the query/key/value to num_attention_heads * units
+        q = self.dense_q(q)
         k = self.dense_k(k)
         v = self.dense_v(v)
 
-        q_ = tf.concat(tf.split(q, self.num_attention_heads, axis=2), axis=0)  # multi-heads transfer to multi-sample
+        # multi-heads transfer to multi-sample
+        q_ = tf.concat(tf.split(q, self.num_attention_heads, axis=2), axis=0)
         k_ = tf.concat(tf.split(k, self.num_attention_heads, axis=2), axis=0)
         v_ = tf.concat(tf.split(v, self.num_attention_heads, axis=2), axis=0)
 
-        score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
-        score = score / tf.cast(tf.shape(q_)[-1], q_.dtype) ** 0.5
+        # => (batch * heads) * seq_q * seq_k
+        score = tf.linalg.matmul(q_, k_, transpose_b=True)
+        score = score / tf.cast(tf.shape(q_)[-1], score.dtype) ** 0.5
 
         if mask is not None:
             mask = tf.repeat(mask, repeats=self.num_attention_heads, axis=0)
@@ -95,8 +98,10 @@ class Attention(tf.keras.layers.Layer):
         score = tf.nn.softmax(score, axis=-1)
         score = self.dropout(score, training=training)
 
-        outputs = tf.linalg.matmul(score, v_)  # (batch * heads) * seq_q * units
+        # (batch * heads) * seq_q * units
+        outputs = tf.linalg.matmul(score, v_)
         outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
+        outputs = tf.cast(outputs, tf.float32)
 
         if return_attention_scores:
             return outputs, score
@@ -162,6 +167,7 @@ class ProbAttention(tf.keras.layers.Layer):
         self.mask_flag = True
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.factor = 5
         self.scale = None
 
@@ -182,7 +188,6 @@ class ProbAttention(tf.keras.layers.Layer):
         indx_k_seq = tf.random.uniform((sample_k,), maxval=L, dtype=tf.int32)
 
         K_sample = tf.gather(k_expand, tf.range(S), axis=2)
-
         K_sample = tf.gather(K_sample, indx_q_seq, axis=2)
         K_sample = tf.gather(K_sample, indx_k_seq, axis=3)
 
