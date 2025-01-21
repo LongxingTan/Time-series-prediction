@@ -261,8 +261,6 @@ class KerasTrainer(BaseTrainer):
             epochs=epochs,
             verbose=verbose,
             callbacks=callbacks,
-            workers=tf.data.AUTOTUNE,
-            use_multiprocessing=True,
             **kwargs,
         )
         return history
