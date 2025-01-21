@@ -25,3 +25,12 @@ class TestAutoModel(unittest.TestCase):
         output = auto_model(input_data)
 
         self.assertEqual(output.shape, (1, 5, 1))
+
+    def test_auto_model_for_classification(self):
+        num_labels = 3
+        config = AutoConfig.for_model("bert")
+        model = AutoModelForClassification.from_config(config, num_labels=num_labels)
+
+        x = tf.random.normal([2, 14, 4])
+        y = model(x)
+        self.assertEqual(y.shape, (2, num_labels))

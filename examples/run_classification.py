@@ -2,7 +2,8 @@
 
 import argparse
 
-import tfts
+import tensorflow as tf
+
 from tfts import AutoConfig, AutoModel, AutoModelForClassification, KerasTrainer
 
 
@@ -24,7 +25,7 @@ def run_train(args):
     config = AutoConfig.for_model(args.use_model)
     model = AutoModelForClassification.from_config(config, num_labels=args.num_labels)
 
-    print(model.summary())
+    print(model)
     return
 
 
