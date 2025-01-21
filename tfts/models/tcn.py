@@ -100,6 +100,9 @@ class TCN(BaseModel):
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
 
+        if output_hidden_states:
+            return encoder_outputs
+
         memory = encoder_state[:, -1]
         encoder_output = self.drop1(memory)
         encoder_output = self.dense1(encoder_output)

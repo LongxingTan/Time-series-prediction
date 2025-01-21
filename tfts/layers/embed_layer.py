@@ -34,7 +34,7 @@ class TokenEmbedding(tf.keras.layers.Layer):
         )
         super(TokenEmbedding, self).build(input_shape)
 
-    def call(self, x):
+    def call(self, x: tf.Tensor):
         """
         Performs the token embedding.
 

@@ -6,7 +6,7 @@
 from typing import Dict, Literal, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Dense, Reshape, TimeDistributed
+from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Concatenate, Dense, Reshape
 
 from .base import BaseConfig, BaseModel
 
@@ -87,9 +87,11 @@ class RNN(BaseModel):
         x, encoder_feature = self._prepare_inputs(inputs)
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
+        if output_hidden_states:
+            return encoder_outputs
+
         if self.config.rnn_type == "lstm":
-            concat_layer = tf.keras.layers.Concatenate(axis=-1)
-            encoder_output = concat_layer(encoder_state)
+            encoder_output = Concatenate(axis=-1)(encoder_state)
         else:
             encoder_output = encoder_state
 
