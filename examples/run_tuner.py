@@ -1,12 +1,8 @@
-"""tfts auto tuner"""
+"""Demo to tune the model parameters by Autotune"""
 
 import numpy as np
 
-from tfts.models.auto_config import AutoConfig
-from tfts.models.auto_model import AutoModel
-from tfts.trainer import KerasTrainer
-
-__all__ = ["AutoTuner"]
+from tfts import AutoConfig, AutoModel, AutoModelForAnomaly, KerasTrainer, get_data
 
 
 class AutoTuner(object):
@@ -25,24 +21,19 @@ class AutoTuner(object):
         num_layers = trial.suggest_int("num_layers", 1, 4)
 
         # Suggest training parameters
-        learning_rate = trial.suggest_loguniform("learning_rate", 1e-4, 1e-2)
-        epochs = trial.suggest_int("epochs", 5, 50)
+        learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-2)
+        epochs = trial.suggest_int("epochs", 10, 50)
 
         # Create model config
-        config = AutoConfig.for_model(
-            self.use_model,
-            hidden_units=hidden_units,
-            num_layers=num_layers,
-        )
+        config = AutoConfig.for_model(self.use_model)
+        config.rnn_hidden_size = hidden_units
+        config.num_stacked_layers = num_layers
 
-        # Create model and trainer
         model = AutoModel.from_config(config, predict_sequence_length=self.predict_sequence_length)
         trainer = KerasTrainer(model, optimizer_config={"learning_rate": learning_rate})
 
-        # Train the model
         trainer.train(self.train_data, self.valid_data, epochs=epochs, verbose=0)
 
-        # Evaluate the model (e.g., mean squared error)
         x_valid, y_valid = self.valid_data
         predictions = trainer.predict(x_valid)
         mse = np.mean((y_valid - predictions) ** 2)
@@ -62,3 +53,18 @@ class AutoTuner(object):
             print(f"    {key}: {value}")
 
         return study
+
+
+if __name__ == "__main__":
+    train_length = 24
+    predict_sequence_length = 8
+    (x_train, y_train), (x_valid, y_valid) = get_data("sine", train_length, predict_sequence_length, test_size=0.2)
+
+    tuner = AutoTuner(
+        use_model="rnn",
+        train_data=(x_train, y_train),
+        valid_data=(x_valid, y_valid),
+        predict_sequence_length=predict_sequence_length,
+    )
+
+    study = tuner.run(n_trials=20, direction="minimize")

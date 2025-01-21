@@ -221,12 +221,12 @@ import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense
 from tfts import AutoModel, AutoConfig
 
-def build_model():
-    train_length = 24
-    train_features = 15
-    predict_sequence_length = 8
+train_length = 24
+num_train_features = 15
+predict_sequence_length = 8
 
-    inputs = Input([train_length, train_features])
+def build_model():
+    inputs = Input([train_length, num_train_features])
     config = AutoConfig.for_model("seq2seq")
     backbone = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
     outputs = backbone(inputs)

@@ -12,7 +12,6 @@ from tfts.models.auto_model import (
 )
 from tfts.trainer import KerasTrainer, Trainer
 from tfts.training_args import TrainingArguments
-from tfts.tuner import AutoTuner
 
 __all__ = [
     "AutoModel",
@@ -22,7 +21,6 @@ __all__ = [
     "AutoModelForAnomaly",
     "AutoModelForUncertainty",
     "AutoConfig",
-    "AutoTuner",
     "Trainer",
     "KerasTrainer",
     "TrainingArguments",
