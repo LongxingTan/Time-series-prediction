@@ -6,7 +6,7 @@
 from typing import Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Flatten, Lambda, ReLU
+from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU, Reshape
 
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
@@ -19,8 +19,8 @@ class TCNConfig(BaseConfig):
 
     def __init__(
         self,
-        dilation_rates: Tuple[int] = [2**i for i in range(4)],
-        kernel_sizes: Tuple[int] = [2 for _ in range(4)],
+        dilation_rates: Tuple[int] = (2**i for i in range(4)),
+        kernel_sizes: Tuple[int] = (2 for _ in range(4)),
         filters: int = 128,
         dense_hidden_size: int = 64,
     ):
@@ -75,15 +75,15 @@ class TCN(BaseModel):
 
         Parameters
         ----------
-        inputs : _type_
-            _description_
-        teacher : _type_, optional
+        inputs : tf.Tensor
+            3D input tensor
+        teacher : tf.Tensor, optional
             _description_, by default None
 
         Returns
         -------
-        _type_
-            _description_
+        tf.Tensor
+            3D output tensor
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -99,24 +99,19 @@ class TCN(BaseModel):
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
         # outputs = self.dense1(encoder_state)  # batch * predict_sequence_length
         # outputs = self.dense2(encoder_outputs)[:, -self.predict_sequence_length]
-        # print(len(encoder_outputs), encoder_outputs[0].shape, encoder_state.shape)
 
         memory = encoder_state[:, -1]
         encoder_output = self.drop1(memory)
         encoder_output = self.dense1(encoder_output)
-        # encoder_output = self.bn2(encoder_output)
         encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
         encoder_output = self.drop2(encoder_output)
 
         outputs = self.project1(encoder_output)
-        # outputs = tf.expand_dims(outputs, -1)
-        expand_dims_layer = tf.keras.layers.Reshape((outputs.shape[1], 1))
-        outputs = expand_dims_layer(outputs)
+        outputs = Reshape((outputs.shape[1], 1))(outputs)
 
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
         # outputs = self.dense3(encoder_outputs)
-
         return outputs
 
 
