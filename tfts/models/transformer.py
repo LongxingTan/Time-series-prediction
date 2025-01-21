@@ -119,7 +119,13 @@ class Transformer(BaseModel):
             layer_norm_eps=self.config.layer_norm_eps,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        inputs: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """Time series transformer
 
         Parameters

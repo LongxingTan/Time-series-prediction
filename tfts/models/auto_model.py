@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from tfts.tasks.auto_task import AnomalyHead
+from tfts.tasks.auto_task import AnomalyHead, ClassificationHead
 
 from .base import BaseConfig, BaseModel
 
@@ -124,12 +124,18 @@ class AutoModelForPrediction(AutoModel):
 class AutoModelForClassification(AutoModel):
     """tfts model for classification"""
 
+    def __init__(self, model, config):
+        super().__init__(model, config)
+        self.head = ClassificationHead(num_labels=config.num_labels)
+
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
     ):
-        return super().__call__(x, return_dict=return_dict)
+        model_output = self.model(x, return_dict=return_dict)
+        logits = self.head(model_output)
+        return logits
 
 
 class AutoModelForAnomaly(AutoModel):

@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 class Pipeline(object):
     _load_processor = False
 
-    def __init__(self, model, processor: Optional):
-        pass
+    def __init__(self, task: str, model, processor: Optional):
+        self.task = task
 
     def __call__(self):
         pass

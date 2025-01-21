@@ -303,14 +303,14 @@ class FastAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x, mask: Optional[tf.Tensor] = None):
         """Fast attention
 
         Parameters
         ----------
         x : tf.Tensor
             _description_
-        mask : _type_, optional
+        mask : tf.Tensor, optional
             _description_, by default None
         """
         return

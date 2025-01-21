@@ -50,7 +50,9 @@ class DeepAR(BaseModel):
         self.dense = Dense(units=predict_sequence_length, activation="relu")
         self.gauss = GaussianHead(units=1)
 
-    def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
+    def __call__(
+        self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
+    ):
         """DeepAR
 
         Parameters

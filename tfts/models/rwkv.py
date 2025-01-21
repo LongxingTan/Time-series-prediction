@@ -73,7 +73,14 @@ class RWKV(BaseModel):
             states.append((att_states, ffn_state))
         return states
 
-    def __call__(self, x, states=None, teacher=None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        x,
+        states=None,
+        teacher=None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """RWKV model call"""
 
         if states is None:

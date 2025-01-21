@@ -88,13 +88,20 @@ class WaveNet(BaseModel):
             predict_sequence_length=self.predict_sequence_length,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        inputs: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """
         Forward pass for the WaveNet model.
 
         Args:
             inputs: Input tensor for the model.
             teacher: Teacher tensor used for scheduled sampling.
+            output_hidden_states: Flag to output the hidden statues
             return_dict: Flag to control the return type.
 
         Returns:
