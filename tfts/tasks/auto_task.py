@@ -26,10 +26,11 @@ class SegmentationHead(tf.keras.layers.Layer, BaseTask):
 class ClassificationHead(tf.keras.layers.Layer):
     """Classification task head layer"""
 
-    def __init__(self, num_labels: int = 1):
+    def __init__(self, num_labels: int = 1, dense_units: Tuple[int] = (128,)):
         super(ClassificationHead, self).__init__()
-        self.pooling = GlobalAveragePooling1D()
-        self.dense = Dense(num_labels, activateion="softmax")
+        self.pooling = GlobalAveragePooling1D(data_format="channels_last")
+        self.dense_units = dense_units
+        self.dense = Dense(num_labels, activation="softmax")
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """classification task head
@@ -37,14 +38,20 @@ class ClassificationHead(tf.keras.layers.Layer):
         Parameters
         ----------
         inputs : tf.Tensor
-            model backbone output as task input
+            model backbone output as task input, (batch_size, train_sequence_length, hidden_size)
 
         Returns
         -------
         tf.Tensor
             logit of the classification
         """
+        # => (batch_size, hidden_size)
         pooled_output = self.pooling(inputs)
+
+        for unit in self.dense_units:
+            pooled_output = Dense(unit, activation="relu")(pooled_output)
+
+        # => (batch_size, num_labels)
         logits = self.dense(pooled_output)
         return logits
 

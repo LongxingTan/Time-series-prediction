@@ -1,10 +1,10 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout
 
 from tfts.layers.mask_layer import ProbMask
 
@@ -52,8 +52,8 @@ class Attention(tf.keras.layers.Layer):
         q: tf.Tensor,
         k: tf.Tensor,
         v: tf.Tensor,
-        past_key_value=None,
         mask: Optional[tf.Tensor] = None,
+        past_key_value=None,
         training: Optional[bool] = None,
         return_attention_scores: bool = False,
         use_causal_mask: bool = False,
@@ -140,7 +140,7 @@ class SelfAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
 
-    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training=None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training: Optional[bool] = None):
         """Self attention layer
 
         Parameters
@@ -155,7 +155,7 @@ class SelfAttention(tf.keras.layers.Layer):
         tf.Tensor
             3D self attention output, (batch_size, sequence_length, attention_hidden_size)
         """
-        return self.attention(x, x, x, mask, training=training)
+        return self.attention(q=x, k=x, v=x, mask=mask, training=training)
 
     def get_config(self):
         base_config = super(SelfAttention, self).get_config()
@@ -234,7 +234,7 @@ class ProbAttention(tf.keras.layers.Layer):
         return tf.convert_to_tensor(context_in)
 
     # @tf.function
-    def call(self, q, k, v, mask=None):
+    def call(self, q, k, v, mask: Optional[tf.Tensor] = None):
         """Prob attention"""
         q = self.dense_q(q)  # project the query/key/value to num_attention_heads * units
         k = self.dense_k(k)
@@ -282,7 +282,7 @@ class SparseAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x, mask: Optional[tf.Tensor] = None):
         """Sparse attention
 
         Parameters

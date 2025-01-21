@@ -7,7 +7,6 @@ import logging
 import os
 from typing import Any, Dict, Union
 
-from flatbuffers.flexbuffers import Object
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
@@ -76,7 +75,7 @@ class BaseModel(ABC):
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
-        if hasattr(self, "model"):
+        if hasattr(self, "model") and self.model is not None:
             self.model.summary()
         else:
             raise RuntimeError("Model has not been built yet. Please build the model first.")
@@ -91,7 +90,7 @@ class BaseConfig(ABC):
     def __init__(self, **kwargs):
         self.update(kwargs)
 
-    def __setattr__(self, key: str, value: Object):
+    def __setattr__(self, key: str, value):
         mapped_key = self.attribute_map.get(key, key)
         super().__setattr__(mapped_key, value)
 
@@ -100,7 +99,7 @@ class BaseConfig(ABC):
             key = super().__getattribute__("attribute_map")[key]
         return super().__getattribute__(key)
 
-    def update(self, config_dict: Dict[str, Object]):
+    def update(self, config_dict: Dict[str, Any]):
         for key, value in config_dict.items():
             try:
                 setattr(self, key, value)

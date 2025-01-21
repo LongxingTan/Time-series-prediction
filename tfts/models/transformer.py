@@ -4,11 +4,11 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention, TimeDistributed
+from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
@@ -225,7 +225,7 @@ class Encoder(tf.keras.layers.Layer):
         x = encoder_inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
-            x = ln_layer1(x + attention_layer(x, encoder_mask))
+            x = ln_layer1(x + attention_layer(x, mask=encoder_mask))
             x = ln_layer2(x + ffn_layer(x))
         return x
 

@@ -1,7 +1,5 @@
 """tfts auto tuner"""
 
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
-
 import numpy as np
 
 from tfts.models.auto_config import AutoConfig

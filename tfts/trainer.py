@@ -148,7 +148,7 @@ class KerasTrainer(BaseTrainer):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
-        loss_fn: Union[Callable, tf.keras.losses.Loss] = tf.keras.losses.MeanSquaredError(),
+        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
         optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
@@ -188,9 +188,8 @@ class KerasTrainer(BaseTrainer):
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
-        callback_metrics: Optional[List[tf.keras.metrics.Metric]] = None,
-        early_stopping: Optional[tf.keras.callbacks.Callback] = None,
-        checkpoint: Optional[tf.keras.callbacks.Callback] = None,
+        metrics: Optional[List[tf.keras.metrics.Metric]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         verbose: int = 1,
         **kwargs: Dict[str, object],
     ) -> tf.keras.callbacks.History:
@@ -203,9 +202,8 @@ class KerasTrainer(BaseTrainer):
             epochs: Number of epochs to train for. Default is 10.
             batch_size: Number of samples per batch. Default is 64.
             steps_per_epoch: Number of steps per epoch. Optional.
-            callback_metrics: List of metrics for monitoring during training. Optional.
-            early_stopping: Early stopping callback, optional.
-            checkpoint: Checkpoint callback, optional.
+            metrics:  List of metrics for monitoring during training. Optional.
+            callbacks: List of keras callbacks during training. Optional.
             verbose: Verbosity level. Default is 1.
             **kwargs: Additional keyword arguments for callbacks.
 
@@ -213,14 +211,8 @@ class KerasTrainer(BaseTrainer):
             A History object containing training logs.
         """
 
-        callbacks: List[tf.keras.callbacks.Callback] = []
-        if early_stopping is not None:
-            callbacks.append(early_stopping)
-        if checkpoint is not None:
-            callbacks.append(checkpoint)
-        if "callbacks" in kwargs:
-            callbacks += kwargs.get("callbacks")
-            logger.info("Callbacks: ", callbacks)
+        if not callbacks:
+            callbacks: List[tf.keras.callbacks.Callback] = []
 
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
@@ -248,9 +240,20 @@ class KerasTrainer(BaseTrainer):
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         logger.info(f"Trainable parameters: {trainable_params}")
 
-        self.model.compile(
-            loss=self.loss_fn, optimizer=self.optimizer, metrics=callback_metrics, run_eagerly=self.run_eagerly
-        )
+        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
+        # if isinstance(train_dataset, (list, tuple)):
+        #     x_train, y_train = train_dataset
+        #     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        #
+        # train_dataset = train_dataset.cache().shuffle(buffer_size=10000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        #
+        # if valid_dataset is not None:
+        #     if isinstance(valid_dataset, (list, tuple)):
+        #         x_val, y_val = valid_dataset
+        #         valid_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+        #
+        #     valid_dataset = valid_dataset.cache().batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
 

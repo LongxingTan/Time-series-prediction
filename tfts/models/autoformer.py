@@ -3,10 +3,8 @@
 <https://arxiv.org/abs/2106.13008>`_
 """
 
-import collections
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
 

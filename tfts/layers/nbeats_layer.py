@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.nbeats`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
