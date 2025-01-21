@@ -78,7 +78,7 @@ class AutoModel(BaseModel):
         return self.model(x, return_dict=return_dict)
 
     @classmethod
-    def from_config(cls, config, predict_sequence_length=1, task="prediction"):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
@@ -136,6 +136,15 @@ class AutoModelForClassification(AutoModel):
         model_output = self.model(x, output_hidden_states=True)
         logits = self.head(model_output)
         return logits
+
+    @classmethod
+    def from_config(cls, config, num_labels: int = 1):
+        config.num_labels = num_labels
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config, predict_sequence_length=1)
+        return cls(model, config)
 
 
 class AutoModelForAnomaly(AutoModel):
