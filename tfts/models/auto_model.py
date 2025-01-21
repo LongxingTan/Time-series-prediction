@@ -53,6 +53,7 @@ class AutoModel(BaseModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
         """automodel callable
@@ -75,7 +76,7 @@ class AutoModel(BaseModel):
                     f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
                     f"but got {len(x[0].shape)}"
                 )
-        return self.model(x, return_dict=return_dict)
+        return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):

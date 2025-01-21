@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization
+from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization, Reshape
 
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
@@ -134,14 +134,16 @@ class Bert(BaseModel):
 
         encoder_feature = self.encoder_embedding(encoder_feature)
 
+        memory = self.encoder(encoder_feature, encoder_mask=None)
+
         if output_hidden_states:
             # (batch_size, train_sequence_length, hidden_size)
-            return encoder_feature
+            return memory
 
-        memory = self.encoder(encoder_feature, encoder_mask=None)
         encoder_output = memory[:, -1]
         encoder_output = self.dense1(encoder_output)
         encoder_output = self.dense2(encoder_output)
         outputs = self.project1(encoder_output)
-        outputs = tf.expand_dims(outputs, -1)
+
+        outputs = Reshape((outputs.shape[1], 1))(outputs)
         return outputs
