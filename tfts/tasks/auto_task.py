@@ -29,7 +29,7 @@ class ClassificationHead(tf.keras.layers.Layer):
     def __init__(self, num_labels: int = 1):
         super(ClassificationHead, self).__init__()
         self.pooling = GlobalAveragePooling1D()
-        self.dense = Dense(num_labels, activateion="softmax")
+        self.dense = Dense(num_labels, activation="softmax")
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """classification task head
