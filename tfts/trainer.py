@@ -70,9 +70,8 @@ class BaseTrainer(object):
 
     def _setup_strategy(self) -> tf.distribute.Strategy:
         """Configure default distributed training strategy."""
-        logger.info("Tensorflow: setting up strategy")
-
         gpus = tf.config.list_physical_devices("GPU")
+
         if not gpus:
             strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
         else:
@@ -87,6 +86,7 @@ class BaseTrainer(object):
             else:
                 raise ValueError("Cannot find the proper strategy, please check your environment properties.")
 
+        logger.info(f"Tensorflow: setting up strategy, Number of devices: {strategy.num_replicas_in_sync}")
         return strategy
 
     def _setup_model(self, model) -> tf.keras.Model:
@@ -123,6 +123,12 @@ class BaseTrainer(object):
         """Configure mixed precision training."""
         policy = tf.keras.mixed_precision.Policy("mixed_float16")
         tf.keras.mixed_precision.set_global_policy(policy)
+
+    # def _setup_ema(self) -> None:
+    #     """Configure Exponential Moving Average if enabled."""
+    #     self.ema = None
+    #     if self.config.use_ema:
+    #         self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
 
     def _prepare_inputs_for_model(
         self, x: Union[np.ndarray, pd.DataFrame]
@@ -348,41 +354,6 @@ class Trainer(object):
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-    def _setup_model(self, model) -> tf.keras.Model:
-        """Prepare the model for training."""
-        if not isinstance(model, tf.keras.Model):
-            if not hasattr(model, "build_model"):
-                raise TypeError("Model must be a tf.keras.Model or have a build_model method")
-        return model
-
-    def _setup_strategy(self) -> None:
-        """Configure distributed training strategy."""
-        if self.config.distribute_strategy == "mirrored":
-            self.strategy = tf.distribute.MirroredStrategy()
-        elif self.config.distribute_strategy == "tpu":
-            resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
-            tf.config.experimental_connect_to_cluster(resolver)
-            tf.tpu.experimental.initialize_tpu_system(resolver)
-            self.strategy = tf.distribute.TPUStrategy(resolver)
-        elif self.config.distribute_strategy == "parameter_server":
-            self.strategy = tf.distribute.experimental.ParameterServerStrategy()
-        else:
-            self.strategy = tf.distribute.get_strategy()  # Default strategy
-
-        logger.info(f"Number of devices: {self.strategy.num_replicas_in_sync}")
-
-    def _setup_ema(self) -> None:
-        """Configure Exponential Moving Average if enabled."""
-        self.ema = None
-        if self.config.use_ema:
-            self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
-
-    def _setup_mixed_precision(self) -> None:
-        """Configure mixed precision training if enabled."""
-        if self.config.mixed_precision:
-            policy = tf.keras.mixed_precision.Policy("mixed_float16")
-            tf.keras.mixed_precision.set_global_policy(policy)
 
     def train(
         self,
