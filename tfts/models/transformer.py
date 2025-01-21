@@ -174,9 +174,6 @@ class Transformer(BaseModel):
 
         return decoder_outputs
 
-    def _shift_right(self, input_ids):
-        return  # shifted_input_ids
-
 
 class Encoder(tf.keras.layers.Layer):
     def __init__(
@@ -197,7 +194,7 @@ class Encoder(tf.keras.layers.Layer):
         self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.layer_norm_eps = layer_norm_eps
-        self.layers: List[tf.keras.layers.Layer] = []
+        self.layers: List[List[tf.keras.layers.Layer]] = []
 
     def build(self, input_shape: Tuple[int]) -> None:
         for _ in range(self.num_hidden_layers):
@@ -228,11 +225,8 @@ class Encoder(tf.keras.layers.Layer):
         x = encoder_inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
-            enc = x
-            enc = attention_layer(enc, encoder_mask)
-            enc = ln_layer1(x + enc)  # residual connect
-            enc1 = ffn_layer(enc)
-            x = ln_layer2(enc + enc1)
+            x = ln_layer1(x + attention_layer(x, encoder_mask))
+            x = ln_layer2(x + ffn_layer(x))
         return x
 
     def get_config(self):

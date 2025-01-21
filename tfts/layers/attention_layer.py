@@ -1,6 +1,5 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-import math
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -127,11 +126,15 @@ class SelfAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
+        position_embedding_type=None,
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
         self.attention = Attention(
-            hidden_size, num_attention_heads, attention_probs_dropout_prob=attention_probs_dropout_prob
+            hidden_size,
+            num_attention_heads,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            position_embedding_type=position_embedding_type,
         )
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:

@@ -8,8 +8,6 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 import tensorflow as tf
 from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization
 
-from tfts.layers.attention_layer import Attention, SelfAttention
-from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
 from tfts.models.transformer import Encoder
 
@@ -137,8 +135,8 @@ class Bert(BaseModel):
         encoder_feature = self.encoder_embedding(encoder_feature)
 
         memory = self.encoder(encoder_feature, encoder_mask=None)
-        encoder_output = memory[:, -1]
 
+        encoder_output = memory[:, -1]
         encoder_output = self.dense1(encoder_output)
         encoder_output = self.dense2(encoder_output)
         outputs = self.project1(encoder_output)
