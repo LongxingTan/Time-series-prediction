@@ -41,12 +41,8 @@ class AutoModel(BaseModel):
     output tensor: [batch_size, predict_sequence_length, num_labels]
     """
 
-    def __init__(
-        self,
-        model,
-        config,
-    ):
-        super().__init__()
+    def __init__(self, model, config):
+        super().__init__(config=config)
         self.model = model
         self.config = config
 
@@ -145,7 +141,7 @@ class AutoModelForClassification(AutoModel):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=1)
+        model = getattr(module, class_name)(config=config)
         return cls(model, config)
 
 

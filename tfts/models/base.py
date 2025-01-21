@@ -75,7 +75,7 @@ class BaseModel(ABC):
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
-        if hasattr(self, "model"):
+        if hasattr(self, "model") and self.model is not None:
             self.model.summary()
         else:
             raise RuntimeError("Model has not been built yet. Please build the model first.")
