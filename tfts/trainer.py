@@ -241,28 +241,42 @@ class KerasTrainer(BaseTrainer):
         logger.info(f"Trainable parameters: {trainable_params}")
 
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
+        # if isinstance(train_dataset, (list, tuple)):
+        #     x_train, y_train = train_dataset
+        #     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        #
+        # train_dataset = train_dataset.cache().shuffle(buffer_size=10000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        #
+        # if valid_dataset is not None:
+        #     if isinstance(valid_dataset, (list, tuple)):
+        #         x_val, y_val = valid_dataset
+        #         valid_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+        #
+        #     valid_dataset = valid_dataset.cache().batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
         if isinstance(train_dataset, (list, tuple)):
             x_train, y_train = train_dataset
-            train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
 
-        train_dataset = train_dataset.cache().shuffle(buffer_size=10000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
-        if valid_dataset is not None:
-            if isinstance(valid_dataset, (list, tuple)):
-                x_val, y_val = valid_dataset
-                valid_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-
-            valid_dataset = valid_dataset.cache().batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
-        history = self.model.fit(
-            train_dataset,
-            validation_data=valid_dataset,
-            steps_per_epoch=steps_per_epoch,
-            epochs=epochs,
-            verbose=verbose,
-            callbacks=callbacks,
-            **kwargs,
-        )
+            history = self.model.fit(
+                x_train,
+                y_train,
+                validation_data=valid_dataset,
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+                batch_size=batch_size,
+                verbose=verbose,
+                callbacks=callbacks,
+            )
+        else:
+            history = self.model.fit(
+                train_dataset,
+                validation_data=valid_dataset,
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+                batch_size=batch_size,
+                verbose=verbose,
+                callbacks=callbacks,
+            )
         return history
 
     def fit(self, **params):

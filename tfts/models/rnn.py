@@ -87,9 +87,6 @@ class RNN(BaseModel):
         x, encoder_feature = self._prepare_inputs(inputs)
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
-        if output_hidden_states:
-            return encoder_outputs
-
         if self.config.rnn_type == "lstm":
             encoder_output = Concatenate(axis=-1)(encoder_state)
         else:

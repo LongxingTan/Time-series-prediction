@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU, Reshape
@@ -19,8 +19,8 @@ class TCNConfig(BaseConfig):
 
     def __init__(
         self,
-        dilation_rates: Tuple[int] = (2**i for i in range(4)),
-        kernel_sizes: Tuple[int] = (2 for _ in range(4)),
+        dilation_rates: List[int] = [2**i for i in range(4)],
+        kernel_sizes: List[int] = [2 for _ in range(4)],
         filters: int = 128,
         dense_hidden_size: int = 64,
     ):
@@ -34,8 +34,8 @@ class TCNConfig(BaseConfig):
             dense_hidden_size: The size of the dense hidden layer.
         """
         super().__init__()
-        self.dilation_rates: Tuple[int] = dilation_rates
-        self.kernel_sizes: Tuple[int] = kernel_sizes
+        self.dilation_rates: List[int] = dilation_rates
+        self.kernel_sizes: List[int] = kernel_sizes
         self.filters: int = filters
         self.dense_hidden_size: int = dense_hidden_size
 
@@ -132,7 +132,8 @@ class Encoder(object):
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
     def __call__(self, x: tf.Tensor):
-        inputs = self.dense_time1(inputs=x)  # batch_size * time_sequence_length * filters
+        # => batch_size * time_sequence_length * filters
+        inputs = self.dense_time1(inputs=x)
 
         skip_outputs = []
         conv_inputs = [inputs]
