@@ -9,6 +9,7 @@ from typing import Any, Dict, Union
 
 from flatbuffers.flexbuffers import Object
 import tensorflow as tf
+from tensorflow.keras.layers import Input
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,5 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-import math
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -13,7 +12,13 @@ from tfts.layers.mask_layer import ProbMask
 class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
-    def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
+    def __init__(
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float = 0.0,
+        position_embedding_type=None,
+    ) -> None:
         """Initialize the Attention layer.
 
         Parameters:
@@ -33,6 +38,7 @@ class Attention(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.position_embedding_type = position_embedding_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
@@ -41,7 +47,17 @@ class Attention(tf.keras.layers.Layer):
         self.dropout = Dropout(rate=self.attention_probs_dropout_prob)
         super(Attention, self).build(input_shape)
 
-    def call(self, q, k, v, mask=None, training=None, return_attention_scores=False, use_causal_mask=False):
+    def call(
+        self,
+        q: tf.Tensor,
+        k: tf.Tensor,
+        v: tf.Tensor,
+        past_key_value=None,
+        mask: Optional[tf.Tensor] = None,
+        training: Optional[bool] = None,
+        return_attention_scores: bool = False,
+        use_causal_mask: bool = False,
+    ):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
 
         Parameters
@@ -51,25 +67,28 @@ class Attention(tf.keras.layers.Layer):
         k : tf.Tensor
             Key with shape batch * seq_k * fea
         v : tf.Tensor
-            value with shape batch * seq_v * fea
-        mask : _type_, optional
-            important to avoid the leaks, defaults to None, by default None
+            Value with shape batch * seq_v * fea
+        mask :tf.Tensor, optional
+            important to avoid the leaks, by default None
 
         Returns
         -------
         tf.Tensor
             tensor with shape batch * seq_q * (units * num_attention_heads)
         """
-        q = self.dense_q(q)  # project the query/key/value to num_attention_heads * units
+        # project the query/key/value to num_attention_heads * units
+        q = self.dense_q(q)
         k = self.dense_k(k)
         v = self.dense_v(v)
 
-        q_ = tf.concat(tf.split(q, self.num_attention_heads, axis=2), axis=0)  # multi-heads transfer to multi-sample
+        # multi-heads transfer to multi-sample
+        q_ = tf.concat(tf.split(q, self.num_attention_heads, axis=2), axis=0)
         k_ = tf.concat(tf.split(k, self.num_attention_heads, axis=2), axis=0)
         v_ = tf.concat(tf.split(v, self.num_attention_heads, axis=2), axis=0)
 
-        score = tf.linalg.matmul(q_, k_, transpose_b=True)  # => (batch * heads) * seq_q * seq_k
-        score = score / tf.cast(tf.shape(q_)[-1], tf.float32) ** 0.5
+        # => (batch * heads) * seq_q * seq_k
+        score = tf.linalg.matmul(q_, k_, transpose_b=True)
+        score = score / tf.cast(tf.shape(q_)[-1], score.dtype) ** 0.5
 
         if mask is not None:
             mask = tf.repeat(mask, repeats=self.num_attention_heads, axis=0)
@@ -78,8 +97,10 @@ class Attention(tf.keras.layers.Layer):
         score = tf.nn.softmax(score, axis=-1)
         score = self.dropout(score, training=training)
 
-        outputs = tf.linalg.matmul(score, v_)  # (batch * heads) * seq_q * units
+        # (batch * heads) * seq_q * units
+        outputs = tf.linalg.matmul(score, v_)
         outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
+        outputs = tf.cast(outputs, tf.float32)
 
         if return_attention_scores:
             return outputs, score
@@ -105,11 +126,15 @@ class SelfAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
+        position_embedding_type=None,
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
         self.attention = Attention(
-            hidden_size, num_attention_heads, attention_probs_dropout_prob=attention_probs_dropout_prob
+            hidden_size,
+            num_attention_heads,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            position_embedding_type=position_embedding_type,
         )
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
@@ -145,6 +170,7 @@ class ProbAttention(tf.keras.layers.Layer):
         self.mask_flag = True
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.factor = 5
         self.scale = None
 
@@ -165,7 +191,6 @@ class ProbAttention(tf.keras.layers.Layer):
         indx_k_seq = tf.random.uniform((sample_k,), maxval=L, dtype=tf.int32)
 
         K_sample = tf.gather(k_expand, tf.range(S), axis=2)
-
         K_sample = tf.gather(K_sample, indx_q_seq, axis=2)
         K_sample = tf.gather(K_sample, indx_k_seq, axis=3)
 
@@ -281,14 +306,14 @@ class FastAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x, mask: Optional[tf.Tensor] = None):
         """Fast attention
 
         Parameters
         ----------
         x : tf.Tensor
             _description_
-        mask : _type_, optional
+        mask : tf.Tensor, optional
             _description_, by default None
         """
         return

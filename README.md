@@ -197,7 +197,7 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 
 **Build your own model**
 
-<details><summary> Full list of model tfts supported using AutoModel </summary>
+<details><summary> Full list of tfts AutoModel supported </summary>
 
 - rnn
 - tcn
@@ -212,7 +212,7 @@ model = AutoModel.from_config(config, predict_sequence_length=7)
 
 </details>
 
-You could build the custom model based on tfts, especially
+You could build the custom model based on tfts, like
 - add custom-defined embeddings for categorical variables
 - add custom-defined head layers for classification or anomaly task
 

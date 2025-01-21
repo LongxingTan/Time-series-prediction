@@ -55,22 +55,22 @@ class TCN(BaseModel):
             filters=config.filters,
             dense_hidden_size=config.dense_hidden_size,
         )
-        # self.dense2 = Dense(1)
-        # self.dense3 = TimeDistributed(Dense(1))
-        # self.pool = AveragePooling1D(pool_size=144, strides=144, padding='valid')
 
         self.project1 = Dense(predict_sequence_length, activation=None)
-        # self.project1 = Dense(48, activation=None)
 
-        # self.bn1 = BatchNormalization()
         self.drop1 = Dropout(0.25)
         self.dense1 = Dense(512, activation="relu")
 
-        # self.bn2 = BatchNormalization()
         self.drop2 = Dropout(0.25)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        inputs: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """TCN call
 
         Parameters

@@ -11,6 +11,8 @@ import tensorflow as tf
 from tensorflow.keras.layers import Input
 
 from .constants import TFTS_HUB_CACHE
+from .models.base import BaseModel
+from .training_args import TrainingArguments
 
 __all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
 
@@ -19,16 +21,36 @@ logger = logging.getLogger(__name__)
 
 
 class BaseTrainer(object):
-    def __init__(self):
-        pass
+    """Trainer for pipeline"""
 
-    def train(self):
-        pass
+    def __init__(
+        self,
+        model: Union[tf.keras.Model, "BaseModel"],
+        args: Optional[TrainingArguments] = None,
+        loss_fn: Callable = tf.keras.losses.MeanSquaredError(),
+        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        strategy: Optional[tf.distribute.Strategy] = None,
+        metrics: Optional[List[Callable]] = None,
+        **kwargs,
+    ):
+        self.model = model
+        self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
+        self.strategy = strategy or self._setup_strategy()
+
+        with self.strategy.scope():
+            self.model = self._setup_model(model)
+            self.loss_fn = loss_fn
+            self.metrics = metrics or []
+            self.optimizer = optimizer or self._create_optimizer()
+            self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
+
+            # Training state
+            self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
+            if self.args.fp16:
+                self._setup_mixed_precision()
 
     def evaluate(self):
-        pass
-
-    def predict(self):
         pass
 
     def get_train_dataloader(self):
@@ -40,23 +62,87 @@ class BaseTrainer(object):
     def get_test_dataloader(self):
         return
 
-    def create_optimizer(self):
-        return
-
-    def create_scheduler(self):
-        return
-
     def get_learning_rates(self):
         return
 
     def create_accelerator_and_postprocess(self):
         return
 
-    def save_model(self):
-        return
+    def _setup_strategy(self) -> tf.distribute.Strategy:
+        """Configure default distributed training strategy."""
+        logger.info("Tensorflow: setting up strategy")
+
+        gpus = tf.config.list_physical_devices("GPU")
+        if not gpus:
+            strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+        else:
+
+            if len(gpus) == 0:
+                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+            elif len(gpus) == 1:
+                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+            elif len(gpus) > 1:
+                # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
+                strategy = tf.distribute.MirroredStrategy()
+            else:
+                raise ValueError("Cannot find the proper strategy, please check your environment properties.")
+
+        return strategy
+
+    def _setup_model(self, model) -> tf.keras.Model:
+        """Prepare the model for training."""
+        if not isinstance(model, tf.keras.Model):
+            if not hasattr(model, "build_model"):
+                raise TypeError("Model must be a tf.keras.Model or have a build_model method")
+
+            # model = model.build_model(inputs=inputs)
+        return model
+
+    def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
+        """Create optimizer with specified parameters."""
+        return tf.keras.optimizers.Adam(
+            learning_rate=self.args.learning_rate,
+            beta_1=self.args.adam_beta1,
+            beta_2=self.args.adam_beta2,
+            epsilon=self.args.adam_epsilon,
+            weight_decay=self.args.weight_decay,
+        )
+
+    def _create_lr_scheduler(self) -> Optional[tf.keras.optimizers.schedules.LearningRateSchedule]:
+        """Create learning rate scheduler based on arguments."""
+        if self.args.lr_scheduler_type == "linear":
+            return tf.keras.optimizers.schedules.PolynomialDecay(
+                initial_learning_rate=self.args.learning_rate,
+                decay_steps=self.args.max_steps if self.args.max_steps > 0 else self.args.num_train_epochs,
+                end_learning_rate=0,
+                power=1.0,
+            )
+        return None
+
+    def _setup_mixed_precision(self) -> None:
+        """Configure mixed precision training."""
+        policy = tf.keras.mixed_precision.Policy("mixed_float16")
+        tf.keras.mixed_precision.set_global_policy(policy)
+
+    def _prepare_inputs_for_model(
+        self, x: Union[np.ndarray, pd.DataFrame]
+    ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
+        """
+        Prepares the input layer(s) based on the shape of the provided data.
+
+        Args:
+            x: Input data (either a NumPy array or a Pandas DataFrame).
+
+        Returns:
+            The corresponding Keras Input layers.
+        """
+        if isinstance(x, dict):
+            return {key: Input(item.shape[1:]) for key, item in x.items()}
+        else:
+            return Input(x.shape[1:])
 
 
-class KerasTrainer(object):
+class KerasTrainer(BaseTrainer):
     """Keras trainer from tf.keras"""
 
     def __init__(
@@ -66,7 +152,9 @@ class KerasTrainer(object):
         optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
+        metrics: Optional[List[Callable]] = None,
         run_eagerly: bool = True,
+        args: Optional[TrainingArguments] = None,
         **kwargs: Dict[str, object],
     ) -> None:
         """
@@ -81,6 +169,7 @@ class KerasTrainer(object):
             run_eagerly: Whether to run eagerly. Default is True.
             **kwargs: Additional arguments that are passed to the instance as attributes.
         """
+        super().__init__(model, args, loss_fn, optimizer, strategy, metrics, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
         self.loss_fn = loss_fn
@@ -133,21 +222,13 @@ class KerasTrainer(object):
             callbacks += kwargs.get("callbacks")
             logger.info("Callbacks: ", callbacks)
 
-        # if self.strategy is None:
-        #     self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-        # else:
-        #     train_dataset = self.strategy.experimental_distribute_dataset(train_dataset)
-        #     if valid_dataset is not None:
-        #         valid_dataset = self.strategy.experimental_distribute_dataset(valid_dataset)
-
-        # with self.strategy.scope():
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
             if isinstance(train_dataset, tf.data.Dataset):
                 # first 0 choose the batch, second 0 choose the x
                 x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
-                inputs = self._prepare_inputs(x)
+                inputs = self._prepare_inputs_for_model(x)
 
             elif isinstance(train_dataset, (list, tuple)):
                 # for encoder only model, single array inputs
@@ -162,10 +243,7 @@ class KerasTrainer(object):
             else:
                 raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
 
-            if hasattr(self.model, "build_model"):
-                self.model = self.model.build_model(inputs=inputs)
-            else:
-                raise ValueError("tfts model should have build_model func")
+            self.model = self.model.build_model(inputs=inputs)
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         logger.info(f"Trainable parameters: {trainable_params}")
@@ -238,23 +316,6 @@ class KerasTrainer(object):
         plt.plot(range(train_length, train_length + pred_length), pred[example, :, 0], label="Predicted")
         plt.legend()
 
-    def _prepare_inputs(
-        self, x: Union[np.ndarray, pd.DataFrame]
-    ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
-        """
-        Prepares the input layer(s) based on the shape of the provided data.
-
-        Args:
-            x: Input data (either a NumPy array or a Pandas DataFrame).
-
-        Returns:
-            The corresponding Keras Input layers.
-        """
-        if isinstance(x, dict):
-            return {key: Input(item.shape[1:]) for key, item in x.items()}
-        else:
-            return Input(x.shape[1:])
-
 
 class Seq2seqKerasTrainer(KerasTrainer):
     """As the transformers forum mentioned: https://discuss.huggingface.co/t/trainer-vs-seq2seqtrainer/3145/2
@@ -284,6 +345,41 @@ class Trainer(object):
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def _setup_model(self, model) -> tf.keras.Model:
+        """Prepare the model for training."""
+        if not isinstance(model, tf.keras.Model):
+            if not hasattr(model, "build_model"):
+                raise TypeError("Model must be a tf.keras.Model or have a build_model method")
+        return model
+
+    def _setup_strategy(self) -> None:
+        """Configure distributed training strategy."""
+        if self.config.distribute_strategy == "mirrored":
+            self.strategy = tf.distribute.MirroredStrategy()
+        elif self.config.distribute_strategy == "tpu":
+            resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
+            tf.config.experimental_connect_to_cluster(resolver)
+            tf.tpu.experimental.initialize_tpu_system(resolver)
+            self.strategy = tf.distribute.TPUStrategy(resolver)
+        elif self.config.distribute_strategy == "parameter_server":
+            self.strategy = tf.distribute.experimental.ParameterServerStrategy()
+        else:
+            self.strategy = tf.distribute.get_strategy()  # Default strategy
+
+        logger.info(f"Number of devices: {self.strategy.num_replicas_in_sync}")
+
+    def _setup_ema(self) -> None:
+        """Configure Exponential Moving Average if enabled."""
+        self.ema = None
+        if self.config.use_ema:
+            self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
+
+    def _setup_mixed_precision(self) -> None:
+        """Configure mixed precision training if enabled."""
+        if self.config.mixed_precision:
+            policy = tf.keras.mixed_precision.Policy("mixed_float16")
+            tf.keras.mixed_precision.set_global_policy(policy)
 
     def train(
         self,
@@ -439,7 +535,7 @@ class Trainer(object):
         return valid_loss / (valid_step + 1), valid_scores
 
     def valid_step(self, x_valid, y_valid):
-        # valid step for one batch
+
         y_valid_pred = self.model(x_valid, training=False)
         valid_loss = self.loss_fn(y_valid, y_valid_pred)
         return y_valid_pred, valid_loss
@@ -455,7 +551,7 @@ class Trainer(object):
         y_test_preds = tf.concat(y_test_preds, axis=0)
         return tf.squeeze(y_test_trues, axis=-1), y_test_preds
 
-    def export_model(self, model_dir, only_pb=True):
+    def save_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
         logger.info(f"Protobuf model successfully saved in {model_dir}")

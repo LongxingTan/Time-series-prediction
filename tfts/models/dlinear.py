@@ -45,7 +45,9 @@ class DLinear(BaseModel):
             self.linear_trend = Dense(self.predict_sequence_length)
         self.project = Dense(1)
 
-    def __call__(self, inputs: tf.Tensor, return_dict: Optional[bool] = None):
+    def __call__(
+        self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
+    ):
         """DLinear model forward pass
 
         Parameters

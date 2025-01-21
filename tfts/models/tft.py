@@ -3,6 +3,8 @@
 <https://arxiv.org/abs/1912.09363>`_
 """
 
+from typing import Optional
+
 import tensorflow as tf
 
 from .base import BaseConfig, BaseModel
@@ -25,7 +27,7 @@ class TFTransformer(BaseModel):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
 
-    def __call__(self, x: tf.Tensor):
+    def __call__(self, x: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
         """_summary_
 
         Parameters

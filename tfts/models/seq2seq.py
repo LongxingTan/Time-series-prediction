@@ -74,7 +74,13 @@ class Seq2seq(BaseModel):
             attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
         )
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        inputs: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """Forward pass of the Seq2seq model.
 
         :param inputs: Input tensor.

@@ -50,7 +50,13 @@ class Unet(BaseModel):
             predict_seq_length=predict_sequence_length,
         )
 
-    def __call__(self, x: tf.Tensor, training: bool = True, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        x: tf.Tensor,
+        training: bool = True,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """Forward pass through the model.
 
         Args:

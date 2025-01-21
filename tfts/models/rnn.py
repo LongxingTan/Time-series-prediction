@@ -3,21 +3,10 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
-from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type
+from typing import Dict, Literal, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import (
-    GRU,
-    LSTM,
-    AveragePooling1D,
-    BatchNormalization,
-    Bidirectional,
-    Dense,
-    Dropout,
-    GRUCell,
-    LSTMCell,
-    TimeDistributed,
-)
+from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Dense, Reshape, TimeDistributed
 
 from .base import BaseConfig, BaseModel
 
@@ -30,7 +19,7 @@ class RNNConfig(BaseConfig):
         rnn_hidden_size: int = 64,
         rnn_type: Literal["gru", "lstm"] = "gru",
         bi_direction: bool = False,
-        dense_hidden_size: int = 32,
+        dense_hidden_size: int = 128,
         num_stacked_layers: int = 1,
         scheduled_sampling: float = 0.0,
         use_attention: bool = False,
@@ -68,17 +57,17 @@ class RNN(BaseModel):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            rnn_size=config.rnn_hidden_size, rnn_type=config.rnn_type, dense_size=config.dense_hidden_size
+            rnn_size=config.rnn_hidden_size,
+            rnn_type=config.rnn_type,
         )
+
+        self.dense1 = Dense(self.config.dense_hidden_size, activation="relu")
+        self.dense2 = Dense(self.config.dense_hidden_size, activation="relu")
         self.project1 = Dense(predict_sequence_length, activation=None)
 
-        self.dense1 = Dense(128, activation="relu")
-        self.bn = BatchNormalization()
-        # self.drop1 = Dropout(0.25)
-        self.dense2 = Dense(128, activation="relu")
-        # self.drop2 = Dropout(0.25)
-
-    def __call__(self, inputs, teacher=None, return_dict: Optional[bool] = None):
+    def __call__(
+        self, inputs, teacher=None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
+    ):
         """RNN model call
 
         Parameters
@@ -105,16 +94,10 @@ class RNN(BaseModel):
             encoder_output = encoder_state
 
         encoder_output = self.dense1(encoder_output)
-        # encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        # encoder_output = self.drop2(encoder_output)
-
         outputs = self.project1(encoder_output)
 
-        # outputs = tf.expand_dims(outputs, -1)
-        expand_dims_layer = tf.keras.layers.Reshape((outputs.shape[1], 1))
-        outputs = expand_dims_layer(outputs)
-
+        outputs = Reshape((outputs.shape[1], 1))(outputs)
         return outputs
 
     def _prepare_inputs(self, inputs):
@@ -149,7 +132,6 @@ class Encoder(tf.keras.layers.Layer):
         rnn_size: int,
         rnn_type: str = "gru",
         rnn_dropout: float = 0,
-        dense_size: int = 32,
         num_stacked_layers: int = 1,
         bi_direction: bool = False,
         return_state: bool = True,
@@ -159,7 +141,6 @@ class Encoder(tf.keras.layers.Layer):
         self.rnn_type = rnn_type.lower()
         self.rnn_size = rnn_size
         self.rnn_dropout = rnn_dropout
-        self.dense_size = dense_size
         self.num_stacked_layers = num_stacked_layers
         self.bi_direction = bi_direction
         self.return_state = return_state
@@ -244,7 +225,6 @@ class Encoder(tf.keras.layers.Layer):
             "rnn_type": self.rnn_type,
             "rnn_size": self.rnn_size,
             "rnn_dropout": self.rnn_dropout,
-            "dense_size": self.dense_size,
         }
         base_config = super(Encoder, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

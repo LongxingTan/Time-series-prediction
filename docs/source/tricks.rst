@@ -34,14 +34,14 @@ There is no free launch, and it's impossible to forecast the future. So we shoul
 
 	we can train different models from different scale
 
+* module usage
 
-Multi-steps prediction strategy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Be careful to use the layer like `Dropout` or `BatchNorm` for regression task
 
-* multi models
 
-* add a hidden-sizes dense layer at last
+* Multi-steps prediction strategy
 
-* encoder-decoder structure
-
-* encoder-forecasting structure
+    * multi models for single variable prediction
+    * add a hidden-sizes dense layer at last
+    * encoder-decoder structure
+    * encoder-forecasting structure

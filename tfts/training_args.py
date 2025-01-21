@@ -51,38 +51,19 @@ class TrainingArguments:
     )
     warmup_steps: int = field(default=0, metadata={"help": "Linear warmup over warmup_steps."})
 
+    bf16: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to use bf16 (mixed) precision instead of 32-bit. Requires Ampere or higher NVIDIA"
+                " architecture or using CPU (use_cpu) or Ascend NPU. This is an experimental API and it may change."
+            )
+        },
+    )
+    fp16: bool = field(
+        default=False,
+        metadata={"help": "Whether to use fp16 (mixed) precision instead of 32-bit"},
+    )
+
     def __post_init__(self):
         pass
-
-    def _setup_strategy(self) -> Tuple["tf.distribute.Strategy", int]:
-
-        logger.info("Tensorflow: setting up strategy")
-
-        gpus = tf.config.list_physical_devices("GPU")
-
-        # Set to float16 at first
-        if self.fp16:
-            tf.keras.mixed_precision.set_global_policy("mixed_float16")
-
-        if not gpus:
-            strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-        else:
-
-            if len(gpus) == 0:
-                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-            elif len(gpus) == 1:
-                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-            elif len(gpus) > 1:
-                # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
-                strategy = tf.distribute.MirroredStrategy()
-            else:
-                raise ValueError("Cannot find the proper strategy, please check your environment properties.")
-
-        return strategy
-
-    @property
-    def strategy(self) -> "tf.distribute.Strategy":
-        """
-        The strategy used for distributed training.
-        """
-        return self._setup_strategy

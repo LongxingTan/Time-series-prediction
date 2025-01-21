@@ -2,8 +2,7 @@
 
 from collections import OrderedDict
 import importlib
-import os
-from typing import Any, Dict, Union
+from typing import Dict
 
 from .base import BaseConfig
 
@@ -44,6 +43,5 @@ class AutoConfig(BaseConfig):
             f"Unrecognized model: {model_name}. Should contain one of {', '.join(CONFIG_MAPPING_NAMES.keys())}"
         )
 
-    @classmethod
-    def from_pretrained(cls, pretrained_path: Union[str, os.PathLike], **kwargs):
-        return
+    def __call__(self, model_name: str):
+        return self.for_model(model_name)

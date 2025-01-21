@@ -13,7 +13,7 @@ from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
 from tfts.layers.dense_layer import FeedForwardNetwork
-from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.embed_layer import DataEmbedding
 
 
 class AutoFormerConfig(object):
@@ -117,7 +117,13 @@ class AutoFormer(object):
         self.drop2 = Dropout(0.0)
         self.dense2 = Dense(1024, activation="relu")
 
-    def __call__(self, inputs: tf.Tensor, teacher: Optional[tf.Tensor] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        inputs: tf.Tensor,
+        teacher: Optional[tf.Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
         """autoformer call
 
         Parameters
