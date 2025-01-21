@@ -26,9 +26,10 @@ class SegmentationHead(tf.keras.layers.Layer, BaseTask):
 class ClassificationHead(tf.keras.layers.Layer):
     """Classification task head layer"""
 
-    def __init__(self, num_labels: int = 1):
+    def __init__(self, num_labels: int = 1, dense_units: Tuple[int] = (128,)):
         super(ClassificationHead, self).__init__()
         self.pooling = GlobalAveragePooling1D()
+        self.dense_units = dense_units
         self.dense = Dense(num_labels, activation="softmax")
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
@@ -45,6 +46,10 @@ class ClassificationHead(tf.keras.layers.Layer):
             logit of the classification
         """
         pooled_output = self.pooling(inputs)
+
+        for unit in self.dense_units:
+            pooled_output = Dense(unit, activation="relu")(pooled_output)
+
         logits = self.dense(pooled_output)
         return logits
 

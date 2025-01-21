@@ -3,10 +3,10 @@
 <https://arxiv.org/abs/1810.04805>`_
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization, Reshape
+from tensorflow.keras.layers import Dense, Reshape
 
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
@@ -34,6 +34,7 @@ class BertConfig(BaseConfig):
         pad_token_id: int = 0,
         position_embedding_type: str = "absolute",
         use_cache: bool = True,
+        dense_units: Tuple[int] = (512, 1024),
         classifier_dropout: Optional[float] = None,
         **kwargs: Dict[str, object]
     ) -> None:
@@ -73,6 +74,7 @@ class BertConfig(BaseConfig):
         self.layer_norm_eps: float = layer_norm_eps
         self.position_embedding_type: str = position_embedding_type
         self.use_cache: bool = use_cache
+        self.dense_unites: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.pad_token_id: int = pad_token_id
 
@@ -97,8 +99,10 @@ class Bert(BaseModel):
             hidden_dropout_prob=self.config.hidden_dropout_prob,
         )
 
-        self.dense1 = Dense(512, activation="relu")
-        self.dense2 = Dense(1024, activation="relu")
+        self.dense_layers = []
+        for unit in self.config.dense_unites:
+            self.dense_layers.append(Dense(unit, activation="relu"))
+
         self.project1 = Dense(predict_sequence_length, activation=None)
 
     def __call__(
@@ -141,9 +145,9 @@ class Bert(BaseModel):
             return memory
 
         encoder_output = memory[:, -1]
-        encoder_output = self.dense1(encoder_output)
-        encoder_output = self.dense2(encoder_output)
-        outputs = self.project1(encoder_output)
 
+        for layer in self.dense_layers:
+            encoder_output = layer(encoder_output)
+        outputs = self.project1(encoder_output)
         outputs = Reshape((outputs.shape[1], 1))(outputs)
         return outputs

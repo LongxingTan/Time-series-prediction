@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/2012.07436>`_
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
 from tensorflow.keras.layers import (

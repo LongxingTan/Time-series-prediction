@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1609.03499>`_
 """
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Flatten, Lambda, ReLU

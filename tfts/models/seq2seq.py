@@ -4,11 +4,11 @@
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Optional
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, GRUCell, LSTMCell
+from tensorflow.keras.layers import GRU, LSTM, Dense, GRUCell, LSTMCell
 
 from tfts.layers.attention_layer import Attention
 
