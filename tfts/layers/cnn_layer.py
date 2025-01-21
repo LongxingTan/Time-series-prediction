@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.wavenet`"""
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers

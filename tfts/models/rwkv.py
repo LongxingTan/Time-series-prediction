@@ -3,10 +3,10 @@
 <https://arxiv.org/abs/2305.13048>`_
 """
 
-from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Literal, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, BatchNormalization, Dense, Dropout
+from tensorflow.keras.layers import GRU, BatchNormalization, Dense
 
 from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
 

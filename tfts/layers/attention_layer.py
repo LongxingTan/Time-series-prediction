@@ -1,10 +1,10 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
+from tensorflow.keras.layers import Conv1D, Dense, Dropout
 
 from tfts.layers.mask_layer import ProbMask
 

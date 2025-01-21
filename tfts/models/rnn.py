@@ -3,7 +3,7 @@
 <http://www.bioinf.jku.at/publications/older/2604.pdf>`_
 """
 
-from typing import Dict, Literal, Optional, Tuple
+from typing import Dict, Literal, Optional
 
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Dense, Reshape, TimeDistributed

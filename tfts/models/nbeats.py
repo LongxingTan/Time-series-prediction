@@ -3,7 +3,7 @@
 <https://arxiv.org/abs/1905.10437>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional
 
 import tensorflow as tf
 

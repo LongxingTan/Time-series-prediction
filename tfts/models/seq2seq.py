@@ -3,14 +3,12 @@
 <https://arxiv.org/abs/1409.3215>`_
 """
 
-from dataclasses import dataclass, field
 import logging
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, Dropout, GRUCell, LSTMCell
+from tensorflow.keras.layers import GRU, LSTM, RNN, Dense, GRUCell, LSTMCell
 
 from tfts.layers.attention_layer import Attention
 

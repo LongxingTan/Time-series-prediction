@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Dense
 
 
 class DenseTemp(tf.keras.layers.Layer):

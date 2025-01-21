@@ -3,12 +3,12 @@
 <https://arxiv.org/abs/1810.04805>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional
 
 import tensorflow as tf
 from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Dense, Dropout, LayerNormalization
 
-from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding, TokenRnnEmbedding
+from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
 from .base import BaseConfig, BaseModel

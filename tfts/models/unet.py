@@ -3,10 +3,10 @@
 <https://arxiv.org/abs/1505.04597>`_
 """
 
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Activation, Add, AveragePooling1D, Concatenate, Conv1D, Input, Lambda, UpSampling1D
+from tensorflow.keras.layers import Activation, AveragePooling1D, Concatenate, Conv1D, Lambda, UpSampling1D
 
 from tfts.layers.unet_layer import conv_br, re_block
 

@@ -1,7 +1,7 @@
 """Layer for :py:class:`~tfts.models.autoformer`"""
 
 import math
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import AveragePooling1D, Conv1D, Dense, Dropout

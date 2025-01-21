@@ -4,11 +4,11 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention, TimeDistributed
+from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
