@@ -14,3 +14,6 @@ class TunerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("rnn")
         print(config)
+
+        tuner = AutoTuner(use_model="rnn", train_data=train, valid_data=valid, predict_sequence_length=1)
+        print(tuner)

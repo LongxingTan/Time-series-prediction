@@ -68,9 +68,6 @@ class BaseTrainer(object):
     def create_accelerator_and_postprocess(self):
         return
 
-    def save_model(self):
-        return
-
     def _setup_strategy(self) -> tf.distribute.Strategy:
         """Configure default distributed training strategy."""
         logger.info("Tensorflow: setting up strategy")
@@ -554,7 +551,7 @@ class Trainer(object):
         y_test_preds = tf.concat(y_test_preds, axis=0)
         return tf.squeeze(y_test_trues, axis=-1), y_test_preds
 
-    def export_model(self, model_dir, only_pb=True):
+    def save_model(self, model_dir, only_pb=True):
         # save the model
         tf.saved_model.save(self.model, model_dir)
         logger.info(f"Protobuf model successfully saved in {model_dir}")

@@ -40,7 +40,7 @@ class TrainerTest(unittest.TestCase):
         trainer = Trainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, **self.fit_config)
         trainer.predict(self.valid_loader)
-        # trainer.export_model(model_dir="./weights")
+        trainer.save_model(model_dir="./weights", only_pb=False)
 
     # def test_trainer_no_dist_strategy(self):
     #     pass
@@ -107,3 +107,4 @@ class KerasTrainerTest(unittest.TestCase):
         model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
         trainer.train(train_loader, valid_loader, **self.fit_config)
+        trainer.save_model("./weights")
