@@ -104,10 +104,11 @@ class AutoModelForPrediction(AutoModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
 
-        model_output = super().__call__(x, return_dict=return_dict)
+        model_output = self.model(x, return_dict=return_dict)
 
         if self.config.skip_connect_circle:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
@@ -128,10 +129,15 @@ class AutoModelForClassification(AutoModel):
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
+        output_hidden_states: Optional[bool] = True,
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        model_output = self.model(x, output_hidden_states=True)
+        if hasattr(self.model, "call"):
+            model_output = self.model(x)
+        else:
+            model_output = self.model(x, output_hidden_states=output_hidden_states)
+
         logits = self.head(model_output)
         return logits
 

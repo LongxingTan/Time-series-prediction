@@ -124,20 +124,6 @@ Multi-variables and multi-steps prediction
 	model()
 
 
-Auto-tuned configuration
-----------------------------------------
-
-.. code-block:: python
-
-    import tensorflow as tf
-    import tfts
-    from tfts import AutoModel, AutoConfig, AutoTuner
-
-    config = AutoConfig.for_model('rnn')
-    tuner = AutoTuner('rnn')
-    tuner.run(config)
-
-
 Custom head for classification or anomaly task
 -------------------------------------------------
 
