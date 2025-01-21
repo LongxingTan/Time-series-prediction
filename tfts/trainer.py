@@ -148,7 +148,7 @@ class KerasTrainer(BaseTrainer):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
-        loss_fn: Union[Callable, tf.keras.losses.Loss] = tf.keras.losses.MeanSquaredError(),
+        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
         optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
