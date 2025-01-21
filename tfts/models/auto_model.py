@@ -133,7 +133,7 @@ class AutoModelForClassification(AutoModel):
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
     ):
-        model_output = self.model(x, return_dict=return_dict)
+        model_output = self.model(x, output_hidden_states=True)
         logits = self.head(model_output)
         return logits
 

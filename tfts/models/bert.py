@@ -134,8 +134,11 @@ class Bert(BaseModel):
 
         encoder_feature = self.encoder_embedding(encoder_feature)
 
-        memory = self.encoder(encoder_feature, encoder_mask=None)
+        if output_hidden_states:
+            # (batch_size, train_sequence_length, hidden_size)
+            return encoder_feature
 
+        memory = self.encoder(encoder_feature, encoder_mask=None)
         encoder_output = memory[:, -1]
         encoder_output = self.dense1(encoder_output)
         encoder_output = self.dense2(encoder_output)
