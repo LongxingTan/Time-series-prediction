@@ -20,6 +20,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("unet", "UnetConfig"),
         ("nbeats", "NBeatsConfig"),
         ("dlinear", "DLinearConfig"),
+        ("rwkv", "RWKVConfig"),
     ]
 )
 

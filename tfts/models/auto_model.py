@@ -31,6 +31,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("unet", "Unet"),
         ("nbeats", "NBeats"),
         ("dlinear", "DLinear"),
+        ("rwkv", "RWKV"),
     ]
 )
 

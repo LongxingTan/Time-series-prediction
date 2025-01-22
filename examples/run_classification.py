@@ -7,7 +7,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModel, AutoModelForClassification, KerasTrainer
+from tfts import AutoConfig, AutoModelForClassification, KerasTrainer
 
 
 def parse_args():

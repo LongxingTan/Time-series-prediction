@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from tfts import AutoConfig, AutoModel, AutoModelForAnomaly, KerasTrainer, get_data
+from tfts import AutoConfig, AutoModel, KerasTrainer, get_data
 
 
 class AutoTuner(object):
