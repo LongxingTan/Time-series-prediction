@@ -12,4 +12,3 @@ API
    layers
    models
    trainer
-   tuner
