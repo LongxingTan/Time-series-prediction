@@ -1,14 +1,13 @@
 # Release notes
 
-## v.0.0.14
-- support training style of transformers
+## v.0.0.15
+- fix classification/anomaly detection
+
 
 ## v0.0.13
+- support training style of transformers
+- solve pandas version conflict
 - support cnn/rnn model for keras3
-
-## v0.0.12
-- transformers style API
-- pandas version conflict
 
 
 ## v0.0.4 Add models support (21/11/2022)

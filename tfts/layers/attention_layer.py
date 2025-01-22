@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -306,7 +306,7 @@ class FastAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
 
-    def call(self, x, mask: Optional[tf.Tensor] = None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
         """Fast attention
 
         Parameters
