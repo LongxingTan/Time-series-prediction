@@ -36,11 +36,11 @@ You can run it in docker, download the Dockerfile to host server
 
 The general setup for training and testing a model is
 
-#. Build time series 3D training dataset and valid dataset. The shape of input and label are (examples, train_sequence_length, features) and (examples, predict_sequence_length, 1)
-#. Instantiate a model using the the ``AutoModel`` method
+#. Build time series ``3D training dataset`` and valid dataset. The shape of input and label are (examples, train_sequence_length, features) and (examples, predict_sequence_length, 1)
+#. Instantiate a model using the ``AutoModel`` method
 #. Create a ``Trainer()`` or ``KerasTrainer()`` object. Define the optimizer and loss function in trainer
 #. Train the model on the training dataset and check if it has converged with acceptable accuracy
-#. Tune the hyper-parameters of the model and training
+#. Tune the hyper-parameters of the model and training, manually or refer to `tuning example <https://github.com/LongxingTan/Time-series-prediction/blob/master/examples/run_tuner.py>`_
 #. Load the model from the model checkpoint and apply it to new data
 
 
@@ -74,7 +74,7 @@ The general setup for training and testing a model is
 
 3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
-Before training, ensure your raw data is preprocessed into a 3D format with the shape `(batch_size, train_steps, features)`. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
+Before training, ensure your raw data is preprocessed into a 3D format with the shape ``(batch_size, train_steps, features)``. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
 
 
 3.2 Train the Model

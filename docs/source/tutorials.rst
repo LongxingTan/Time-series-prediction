@@ -27,8 +27,6 @@ tfts supports multi-type time series prediction:
 Feed the input data into the model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-input 1
-
 .. code-block:: python
 
 	# tf.data.Dataset
@@ -112,7 +110,7 @@ Multi-variables and multi-steps prediction
 
 	config.update({
 	    "rnn_size": 128,
-        "dense_size": 128,
+	    "dense_size": 128,
 	})
 	print(config)
 
