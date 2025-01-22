@@ -39,6 +39,7 @@ class BaseModel(ABC):
         return model
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
+        # only accept the inputs parameters after built
         outputs = self.model(inputs)
         # to handles the Keras symbolic tensors for tf2.3.1
         self.model = tf.keras.Model([inputs], [outputs])

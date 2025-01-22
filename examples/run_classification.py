@@ -70,9 +70,8 @@ def run_train(args):
 
     y_pred = model(x_val)
     y_pred_classes = np.argmax(y_pred, axis=1)
-    y_true_classes = np.argmax(y_val, axis=1)
 
-    cm = confusion_matrix(y_true_classes, y_pred_classes)
+    cm = confusion_matrix(y_val, y_pred_classes)
     print(cm)
     return
 

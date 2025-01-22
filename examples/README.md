@@ -2,9 +2,10 @@
 
 ## 🛠️ Basic Usage
 Get started with these basic examples:
-- [Time Series Prediction](./run_prediction_simple.py): Learn how to predict future values in a time series.
+- [Time Series Prediction](./run_prediction_simple.py): Learn how to predict future values.
 - [Time Series Classification](./run_classification.py): Explore how to classify time series data.
 - [Time Series Anomaly Detection](./run_anomaly.py): Detect anomalies in time series data.
+- [AutoML for parameters tuning](./run_tuner.py): Try the parameters auto-tune.
 
 
 ## 📓 Notebooks
