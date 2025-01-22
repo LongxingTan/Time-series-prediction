@@ -29,8 +29,10 @@ class ClassificationHead(tf.keras.layers.Layer):
     def __init__(self, num_labels: int = 1, dense_units: Tuple[int] = (128,)):
         super(ClassificationHead, self).__init__()
         self.pooling = GlobalAveragePooling1D(data_format="channels_last")
-        self.dense_units = dense_units
-        self.dense = Dense(num_labels, activation="softmax")
+        self.intermediate_dense_layers = []
+        for unit in dense_units:
+            self.intermediate_dense_layers.append(Dense(unit, activation="relu"))
+        self.classifier = Dense(num_labels, activation="softmax")
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """classification task head
@@ -48,11 +50,11 @@ class ClassificationHead(tf.keras.layers.Layer):
         # => (batch_size, hidden_size)
         pooled_output = self.pooling(inputs)
 
-        for unit in self.dense_units:
-            pooled_output = Dense(unit, activation="relu")(pooled_output)
+        for layer in self.intermediate_dense_layers:
+            pooled_output = layer(pooled_output)
 
         # => (batch_size, num_labels)
-        logits = self.dense(pooled_output)
+        logits = self.classifier(pooled_output)
         return logits
 
 

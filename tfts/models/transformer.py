@@ -161,7 +161,7 @@ class Transformer(BaseModel):
             )
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
-        memory = self.encoder(encoder_feature, encoder_mask=None)
+        memory = self.encoder(encoder_feature, mask=None)
 
         decoder_outputs = self.decoder(
             decoder_feature, init_input=x[:, -1:, 0:1], encoder_memory=memory, teacher=teacher
@@ -207,14 +207,14 @@ class Encoder(tf.keras.layers.Layer):
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
-    def call(self, encoder_inputs: tf.Tensor, encoder_mask: Optional[tf.Tensor] = None):
+    def call(self, inputs: tf.Tensor, mask: Optional[tf.Tensor] = None):
         """Transformer encoder
 
         Parameters
         ----------
-        encoder_inputs : tf.Tensor
+        inputs : tf.Tensor
             Transformer encoder inputs, with dimension of (batch, seq_len, features)
-        encoder_mask : tf.Tensor, optional
+        mask : tf.Tensor, optional
             encoder mask to ignore it during attention, by default None
 
         Returns
@@ -222,10 +222,10 @@ class Encoder(tf.keras.layers.Layer):
         tf.Tensor
             Transformer encoder output
         """
-        x = encoder_inputs
+        x = inputs
         for _, layer in enumerate(self.layers):
             attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
-            x = ln_layer1(x + attention_layer(x, mask=encoder_mask))
+            x = ln_layer1(x + attention_layer(x, mask=mask))
             x = ln_layer2(x + ffn_layer(x))
         return x
 

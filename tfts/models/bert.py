@@ -84,9 +84,7 @@ class Bert(BaseModel):
 
     def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
         super(Bert, self).__init__()
-        if config is None:
-            config = BertConfig()
-        self.config = config
+        self.config = config or BertConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.encoder_embedding = TokenEmbedding(self.config.hidden_size)
@@ -103,7 +101,7 @@ class Bert(BaseModel):
         for unit in self.config.dense_unites:
             self.dense_layers.append(Dense(unit, activation="relu"))
 
-        self.project1 = Dense(predict_sequence_length, activation=None)
+        self.projection = Dense(predict_sequence_length, activation=None)
 
     def __call__(
         self,
@@ -138,7 +136,7 @@ class Bert(BaseModel):
 
         encoder_feature = self.encoder_embedding(encoder_feature)
 
-        memory = self.encoder(encoder_feature, encoder_mask=None)
+        memory = self.encoder(encoder_feature, mask=None)
 
         if output_hidden_states:
             # (batch_size, train_sequence_length, hidden_size)
@@ -148,6 +146,6 @@ class Bert(BaseModel):
 
         for layer in self.dense_layers:
             encoder_output = layer(encoder_output)
-        outputs = self.project1(encoder_output)
+        outputs = self.projection(encoder_output)
         outputs = Reshape((outputs.shape[1], 1))(outputs)
         return outputs
