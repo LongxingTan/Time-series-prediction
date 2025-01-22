@@ -25,72 +25,88 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_subseq(ts, train_length, pred_length):
-    sub_seq, next_values = [], []
-    for i in range(len(ts) - train_length - pred_length):
-        sub_seq.append(ts[i : i + train_length])
-        next_values.append(ts[i + train_length : i + train_length + pred_length].T[0])
-    return sub_seq, next_values
+def create_subsequences(time_series, train_length, pred_length):
+    """Create subsequences for training and prediction."""
+    subsequences, next_values = [], []
+    for i in range(len(time_series) - train_length - pred_length):
+        subsequences.append(time_series[i : i + train_length])
+        next_values.append(time_series[i + train_length : i + train_length + pred_length].T[0])
+    return subsequences, next_values
 
 
-def build_data():
-    df = pd.read_csv("http://www.cs.ucr.edu/~eamonn/discords/qtdbsel102.txt", header=None, delimiter="\t")
-    ecg = df.iloc[:, 2].values
-    ecg = ecg.reshape(len(ecg), -1)
-    print("length of ECG data : ", len(ecg))
+def load_and_preprocess_data(args):
+    """Load ECG data, scale it, and prepare subsequences."""
+    url = "http://www.cs.ucr.edu/~eamonn/discords/qtdbsel102.txt"
+    df = pd.read_csv(url, header=None, delimiter="\t")
+    ecg_data = df.iloc[:, 2].values.reshape(-1, 1)
 
+    print(f"Loaded ECG data of length: {len(ecg_data)}")
+
+    # Standardize the ECG data
     scaler = StandardScaler()
-    std_ecg = scaler.fit_transform(ecg)
-    std_ecg = std_ecg[:5000]
+    scaled_ecg = scaler.fit_transform(ecg_data)
 
-    sub_seq, next_values = create_subseq(std_ecg, args.train_length, args.predict_sequence_length)
-    return np.array(sub_seq), np.array(next_values), std_ecg
+    # Create subsequences for training and prediction
+    subsequences, next_values = create_subsequences(scaled_ecg, args.train_length, args.predict_sequence_length)
+    return np.array(subsequences), np.array(next_values), scaled_ecg
 
 
-def run_train(args):
-    x_test, y_test, sig = build_data()
+def train_model(args):
+    """Train the model using the specified arguments."""
+    x_train, y_train, _ = load_and_preprocess_data(args)
 
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
-    model = AutoModelForAnomaly.from_config(config, predict_sequence_length=1)
+    model = AutoModelForAnomaly.from_config(config, predict_sequence_length=args.predict_sequence_length)
 
     trainer = KerasTrainer(model)
-    trainer.train((x_test, y_test), (x_test, y_test), epochs=args.epochs)
+    trainer.train((x_train, y_train), (x_train, y_train), epochs=args.epochs)
     trainer.save_model(args.output_dir)
-    return
+    print(f"Model trained and saved to {args.output_dir}")
 
 
-def run_inference(args):
-    x_test, y_test, sig = build_data()
+def perform_inference(args):
+    """Perform inference using the trained model."""
+    x_test, y_test, _ = load_and_preprocess_data(args)
 
+    print("Starting inference...")
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
-
     model = AutoModelForAnomaly.from_pretrained(weights_dir=args.output_dir)
-    det = model.detect(x_test, y_test)
-    return sig, det
+
+    anomaly_scores = model.detect(x_test, y_test)
+    return _, anomaly_scores
 
 
-def plot(sig, det):
+def plot_results(signal, anomaly_scores):
+    """Plot the original signal and detected anomalies."""
     fig, axes = plt.subplots(nrows=2, figsize=(15, 10))
-    axes[0].plot(sig, color="b", label="original data")
-    x = np.arange(4200, 4400)
-    y1 = [-3] * len(x)
-    y2 = [3] * len(x)
-    axes[0].fill_between(x, y1, y2, facecolor="g", alpha=0.3)
 
-    axes[1].plot(det, color="r", label="Mahalanobis Distance")
+    axes[0].plot(signal, color="b", label="Original Data")
+    x_range = np.arange(4200, 4400)
+    axes[0].fill_between(x_range, -3, 3, facecolor="g", alpha=0.3)
+    axes[0].set_title("ECG Data with Anomalies")
+    axes[0].legend()
+
+    axes[1].plot(anomaly_scores, color="r", label="Mahalanobis Distance")
     axes[1].set_ylim(0, 1000)
-    y1 = [0] * len(x)
-    y2 = [1000] * len(x)
-    axes[1].fill_between(x, y1, y2, facecolor="g", alpha=0.3)
-    # plt.savefig('./anomaly.png')
+    axes[1].fill_between(x_range, 0, 1000, facecolor="g", alpha=0.3)
+    axes[1].set_title("Anomaly Detection Scores")
+    axes[1].legend()
+
+    plt.tight_layout()
     plt.show()
 
 
-if __name__ == "__main__":
+def main():
+    """Main function to orchestrate training, inference, and plotting."""
     args = parse_args()
-    run_train(args)
+    train_model(args)
 
-    sig, det = run_inference(args)
-    plot(sig, det)
+    # Run inference
+    signal, anomaly_scores = perform_inference(args)
+    plot_results(signal, anomaly_scores)
+
+
+if __name__ == "__main__":
+    main()

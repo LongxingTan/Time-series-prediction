@@ -56,53 +56,36 @@ class ClassificationHead(tf.keras.layers.Layer):
         return logits
 
 
-class AnomalyHead(tf.keras.layers.Layer):
+class AnomalyHead:
     """Anomaly task head layer: Reconstruct style"""
 
     def __init__(self, train_sequence_length: int) -> None:
         super().__init__()
         self.train_sequence_length = train_sequence_length
 
-    def call(self, y_pred, y_test):
-        """anomaly task head
-
-        Parameters
-        ----------
-        y_pred : tf.Tensor
-            model predict
-        y_test: tf.Tensor
-            model truth
-
-        Returns
-        -------
-        tf.Tensor
-            distance
-        """
-        y_pred = y_pred.numpy() if isinstance(y_pred, tf.Tensor) else y_pred
-        y_test = y_test.numpy() if isinstance(y_test, tf.Tensor) else y_test
-
+    def __call__(self, y_pred, y_test):
+        if isinstance(y_pred, tf.Tensor):
+            y_pred = y_pred.numpy()
+        if y_pred.shape[1] == 1:
+            y_pred = np.squeeze(y_pred, 1)
         errors = y_pred - y_test
 
+        # mean / cov
         mean = sum(errors) / len(errors)
-        cov = 0  # Initialize covariance matrix
-
-        # Calculate covariance using NumPy operations
+        cov = 0
         for e in errors:
             cov += np.dot((e - mean).reshape(len(e), 1), (e - mean).reshape(1, len(e)))
         cov /= len(errors)
 
         m_dist = [0] * self.train_sequence_length
         for e in errors:
-            m_dist.append(self._mahala_distance(e, mean, cov))
+            m_dist.append(AnomalyHead.mahala_distantce(e, mean, cov))
 
         return m_dist
 
-    def _mahala_distance(self, x, mean, cov):
-        """calculate Mahalanobis distance"""
-        x = np.array(x)
-        mean = np.array(mean)
-        cov = np.array(cov)
-
+    @staticmethod
+    def mahala_distantce(x, mean, cov, epsilon=1e-8):
+        cov += epsilon * np.eye(cov.shape[0])  # Zero Covariance
         d = np.dot(x - mean, np.linalg.inv(cov))
         d = np.dot(d, (x - mean).T)
         return d
