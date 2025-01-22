@@ -1,5 +1,6 @@
 """AutoModel to choose different models"""
 
+import collections
 import importlib
 import logging
 import os
@@ -9,10 +10,29 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from tfts.models.base import MODEL_MAPPING_NAMES, BaseConfig, BaseModel
+from tfts.models.base import BaseConfig, BaseModel
 from tfts.tasks.auto_task import AnomalyHead, ClassificationHead
 
 logger = logging.getLogger(__name__)
+
+
+MODEL_MAPPING_NAMES = collections.OrderedDict(
+    [
+        ("seq2seq", "Seq2seq"),
+        ("rnn", "RNN"),
+        ("wavenet", "WaveNet"),
+        ("tcn", "TCN"),
+        ("transformer", "Transformer"),
+        ("bert", "Bert"),
+        ("informer", "Informer"),
+        ("autoformer", "AutoFormer"),
+        ("tft", "TFTransformer"),
+        ("unet", "Unet"),
+        ("nbeats", "NBeats"),
+        ("dlinear", "DLinear"),
+        ("rwkv", "RWKV"),
+    ]
+)
 
 
 class AutoModel(BaseModel):
@@ -53,6 +73,14 @@ class AutoModel(BaseModel):
                     f"but got {len(x[0].shape)}"
                 )
         return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+
+    @classmethod
+    def from_config(cls, config, predict_sequence_length: int = 1):
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
+        return cls(model, config)
 
 
 class AutoModelForPrediction(BaseModel):
@@ -138,6 +166,14 @@ class AutoModelForAnomaly(BaseModel):
         config = BaseConfig.from_json(config_path)  # Load config from JSON
         return cls(model, config)
 
+    @classmethod
+    def from_config(cls, config):
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config)
+        return cls(model, config)
+
 
 class AutoModelForSegmentation(BaseModel):
     """tfts model for time series segmentation"""
@@ -151,6 +187,14 @@ class AutoModelForSegmentation(BaseModel):
         model_output = self.model(x, return_dict=return_dict)
         return model_output
 
+    @classmethod
+    def from_config(cls, config):
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config)
+        return cls(model, config)
+
 
 class AutoModelForUncertainty(BaseModel):
     """tfts model for time series uncertainty prediction"""
@@ -163,3 +207,11 @@ class AutoModelForUncertainty(BaseModel):
     ):
         model_output = self.model(x, return_dict=return_dict)
         return model_output
+
+    @classmethod
+    def from_config(cls, config):
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config)
+        return cls(model, config)
