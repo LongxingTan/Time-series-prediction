@@ -194,7 +194,7 @@ class KerasTrainer(BaseTrainer):
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
-        metrics: Optional[List[tf.keras.metrics.Metric]] = None,
+        metrics: Optional[Union[List[tf.keras.metrics.Metric], List[str]]] = None,
         callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         verbose: int = 1,
         **kwargs: Dict[str, object],

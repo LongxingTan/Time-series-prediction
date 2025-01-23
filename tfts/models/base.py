@@ -30,19 +30,6 @@ class BaseModel(ABC):
         model = tf.keras.models.load_model(weights_dir)
         return model
 
-    # @classmethod
-    # def from_pretrained(cls, weights_dir: str, predict_sequence_length: int = 1):
-    #     config_path = os.path.join(weights_dir, "config.json")
-    #     if not os.path.exists(config_path):
-    #         raise FileNotFoundError(f"Config file not found at {config_path}")
-    #
-    #     config = BaseConfig.from_json(config_path)  # Load config from JSON
-    #     model = cls.from_config(
-    #         config, predict_sequence_length=predict_sequence_length
-    #     )  # Use from_config to create the model
-    #     model.load_weights(weights_dir, os.path.join(weights_dir, "model.h5"))  # Load weights
-    #     return model
-
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
         # only accept the inputs parameters after built
         outputs = self.model(inputs)

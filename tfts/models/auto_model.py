@@ -112,6 +112,7 @@ class AutoModelForClassification(BaseModel):
         self.model = model
         self.config = config
         self.head = ClassificationHead(num_labels=config.num_labels)
+        self.keras_model: Optional[tf.keras.Model] = None
 
     def __call__(
         self,
@@ -120,11 +121,11 @@ class AutoModelForClassification(BaseModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        if hasattr(self.model, "call"):
-            model_output = self.model(x)
+        if self.keras_model is not None:
+            logits = self.keras_model(x)
         else:
             model_output = self.model(x, output_hidden_states=output_hidden_states)
-        logits = self.head(model_output)
+            logits = self.head(model_output)
         return logits
 
     @classmethod
@@ -135,6 +136,12 @@ class AutoModelForClassification(BaseModel):
         module = importlib.import_module(f".{model_name}", "tfts.models")
         model = getattr(module, class_name)(config=config)
         return cls(model, config)
+
+    def build_model(self, inputs: tf.keras.layers.Input):
+        model_output = self.model(inputs)
+        logits = self.head(model_output)  # Apply the head layer to the output
+        self.keras_model = tf.keras.Model(inputs, logits)  # Create a complete model
+        return self.keras_model
 
 
 class AutoModelForAnomaly(BaseModel):

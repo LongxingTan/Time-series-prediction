@@ -1,6 +1,8 @@
 """Demo of time series classification"""
 
 import argparse
+import logging
+import sys
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -8,6 +10,8 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForClassification, KerasTrainer
+
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
 def parse_args():
@@ -17,8 +21,7 @@ def parse_args():
     parser.add_argument("--num_labels", type=int, default=2, help="number of unique labels")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size for training")
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
-
+    parser.add_argument("--learning_rate", type=float, default=2e-4, help="learning rate for training")
     return parser.parse_args()
 
 
@@ -56,7 +59,7 @@ def run_train(args):
     model = AutoModelForClassification.from_config(config, num_labels=args.num_labels)
 
     opt = tf.keras.optimizers.Adam(args.learning_rate)
-    loss_fn = "sparse_categorical_crossentropy"
+    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
     trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
     early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0, patience=5)
 
@@ -65,6 +68,7 @@ def run_train(args):
         valid_dataset=(x_val, y_val),
         epochs=args.epochs,
         batch_size=args.batch_size,
+        metrics=["sparse_categorical_accuracy"],
         callbacks=[early_stop_callback],
     )
 
