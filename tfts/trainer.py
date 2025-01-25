@@ -244,7 +244,7 @@ class KerasTrainer(BaseTrainer):
             self.model = self.model.build_model(inputs=inputs)
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
-        logger.info(f"Trainable parameters: {trainable_params}")
+        tf.print(f"Trainable parameters: {trainable_params}")
 
         self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
         # if isinstance(train_dataset, (list, tuple)):

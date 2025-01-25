@@ -71,6 +71,8 @@ def run_train(args):
         metrics=["sparse_categorical_accuracy"],
         callbacks=[early_stop_callback],
     )
+    # note that tfts model summary only work during training process
+    print(trainer.model.summary())
 
     y_pred = model(x_val)
     y_pred_classes = np.argmax(y_pred, axis=1)
