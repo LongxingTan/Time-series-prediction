@@ -24,7 +24,7 @@ class Attention(tf.keras.layers.Layer):
         Parameters:
         -----------
         hidden_size : int
-            The number of hidden units in each attention head.
+            The number of hidden units, hidden_size = attention_dim_each_head x num_attention_heads.
         num_attention_heads : int
             The number of attention heads.
         attention_probs_dropout_prob : float, optional
@@ -74,7 +74,7 @@ class Attention(tf.keras.layers.Layer):
         Returns
         -------
         tf.Tensor
-            tensor with shape batch * seq_q * (units * num_attention_heads)
+            Tensor with shape batch * seq_q * (units * num_attention_heads)
         """
         # project the query/key/value to num_attention_heads * units
         q = self.dense_q(q)
