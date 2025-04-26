@@ -243,7 +243,9 @@ class KerasTrainer(BaseTrainer):
                 x = train_dataset[0]
                 inputs = self._prepare_inputs_for_model(x)
             else:
-                raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
+                raise ValueError(
+                    "Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple."
+                )
 
             self.model = self.model.build_model(inputs=inputs)
 
