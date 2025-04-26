@@ -37,7 +37,7 @@ class TransformerConfig(BaseConfig):
         scheduled_sampling: float = 1,
         max_position_embeddings: int = 512,
         initializer_range: float = 0.02,
-        position_embedding_type: str = "positional encoding",
+        positional_type: str = "positional encoding",
         use_cache: bool = True,
         classifier_dropout: Optional[float] = None,
         layer_norm_eps: float = 1e-12,
@@ -62,7 +62,7 @@ class TransformerConfig(BaseConfig):
             initializer_range: The standard deviation for weight initialization.
             layer_norm_eps: The epsilon for layer normalization.
             pad_token_id: The ID for the padding token.
-            position_embedding_type: The type of position embeddings (absolute or relative).
+            positional_type: The type of position embeddings (absolute or relative).
             use_cache: Whether to use cache during inference.
             classifier_dropout: Dropout rate for classifier layers.
             **kwargs: Additional parameters for further customization passed to the parent class.
@@ -81,7 +81,7 @@ class TransformerConfig(BaseConfig):
         self.scheduled_sampling: float = scheduled_sampling
         self.max_position_embeddings: int = max_position_embeddings
         self.initializer_range: float = initializer_range
-        self.position_embedding_type: str = position_embedding_type
+        self.positional_type: str = positional_type
         self.use_cache: bool = use_cache
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.layer_norm_eps: float = layer_norm_eps
@@ -96,7 +96,7 @@ class Transformer(BaseModel):
         super(Transformer, self).__init__()
         self.config = config or TransformerConfig()
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(self.config.hidden_size)
+        self.encoder_embedding = DataEmbedding(self.config.hidden_size, positional_type=self.config.positional_type)
 
         self.encoder = Encoder(
             num_hidden_layers=self.config.num_layers,
@@ -142,27 +142,11 @@ class Transformer(BaseModel):
         tf.Tensor
             3D tensor for output, batch * output_seq * 1
         """
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            decoder_feature = inputs["decoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            encoder_feature = x = inputs
-            decoder_feature = tf.cast(
-                tf.tile(
-                    tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
-                    (tf.shape(encoder_feature)[0], 1, 1),
-                ),
-                tf.float32,
-            )
+
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs)
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
-
         decoder_outputs = self.decoder(
             decoder_feature, init_input=x[:, -1:, 0:1], encoder_memory=memory, teacher=teacher
         )

@@ -47,6 +47,26 @@ class BaseModel(ABC):
         self.model = tf.keras.models.load_model(weights_dir)
         # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
+    def _prepare_3d_inputs(self, inputs):
+        if isinstance(inputs, (list, tuple)):
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            decoder_feature = inputs["decoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        else:
+            encoder_feature = x = inputs
+            decoder_feature = tf.cast(
+                tf.tile(
+                    tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                    (tf.shape(encoder_feature)[0], 1, 1),
+                ),
+                tf.float32,
+            )
+        return x, encoder_feature, decoder_feature
+
     def save_weights(self, weights_dir: str):
         if os.path.isdir(weights_dir):
             os.makedirs(weights_dir, exist_ok=True)

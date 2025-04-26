@@ -32,7 +32,7 @@ class GPTConfig(BaseConfig):
         initializer_range: float = 0.02,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        position_embedding_type: str = "absolute",
+        positional_type: str = "absolute",
         use_cache: bool = True,
         dense_units: Tuple[int] = (512, 1024),
         classifier_dropout: Optional[float] = None,
@@ -53,7 +53,7 @@ class GPTConfig(BaseConfig):
             initializer_range: The standard deviation for weight initialization. Default is 0.02.
             layer_norm_eps: The epsilon value for layer normalization. Default is 1e-12.
             pad_token_id: The ID for the padding token. Default is 0.
-            position_embedding_type: The type of position embedding ("absolute" or "relative"). Default is "absolute".
+            positional_type: The type of position embedding ("absolute" or "relative"). Default is "absolute".
             use_cache: Whether to use the cache during inference. Default is True.
             classifier_dropout: Dropout probability for the classifier layer. Default is None.
             **kwargs: Additional keyword arguments passed to the parent `BaseConfig` class.
@@ -72,7 +72,7 @@ class GPTConfig(BaseConfig):
         self.type_vocab_size: int = type_vocab_size
         self.initializer_range: float = initializer_range
         self.layer_norm_eps: float = layer_norm_eps
-        self.position_embedding_type: str = position_embedding_type
+        self.positional_type: str = positional_type
         self.use_cache: bool = use_cache
         self.dense_unites: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout

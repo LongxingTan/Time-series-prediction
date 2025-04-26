@@ -17,7 +17,7 @@ class Attention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
-        position_embedding_type=None,
+        positional_type=None,
     ) -> None:
         """Initialize the Attention layer.
 
@@ -38,7 +38,7 @@ class Attention(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.position_embedding_type = position_embedding_type
+        self.positional_type = positional_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
@@ -126,7 +126,7 @@ class SelfAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
-        position_embedding_type=None,
+        positional_type=None,
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
@@ -134,7 +134,7 @@ class SelfAttention(tf.keras.layers.Layer):
             hidden_size,
             num_attention_heads,
             attention_probs_dropout_prob=attention_probs_dropout_prob,
-            position_embedding_type=position_embedding_type,
+            positional_type=positional_type,
         )
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:

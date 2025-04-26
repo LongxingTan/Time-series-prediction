@@ -55,7 +55,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 class PositionalEncoding(tf.keras.layers.Layer):
     def __init__(self, max_len: int = 5000):
         super(PositionalEncoding, self).__init__()
-        self.max_len = max_len
+        self.max_len = max_len  # TODO: check if without this works
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super(PositionalEncoding, self).build(input_shape)
@@ -77,22 +77,22 @@ class PositionalEncoding(tf.keras.layers.Layer):
         """
 
         d_model = x.get_shape().as_list()[-1]  # static
-        batch_size, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
-        with tf.name_scope("position_encode"):
-            # => batch_size * seq_length
-            position_ind = tf.tile(tf.expand_dims(tf.range(seq_length), 0), [batch_size, 1])
-            position_enc = np.array(
-                [[pos / np.power(10000, (i - i % 2) / d_model) for i in range(d_model)] for pos in range(self.max_len)]
-            )
+        depth = d_model // 2
+        _, seq_length = tf.shape(x)[0], tf.shape(x)[1]  # dynamic
 
-            position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
-            position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-            position_enc = tf.convert_to_tensor(position_enc, tf.float32)  # (max_len, d_model)
+        with tf.name_scope("positional_encode"):
+            # => (max_len, 1)
+            positions = tf.range(seq_length, dtype=tf.float32)[..., tf.newaxis]
+            # => (1, d_model/2)
+            depths = tf.range(depth, dtype=tf.float32)[np.newaxis, :] / depth
+            # => (1, d_model/2)
+            angle_rates = tf.math.divide(1, tf.math.pow(tf.cast(10000, tf.float32), depths))
+            # => (max_len, d_model/2)
+            angle_rads = tf.linalg.matmul(positions, angle_rates)
+            # => (max_len, d_model)
+            position_enc = tf.concat([tf.math.sin(angle_rads), tf.math.cos(angle_rads)], axis=-1)
 
-            outputs = tf.nn.embedding_lookup(position_enc, position_ind)
-            if masking:
-                outputs = tf.where(tf.equal(x, 0), x, outputs)
-        return tf.cast(outputs, tf.float32)
+        return position_enc
 
     def get_config(self):
         config = {"max_len": self.max_len}
