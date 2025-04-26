@@ -29,7 +29,6 @@ class BaseTrainer(object):
         model: Union[tf.keras.Model, "BaseModel"],
         args: Optional[TrainingArguments] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
-        metrics: Optional[List[Callable]] = None,
         **kwargs,
     ):
         self.model = model
@@ -167,11 +166,7 @@ class KerasTrainer(BaseTrainer):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
-        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
-        metrics: Optional[List[Callable]] = None,
         run_eagerly: bool = True,
         args: Optional[TrainingArguments] = None,
         **kwargs: Dict[str, object],
@@ -188,7 +183,7 @@ class KerasTrainer(BaseTrainer):
             run_eagerly: Whether to run eagerly. Default is True.
             **kwargs: Additional arguments that are passed to the instance as attributes.
         """
-        super().__init__(model, args, strategy, metrics, **kwargs)
+        super().__init__(model, args, strategy, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
         self.run_eagerly = run_eagerly
@@ -196,15 +191,13 @@ class KerasTrainer(BaseTrainer):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        with self.get_strategy_scope():
-            self.loss_fn = loss_fn
-            self.optimizer = optimizer
-            self.lr_scheduler = lr_scheduler
-
     def train(
         self,
         train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
+        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
@@ -237,6 +230,10 @@ class KerasTrainer(BaseTrainer):
         inputs = self.get_inputs(train_dataset)
 
         with self.get_strategy_scope():
+            self.loss_fn = loss_fn
+            self.optimizer = optimizer
+            self.lr_scheduler = lr_scheduler
+
             if not isinstance(self.model, tf.keras.Model):
                 if "build_model" not in dir(self.model):
                     raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
