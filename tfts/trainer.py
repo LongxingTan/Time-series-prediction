@@ -1,6 +1,7 @@
 """tfts Trainer"""
 
 from collections.abc import Iterable
+from contextlib import nullcontext
 import logging
 import os
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
@@ -36,9 +37,8 @@ class BaseTrainer(object):
     ):
         self.model = model
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
-        self.strategy = strategy or self._setup_strategy()
 
-        with self.strategy.scope():
+        with self.get_strategy_scope(strategy):
             self.model = self._setup_model(model)
             self.loss_fn = loss_fn
             self.metrics = metrics or []
@@ -68,26 +68,25 @@ class BaseTrainer(object):
     def create_accelerator_and_postprocess(self):
         return
 
-    def _setup_strategy(self) -> tf.distribute.Strategy:
-        """Configure default distributed training strategy."""
-        gpus = tf.config.list_physical_devices("GPU")
+    def get_strategy_scope(self, strategy: Optional[tf.distribute.Strategy]):
+        if not strategy:
+            strategy = None
+            gpus = tf.config.list_physical_devices("GPU")
 
-        if not gpus:
-            strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-        else:
-
-            if len(gpus) == 0:
+            if not gpus:
                 strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-            elif len(gpus) == 1:
-                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-            elif len(gpus) > 1:
-                # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
-                strategy = tf.distribute.MirroredStrategy()
             else:
-                raise ValueError("Cannot find the proper strategy, please check your environment properties.")
+                if len(gpus) == 0:
+                    strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+                elif len(gpus) == 1:
+                    strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+                elif len(gpus) > 1:
+                    # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
+                    strategy = tf.distribute.MirroredStrategy()
+                else:
+                    logger.warning("Cannot find the proper strategy, please check your environment properties.")
 
-        logger.info(f"Tensorflow: setting up strategy, Number of devices: {strategy.num_replicas_in_sync}")
-        return strategy
+        return strategy.scope() if strategy is not None else nullcontext()
 
     def _setup_model(self, model) -> tf.keras.Model:
         """Prepare the model for training."""
@@ -247,7 +246,8 @@ class KerasTrainer(BaseTrainer):
                     "Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple."
                 )
 
-            self.model = self.model.build_model(inputs=inputs)
+            with self.get_strategy_scope(self.strategy):
+                self.model = self.model.build_model(inputs=inputs)
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         tf.print(f"Trainable parameters: {trainable_params}")
