@@ -122,6 +122,23 @@ class BaseTrainer(object):
     #     if self.config.use_ema:
     #         self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
 
+    def get_inputs(self, train_dataset):
+        if isinstance(train_dataset, tf.data.Dataset):
+            # choose the first batch
+            x = next(iter(train_dataset.take(1).as_numpy_iterator()))[0]
+            inputs = self._prepare_inputs_for_model(x)
+
+        elif isinstance(train_dataset, tf.keras.utils.Sequence):
+            x, _ = train_dataset[0]
+            inputs = self._prepare_inputs_for_model(x)
+
+        elif isinstance(train_dataset, (list, tuple)):
+            x = train_dataset[0]
+            inputs = self._prepare_inputs_for_model(x)
+        else:
+            raise ValueError("Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple.")
+        return inputs
+
     def _prepare_inputs_for_model(
         self, x: Union[np.ndarray, pd.DataFrame]
     ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
@@ -218,33 +235,26 @@ class KerasTrainer(BaseTrainer):
         if not callbacks:
             callbacks: List[tf.keras.callbacks.Callback] = []
 
+        inputs = self.get_inputs(train_dataset)
+
         if not isinstance(self.model, tf.keras.Model):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
-            if isinstance(train_dataset, tf.data.Dataset):
-                # choose the first batch
-                x = next(iter(train_dataset.take(1).as_numpy_iterator()))[0]
-                inputs = self._prepare_inputs_for_model(x)
-
-            elif isinstance(train_dataset, tf.keras.utils.Sequence):
-                x, _ = train_dataset[0]
-                inputs = self._prepare_inputs_for_model(x)
-
-            elif isinstance(train_dataset, (list, tuple)):
-                x = train_dataset[0]
-                inputs = self._prepare_inputs_for_model(x)
-            else:
-                raise ValueError(
-                    "Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple."
-                )
 
             with self.get_strategy_scope():
                 self.model = self.model.build_model(inputs=inputs)
+                self.model.compile(
+                    loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
+                )
+        else:
+            with self.get_strategy_scope():
+                self.model.compile(
+                    loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
+                )
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
         tf.print(f"Trainable parameters: {trainable_params}")
 
-        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
         # if isinstance(train_dataset, (list, tuple)):
         #     x_train, y_train = train_dataset
         #     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
