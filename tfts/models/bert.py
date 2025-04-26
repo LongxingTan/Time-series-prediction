@@ -153,15 +153,7 @@ class Bert(BaseModel):
             Model outputs - either a tensor of predictions or a dictionary of tensors
         """
 
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            encoder_feature = x = inputs
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
 
         encoder_feature = self.encoder_embedding(encoder_feature)
         memory = self.encoder(encoder_feature, mask=None)

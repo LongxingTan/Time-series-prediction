@@ -143,9 +143,16 @@ class BaseTrainer(object):
             The corresponding Keras Input layers.
         """
         if isinstance(x, dict):
-            return {key: Input(item.shape[1:]) for key, item in x.items()}
+            logger.debug("Preparing inputs from dict")
+            return {key: Input(shape=item.shape[1:], name=key) for key, item in x.items()}
+        elif isinstance(x, (list, tuple)):
+            logger.debug("Preparing inputs from list or tuple")
+            return [Input(shape=item.shape[1:], name=f"input_{i}") for i, item in enumerate(x)]
+        elif isinstance(x, (np.ndarray, pd.DataFrame)):
+            logger.debug("Preparing single input")
+            return Input(shape=x.shape[1:], name="input")
         else:
-            return Input(x.shape[1:])
+            raise TypeError(f"Unsupported input type: {type(x)}")
 
 
 class KerasTrainer(BaseTrainer):
@@ -224,20 +231,17 @@ class KerasTrainer(BaseTrainer):
             if "build_model" not in dir(self.model):
                 raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
             if isinstance(train_dataset, tf.data.Dataset):
-                # first 0 choose the batch, second 0 choose the x
-                x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
+                # choose the first batch
+                x = next(iter(train_dataset.take(1).as_numpy_iterator()))[0]
+                inputs = self._prepare_inputs_for_model(x)
+
+            elif isinstance(train_dataset, tf.keras.utils.Sequence):
+                x, _ = train_dataset[0]
                 inputs = self._prepare_inputs_for_model(x)
 
             elif isinstance(train_dataset, (list, tuple)):
-                # for encoder only model, single array inputs
-                if isinstance(train_dataset[0], (np.ndarray, pd.DataFrame)):
-                    inputs = Input(train_dataset[0].shape[1:])
-                # for encoder decoder model, 3 item of array as inputs
-                elif isinstance(train_dataset[0], (list, tuple)):
-                    inputs = [Input(item.shape[1:]) for item in train_dataset[0]]
-                # for encoder decoder model, 3 item dict as inputs
-                elif isinstance(train_dataset[0], dict):
-                    inputs = {key: Input(item.shape[1:]) for key, item in train_dataset[0].items()}
+                x = train_dataset[0]
+                inputs = self._prepare_inputs_for_model(x)
             else:
                 raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
 

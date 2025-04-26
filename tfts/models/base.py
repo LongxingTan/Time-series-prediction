@@ -48,14 +48,28 @@ class BaseModel(ABC):
         # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
     def _prepare_3d_inputs(self, inputs):
+        """
+        Prepares 3D inputs for model processing by extracting and formatting features from various input types.
+
+        Args:
+            inputs: Input data that can be a tuple/list, dictionary, or tensor.
+                - If tuple/list: Expected to be [x, encoder_feature, decoder_feature]
+                - If dictionary: Expected to have keys "x", "encoder_feature", and "decoder_feature"
+                - If tensor: Used directly as both x and encoder_feature
+
+        Returns:
+            tuple: (x, encoder_feature, decoder_feature) properly formatted for model processing
+        """
+        decoder_feature = None
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
             encoder_feature = tf.concat([x, encoder_feature], axis=-1)
         elif isinstance(inputs, dict):
             x = inputs["x"]
             encoder_feature = inputs["encoder_feature"]
-            decoder_feature = inputs["decoder_feature"]
             encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+            if "decoder_feature" in inputs:
+                decoder_feature = inputs["decoder_feature"]
         else:
             encoder_feature = x = inputs
             decoder_feature = tf.cast(
