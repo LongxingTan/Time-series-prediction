@@ -5,8 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
-from tfts.layers.attention_layer import Attention, SelfAttention
-
 
 class ConvTemp(tf.keras.layers.Layer):
     """Temporal convolutional layer"""
@@ -27,11 +25,12 @@ class ConvTemp(tf.keras.layers.Layer):
         self.kernel_size = kernel_size
         self.strides = strides
         self.dilation_rate = dilation_rate
-        self.activation = activations.get(activation)
         self.causal = causal
         self.kernel_initializer = initializers.get(kernel_initializer)
+        self.activation = activations.get(activation)
 
     def build(self, input_shape: Tuple[int]) -> None:
+
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
             kernel_initializer=self.kernel_initializer,

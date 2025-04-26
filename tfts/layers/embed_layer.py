@@ -57,25 +57,23 @@ class DataEmbedding(tf.keras.layers.Layer):
                 Defaults to None.
         """
         super(DataEmbedding, self).__init__()
-
         self.embed_size = embed_size
         self.positional_type = positional_type
 
+    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
+        super(DataEmbedding, self).build(input_shape)
         # Value embedding layer
-        self.value_embedding = TokenEmbedding(embed_size)
+        self.value_embedding = TokenEmbedding(self.embed_size)
 
         # Positional embedding layer based on specified type
-        if positional_type == "positional encoding":
+        if self.positional_type == "positional encoding":
             self.positional_embedding = PositionalEncoding()
-        elif positional_type == "positional embedding":
+        elif self.positional_type == "positional embedding":
             self.positional_embedding = PositionalEmbedding()
-        elif positional_type == "relative encoding":
+        elif self.positional_type == "relative encoding":
             self.positional_embedding = RelativePositionEmbedding()
         else:
             self.positional_embedding = None
-
-    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
-        super(DataEmbedding, self).build(input_shape)
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """
@@ -227,10 +225,13 @@ class TemporalEmbedding(tf.keras.layers.Layer):
     # minute, hour, weekday, day, month
     def __init__(self, embed_size, embed_type="fixed") -> None:
         super().__init__()
-        minute_size = 6  # every 10 minutes
-        hour_size = 24  #
-        self.minute_embed = Embedding(minute_size, 3)
-        self.hour_embed = Embedding(hour_size, 6)
+        self.minute_size = 6  # every 10 minutes
+        self.hour_size = 24  #
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
+        self.minute_embed = Embedding(self.minute_size, 3)
+        self.hour_embed = Embedding(self.hour_size, 6)
 
     def call(self, x, **kwargs):
         """_summary_

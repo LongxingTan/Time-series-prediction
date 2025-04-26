@@ -105,10 +105,10 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
         super(RelativePositionEmbedding, self).__init__()
         self.max_len = max_len
         self.output_dim = output_dim
-        self.embedding_initializer = tf.keras.initializers.get("zeros")
 
     def build(self, input_shape):
         super(RelativePositionEmbedding, self).build(input_shape)
+        self.embedding_initializer = tf.keras.initializers.get("zeros")
         self.embeddings = self.add_weight(
             name="RelativePositionEmbedding",
             shape=(self.max_len, self.output_dim),

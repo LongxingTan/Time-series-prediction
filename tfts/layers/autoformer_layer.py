@@ -1,6 +1,5 @@
 """Layer for :py:class:`~tfts.models.autoformer`"""
 
-import math
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
@@ -18,7 +17,10 @@ class MovingAvg(tf.keras.layers.Layer):
             raise ValueError("Moving average kernel size must be an odd number")
         self.kernel_size = kernel_size
         self.stride = stride
-        self.avg = AveragePooling1D(pool_size=kernel_size, strides=stride, padding="valid")
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
+        self.avg = AveragePooling1D(pool_size=self.kernel_size, strides=self.stride, padding="valid")
 
     def call(self, inputs):
         """
@@ -41,7 +43,10 @@ class SeriesDecomp(tf.keras.layers.Layer):
     def __init__(self, kernel_size: int) -> None:
         super().__init__()
         self.kernel_size = kernel_size
-        self.moving_avg = MovingAvg(kernel_size, stride=1)
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
+        self.moving_avg = MovingAvg(self.kernel_size, stride=1)
 
     def call(self, x: tf.Tensor):
         """

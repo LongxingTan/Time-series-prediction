@@ -242,15 +242,26 @@ class Decoder(tf.keras.layers.Layer):
     ) -> None:
         super(Decoder, self).__init__()
         self.predict_sequence_length = predict_sequence_length
-        self.decoder_embedding = DataEmbedding(embed_size=hidden_size)
+        self.num_decoder_layers = num_decoder_layers
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.layer_norm_eps = layer_norm_eps
+
+    def build(self, input_shape):
+        """Build the decoder layers."""
+        super().build(input_shape)
+        self.decoder_embedding = DataEmbedding(embed_size=self.hidden_size)
         self.decoder_layer = DecoderLayer(
-            num_decoder_layers,
-            hidden_size,
-            num_attention_heads,
-            attention_probs_dropout_prob,
-            ffn_intermediate_size,
-            hidden_dropout_prob,
-            layer_norm_eps,
+            num_decoder_layers=self.num_decoder_layers,
+            hidden_size=self.hidden_size,
+            num_attention_heads=self.num_attention_heads,
+            attention_probs_dropout_prob=self.attention_probs_dropout_prob,
+            ffn_intermediate_size=self.ffn_intermediate_size,
+            hidden_dropout_prob=self.hidden_dropout_prob,
+            layer_norm_eps=self.layer_norm_eps,
         )
         self.projection = Dense(units=1, name="final_projection")
 
@@ -398,12 +409,22 @@ class TransformerBlock(tf.keras.layers.Layer):
         layer_norm_eps: float = 1e-9,
     ) -> None:
         super(TransformerBlock, self).__init__()
-        self.att = MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
-        self.ffn = tf.keras.Sequential([Dense(ffn_intermediate_size, activation="gelu"), Dense(feat_dim)])
-        self.layernorm1 = LayerNormalization(epsilon=layer_norm_eps)
-        self.layernorm2 = LayerNormalization(epsilon=layer_norm_eps)
-        self.dropout1 = Dropout(rate)
-        self.dropout2 = Dropout(rate)
+        self.embed_dim = embed_dim
+        self.feat_dim = feat_dim
+        self.num_heads = num_heads
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.rate = rate
+        self.layer_norm_eps = layer_norm_eps
+
+    def build(self, input_shape):
+        """Build the Transformer block layers."""
+        super().build(input_shape)
+        self.att = MultiHeadAttention(num_heads=self.num_heads, key_dim=self.embed_dim)
+        self.ffn = tf.keras.Sequential([Dense(self.ffn_intermediate_size, activation="gelu"), Dense(self.feat_dim)])
+        self.layernorm1 = LayerNormalization(epsilon=self.layer_norm_eps)
+        self.layernorm2 = LayerNormalization(epsilon=self.layer_norm_eps)
+        self.dropout1 = Dropout(self.rate)
+        self.dropout2 = Dropout(self.rate)
 
     def call(self, inputs: tf.Tensor, training: bool) -> tf.Tensor:
         """Forward pass through a Transformer block for time series."""

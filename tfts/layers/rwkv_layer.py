@@ -1,3 +1,5 @@
+from typing import Any, Callable, Dict, Optional, Tuple
+
 import tensorflow as tf
 
 
@@ -7,6 +9,9 @@ class TimeMixing(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.n_embd = config.n_embd
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
 
         # Trainable parameters
         self.time_mix_k = self.add_weight("time_mix_k", (1, self.n_embd), initializer="zeros")
@@ -69,6 +74,9 @@ class ChannelMixing(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.n_embd = config.n_embd
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
 
         self.time_mix_k = self.add_weight("time_mix_k", (1, self.n_embd), initializer="zeros")
         self.time_mix_r = self.add_weight("time_mix_r", (1, self.n_embd), initializer="zeros")

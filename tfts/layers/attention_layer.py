@@ -17,7 +17,7 @@ class Attention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         attention_probs_dropout_prob: float = 0.0,
-        positional_type=None,
+        positional_type: str = None,
     ) -> None:
         """Initialize the Attention layer.
 
@@ -130,15 +130,19 @@ class SelfAttention(tf.keras.layers.Layer):
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
-        self.attention = Attention(
-            hidden_size,
-            num_attention_heads,
-            attention_probs_dropout_prob=attention_probs_dropout_prob,
-            positional_type=positional_type,
-        )
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.positional_type = positional_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super(SelfAttention, self).build(input_shape)
+        self.attention = Attention(
+            self.hidden_size,
+            self.num_attention_heads,
+            attention_probs_dropout_prob=self.attention_probs_dropout_prob,
+            positional_type=self.positional_type,
+        )
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training: Optional[bool] = None):
         """Self attention layer

@@ -22,11 +22,11 @@ class DenseTemp(tf.keras.layers.Layer):
     ):
         super(DenseTemp, self).__init__(trainable=trainable, name=name)
         self.hidden_size = hidden_size
+        self.use_bias = use_bias
         self.activation = activations.get(activation)
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
-        self.use_bias = use_bias
         self.bias_initializer = bias_initializer
 
     def build(self, input_shape: Tuple[int]):
