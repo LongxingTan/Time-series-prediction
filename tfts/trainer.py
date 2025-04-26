@@ -237,60 +237,42 @@ class KerasTrainer(BaseTrainer):
 
         inputs = self.get_inputs(train_dataset)
 
-        if not isinstance(self.model, tf.keras.Model):
-            if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
-
-            with self.get_strategy_scope():
+        with self.get_strategy_scope():
+            if not isinstance(self.model, tf.keras.Model):
+                if "build_model" not in dir(self.model):
+                    raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
                 self.model = self.model.build_model(inputs=inputs)
-                self.model.compile(
-                    loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
-                )
-        else:
-            with self.get_strategy_scope():
-                self.model.compile(
-                    loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
-                )
 
-        trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
-        tf.print(f"Trainable parameters: {trainable_params}")
-
-        # if isinstance(train_dataset, (list, tuple)):
-        #     x_train, y_train = train_dataset
-        #     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-        #
-        # train_dataset = train_dataset.cache().shuffle(buffer_size=10000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-        #
-        # if valid_dataset is not None:
-        #     if isinstance(valid_dataset, (list, tuple)):
-        #         x_val, y_val = valid_dataset
-        #         valid_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-        #
-        #     valid_dataset = valid_dataset.cache().batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
-        if isinstance(train_dataset, (list, tuple)):
-            x_train, y_train = train_dataset
-
-            history = self.model.fit(
-                x_train,
-                y_train,
-                validation_data=valid_dataset,
-                steps_per_epoch=steps_per_epoch,
-                epochs=epochs,
-                batch_size=batch_size,
-                verbose=verbose,
-                callbacks=callbacks,
+            self.model.compile(
+                loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
             )
-        else:
-            history = self.model.fit(
-                train_dataset,
-                validation_data=valid_dataset,
-                steps_per_epoch=steps_per_epoch,
-                epochs=epochs,
-                batch_size=batch_size,
-                verbose=verbose,
-                callbacks=callbacks,
-            )
+
+            trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
+            tf.print(f"Trainable parameters: {trainable_params}")
+
+            if isinstance(train_dataset, (list, tuple)):
+                x_train, y_train = train_dataset
+
+                history = self.model.fit(
+                    x_train,
+                    y_train,
+                    validation_data=valid_dataset,
+                    steps_per_epoch=steps_per_epoch,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                    callbacks=callbacks,
+                )
+            else:
+                history = self.model.fit(
+                    train_dataset,
+                    validation_data=valid_dataset,
+                    steps_per_epoch=steps_per_epoch,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                    callbacks=callbacks,
+                )
         return history
 
     def fit(self, **params):
