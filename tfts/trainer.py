@@ -38,17 +38,27 @@ class BaseTrainer(object):
         self.model = model
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
 
-        with self.get_strategy_scope(strategy):
-            self.model = self._setup_model(model)
-            self.loss_fn = loss_fn
-            self.metrics = metrics or []
-            self.optimizer = optimizer or self._create_optimizer()
-            self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
+        if strategy is None:
+            gpus = tf.config.list_physical_devices("GPU")
+            if not gpus:
+                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+            elif len(gpus) == 1:
+                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+            else:
+                strategy = tf.distribute.MirroredStrategy()
+        self.strategy = strategy
 
-            # Training state
-            self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
-            if self.args.fp16:
-                self._setup_mixed_precision()
+        # with self.get_strategy_scope(strategy):
+        #     self.model = self._setup_model(model)
+        #     self.loss_fn = loss_fn
+        #     self.metrics = metrics or []
+        #     self.optimizer = optimizer or self._create_optimizer()
+        #     self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
+        #
+        #     # Training state
+        #     self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
+        #     if self.args.fp16:
+        #         self._setup_mixed_precision()
 
     def evaluate(self):
         pass
@@ -68,25 +78,8 @@ class BaseTrainer(object):
     def create_accelerator_and_postprocess(self):
         return
 
-    def get_strategy_scope(self, strategy: Optional[tf.distribute.Strategy]):
-        if not strategy:
-            strategy = None
-            gpus = tf.config.list_physical_devices("GPU")
-
-            if not gpus:
-                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-            else:
-                if len(gpus) == 0:
-                    strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-                elif len(gpus) == 1:
-                    strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-                elif len(gpus) > 1:
-                    # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
-                    strategy = tf.distribute.MirroredStrategy()
-                else:
-                    logger.warning("Cannot find the proper strategy, please check your environment properties.")
-
-        return strategy.scope() if strategy is not None else nullcontext()
+    def get_strategy_scope(self):
+        return self.strategy.scope() if self.strategy else nullcontext()
 
     def _setup_model(self, model) -> tf.keras.Model:
         """Prepare the model for training."""
@@ -187,7 +180,6 @@ class KerasTrainer(BaseTrainer):
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
-        self.strategy = strategy
         self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
@@ -246,7 +238,7 @@ class KerasTrainer(BaseTrainer):
                     "Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple."
                 )
 
-            with self.get_strategy_scope(self.strategy):
+            with self.get_strategy_scope():
                 self.model = self.model.build_model(inputs=inputs)
 
         trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
