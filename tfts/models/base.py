@@ -13,13 +13,13 @@ from tensorflow.keras.layers import Input
 logger = logging.getLogger(__name__)
 
 
-class BaseModel(ABC):
+class BaseModel(ABC, tf.keras.layers.Layer):
     """Base class for tfts model."""
 
     def __init__(self, predict_sequence_length: int = 1, config=None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.model = None  # Model should be defined later
+        self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
     @classmethod
     def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
