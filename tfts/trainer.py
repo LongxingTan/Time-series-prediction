@@ -188,7 +188,7 @@ class KerasTrainer(BaseTrainer):
             run_eagerly: Whether to run eagerly. Default is True.
             **kwargs: Additional arguments that are passed to the instance as attributes.
         """
-        super().__init__(model, args, loss_fn, optimizer, strategy, metrics, **kwargs)
+        super().__init__(model, args, strategy, metrics, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
         self.run_eagerly = run_eagerly
