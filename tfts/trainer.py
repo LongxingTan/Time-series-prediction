@@ -28,9 +28,6 @@ class BaseTrainer(object):
         self,
         model: Union[tf.keras.Model, "BaseModel"],
         args: Optional[TrainingArguments] = None,
-        loss_fn: Callable = tf.keras.losses.MeanSquaredError(),
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
         metrics: Optional[List[Callable]] = None,
         **kwargs,
@@ -194,13 +191,15 @@ class KerasTrainer(BaseTrainer):
         super().__init__(model, args, loss_fn, optimizer, strategy, metrics, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
         self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        with self.get_strategy_scope():
+            self.loss_fn = loss_fn
+            self.optimizer = optimizer
+            self.lr_scheduler = lr_scheduler
 
     def train(
         self,
