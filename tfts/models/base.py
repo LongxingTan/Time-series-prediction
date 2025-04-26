@@ -5,18 +5,17 @@ import collections
 import json
 import logging
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Input
 
 logger = logging.getLogger(__name__)
 
 
-class BaseModel(ABC, tf.keras.layers.Layer):
+class BaseModel(ABC):
     """Base class for tfts model."""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)

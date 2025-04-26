@@ -110,10 +110,10 @@ class Bert(BaseModel):
         super(Bert, self).__init__()
         self.config = config or BertConfig()
         self.predict_sequence_length = predict_sequence_length
+        self.built = False
 
     def build(self, input_shape):
         """Builds the model layers with the input shape."""
-        super().build(input_shape)
 
         self.encoder_embedding = DataEmbedding(self.config.hidden_size, positional_type=self.config.positional_type)
         self.encoder = Encoder(
@@ -155,6 +155,9 @@ class Bert(BaseModel):
         Union[tf.Tensor, Dict[str, tf.Tensor]]
             Model outputs - either a tensor of predictions or a dictionary of tensors
         """
+        if not self.built:
+            self.build(inputs.shape)
+            self.built = True
 
         x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
 

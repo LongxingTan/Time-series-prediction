@@ -26,18 +26,18 @@ class ConvTemp(tf.keras.layers.Layer):
         self.strides = strides
         self.dilation_rate = dilation_rate
         self.causal = causal
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.activation = activations.get(activation)
+        self.kernel_initializer = kernel_initializer
+        self.activation = activation
 
     def build(self, input_shape: Tuple[int]) -> None:
 
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
-            kernel_initializer=self.kernel_initializer,
+            kernel_initializer=initializers.get(self.kernel_initializer),
             filters=self.filters,
             padding="valid",
             dilation_rate=self.dilation_rate,
-            activation=self.activation,
+            activation=activations.get(self.activation),
         )
         super(ConvTemp, self).build(input_shape)
 

@@ -15,9 +15,8 @@ class Attention(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_size: int,
-        num_attention_heads: int,
+        num_attention_heads: int = 1,
         attention_probs_dropout_prob: float = 0.0,
-        positional_type: str = None,
     ) -> None:
         """Initialize the Attention layer.
 
@@ -38,7 +37,6 @@ class Attention(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.positional_type = positional_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
@@ -124,25 +122,22 @@ class SelfAttention(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_size: int,
-        num_attention_heads: int,
+        num_attention_heads: int = 1,
         attention_probs_dropout_prob: float = 0.0,
-        positional_type=None,
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.positional_type = positional_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
-        super(SelfAttention, self).build(input_shape)
         self.attention = Attention(
             self.hidden_size,
             self.num_attention_heads,
             attention_probs_dropout_prob=self.attention_probs_dropout_prob,
-            positional_type=self.positional_type,
         )
+        super(SelfAttention, self).build(input_shape)
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training: Optional[bool] = None):
         """Self attention layer
