@@ -73,7 +73,7 @@ class BertConfig(BaseConfig):
         self.layer_norm_eps: float = layer_norm_eps
         self.positional_type: str = positional_type
         self.use_cache: bool = use_cache
-        self.dense_unites: Tuple[int] = dense_units
+        self.dense_units: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.pad_token_id: int = pad_token_id
 
@@ -104,8 +104,6 @@ class Bert(BaseModel):
         Transformer encoder module
     dense_layers : List[Dense]
         List of dense layers for final projection
-    projection : Dense
-        Final projection layer to output dimension
     """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[BertConfig] = None) -> None:
