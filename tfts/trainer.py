@@ -77,15 +77,6 @@ class BaseTrainer(object):
     def get_strategy_scope(self):
         return self.strategy.scope() if self.strategy else nullcontext()
 
-    def _setup_model(self, model) -> tf.keras.Model:
-        """Prepare the model for training."""
-        if not isinstance(model, tf.keras.Model):
-            if not hasattr(model, "build_model"):
-                raise TypeError("Model must be a tf.keras.Model or have a build_model method")
-
-            # model = model.build_model(inputs=inputs)
-        return model
-
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Create optimizer with specified parameters."""
         return tf.keras.optimizers.Adam(

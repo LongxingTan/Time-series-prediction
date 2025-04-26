@@ -111,6 +111,10 @@ class Bert(BaseModel):
         self.config = config or BertConfig()
         self.predict_sequence_length = predict_sequence_length
 
+    def build(self, input_shape):
+        """Builds the model layers with the input shape."""
+        super().build(input_shape)
+
         self.encoder_embedding = DataEmbedding(self.config.hidden_size, positional_type=self.config.positional_type)
         self.encoder = Encoder(
             num_hidden_layers=self.config.num_layers,
@@ -123,9 +127,8 @@ class Bert(BaseModel):
         self.dense_layers = [
             Dense(unit, activation="relu", name=f"dense_{i}") for i, unit in enumerate(self.config.dense_units)
         ]
-
-        self.projection = Dense(predict_sequence_length, activation="linear", name="projection")
-        self.reshape = Reshape((predict_sequence_length, 1))
+        self.projection = Dense(self.predict_sequence_length, activation="linear", name="projection")
+        self.reshape = Reshape((self.predict_sequence_length, 1))
 
     def __call__(
         self,
