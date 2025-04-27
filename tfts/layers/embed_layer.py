@@ -81,8 +81,6 @@ class DataEmbedding(tf.keras.layers.Layer):
 
         Args:
             x (tf.Tensor): Input tensor of shape (batch_size, seq_length, input_dim).
-            training (bool, optional): Whether the model is in training mode.
-                This affects the behavior of dropout. Defaults to None.
 
         Returns:
             tf.Tensor: Output tensor of shape (batch_size, seq_length, embed_size).

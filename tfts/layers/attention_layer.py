@@ -98,7 +98,6 @@ class Attention(tf.keras.layers.Layer):
         # (batch * heads) * seq_q * units
         outputs = tf.linalg.matmul(score, v_)
         outputs = tf.concat(tf.split(outputs, self.num_attention_heads, axis=0), axis=2)
-        outputs = tf.cast(outputs, tf.float32)
 
         if return_attention_scores:
             return outputs, score

@@ -1,4 +1,4 @@
-From tensorflow/tensorflow:2.8.3-gpu
+From tensorflow/tensorflow:2.16.1-gpu
 
 RUN apt-get update
 RUN apt-get install -y libgl1-mesa-dev wget vim python3.8

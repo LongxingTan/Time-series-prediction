@@ -85,7 +85,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         self.relu_dropout = relu_dropout
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="gelu")
+        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
         super(FeedForwardNetwork, self).build(input_shape)
 
