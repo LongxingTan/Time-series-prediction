@@ -115,9 +115,8 @@ class Bert(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.built = False
 
-    def build(self, input_shape: tf.TensorShape):
+    def build(self):
         """Builds the model layers with the input shape."""
-        logger.debug(f"Building model with input shape: {input_shape}")
 
         self.encoder_embedding = DataEmbedding(self.config.hidden_size, positional_type=self.config.positional_type)
         self.encoder = Encoder(
@@ -168,7 +167,7 @@ class Bert(BaseModel):
         """
         if not self.built:
             logger.info("Model not built yet, building now...")
-            self.build(inputs.shape)
+            self.build()
             self.built = True
 
         try:
