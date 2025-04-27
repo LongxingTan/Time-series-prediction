@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import tensorflow as tf
@@ -11,6 +10,7 @@ from tfts import (
     AutoModelForClassification,
     AutoModelForPrediction,
     AutoModelForSegmentation,
+    AutoModelForUncertainty,
 )
 
 
@@ -26,6 +26,14 @@ class TestAutoModel(unittest.TestCase):
 
         self.assertEqual(output.shape, (1, 5, 1))
 
+    def test_auto_model_for_prediction(self):
+        config = AutoConfig.for_model("bert")
+        model = AutoModelForPrediction.from_config(config, predict_sequence_length=3)
+
+        x = tf.random.normal([2, 14, 4])
+        y = model(x)
+        self.assertEqual(y.shape, (2, 3, 1))
+
     def test_auto_model_for_classification(self):
         num_labels = 3
         config = AutoConfig.for_model("bert")
@@ -34,3 +42,27 @@ class TestAutoModel(unittest.TestCase):
         x = tf.random.normal([2, 14, 4])
         y = model(x)
         self.assertEqual(y.shape, (2, num_labels))
+
+    def test_auto_model_for_anomaly(self):
+        config = AutoConfig.for_model("bert")
+        model = AutoModelForAnomaly.from_config(config)
+
+        x = tf.random.normal([2, 14, 4])
+        dist = model.detect(x)
+        print(dist.shape)
+
+    def test_auto_model_for_segmentation(self):
+        config = AutoConfig.for_model("bert")
+        model = AutoModelForSegmentation.from_config(config)
+
+        x = tf.random.normal([2, 14, 4])
+        output = model(x)
+        print(output.shape)
+
+    def test_auto_model_for_uncertainty(self):
+        config = AutoConfig.for_model("bert")
+        model = AutoModelForUncertainty.from_config(config)
+
+        x = tf.random.normal([2, 14, 4])
+        output = model(x)
+        print(output.shape)
