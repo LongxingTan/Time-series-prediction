@@ -84,7 +84,7 @@ class RNN(BaseModel):
         tf.Tensor
             Model output.
         """
-        x, encoder_feature = self._prepare_inputs(inputs)
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         if self.config.rnn_type == "lstm":
@@ -98,31 +98,6 @@ class RNN(BaseModel):
 
         outputs = Reshape((outputs.shape[1], 1))(outputs)
         return outputs
-
-    def _prepare_inputs(self, inputs):
-        """Prepare the inputs for the encoder.
-
-        Parameters
-        ----------
-        inputs : Union[list, tuple, dict, tf.Tensor]
-            Raw inputs.
-
-        Returns
-        -------
-        tuple
-            Prepared inputs.
-        """
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, _ = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            x = inputs
-            encoder_feature = x
-        return x, encoder_feature
 
 
 class Encoder(tf.keras.layers.Layer):

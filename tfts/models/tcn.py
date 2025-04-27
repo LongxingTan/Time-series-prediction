@@ -85,15 +85,7 @@ class TCN(BaseModel):
         tf.Tensor
             3D output tensor
         """
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            encoder_feature = x = inputs
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
 
         # encoder_features = self.pool(encoder_features)  # batch * n_train_days * n_feature
         encoder_outputs, encoder_state = self.encoder(encoder_feature)

@@ -107,7 +107,7 @@ class WaveNet(BaseModel):
         Returns:
             Tensor containing the model output.
         """
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs)
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_state, encoder_outputs = self.encoder(encoder_feature)
         decoder_outputs = self.decoder(
             decoder_features=decoder_feature,

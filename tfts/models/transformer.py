@@ -143,7 +143,7 @@ class Transformer(BaseModel):
             3D tensor for output, batch * output_seq * 1
         """
 
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs)
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
 
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)

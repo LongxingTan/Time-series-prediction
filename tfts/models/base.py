@@ -59,7 +59,7 @@ class BaseModel(ABC):
         self.model = tf.keras.models.load_model(weights_dir)
         # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
-    def _prepare_3d_inputs(self, inputs):
+    def _prepare_3d_inputs(self, inputs, ignore_decoder_inputs=True):
         """
         Prepares 3D inputs for model processing by extracting and formatting features from various input types.
 
@@ -86,15 +86,16 @@ class BaseModel(ABC):
                 decoder_feature = inputs["decoder_feature"]
         else:
             encoder_feature = x = inputs
-            decoder_feature = Lambda(
-                lambda encoder_feature: tf.cast(
-                    tf.tile(
-                        tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
-                        (tf.shape(encoder_feature)[0], 1, 1),
-                    ),
-                    tf.float32,
-                )
-            )(encoder_feature)
+            if not ignore_decoder_inputs:
+                decoder_feature = Lambda(
+                    lambda encoder_feature: tf.cast(
+                        tf.tile(
+                            tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                            (tf.shape(encoder_feature)[0], 1, 1),
+                        ),
+                        tf.float32,
+                    )
+                )(encoder_feature)
         return x, encoder_feature, decoder_feature
 
     def save_weights(self, weights_path: str):

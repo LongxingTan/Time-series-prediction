@@ -87,7 +87,7 @@ class Seq2seq(BaseModel):
         :return: Decoder outputs.
         """
 
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs)
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_outputs, encoder_state = self.encoder(encoder_feature)
 
         decoder_outputs = self.decoder(
