@@ -28,6 +28,8 @@ class TestAutoModel(unittest.TestCase):
 
     def test_auto_model_for_prediction(self):
         config = AutoConfig.for_model("bert")
+        config.skip_connect_circle = False
+        config.skip_connect_mean = False
         model = AutoModelForPrediction.from_config(config, predict_sequence_length=3)
 
         x = tf.random.normal([2, 14, 4])
