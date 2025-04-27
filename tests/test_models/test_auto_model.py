@@ -45,6 +45,7 @@ class TestAutoModel(unittest.TestCase):
 
     def test_auto_model_for_anomaly(self):
         config = AutoConfig.for_model("bert")
+        config.train_sequence_length = 14
         model = AutoModelForAnomaly.from_config(config)
 
         x = tf.random.normal([2, 14, 4])

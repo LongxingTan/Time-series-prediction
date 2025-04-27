@@ -83,7 +83,7 @@ class AutoModel(BaseModel):
         return cls(model, config)
 
 
-class AutoModelForPrediction(BaseModel):
+class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
     def __call__(
@@ -185,6 +185,11 @@ class AutoModelForAnomaly(BaseModel):
 class AutoModelForSegmentation(BaseModel):
     """tfts model for time series segmentation"""
 
+    def __init__(self, model, config):
+        super().__init__(config=config)
+        self.model = model
+        self.config = config
+
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
@@ -205,6 +210,11 @@ class AutoModelForSegmentation(BaseModel):
 
 class AutoModelForUncertainty(BaseModel):
     """tfts model for time series uncertainty prediction"""
+
+    def __init__(self, model, config):
+        super().__init__(config=config)
+        self.model = model
+        self.config = config
 
     def __call__(
         self,
