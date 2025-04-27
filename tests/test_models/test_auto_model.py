@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from reference.run_uncertainty import predict_sequence_length
 from tfts import (
     AutoConfig,
     AutoModel,
