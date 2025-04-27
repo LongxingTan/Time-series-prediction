@@ -71,10 +71,10 @@ class Informer(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=InformerConfig(),
+        config: Optional[InformerConfig] = None,
     ):
         super(Informer, self).__init__()
-        self.config = config
+        self.config = config or InformerConfig
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(config.hidden_size)
         self.decoder_embedding = DataEmbedding(config.hidden_size)

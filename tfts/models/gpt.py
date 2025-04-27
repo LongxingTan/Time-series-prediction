@@ -82,7 +82,7 @@ class GPTConfig(BaseConfig):
 class GPT(BaseModel):
     """GPT decoder model for time series"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[GPTConfig] = None) -> None:
         super(GPT, self).__init__()
         self.config = config or GPTConfig()
         self.predict_sequence_length = predict_sequence_length

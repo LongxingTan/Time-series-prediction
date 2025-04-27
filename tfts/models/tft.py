@@ -20,11 +20,9 @@ class TFTransformerConfig(BaseConfig):
 class TFTransformer(BaseModel):
     """Temporal fusion transformer model"""
 
-    def __init__(self, predict_sequence_length=1, config=None):
+    def __init__(self, predict_sequence_length=1, config: Optional[TFTransformerConfig] = None):
         super(TFTransformer, self).__init__()
-        if config is None:
-            config = TFTransformerConfig()
-        self.config = config
+        self.config = config or TFTransformerConfig()
         self.predict_sequence_length = predict_sequence_length
 
     def __call__(self, x: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):

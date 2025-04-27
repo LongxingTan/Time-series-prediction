@@ -39,12 +39,10 @@ class NBeats(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=None,
+        config: Optional[NBeatsConfig] = None,
     ):
-        if config is None:
-            config = NBeatsConfig()
         super(NBeats, self).__init__(config)
-        self.config = config
+        self.config = config or NBeatsConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.stack_types = config.stack_types

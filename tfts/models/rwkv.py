@@ -44,11 +44,9 @@ class RWKVConfig(BaseConfig):
 class RWKV(BaseModel):
     """TensorFlow RWKV model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[RWKVConfig] = None):
         super().__init__(config)
-        if config is None:
-            config = RWKVConfig()
-        self.config = config
+        self.config = config or RWKVConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)

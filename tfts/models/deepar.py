@@ -37,11 +37,11 @@ class DeepAR(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=DeepARConfig(),
+        config: Optional[DeepARConfig] = None,
     ):
 
         super(DeepAR, self).__init__()
-        self.config = config
+        self.config = config or DeepARConfig()
         self.predict_sequence_length = predict_sequence_length
 
         cell = tf.keras.layers.GRUCell(units=self.config.rnn_hidden_size)

@@ -50,7 +50,7 @@ class RNNConfig(BaseConfig):
 class RNN(BaseModel):
     """tfts RNN model"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[RNNConfig] = None):
         super().__init__(config)
         if config is None:
             config = RNNConfig()

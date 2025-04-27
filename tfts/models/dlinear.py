@@ -31,9 +31,9 @@ class DLinearConfig(BaseConfig):
 class DLinear(BaseModel):
     """DLinear Network"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=DLinearConfig()):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[DLinearConfig] = None):
         super(DLinear, self).__init__()
-        self.config = config
+        self.config = config or DLinearConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.decomposition = SeriesDecomp(self.config.kernel_size)
