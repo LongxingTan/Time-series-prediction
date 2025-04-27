@@ -186,8 +186,9 @@ class KerasTrainer(BaseTrainer):
         self,
         train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
-        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
+        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = "mse",
+        optimizer: Union[tf.keras.optimizers, str] = "adam",
+        learning_rate: float = 0.03,
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
@@ -221,9 +222,24 @@ class KerasTrainer(BaseTrainer):
         inputs = self.get_inputs(train_dataset)
 
         with self.get_strategy_scope():
-            self.loss_fn = loss_fn
-            self.optimizer = optimizer
-            self.lr_scheduler = lr_scheduler
+            if isinstance(loss_fn, str):
+                self.loss_fn = tf.keras.losses.get(loss_fn)  # Handle string loss names
+            elif callable(loss_fn) or isinstance(loss_fn, tf.keras.losses.Loss):
+                self.loss_fn = loss_fn
+            else:
+                self.loss_fn = tf.keras.losses.MeanSquaredError()
+
+            if isinstance(optimizer, str):
+                self.optimizer = tf.keras.optimizers.get(optimizer)(learning_rate=learning_rate)
+            elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
+                self.optimizer = optimizer
+            else:
+                self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
+            if callable(lr_scheduler) or isinstance(lr_scheduler, tf.keras.optimizers.schedules.LearningRateSchedule):
+                self.lr_scheduler = lr_scheduler
+            else:
+                self.lr_scheduler = None
 
             if not isinstance(self.model, tf.keras.Model):
                 if "build_model" not in dir(self.model):

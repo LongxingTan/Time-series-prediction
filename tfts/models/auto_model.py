@@ -75,11 +75,13 @@ class AutoModel(BaseModel):
         return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
     @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
+    def from_config(cls, config, predict_sequence_length: int = 1, verbose: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
+        model = getattr(module, class_name)(
+            config=config, predict_sequence_length=predict_sequence_length, verbose=verbose
+        )
         return cls(model, config)
 
 

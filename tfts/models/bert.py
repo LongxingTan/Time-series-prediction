@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1810.04805>`_
 """
 
+import logging
 from typing import Dict, Optional, Tuple
 
 import tensorflow as tf
@@ -12,6 +13,8 @@ from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class BertConfig(BaseConfig):
@@ -107,13 +110,14 @@ class Bert(BaseModel):
     """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[BertConfig] = None) -> None:
-        super(Bert, self).__init__()
+        super(Bert, self).__init__(predict_sequence_length=predict_sequence_length, config=config)
         self.config = config or BertConfig()
         self.predict_sequence_length = predict_sequence_length
         self.built = False
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape):
         """Builds the model layers with the input shape."""
+        logger.debug(f"Building model with input shape: {input_shape}")
 
         self.encoder_embedding = DataEmbedding(self.config.hidden_size, positional_type=self.config.positional_type)
         self.encoder = Encoder(
@@ -124,11 +128,18 @@ class Bert(BaseModel):
             ffn_intermediate_size=self.config.ffn_intermediate_size,
             hidden_dropout_prob=self.config.hidden_dropout_prob,
         )
+        logger.debug(
+            f"Created encoder with {self.config.num_layers} layers and {self.config.num_attention_heads} heads"
+        )
+
         self.dense_layers = [
             Dense(unit, activation="relu", name=f"dense_{i}") for i, unit in enumerate(self.config.dense_units)
         ]
+        logger.debug(f"Created {len(self.dense_layers)} dense layers with units: {self.config.dense_units}")
+
         self.projection = Dense(self.predict_sequence_length, activation="linear", name="projection")
         self.reshape = Reshape((self.predict_sequence_length, 1))
+        logger.debug("Model building completed")
 
     def __call__(
         self,
@@ -156,33 +167,38 @@ class Bert(BaseModel):
             Model outputs - either a tensor of predictions or a dictionary of tensors
         """
         if not self.built:
+            logger.info("Model not built yet, building now...")
             self.build(inputs.shape)
             self.built = True
 
-        x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
+        try:
+            x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
+            encoder_feature = self.encoder_embedding(encoder_feature)
+            memory = self.encoder(encoder_feature, mask=None)
 
-        encoder_feature = self.encoder_embedding(encoder_feature)
-        memory = self.encoder(encoder_feature, mask=None)
+            if output_hidden_states:
+                # (batch_size, train_sequence_length, hidden_size)
+                if return_dict:
+                    return {"hidden_states": memory}
+                return memory
 
-        if output_hidden_states:
-            # (batch_size, train_sequence_length, hidden_size)
+            # Extract the mean or last time step for prediction
+            if self.config.pooling_method == "mean":
+                encoder_output = tf.keras.layers.GlobalAveragePooling1D()(memory)
+            elif self.config.pooling_method == "last":
+                encoder_output = memory[:, -1]
+            else:
+                raise ValueError(f"Pooling method should be mean or last, while received {self.config.poolint_method}")
+
+            for layer in self.dense_layers:
+                encoder_output = layer(encoder_output)
+            outputs = self.projection(encoder_output)
+            outputs = self.reshape(outputs)
+
             if return_dict:
-                return {"hidden_states": memory}
-            return memory
+                return {"predictions": outputs}
+            return outputs
 
-        # Extract the mean or last time step for prediction
-        if self.config.pooling_method == "mean":
-            encoder_output = tf.keras.layers.GlobalAveragePooling1D()(memory)
-        elif self.config.pooling_method == "last":
-            encoder_output = memory[:, -1]
-        else:
-            raise ValueError(f"Pooling method should be mean or last, while received {self.config.poolint_method}")
-
-        for layer in self.dense_layers:
-            encoder_output = layer(encoder_output)
-        outputs = self.projection(encoder_output)
-        outputs = self.reshape(outputs)
-
-        if return_dict:
-            return {"predictions": outputs}
-        return outputs
+        except Exception as e:
+            logger.error(f"Error in forward pass: {str(e)}")
+            raise

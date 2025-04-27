@@ -13,7 +13,35 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
-    """Base class for tfts model."""
+    """Bert model for time series forecasting.
+
+    This model implements a transformer-based architecture (BERT) adapted for time series data.
+    It processes time series inputs through a transformer encoder and produces predictions
+    for future time steps.
+
+    Parameters
+    ----------
+    predict_sequence_length : int, optional
+        Number of future time steps to predict, by default 1
+    config : BertConfig, optional
+        Configuration parameters for the model, by default None
+    verbose : int, optional
+        Verbosity level (0=silent, 1=progress info, 2=debug info), by default 1
+
+    Attributes
+    ----------
+    config : BertConfig
+        Configuration object containing model hyperparameters
+    predict_sequence_length : int
+        Number of future time steps to predict
+    encoder_embedding : DataEmbedding
+        Embedding layer for encoder inputs
+    encoder : Encoder
+        Transformer encoder module
+    dense_layers : List[Dense]
+        List of dense layers for final projection
+
+    """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
         self.config = config
@@ -59,6 +87,9 @@ class BaseModel(ABC):
         Returns:
             tuple: (x, encoder_feature, decoder_feature) properly formatted for model processing
         """
+        if self.verbose >= 2:
+            logger.debug(f"Preparing 3D inputs with shape: {inputs.shape}")
+
         decoder_feature = None
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
@@ -73,21 +104,21 @@ class BaseModel(ABC):
             encoder_feature = x = inputs
         return x, encoder_feature, decoder_feature
 
-    def save_weights(self, weights_dir: str):
-        if os.path.isdir(weights_dir):
-            os.makedirs(weights_dir, exist_ok=True)
-            parent_dir = os.path.dirname(weights_dir)
-            weights_dir = os.path.join(parent_dir, "weights.h5")
-            config_dir = os.path.join(parent_dir, "config.json")
+    def save_weights(self, weights_path: str):
+        if weights_path.endswith(".h5"):
+            # User passed a full filepath
+            weights_file = weights_path
+            config_file = weights_path.replace(".h5", ".config.json")
+            os.makedirs(os.path.dirname(weights_file), exist_ok=True)
         else:
-            parent_dir = os.path.normpath(weights_dir)  # Get the parent directory
-            os.makedirs(parent_dir, exist_ok=True)
-            weights_dir = os.path.join(parent_dir, "weights.h5")  # Save weights in the same directory
-            config_dir = os.path.join(parent_dir, "config.json")
+            # User passed a directory
+            os.makedirs(weights_path, exist_ok=True)
+            weights_file = os.path.join(weights_path, "model.weights.h5")
+            config_file = os.path.join(weights_path, "config.json")
 
-        self.model.save_weights(weights_dir)
-        self.config.to_json(config_dir)
-        logger.info(f"Model weights successfully saved in {weights_dir}")
+        self.model.save_weights(weights_file)
+        self.config.to_json(config_file)
+        logger.info(f"Model weights successfully saved in {weights_file}")
 
     def save_model(self, weights_dir: str):
         self.model.save(weights_dir)
