@@ -81,6 +81,23 @@ Before training, ensure your raw data is preprocessed into a 3D format with the 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training the model, use appropriate loss functions, optimizers, and hyperparameters to achieve the best results.
 
+Multi-gpu training
+
+.. code-block:: python
+
+    from tfts import KerasTrainer
+
+    config = AutoConfig.for_model(model_name_or_path)
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+    optimizer = {
+        'class_name': 'adam',
+        'config': {'learning_rate': 0.0005}
+    }
+
+    strategy = tf.distribute.MirroredStrategy()
+    trainer = KerasTrainer(model, strategy=strategy)
+    trainer.train(train_gen, valid_gen, optimizer=optimizer, epochs=30)
+
 
 3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
