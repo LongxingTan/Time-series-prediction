@@ -8,7 +8,7 @@ import os
 from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import Concatenate, Lambda
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class BaseModel(ABC):
         # only accept the inputs parameters after built
         outputs = self.model(inputs)
         # to handles the Keras symbolic tensors for tf2.3.1
-        self.model = tf.keras.Model([inputs], [outputs])
+        self.model = tf.keras.Model(inputs, [outputs])
         return self.model
 
     def to_model(self):
@@ -76,11 +76,11 @@ class BaseModel(ABC):
         decoder_feature = None
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+            encoder_feature = Concatenate(axis=-1)([x, encoder_feature])
         elif isinstance(inputs, dict):
             x = inputs["x"]
             encoder_feature = inputs["encoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+            encoder_feature = Concatenate(axis=-1)([x, encoder_feature])
             if "decoder_feature" in inputs:
                 decoder_feature = inputs["decoder_feature"]
         else:

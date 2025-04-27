@@ -81,7 +81,7 @@ Before training, ensure your raw data is preprocessed into a 3D format with the 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training the model, use appropriate loss functions, optimizers, and hyperparameters to achieve the best results.
 
-Multi-gpu training
+Run with strategy to support multi-gpu or tpu training
 
 .. code-block:: python
 
