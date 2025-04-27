@@ -33,15 +33,6 @@ class BaseTrainer(object):
     ):
         self.model = model
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
-
-        if strategy is None:
-            gpus = tf.config.list_physical_devices("GPU")
-            if not gpus:
-                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-            elif len(gpus) == 1:
-                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-            else:
-                strategy = tf.distribute.MirroredStrategy()
         self.strategy = strategy
 
         # with self.get_strategy_scope(strategy):
@@ -277,7 +268,8 @@ class KerasTrainer(BaseTrainer):
         else:
             logger.info("No checkpoint Loaded")
 
-        self.model.save(model_dir)
+        os.makedirs(model_dir, exist_ok=True)
+        self.model.save(os.path.join(model_dir, "model.h5"))
         if self.config is not None:
             self.config.to_json(os.path.join(model_dir, "config.json"))
         logger.info("protobuf model successfully saved in {}".format(model_dir))
@@ -314,16 +306,10 @@ class Trainer(object):
     def __init__(
         self,
         model,
-        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
         self.model = model
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
         self.strategy = strategy
 
         for key, value in kwargs.items():
@@ -333,6 +319,9 @@ class Trainer(object):
         self,
         train_loader: Union[tf.data.Dataset, Generator],
         valid_loader: Union[tf.data.Dataset, Generator, None] = None,
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         learning_rate: float = 3e-4,
         verbose: int = 1,
@@ -372,6 +361,9 @@ class Trainer(object):
         transform : Optional[Callable], optional
             A function to transform the data before feeding it to the model, by default None.
         """
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.learning_rate = learning_rate
         self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
         self.use_ema = use_ema

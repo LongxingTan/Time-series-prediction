@@ -68,6 +68,8 @@ class AnomalyHead:
     def __call__(self, y_pred, y_test):
         if isinstance(y_pred, tf.Tensor):
             y_pred = y_pred.numpy()
+        if isinstance(y_test, tf.Tensor):
+            y_test = y_test.numpy()
         if y_pred.shape[1] == 1:
             y_pred = np.squeeze(y_pred, 1)
         errors = y_pred - y_test

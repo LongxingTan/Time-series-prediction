@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-import sys
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -60,12 +59,14 @@ def run_train(args):
 
     opt = tf.keras.optimizers.Adam(args.learning_rate)
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-    trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
+    trainer = KerasTrainer(model)
     early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0, patience=5)
 
     trainer.train(
         (x_train, y_train),
         valid_dataset=(x_val, y_val),
+        loss_fn=loss_fn,
+        optimizer=opt,
         epochs=args.epochs,
         batch_size=args.batch_size,
         metrics=["sparse_categorical_accuracy"],

@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+from reference.run_uncertainty import predict_sequence_length
 from tfts import (
     AutoConfig,
     AutoModel,
@@ -51,9 +52,9 @@ class TestAutoModel(unittest.TestCase):
         model = AutoModelForAnomaly.from_config(config)
 
         x = tf.random.normal([2, 14, 4])
-        y_test = tf.random.normal([2, 14, 1])
+        y_test = tf.random.normal([2, 1])
         dist = model.detect(x, y_test)
-        print(dist.shape)
+        print(dist)
 
     def test_auto_model_for_segmentation(self):
         config = AutoConfig.for_model("bert")

@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for train")
     parser.add_argument("--predict_sequence_length", type=int, default=1, help="sequence length for predict")
-    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
     parser.add_argument("--output_dir", type=str, default="./weights", help="saved model weights")
@@ -57,7 +57,7 @@ def train_model(args):
 
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
-    model = AutoModelForAnomaly.from_config(config, predict_sequence_length=args.predict_sequence_length)
+    model = AutoModelForAnomaly.from_config(config)
 
     trainer = KerasTrainer(model)
     trainer.train((x_train, y_train), (x_train, y_train), epochs=args.epochs)

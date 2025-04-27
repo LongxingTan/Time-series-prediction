@@ -164,7 +164,8 @@ class AutoModelForAnomaly(BaseModel):
 
     @classmethod
     def from_pretrained(cls, weights_dir: Union[str, os.PathLike]):
-        model = tf.keras.models.load_model(weights_dir)
+        model_path = os.path.join(weights_dir, "model.h5")
+        model = tf.keras.models.load_model(model_path)
         logger.info(f"Load model from {weights_dir}")
         config_path = os.path.join(weights_dir, "config.json")
         if not os.path.exists(config_path):
