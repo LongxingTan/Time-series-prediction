@@ -216,7 +216,7 @@ class KerasTrainer(BaseTrainer):
 
         with self.get_strategy_scope():
             if lr_scheduler:
-                callbacks.append(lr_scheduler)
+                callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
 
             if isinstance(optimizer, (str, dict)):
                 optimizer = tf.keras.optimizers.get(optimizer)

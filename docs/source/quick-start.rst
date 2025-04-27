@@ -98,6 +98,19 @@ Run with strategy to support multi-gpu or tpu training
     trainer = KerasTrainer(model, strategy=strategy)
     trainer.train(train_gen, valid_gen, optimizer=optimizer, epochs=30)
 
+Run with Learning rate scheduler
+
+.. code-block:: python
+
+    opt = tf.keras.optimizers.Adam(0.001)
+    loss_fn = tf.keras.losses.MeanSquaredError()
+    lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(
+        initial_learning_rate=0.001,
+        decay_steps=1000,
+    )
+    trainer = KerasTrainer(model)
+    trainer.train(train_dataset, valid_dataset, optimizer=opt, loss_fn=loss_fn, lr_scheduler=lr_scheduler)
+
 
 3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,5 +120,6 @@ Run with strategy to support multi-gpu or tpu training
 ~~~~~~~~~~~~~~~~~~~~~~~
 Once the model is trained and evaluated, deploy it for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel, ONNX, etc.). Set up an API or service to handle incoming requests, preprocess input data, and return predictions in real-time.
 
+Save the model into protobuf file
 
 .. currentmodule:: tfts
