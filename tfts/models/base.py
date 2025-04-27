@@ -72,7 +72,6 @@ class BaseModel(ABC):
         Returns:
             tuple: (x, encoder_feature, decoder_feature) properly formatted for model processing
         """
-        logger.debug(f"Preparing 3D inputs with shape: {inputs.shape}")
 
         decoder_feature = None
         if isinstance(inputs, (list, tuple)):
