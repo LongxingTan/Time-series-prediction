@@ -8,6 +8,7 @@ import os
 from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
+from tensorflow.keras.layers import Lambda
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,15 @@ class BaseModel(ABC):
                 decoder_feature = inputs["decoder_feature"]
         else:
             encoder_feature = x = inputs
+            decoder_feature = Lambda(
+                lambda encoder_feature: tf.cast(
+                    tf.tile(
+                        tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                        (tf.shape(encoder_feature)[0], 1, 1),
+                    ),
+                    tf.float32,
+                )
+            )(encoder_feature)
         return x, encoder_feature, decoder_feature
 
     def save_weights(self, weights_path: str):

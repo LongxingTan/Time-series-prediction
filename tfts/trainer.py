@@ -222,33 +222,15 @@ class KerasTrainer(BaseTrainer):
         inputs = self.get_inputs(train_dataset)
 
         with self.get_strategy_scope():
-            if isinstance(loss_fn, str):
-                self.loss_fn = tf.keras.losses.get(loss_fn)  # Handle string loss names
-            elif callable(loss_fn) or isinstance(loss_fn, tf.keras.losses.Loss):
-                self.loss_fn = loss_fn
-            else:
-                self.loss_fn = tf.keras.losses.MeanSquaredError()
-
-            if isinstance(optimizer, str):
-                self.optimizer = tf.keras.optimizers.get(optimizer)(learning_rate=learning_rate)
-            elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
-                self.optimizer = optimizer
-            else:
-                self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-
-            if callable(lr_scheduler) or isinstance(lr_scheduler, tf.keras.optimizers.schedules.LearningRateSchedule):
-                self.lr_scheduler = lr_scheduler
-            else:
-                self.lr_scheduler = None
+            if lr_scheduler:
+                callbacks.append(lr_scheduler)
 
             if not isinstance(self.model, tf.keras.Model):
                 if "build_model" not in dir(self.model):
                     raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
                 self.model = self.model.build_model(inputs=inputs)
 
-            self.model.compile(
-                loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly
-            )
+            self.model.compile(loss=loss_fn, optimizer=optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
 
             trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
             tf.print(f"Trainable parameters: {trainable_params}")
