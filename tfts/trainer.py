@@ -1,6 +1,7 @@
 """tfts Trainer"""
 
 from collections.abc import Iterable
+from contextlib import nullcontext
 import logging
 import os
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
@@ -27,28 +28,24 @@ class BaseTrainer(object):
         self,
         model: Union[tf.keras.Model, "BaseModel"],
         args: Optional[TrainingArguments] = None,
-        loss_fn: Callable = tf.keras.losses.MeanSquaredError(),
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
-        metrics: Optional[List[Callable]] = None,
         **kwargs,
     ):
         self.model = model
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
-        self.strategy = strategy or self._setup_strategy()
+        self.strategy = strategy
 
-        with self.strategy.scope():
-            self.model = self._setup_model(model)
-            self.loss_fn = loss_fn
-            self.metrics = metrics or []
-            self.optimizer = optimizer or self._create_optimizer()
-            self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
-
-            # Training state
-            self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
-            if self.args.fp16:
-                self._setup_mixed_precision()
+        # with self.get_strategy_scope(strategy):
+        #     self.model = self._setup_model(model)
+        #     self.loss_fn = loss_fn
+        #     self.metrics = metrics or []
+        #     self.optimizer = optimizer or self._create_optimizer()
+        #     self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
+        #
+        #     # Training state
+        #     self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
+        #     if self.args.fp16:
+        #         self._setup_mixed_precision()
 
     def evaluate(self):
         pass
@@ -68,35 +65,8 @@ class BaseTrainer(object):
     def create_accelerator_and_postprocess(self):
         return
 
-    def _setup_strategy(self) -> tf.distribute.Strategy:
-        """Configure default distributed training strategy."""
-        gpus = tf.config.list_physical_devices("GPU")
-
-        if not gpus:
-            strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-        else:
-
-            if len(gpus) == 0:
-                strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-            elif len(gpus) == 1:
-                strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-            elif len(gpus) > 1:
-                # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
-                strategy = tf.distribute.MirroredStrategy()
-            else:
-                raise ValueError("Cannot find the proper strategy, please check your environment properties.")
-
-        logger.info(f"Tensorflow: setting up strategy, Number of devices: {strategy.num_replicas_in_sync}")
-        return strategy
-
-    def _setup_model(self, model) -> tf.keras.Model:
-        """Prepare the model for training."""
-        if not isinstance(model, tf.keras.Model):
-            if not hasattr(model, "build_model"):
-                raise TypeError("Model must be a tf.keras.Model or have a build_model method")
-
-            # model = model.build_model(inputs=inputs)
-        return model
+    def get_strategy_scope(self):
+        return self.strategy.scope() if self.strategy else nullcontext()
 
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Create optimizer with specified parameters."""
@@ -130,6 +100,23 @@ class BaseTrainer(object):
     #     if self.config.use_ema:
     #         self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
 
+    def get_inputs(self, train_dataset):
+        if isinstance(train_dataset, tf.data.Dataset):
+            # choose the first batch
+            x = next(iter(train_dataset.take(1).as_numpy_iterator()))[0]
+            inputs = self._prepare_inputs_for_model(x)
+
+        elif isinstance(train_dataset, tf.keras.utils.Sequence):
+            x, _ = train_dataset[0]
+            inputs = self._prepare_inputs_for_model(x)
+
+        elif isinstance(train_dataset, (list, tuple)):
+            x = train_dataset[0]
+            inputs = self._prepare_inputs_for_model(x)
+        else:
+            raise ValueError("Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple.")
+        return inputs
+
     def _prepare_inputs_for_model(
         self, x: Union[np.ndarray, pd.DataFrame]
     ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
@@ -143,9 +130,16 @@ class BaseTrainer(object):
             The corresponding Keras Input layers.
         """
         if isinstance(x, dict):
-            return {key: Input(item.shape[1:]) for key, item in x.items()}
+            logger.debug("Preparing inputs from dict")
+            return {key: Input(shape=item.shape[1:], name=key) for key, item in x.items()}
+        elif isinstance(x, (list, tuple)):
+            logger.debug("Preparing inputs from list or tuple")
+            return [Input(shape=item.shape[1:], name=f"input_{i}") for i, item in enumerate(x)]
+        elif isinstance(x, (np.ndarray, pd.DataFrame)):
+            logger.debug("Preparing single input")
+            return Input(shape=x.shape[1:], name="input")
         else:
-            return Input(x.shape[1:])
+            raise TypeError(f"Unsupported input type: {type(x)}")
 
 
 class KerasTrainer(BaseTrainer):
@@ -154,11 +148,7 @@ class KerasTrainer(BaseTrainer):
     def __init__(
         self,
         model: Union[tf.keras.Model, tf.keras.Sequential],
-        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers = tf.keras.optimizers.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
-        metrics: Optional[List[Callable]] = None,
         run_eagerly: bool = True,
         args: Optional[TrainingArguments] = None,
         **kwargs: Dict[str, object],
@@ -175,13 +165,9 @@ class KerasTrainer(BaseTrainer):
             run_eagerly: Whether to run eagerly. Default is True.
             **kwargs: Additional arguments that are passed to the instance as attributes.
         """
-        super().__init__(model, args, loss_fn, optimizer, strategy, metrics, **kwargs)
+        super().__init__(model, args, strategy, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.strategy = strategy
         self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
@@ -191,10 +177,13 @@ class KerasTrainer(BaseTrainer):
         self,
         train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
+        loss_fn: Union[Callable, tf.keras.losses.Loss, str] = "mse",
+        optimizer: Union[tf.keras.optimizers.Optimizer, str] = "adam",
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
-        metrics: Optional[List[tf.keras.metrics.Metric]] = None,
+        metrics: Optional[Union[List[tf.keras.metrics.Metric], List[str]]] = None,
         callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         verbose: int = 1,
         **kwargs: Dict[str, object],
@@ -220,69 +209,45 @@ class KerasTrainer(BaseTrainer):
         if not callbacks:
             callbacks: List[tf.keras.callbacks.Callback] = []
 
-        if not isinstance(self.model, tf.keras.Model):
-            if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
-            if isinstance(train_dataset, tf.data.Dataset):
-                # first 0 choose the batch, second 0 choose the x
-                x = list(train_dataset.take(1).as_numpy_iterator())[0][0]
-                inputs = self._prepare_inputs_for_model(x)
+        inputs = self.get_inputs(train_dataset)
 
-            elif isinstance(train_dataset, (list, tuple)):
-                # for encoder only model, single array inputs
-                if isinstance(train_dataset[0], (np.ndarray, pd.DataFrame)):
-                    inputs = Input(train_dataset[0].shape[1:])
-                # for encoder decoder model, 3 item of array as inputs
-                elif isinstance(train_dataset[0], (list, tuple)):
-                    inputs = [Input(item.shape[1:]) for item in train_dataset[0]]
-                # for encoder decoder model, 3 item dict as inputs
-                elif isinstance(train_dataset[0], dict):
-                    inputs = {key: Input(item.shape[1:]) for key, item in train_dataset[0].items()}
+        with self.get_strategy_scope():
+            if lr_scheduler:
+                callbacks.append(lr_scheduler)
+
+            if not isinstance(self.model, tf.keras.Model):
+                if "build_model" not in dir(self.model):
+                    raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
+                self.model = self.model.build_model(inputs=inputs)
+
+            self.model.compile(loss=loss_fn, optimizer=optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
+
+            trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
+            tf.print(f"Trainable parameters: {trainable_params}")
+
+            if isinstance(train_dataset, (list, tuple)):
+                x_train, y_train = train_dataset
+
+                history = self.model.fit(
+                    x_train,
+                    y_train,
+                    validation_data=valid_dataset,
+                    steps_per_epoch=steps_per_epoch,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                    callbacks=callbacks,
+                )
             else:
-                raise ValueError("tfts inputs should be either tf.data instance or 3d array list/tuple")
-
-            self.model = self.model.build_model(inputs=inputs)
-
-        trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
-        logger.info(f"Trainable parameters: {trainable_params}")
-
-        self.model.compile(loss=self.loss_fn, optimizer=self.optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
-        # if isinstance(train_dataset, (list, tuple)):
-        #     x_train, y_train = train_dataset
-        #     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-        #
-        # train_dataset = train_dataset.cache().shuffle(buffer_size=10000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-        #
-        # if valid_dataset is not None:
-        #     if isinstance(valid_dataset, (list, tuple)):
-        #         x_val, y_val = valid_dataset
-        #         valid_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-        #
-        #     valid_dataset = valid_dataset.cache().batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
-        if isinstance(train_dataset, (list, tuple)):
-            x_train, y_train = train_dataset
-
-            history = self.model.fit(
-                x_train,
-                y_train,
-                validation_data=valid_dataset,
-                steps_per_epoch=steps_per_epoch,
-                epochs=epochs,
-                batch_size=batch_size,
-                verbose=verbose,
-                callbacks=callbacks,
-            )
-        else:
-            history = self.model.fit(
-                train_dataset,
-                validation_data=valid_dataset,
-                steps_per_epoch=steps_per_epoch,
-                epochs=epochs,
-                batch_size=batch_size,
-                verbose=verbose,
-                callbacks=callbacks,
-            )
+                history = self.model.fit(
+                    train_dataset,
+                    validation_data=valid_dataset,
+                    steps_per_epoch=steps_per_epoch,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                    callbacks=callbacks,
+                )
         return history
 
     def fit(self, **params):
@@ -303,7 +268,8 @@ class KerasTrainer(BaseTrainer):
         else:
             logger.info("No checkpoint Loaded")
 
-        self.model.save(model_dir)
+        os.makedirs(model_dir, exist_ok=True)
+        self.model.save(os.path.join(model_dir, "model.h5"))
         if self.config is not None:
             self.config.to_json(os.path.join(model_dir, "config.json"))
         logger.info("protobuf model successfully saved in {}".format(model_dir))
@@ -340,16 +306,10 @@ class Trainer(object):
     def __init__(
         self,
         model,
-        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         strategy: Optional[tf.distribute.Strategy] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
         self.model = model
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
         self.strategy = strategy
 
         for key, value in kwargs.items():
@@ -359,6 +319,9 @@ class Trainer(object):
         self,
         train_loader: Union[tf.data.Dataset, Generator],
         valid_loader: Union[tf.data.Dataset, Generator, None] = None,
+        loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
+        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
+        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         learning_rate: float = 3e-4,
         verbose: int = 1,
@@ -398,6 +361,9 @@ class Trainer(object):
         transform : Optional[Callable], optional
             A function to transform the data before feeding it to the model, by default None.
         """
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.learning_rate = learning_rate
         self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
         self.use_ema = use_ema

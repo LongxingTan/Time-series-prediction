@@ -27,8 +27,13 @@ class InputsTest(unittest.TestCase):
             logger.info(f"Test model {m}")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
-            trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
+            trainer = KerasTrainer(model)
+            trainer.train(
+                train_dataset=(x_train, y_train),
+                valid_dataset=(x_valid, y_valid),
+                optimizer=tf.keras.optimizers.Adam(0.003),
+                epochs=1,
+            )
 
     def test_encoder_decoder_array(self):
         train_length = 32
@@ -51,8 +56,8 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
-            trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
+            trainer = KerasTrainer(model)
+            trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
     def test_encoder_decoder_array2(self):
         train_length = 32
@@ -76,8 +81,8 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
-            trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
+            trainer = KerasTrainer(model)
+            trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
     # def test_encoder_tfdata(self):
     #     train_length = 20
@@ -114,8 +119,13 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
-            trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
+            trainer = KerasTrainer(model)
+            trainer.train(
+                train_dataset=train_loader,
+                valid_dataset=valid_loader,
+                optimizer=tf.keras.optimizers.Adam(0.003),
+                epochs=1,
+            )
 
 
 class FakeReader(object):

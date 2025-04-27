@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.transformer` :py:class:`~tfts.models.autoformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -15,16 +15,15 @@ class Attention(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_size: int,
-        num_attention_heads: int,
+        num_attention_heads: int = 1,
         attention_probs_dropout_prob: float = 0.0,
-        position_embedding_type=None,
     ) -> None:
         """Initialize the Attention layer.
 
         Parameters:
         -----------
         hidden_size : int
-            The number of hidden units in each attention head.
+            The number of hidden units, hidden_size = attention_dim_each_head x num_attention_heads.
         num_attention_heads : int
             The number of attention heads.
         attention_probs_dropout_prob : float, optional
@@ -38,7 +37,6 @@ class Attention(tf.keras.layers.Layer):
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.position_embedding_type = position_embedding_type
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         self.dense_q = Dense(self.hidden_size, use_bias=False)
@@ -74,7 +72,7 @@ class Attention(tf.keras.layers.Layer):
         Returns
         -------
         tf.Tensor
-            tensor with shape batch * seq_q * (units * num_attention_heads)
+            Tensor with shape batch * seq_q * (units * num_attention_heads)
         """
         # project the query/key/value to num_attention_heads * units
         q = self.dense_q(q)
@@ -124,20 +122,21 @@ class SelfAttention(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_size: int,
-        num_attention_heads: int,
+        num_attention_heads: int = 1,
         attention_probs_dropout_prob: float = 0.0,
-        position_embedding_type=None,
         **kwargs: Dict[str, Any],
     ) -> None:
         super(SelfAttention, self).__init__()
-        self.attention = Attention(
-            hidden_size,
-            num_attention_heads,
-            attention_probs_dropout_prob=attention_probs_dropout_prob,
-            position_embedding_type=position_embedding_type,
-        )
+        self.hidden_size = hidden_size
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
+        self.attention = Attention(
+            self.hidden_size,
+            self.num_attention_heads,
+            attention_probs_dropout_prob=self.attention_probs_dropout_prob,
+        )
         super(SelfAttention, self).build(input_shape)
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None, training: Optional[bool] = None):
@@ -306,7 +305,7 @@ class FastAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
 
-    def call(self, x, mask: Optional[tf.Tensor] = None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None):
         """Fast attention
 
         Parameters

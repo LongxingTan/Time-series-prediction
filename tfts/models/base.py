@@ -5,37 +5,41 @@ import collections
 import json
 import logging
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Lambda
 
 logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
-    """Base class for tfts model."""
+    """Bert model for time series forecasting.
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    This model implements a transformer-based architecture (BERT) adapted for time series data.
+    It processes time series inputs through a transformer encoder and produces predictions
+    for future time steps.
+
+    Parameters
+    ----------
+    predict_sequence_length : int, optional
+        Number of future time steps to predict, by default 1
+    config : BertConfig, optional
+        Configuration parameters for the model, by default None
+    """
+
+    def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
-        self.model = None  # Model should be defined later
+        self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
     @classmethod
-    def from_config(cls, config: "BaseConfig", predict_sequence_length: int = 1):
-        return cls(predict_sequence_length=predict_sequence_length, config=config)
-
-    @classmethod
-    def from_pretrained(cls, weights_dir: str, predict_sequence_length: int = 1):
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
         config_path = os.path.join(weights_dir, "config.json")
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at {config_path}")
 
-        config = BaseConfig.from_json(config_path)  # Load config from JSON
-        model = cls.from_config(
-            config, predict_sequence_length=predict_sequence_length
-        )  # Use from_config to create the model
-        model.load_weights(weights_dir, os.path.join(weights_dir, "model.h5"))  # Load weights
+        model = tf.keras.models.load_model(weights_dir)
         return model
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
@@ -55,21 +59,59 @@ class BaseModel(ABC):
         self.model = tf.keras.models.load_model(weights_dir)
         # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
-    def save_weights(self, weights_dir: str):
-        if os.path.isdir(weights_dir):
-            os.makedirs(weights_dir, exist_ok=True)
-            parent_dir = os.path.dirname(weights_dir)
-            weights_dir = os.path.join(parent_dir, "weights.h5")
-            config_dir = os.path.join(parent_dir, "config.json")
-        else:
-            parent_dir = os.path.normpath(weights_dir)  # Get the parent directory
-            os.makedirs(parent_dir, exist_ok=True)
-            weights_dir = os.path.join(parent_dir, "weights.h5")  # Save weights in the same directory
-            config_dir = os.path.join(parent_dir, "config.json")
+    def _prepare_3d_inputs(self, inputs, ignore_decoder_inputs=True):
+        """
+        Prepares 3D inputs for model processing by extracting and formatting features from various input types.
 
-        self.model.save_weights(weights_dir)
-        self.config.to_json(config_dir)
-        logger.info(f"Model weights successfully saved in {weights_dir}")
+        Args:
+            inputs: Input data that can be a tuple/list, dictionary, or tensor.
+                - If tuple/list: Expected to be [x, encoder_feature, decoder_feature]
+                - If dictionary: Expected to have keys "x", "encoder_feature", and "decoder_feature"
+                - If tensor: Used directly as both x and encoder_feature
+
+        Returns:
+            tuple: (x, encoder_feature, decoder_feature) properly formatted for model processing
+        """
+
+        decoder_feature = None
+        if isinstance(inputs, (list, tuple)):
+            x, encoder_feature, decoder_feature = inputs
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+        elif isinstance(inputs, dict):
+            x = inputs["x"]
+            encoder_feature = inputs["encoder_feature"]
+            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
+            if "decoder_feature" in inputs:
+                decoder_feature = inputs["decoder_feature"]
+        else:
+            encoder_feature = x = inputs
+            if not ignore_decoder_inputs:
+                decoder_feature = Lambda(
+                    lambda encoder_feature: tf.cast(
+                        tf.tile(
+                            tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
+                            (tf.shape(encoder_feature)[0], 1, 1),
+                        ),
+                        tf.float32,
+                    )
+                )(encoder_feature)
+        return x, encoder_feature, decoder_feature
+
+    def save_weights(self, weights_path: str):
+        if weights_path.endswith(".h5"):
+            # User passed a full filepath
+            weights_file = weights_path
+            config_file = weights_path.replace(".h5", ".config.json")
+            os.makedirs(os.path.dirname(weights_file), exist_ok=True)
+        else:
+            # User passed a directory
+            os.makedirs(weights_path, exist_ok=True)
+            weights_file = os.path.join(weights_path, "model.weights.h5")
+            config_file = os.path.join(weights_path, "config.json")
+
+        self.model.save_weights(weights_file)
+        self.config.to_json(config_file)
+        logger.info(f"Model weights successfully saved in {weights_file}")
 
     def save_model(self, weights_dir: str):
         self.model.save(weights_dir)

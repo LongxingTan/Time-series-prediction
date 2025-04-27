@@ -3,7 +3,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.6.0
     hooks:
     - id: trailing-whitespace
     - id: end-of-file-fixer
@@ -13,6 +13,7 @@ repos:
     rev: "3.9.2"
     hooks:
     - id: flake8
+      exclude: 'tests|.venv|docs'
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
     hooks:
@@ -22,7 +23,7 @@ repos:
     hooks:
     - id: black
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.2.3
+    rev: 1.8.7
     hooks:
       - id: nbqa-black
       - id: nbqa-isort

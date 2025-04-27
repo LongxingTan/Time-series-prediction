@@ -57,7 +57,7 @@ def train_model(args):
 
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
-    model = AutoModelForAnomaly.from_config(config, predict_sequence_length=args.predict_sequence_length)
+    model = AutoModelForAnomaly.from_config(config)
 
     trainer = KerasTrainer(model)
     trainer.train((x_train, y_train), (x_train, y_train), epochs=args.epochs)

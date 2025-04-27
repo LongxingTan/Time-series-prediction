@@ -92,14 +92,14 @@ class ReBlock(tf.keras.layers.Layer):
         self.kernel_size = kernel_size
         self.strides = strides
         self.dilation = dilation
-        self.conv_br1 = ConvbrLayer(units, kernel_size, strides, dilation)
-        self.conv_br2 = ConvbrLayer(units, kernel_size, strides, dilation)
-        if use_se:
-            self.se_block = SeBlock(units=units)
         self.use_se = use_se
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        super(ReBlock, self).build(input_shape)
+        super().build(input_shape)
+        self.conv_br1 = ConvbrLayer(self.units, self.kernel_size, self.strides, self.dilation)
+        self.conv_br2 = ConvbrLayer(self.units, self.kernel_size, self.strides, self.dilation)
+        if self.use_se:
+            self.se_block = SeBlock(units=self.units)
 
     def call(self, x):
         """_summary_

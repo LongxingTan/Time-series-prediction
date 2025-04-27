@@ -27,9 +27,11 @@ class DLinearTest(unittest.TestCase):
         config.channels = 1  # number of features
 
         model = AutoModel.from_config(config, predict_sequence_length=8)
-        trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.legacy.Adam(0.003))
+        trainer = KerasTrainer(
+            model,
+        )
 
-        trainer.train(train, valid, epochs=1)
+        trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)
