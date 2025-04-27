@@ -25,22 +25,6 @@ class BaseModel(ABC):
         Number of future time steps to predict, by default 1
     config : BertConfig, optional
         Configuration parameters for the model, by default None
-    verbose : int, optional
-        Verbosity level (0=silent, 1=progress info, 2=debug info), by default 1
-
-    Attributes
-    ----------
-    config : BertConfig
-        Configuration object containing model hyperparameters
-    predict_sequence_length : int
-        Number of future time steps to predict
-    encoder_embedding : DataEmbedding
-        Embedding layer for encoder inputs
-    encoder : Encoder
-        Transformer encoder module
-    dense_layers : List[Dense]
-        List of dense layers for final projection
-
     """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
@@ -87,8 +71,7 @@ class BaseModel(ABC):
         Returns:
             tuple: (x, encoder_feature, decoder_feature) properly formatted for model processing
         """
-        if self.verbose >= 2:
-            logger.debug(f"Preparing 3D inputs with shape: {inputs.shape}")
+        logger.debug(f"Preparing 3D inputs with shape: {inputs.shape}")
 
         decoder_feature = None
         if isinstance(inputs, (list, tuple)):
