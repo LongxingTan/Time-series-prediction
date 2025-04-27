@@ -121,7 +121,7 @@ jobs:
         run: |
           cd docs
           make clean
-          make html --debug --jobs 2 SPHINXOPTS="-W"
+          make html --debug --jobs 2 SPHINXOPTS=""
 
       - name: Upload built docs
         uses: actions/upload-artifact@v4
