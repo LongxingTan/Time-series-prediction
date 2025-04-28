@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.transformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding

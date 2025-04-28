@@ -45,7 +45,7 @@ class RWKV(BaseModel):
     """TensorFlow RWKV model"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[RWKVConfig] = None):
-        super().__init__(config)
+        super().__init__()
         self.config = config or RWKVConfig()
         self.predict_sequence_length = predict_sequence_length
 

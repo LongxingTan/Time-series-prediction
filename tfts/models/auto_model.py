@@ -93,7 +93,7 @@ class AutoModelForPrediction(AutoModel):
         return_dict: Optional[bool] = None,
     ):
 
-        model_output = self.model(x, return_dict=return_dict)
+        model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
         if self.config.skip_connect_circle:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
@@ -124,7 +124,7 @@ class AutoModelForClassification(BaseModel):
         if self.keras_model is not None:
             logits = self.keras_model(x)
         else:
-            model_output = self.model(x, output_hidden_states=output_hidden_states)
+            model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
             logits = self.head(model_output)
         return logits
 

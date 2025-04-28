@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.transformer`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
