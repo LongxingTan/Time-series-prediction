@@ -12,6 +12,11 @@ from tensorflow.keras.layers import Concatenate, Lambda
 
 logger = logging.getLogger(__name__)
 
+TF2_WEIGHTS_NAME = "tf_model.h5"
+TF2_WEIGHTS_INDEX_NAME = "tf_model.h5.index.json"
+TF_WEIGHTS_NAME = "model.ckpt"
+CONFIG_NAME = "config.json"
+
 
 class BaseModel(ABC):
     """Bert model for time series forecasting.
@@ -33,15 +38,6 @@ class BaseModel(ABC):
         self.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
-    @classmethod
-    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
-        config_path = os.path.join(weights_dir, "config.json")
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found at {config_path}")
-
-        model = tf.keras.models.load_model(weights_dir)
-        return model
-
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
         # only accept the inputs parameters after built
         outputs = self.model(inputs)
@@ -52,6 +48,26 @@ class BaseModel(ABC):
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
         return self.build_model(inputs)
+
+    @classmethod
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
+        config_path = os.path.join(weights_dir, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+        try:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+        except Exception as e:
+            raise OSError(f"Error loading config file from {config_path}. Original error: {e}")
+
+        try:
+            model = tf.keras.models.load_model(weights_dir)
+            return cls(config, model)
+        except Exception as e:
+            raise OSError(
+                f"Error loading model from {weights_dir}. "
+                f"Ensure it was saved using {repr('tf.keras.models.save_model')}. Original error: {e}"
+            )
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
@@ -97,6 +113,29 @@ class BaseModel(ABC):
                 )(encoder_feature)
         return x, encoder_feature, decoder_feature
 
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        max_shard_size: Union[int, str] = "5GB",
+        safe_serialization: bool = False,
+    ):
+        if os.path.isfile(save_directory):
+            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            return
+
+        os.makedirs(save_directory, exist_ok=True)
+        self.config.architectures = [self.__class__.__name__[2:]]
+        self.config.save_pretrained(save_directory)
+
+        weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
+
+        try:
+            self.model.save_weights(weights_file)
+            print(f"Model weights successfully saved in {weights_file}")
+        except Exception as e:
+            print(f"Error saving model weights to {weights_file}: {e}")
+            return
+
     def save_weights(self, weights_path: str):
         if weights_path.endswith(".h5"):
             # User passed a full filepath
@@ -106,8 +145,8 @@ class BaseModel(ABC):
         else:
             # User passed a directory
             os.makedirs(weights_path, exist_ok=True)
-            weights_file = os.path.join(weights_path, "model.weights.h5")
-            config_file = os.path.join(weights_path, "config.json")
+            weights_file = os.path.join(weights_path, TF2_WEIGHTS_NAME)
+            config_file = os.path.join(weights_path, CONFIG_NAME)
 
         self.model.save_weights(weights_file)
         self.config.to_json(config_file)
@@ -174,14 +213,26 @@ class BaseConfig(ABC):
         return cls(**config_dict)
 
     @classmethod
-    def from_pretrained(cls, pretrained_path: Union[str, os.PathLike]):
-        with open(pretrained_path, "r") as f:
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Union[str, os.PathLike],
+        cache_dir: Optional[Union[str, os.PathLike]] = None,
+        force_download: bool = False,
+    ):
+        with open(pretrained_model_name_or_path, "r") as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
-    def save_pretrained(self, save_path: Union[str, os.PathLike]):
-        with open(save_path, "w") as file:
-            json.dump(self.to_dict(), file, indent=4)
+    def save_pretrained(self, save_directory: Union[str, os.PathLike]):
+        os.makedirs(save_directory, exist_ok=True)
+        output_config_file = os.path.join(save_directory, CONFIG_NAME)
+
+        try:
+            with open(output_config_file, "w") as f:
+                json.dump(self.config, f, indent=4)
+            logger.info(f"Model config successfully saved in {output_config_file}")
+        except Exception as e:
+            logger.warning(f"Error saving model config to {output_config_file}: {e}")
 
     def __str__(self):
         """Convert config to string representation in dictionary format"""

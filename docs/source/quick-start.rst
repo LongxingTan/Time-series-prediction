@@ -111,6 +111,15 @@ Run with Learning rate scheduler
     trainer = KerasTrainer(model)
     trainer.train(train_dataset, valid_dataset, optimizer=opt, loss_fn=loss_fn, lr_scheduler=lr_scheduler)
 
+Run with pretrained weights
+
+.. code-block:: python
+
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+    model.save_pretrained("tfts-model")
+
+    model = AutoModel.from_pretrained("tfts-model")
+
 
 3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
