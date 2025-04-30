@@ -45,25 +45,17 @@ jobs:
         shell: bash
         run: poetry config virtualenvs.in-project true
 
-      - name: Set up cache
-        uses: actions/cache@v4
-        id: cache
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Ensure cache is healthy
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Check for healthy virtualenv manually
         shell: bash
-        run: poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
-
-      - name: Upgrade pip
-        shell: bash
-        run: poetry run python -m pip install pip -U
+        run: |
+          if [ -d .venv ]; then
+            poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
+          fi
 
       - name: Install dependencies
         shell: bash
         run: |
+          poetry run python -m pip install pip -U
           poetry install --no-interaction --no-root
           poetry run python -m pip install tensorflow==${{ matrix.tf-version }}
           poetry run python -m pip install matplotlib
@@ -102,13 +94,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements_docs.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - name: Create pip cache directory manually
+        run: |
+          CACHE_DIR="$HOME/.cache/pip"
+          mkdir -p "$CACHE_DIR"
+          echo "Using manual pip cache at $CACHE_DIR"
 
       - name: Install dependencies
         run: |
