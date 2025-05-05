@@ -52,9 +52,7 @@ class RNN(BaseModel):
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[RNNConfig] = None):
         super().__init__()
-        if config is None:
-            config = RNNConfig()
-        self.config = config
+        self.config = config or RNNConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
             rnn_size=config.rnn_hidden_size,
