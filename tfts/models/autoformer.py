@@ -103,7 +103,7 @@ class AutoFormer(object):
         return_dict: Optional[bool] = None,
     ):
         """Forward pass of the AutoFormer model.
-        
+
         Args:
             inputs: Input tensor(s) or dictionary.
                 Can be:
@@ -114,7 +114,7 @@ class AutoFormer(object):
             training: Whether the model is in training mode.
             output_hidden_states: Whether to return all hidden states.
             return_dict: Whether to return a dictionary or tensor as output.
-            
+
         Returns:
             If return_dict is True, returns a dictionary with model outputs.
             Otherwise, returns the output tensor.
@@ -178,16 +178,17 @@ class AutoFormer(object):
 
 class EncoderLayer(tf.keras.layers.Layer):
     """Encoder Layer for Autoformer architecture.
-    
+
     This layer implements the encoder block of the Autoformer architecture,
     which combines auto-correlation attention with series decomposition.
-    
+
     Attributes:
         kernel_size: Size of the kernel for series decomposition.
         d_model: The dimension of the model/embedding.
         num_attention_heads: Number of attention heads.
         dropout_rate: Dropout rate for regularization.
     """
+
     def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
         super().__init__()
         self.kernel_size = kernel_size
@@ -204,11 +205,11 @@ class EncoderLayer(tf.keras.layers.Layer):
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """Process input through the encoder layer.
-        
+
         Args:
             x: Input tensor of shape [batch_size, time_steps, features]
             training: Whether the layer is being called during training
-            
+
         Returns:
             Processed tensor after applying encoder operations
         """
@@ -219,16 +220,17 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 class DecoderLayer(tf.keras.layers.Layer):
     """Decoder Layer for Autoformer architecture.
-    
+
     This layer implements the decoder block of the Autoformer architecture,
     which combines auto-correlation attention with series decomposition.
-    
+
     Attributes:
         kernel_size: Size of the kernel for series decomposition.
         d_model: The dimension of the model/embedding.
         num_attention_heads: Number of attention heads.
         drop_rate: Dropout rate for regularization.
     """
+
     def __init__(self, kernel_size, d_model, num_attention_heads, drop_rate=0.1) -> None:
         super().__init__()
         self.kernel_size = kernel_size
@@ -252,13 +254,13 @@ class DecoderLayer(tf.keras.layers.Layer):
 
     def call(self, x, cross, init_trend):
         """Process inputs through the decoder layer.
-        
+
         Args:
             x: Input tensor of shape [batch_size, time_steps, features]
             cross: Cross attention tensor of shape [batch_size, time_steps, features]
             init_trend: Initial trend component of shape [batch_size, time_steps, 1]
             training: Whether the layer is being called during training
-            
+
         Returns:
             Tuple of (seasonal component, updated trend component)
         """

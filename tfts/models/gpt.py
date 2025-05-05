@@ -36,7 +36,7 @@ class GPTConfig(BaseConfig):
         use_cache: bool = True,
         dense_units: Tuple[int] = (512, 1024),
         classifier_dropout: Optional[float] = None,
-        **kwargs: Dict[str, object]
+        **kwargs: Dict[str, object],
     ) -> None:
         """Configuration class for GPT decoder model, inheriting from BaseConfig.
 
@@ -77,7 +77,7 @@ class GPTConfig(BaseConfig):
         self.dense_unites: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.pad_token_id: int = pad_token_id
-    
+
     def __post_init__(self):
         """Validate configuration parameters."""
         if self.hidden_size <= 0:
@@ -92,7 +92,7 @@ class GPTConfig(BaseConfig):
             raise ValueError(f"hidden_dropout_prob must be in [0, 1), got {self.hidden_dropout_prob}")
         if self.hidden_size % self.num_attention_heads != 0:
             raise ValueError(
-                f"hidden_size must be divisible by num_attention_heads, got {self.hidden_size} and {self.num_attention_heads}"
+                f"hidden_size must be divisible by attention_heads, got {self.hidden_size}/{self.num_attention_heads}"
             )
 
 

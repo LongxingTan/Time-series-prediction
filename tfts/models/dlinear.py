@@ -28,7 +28,7 @@ class DLinearConfig(BaseConfig):
         self.individual = individual
         self.activation: Optional[str] = None
         self.initializer: str = "glorot_uniform"
-    
+
     def __post_init__(self):
         """Validate configuration parameters."""
         if self.channels <= 0:
@@ -72,7 +72,7 @@ class DLinear(BaseModel):
                 Forecasted values tensor of shape [batch_size, predict_sequence_length, input_dim]
             If return_dict is True:
                 Dictionary containing:
-                - 'predictions': Forecasted values 
+                - 'predictions': Forecasted values
                 - 'seasonal_component': Seasonal component (if output_hidden_states is True)
                 - 'trend_component': Trend component (if output_hidden_states is True)
         """
