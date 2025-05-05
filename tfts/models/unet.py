@@ -35,9 +35,9 @@ class UnetConfig(BaseConfig):
 class Unet(BaseModel):
     """Unet model for sequence-to-sequence prediction tasks."""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[UnetConfig] = None):
         super(Unet, self).__init__()
-        self.config = config if config else UnetConfig()
+        self.config = config or UnetConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.avg_pool1 = AveragePooling1D(pool_size=self.config.pool_sizes[0])

@@ -178,7 +178,7 @@ class KerasTrainer(BaseTrainer):
         train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
         loss_fn: Union[Callable, tf.keras.losses.Loss, str] = "mse",
-        optimizer: Union[tf.keras.optimizers.Optimizer, str] = "adam",
+        optimizer: Union[tf.keras.optimizers.Optimizer, str, Dict] = "adam",
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
@@ -194,6 +194,9 @@ class KerasTrainer(BaseTrainer):
         Args:
             train_dataset: A tf.data.Dataset or list/tuple of tensors (x_train, y_train).
             valid_dataset: A tf.data.Dataset or list/tuple of tensors (x_valid, y_valid), optional.
+            loss_fn: loss function
+            optimizer: tf optimizer use
+            lr_scheduler: learning rate scheduler
             epochs: Number of epochs to train for. Default is 10.
             batch_size: Number of samples per batch. Default is 64.
             steps_per_epoch: Number of steps per epoch. Optional.
@@ -213,7 +216,10 @@ class KerasTrainer(BaseTrainer):
 
         with self.get_strategy_scope():
             if lr_scheduler:
-                callbacks.append(lr_scheduler)
+                callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
+
+            if isinstance(optimizer, (str, dict)):
+                optimizer = tf.keras.optimizers.get(optimizer)
 
             if not isinstance(self.model, tf.keras.Model):
                 if "build_model" not in dir(self.model):
@@ -393,11 +399,11 @@ class Trainer(object):
 
         for epoch in range(epochs):
             train_loss, train_scores = self.train_loop(train_loader)
-            log_str = f"Epoch: {epoch + 1}, Train Loss: {train_loss:.4f}"
+            log_str = f"Epoch: {epoch + 1}, Train Loss: {train_loss:.4f}"  # noqa
 
             if valid_loader is not None:
                 valid_loss, valid_scores = self.valid_loop(valid_loader)
-                log_str += f", Valid Loss: {valid_loss:.4f}"
+                log_str += f", Valid Loss: {valid_loss:.4f}"  # noqa
                 log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
 
                 if (stop_no_improve_epochs is not None) and (eval_metric is not None):

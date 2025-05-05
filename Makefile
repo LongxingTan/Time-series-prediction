@@ -7,7 +7,7 @@ CHECK_DIRS := tfts examples tests
 style:  ## Run formatters and linters (black, isort, flake8, pre-commit)
 	black $(CHECK_DIRS)
 	isort $(CHECK_DIRS)
-	flake8
+	flake8 $(check_dirs)
 	pre-commit run --all-files
 
 ## Run all unit tests

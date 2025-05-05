@@ -81,6 +81,45 @@ Before training, ensure your raw data is preprocessed into a 3D format with the 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training the model, use appropriate loss functions, optimizers, and hyperparameters to achieve the best results.
 
+Run with strategy to support multi-gpu or tpu training
+
+.. code-block:: python
+
+    from tfts import KerasTrainer
+
+    config = AutoConfig.for_model(model_name_or_path)
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+    optimizer = {
+        'class_name': 'adam',
+        'config': {'learning_rate': 0.0005}
+    }
+
+    strategy = tf.distribute.MirroredStrategy()
+    trainer = KerasTrainer(model, strategy=strategy)
+    trainer.train(train_gen, valid_gen, optimizer=optimizer, epochs=30)
+
+Run with Learning rate scheduler
+
+.. code-block:: python
+
+    opt = tf.keras.optimizers.Adam(0.001)
+    loss_fn = tf.keras.losses.MeanSquaredError()
+    lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(
+        initial_learning_rate=0.001,
+        decay_steps=1000,
+    )
+    trainer = KerasTrainer(model)
+    trainer.train(train_dataset, valid_dataset, optimizer=opt, loss_fn=loss_fn, lr_scheduler=lr_scheduler)
+
+Run with pretrained weights
+
+.. code-block:: python
+
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+    model.save_pretrained("tfts-model")
+
+    model = AutoModel.from_pretrained("tfts-model")
+
 
 3.3 Evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,5 +129,6 @@ When training the model, use appropriate loss functions, optimizers, and hyperpa
 ~~~~~~~~~~~~~~~~~~~~~~~
 Once the model is trained and evaluated, deploy it for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel, ONNX, etc.). Set up an API or service to handle incoming requests, preprocess input data, and return predictions in real-time.
 
+Save the model into protobuf file
 
 .. currentmodule:: tfts

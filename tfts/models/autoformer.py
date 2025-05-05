@@ -36,7 +36,6 @@ class AutoFormerConfig(object):
         type_vocab_size=2,
         initializer_range=0.02,
         layer_norm_eps=1e-12,
-        pad_token_id=0,
         positional_type="absolute",
         use_cache=True,
         classifier_dropout=None,

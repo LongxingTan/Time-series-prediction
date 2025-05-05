@@ -6,7 +6,7 @@
 from typing import Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Lambda
 
 from tfts.layers.autoformer_layer import SeriesDecomp
 
@@ -79,8 +79,8 @@ class DLinear(BaseModel):
         # Decompose the input into trend and seasonal components
         seasonal, trend = self.decomposition(inputs)
 
-        seasonal = tf.transpose(seasonal, [0, 2, 1])
-        trend = tf.transpose(trend, [0, 2, 1])
+        seasonal = Lambda(lambda x: tf.transpose(x, [0, 2, 1]))(seasonal)
+        trend = Lambda(lambda x: tf.transpose(x, [0, 2, 1]))(trend)
 
         if self.config.individual:
             seasonal_output = []
