@@ -77,6 +77,23 @@ class GPTConfig(BaseConfig):
         self.dense_unites: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.pad_token_id: int = pad_token_id
+    
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if self.hidden_size <= 0:
+            raise ValueError(f"hidden_size must be positive, got {self.hidden_size}")
+        if self.num_layers <= 0:
+            raise ValueError(f"num_layers must be positive, got {self.num_layers}")
+        if self.num_attention_heads <= 0:
+            raise ValueError(f"num_attention_heads must be positive, got {self.num_attention_heads}")
+        if not 0 <= self.attention_probs_dropout_prob < 1:
+            raise ValueError(f"attention_probs_dropout_prob must be in [0, 1), got {self.attention_probs_dropout_prob}")
+        if not 0 <= self.hidden_dropout_prob < 1:
+            raise ValueError(f"hidden_dropout_prob must be in [0, 1), got {self.hidden_dropout_prob}")
+        if self.hidden_size % self.num_attention_heads != 0:
+            raise ValueError(
+                f"hidden_size must be divisible by num_attention_heads, got {self.hidden_size} and {self.num_attention_heads}"
+            )
 
 
 class GPT(BaseModel):
@@ -110,19 +127,26 @@ class GPT(BaseModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> tf.Tensor:
-        """Bert model call
+        """GPT model forward pass.
 
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            BERT model input
-        teacher : tf.Tensor, optional
-            teacher forcing for autoregression, by default None
+        Args:
+            inputs: Input time-series data, can be:
+                - A single tensor of shape [batch_size, seq_len, feature_dim]
+                - A tuple/list of (x, encoder_feature, decoder_feature)
+                - A dictionary with keys 'x' and 'encoder_feature'
+            teacher: Optional teacher forcing tensor for autoregression.
+            training: Whether the model is in training mode.
+            mask: Optional attention mask.
+            output_hidden_states: Whether to return hidden states.
+            return_dict: Whether to return outputs as a dictionary.
 
-        Returns
-        -------
-        tf.Tensor
-            BERT model output tensor as prediction output
+        Returns:
+            If return_dict is False and output_hidden_states is False:
+                Forecasted values tensor of shape [batch_size, predict_sequence_length, input_dim]
+            If output_hidden_states is True:
+                Hidden states from the encoder.
+            If return_dict is True:
+                Dictionary containing model outputs.
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs

@@ -24,22 +24,14 @@ class DeepARConfig(BaseConfig):
         self.rnn_hidden_size = rnn_hidden_size
 
 
-config: Dict[str, Any] = {
-    "rnn_size": 64,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-}
-
-
 class DeepAR(BaseModel):
     """DeepAR Network"""
 
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config: Optional[DeepARConfig] = None,
-    ):
-
+        config: Optional[DeepARConfig] = None
+    ) -> None:
         super(DeepAR, self).__init__()
         self.config = config or DeepARConfig()
         self.predict_sequence_length = predict_sequence_length

@@ -50,21 +50,6 @@ class InformerConfig(BaseConfig):
         self.distil_conv = distil_conv
 
 
-config: Dict[str, Any] = {
-    "num_hidden_layers": 1,
-    "n_decoder_layers": 1,
-    "hidden_size": 32 * 1,
-    "num_attention_heads": 1,
-    "attention_probs_dropout_prob": 0.0,
-    "ffn_intermediate_size": 32 * 1,
-    "hidden_dropout_prob": 0.0,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-    "prob_attention": False,
-    "distil_conv": False,
-}
-
-
 class Informer(BaseModel):
     """Informer model for time series"""
 
@@ -74,7 +59,7 @@ class Informer(BaseModel):
         config: Optional[InformerConfig] = None,
     ):
         super(Informer, self).__init__()
-        self.config = config or InformerConfig
+        self.config = config or InformerConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(config.hidden_size)
         self.decoder_embedding = DataEmbedding(config.hidden_size)
