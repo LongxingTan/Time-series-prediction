@@ -2,6 +2,8 @@
 
 import logging
 
+from .registry import FeatureRegistry
+
 logger = logging.getLogger(__name__)
 
 

@@ -5,6 +5,8 @@ from typing import List, Optional
 
 import pandas as pd
 
+from .registry import FeatureRegistry
+
 logger = logging.getLogger(__name__)
 
 
