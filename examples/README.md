@@ -10,7 +10,8 @@ Get started with these basic examples:
 
 ## 📓 Notebooks
 Dive deeper with these interactive notebooks:
-- [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/demo_single_step_prediction.ipynb): A step-by-step guide to single-step time series prediction.
+- [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/single_step_weather_prediction.ipynb): A step-by-step guide to single-step time series weather prediction.
+- [multi steps prediction](multi_steps_sales_prediction.ipynb): guide to multiple-step time series sales prediction.
 
 
 ## 🏆 More examples

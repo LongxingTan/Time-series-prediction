@@ -278,7 +278,7 @@ class KerasTrainer(BaseTrainer):
         self.model.save(os.path.join(model_dir, "model.h5"))
         if self.config is not None:
             self.config.to_json(os.path.join(model_dir, "config.json"))
-        logger.info("protobuf model successfully saved in {}".format(model_dir))
+        logger.info(f"protobuf model successfully saved in {model_dir}")
 
         if not save_weights_only:
             self.model.save_weights(f"{model_dir}.ckpt")
@@ -458,7 +458,7 @@ class Trainer(object):
             lr = self.learning_rate
         self.optimizer.lr.assign(lr)
         self.global_step.assign_add(1)
-        # logger.info('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
+        # logger.info(f'Step: {self.global_step.numpy()}, Loss: {loss}'
         return y_pred, loss
 
     def valid_loop(self, valid_loader):

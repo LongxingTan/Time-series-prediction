@@ -30,7 +30,7 @@ def get_data(
         return get_air_passengers(train_length, predict_sequence_length, test_size=test_size)
 
     else:
-        raise ValueError("unsupported data of {} yet, try 'sine', 'airpassengers'".format(name))
+        raise ValueError(f"unsupported data of {name} yet, try 'sine', 'airpassengers'")
 
 
 def get_sine(
