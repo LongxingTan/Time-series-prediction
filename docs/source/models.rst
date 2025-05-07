@@ -19,7 +19,7 @@ You can you below models in ``AutoModel``
 * WaveNet
 * Bert
 * Transformer
-* Dlinear
+* DLinear
 * NBeats
 * AutoFormer
 * Informer

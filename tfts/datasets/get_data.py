@@ -11,6 +11,9 @@ import pandas as pd
 
 from tfts.constants import TFTS_ASSETS_CACHE
 
+logger = logging.getLogger(__name__)
+
+
 air_passenger_url = (
     "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
 )
@@ -121,3 +124,26 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
         y_valid = y_array[slice:]
         return (x_train, y_train), (x_valid, y_valid)
     return x_array, y_array
+
+
+def get_stock_data(ticker: str = "NVDA", start_date="2023-09-01", end_date="2024-03-15") -> pd.DataFrame:
+    """
+    Retrieve historical stock data for a given ticker symbol.
+    """
+    # Download data
+    import yfinance as yf
+
+    try:
+        logger.info(f"Retrieving data for {ticker} from {start_date} to {end_date}")
+
+        data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+        if data.empty:
+            logger.warning(f"No data returned for ticker {ticker}")
+            raise ValueError(f"No data available for ticker: {ticker}")
+
+        logger.info(f"Successfully retrieved {len(data)} records for {ticker}")
+        return data
+
+    except Exception as e:
+        raise ValueError(f"Error retrieving stock data: {str(e)}")

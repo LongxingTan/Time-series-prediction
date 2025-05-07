@@ -177,7 +177,7 @@ save the model
 	from tfts import AutoModel, AutoConfig, AutoTuner
 
 
-serve the model in docker
+serve the model with tf-serving
 
 .. code-block:: shell
 

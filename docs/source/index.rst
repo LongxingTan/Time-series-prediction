@@ -44,6 +44,30 @@ The tfts library supports the SOTA deep learning models for time series.
 - `TFTS Seq2Seq model <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_ wins the 4th place in `Alibaba Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_
 - :ref:`Learn more models <models>`
 
+.. code-block:: python
+
+   import tensorflow as tf
+   from tfts import AutoConfig, AutoModel
+
+
+   def build_model(use_model, input_shape):
+      inputs = tf.keras.layers.Input(input_shape)
+      config = AutoConfig.for_model(use_model)
+
+      backbone = AutoModel.from_config(config)
+      outputs = backbone(inputs)
+      model = tf.keras.Model(inputs, outputs=outputs)
+
+      optimizer = tf.keras.optimizers.Adam(0.003)
+      loss_fn = tf.keras.losses.MeanSquaredError()
+
+      model.compile(optimizer, loss_fn)
+      return model
+
+
+   model = build_model(use_model="bert", input_shape=(24, 3))
+   model.summary()
+
 
 Tricks
 -------
