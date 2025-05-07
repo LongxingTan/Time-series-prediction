@@ -16,7 +16,7 @@ default_assets_cache_path = os.path.join(TFTS_HOME, "assets")
 TFTS_HUB_CACHE = os.getenv("TFTS_HUB_CACHE", default_cache_path)
 TFTS_ASSETS_CACHE = os.getenv("TFTS_ASSETS_CACHE", default_assets_cache_path)
 
-TF2_WEIGHTS_NAME = "tf_model.h5"
+TF2_WEIGHTS_NAME = "tf_model.keras"
 TF2_WEIGHTS_INDEX_NAME = "tf_model.h5.index.json"
 TF_WEIGHTS_NAME = "model.ckpt"
 CONFIG_NAME = "config.json"

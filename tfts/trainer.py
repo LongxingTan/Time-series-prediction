@@ -32,6 +32,7 @@ class BaseTrainer(object):
         **kwargs,
     ):
         self.model = model
+        self.config = model.config if hasattr(model, "config") else None
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
         self.strategy = strategy
 
@@ -146,7 +147,26 @@ class BaseTrainer(object):
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
         # save_model = self.model.model if hasattr(self.model, "model") else self.model
-        self.model.save_pretrained(output_dir)
+        # self.model.save_pretrained(output_dir)
+
+        # model save (due to after build_model, the model will be replaced to a tf.keras.model)
+        save_directory = output_dir
+        if os.path.isfile(save_directory):
+            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            return
+
+        os.makedirs(save_directory, exist_ok=True)
+        self.config.architectures = [self.__class__.__name__[2:]]
+        self.config.save_pretrained(save_directory)
+
+        weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
+
+        try:
+            self.model.save_weights(weights_file)
+            logging.info(f"Model weights successfully saved in {weights_file}")
+        except Exception as e:
+            logging.error(f"Failed to save model weights to {weights_file}: {e}")
+            return
 
 
 class KerasTrainer(BaseTrainer):
