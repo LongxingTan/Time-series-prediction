@@ -272,24 +272,10 @@ class KerasTrainer(BaseTrainer):
     def get_model(self) -> tf.keras.Model:
         return self.model
 
-    def save_model(self, model_dir: str, save_weights_only: bool = True, checkpoint_dir: Optional[str] = None):
+    def save_model(self, output_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
-        if checkpoint_dir is not None:
-            logger.info("checkpoint Loaded", checkpoint_dir)
-            self.model.load_weights(checkpoint_dir)
-        else:
-            logger.info("No checkpoint Loaded")
-
-        os.makedirs(model_dir, exist_ok=True)
-        self.model.save(os.path.join(model_dir, "model.h5"))
-        if self.config is not None:
-            self.config.to_json(os.path.join(model_dir, "config.json"))
-        logger.info(f"protobuf model successfully saved in {model_dir}")
-
-        if not save_weights_only:
-            self.model.save_weights(f"{model_dir}.ckpt")
-            logger.info(f"model weights successfully saved in {model_dir}.ckpt")
-        return
+        output_dir = TFTS_HOME if output_dir is None else output_dir
+        self._save(output_dir)
 
     def plot(self, history, true: np.ndarray, pred: np.ndarray):
         import matplotlib.pyplot as plt
