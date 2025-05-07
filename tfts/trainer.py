@@ -162,7 +162,7 @@ class BaseTrainer(object):
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
 
         try:
-            self.model.save_weights(weights_file)
+            self.model.save(weights_file)
             logging.info(f"Model weights successfully saved in {weights_file}")
         except Exception as e:
             logging.error(f"Failed to save model weights to {weights_file}: {e}")

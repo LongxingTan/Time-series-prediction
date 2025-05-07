@@ -36,7 +36,7 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
 
 
 class AutoModel(BaseModel):
-    """tftf auto model
+    """tfts auto model
     input tensor: [batch_size, sequence_length, num_features]
     output tensor: [batch_size, predict_sequence_length, num_labels]
     """

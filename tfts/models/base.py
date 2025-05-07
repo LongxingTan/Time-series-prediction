@@ -58,7 +58,7 @@ class BaseModel(ABC):
             raise OSError(f"Error loading config file from {config_path}. Original error: {e}")
 
         try:
-            model = tf.keras.models.load_model(weights_dir)
+            model = tf.keras.models.load_model(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
             return cls(config, model)
         except Exception as e:
             raise OSError(
