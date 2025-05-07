@@ -147,7 +147,7 @@ class KerasTrainer(BaseTrainer):
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential],
+        model: Union[tf.keras.Model, "BaseModel"],
         strategy: Optional[tf.distribute.Strategy] = None,
         run_eagerly: bool = True,
         args: Optional[TrainingArguments] = None,
@@ -215,8 +215,8 @@ class KerasTrainer(BaseTrainer):
         inputs = self.get_inputs(train_dataset)
 
         with self.get_strategy_scope():
-            if lr_scheduler:
-                callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
+            # if lr_scheduler:
+            #     callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
 
             if isinstance(optimizer, (str, dict)):
                 optimizer = tf.keras.optimizers.get(optimizer)
