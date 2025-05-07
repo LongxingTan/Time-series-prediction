@@ -95,6 +95,6 @@ class DLinear(BaseModel):
             trend_output = self.linear_trend(trend)
 
         output = seasonal_output + trend_output
-        output = tf.transpose(output, [0, 2, 1])
+        output = Lambda(lambda t: tf.transpose(t, [0, 2, 1]))(output)
         output = self.project(output)
         return output

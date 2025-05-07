@@ -239,8 +239,6 @@ class KerasTrainer(BaseTrainer):
         if not callbacks:
             callbacks: List[tf.keras.callbacks.Callback] = []
 
-        inputs = self.get_inputs(train_dataset)
-
         with self.get_strategy_scope():
             # if lr_scheduler:  # just set Optimizer(learning_rate=lr_scheduler)
             #     callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
@@ -249,6 +247,7 @@ class KerasTrainer(BaseTrainer):
                 optimizer = tf.keras.optimizers.get(optimizer)
 
             if not isinstance(self.model, tf.keras.Model):
+                inputs = self.get_inputs(train_dataset)
                 if "build_model" not in dir(self.model):
                     raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
                 self.model = self.model.build_model(inputs=inputs)
@@ -465,10 +464,10 @@ class Trainer(object):
 
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.global_step)
-            self.optimizer.lr.assign(lr)
+            self.optimizer.learning_rate.assign(lr)
         else:
             lr = self.learning_rate
-        self.optimizer.lr.assign(lr)
+        self.optimizer.learning_rate.assign(lr)
         self.global_step.assign_add(1)
         # logger.info(f'Step: {self.global_step.numpy()}, Loss: {loss}'
         return y_pred, loss

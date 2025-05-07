@@ -40,8 +40,8 @@ class MovingAvg(tf.keras.layers.Layer):
 
 
 class SeriesDecomp(tf.keras.layers.Layer):
-    def __init__(self, kernel_size: int) -> None:
-        super().__init__()
+    def __init__(self, kernel_size: int, name=None) -> None:
+        super().__init__(name=name)
         self.kernel_size = kernel_size
 
     def build(self, input_shape: Tuple[Optional[int], ...]):

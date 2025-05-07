@@ -111,7 +111,15 @@ class AutoModel(BaseModel):
 
             # Build model and load weights
             model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
-            inputs = tf.keras.layers.Input(config.input_shape)
+            inputs = None
+            if isinstance(config.input_shape, dict):
+                inputs = {k: tf.keras.layers.Input(shape=v, name=k) for k, v in config.input_shape.items()}
+            elif isinstance(config.input_shape, list):
+                inputs = [
+                    tf.keras.layers.Input(shape=shape, name=f"input_{i}") for i, shape in enumerate(config.input_shape)
+                ]
+            else:
+                inputs = tf.keras.layers.Input(shape=config.input_shape, name="input")
             model.build_model(inputs)
             model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
             return cls(model, config)

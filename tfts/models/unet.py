@@ -156,6 +156,6 @@ class Decoder(tf.keras.layers.Layer):
 
         x = Lambda(lambda x: 12 * x)(x)
         # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way for time
-        x = AveragePooling1D(strides=4)(x)
+        x = AveragePooling1D(pool_size=1, strides=4)(x)
 
         return x

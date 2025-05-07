@@ -63,7 +63,7 @@ class Informer(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(self.config.hidden_size)
         self.decoder_embedding = DataEmbedding(self.config.hidden_size)
-        if not config.prob_attention:
+        if not self.config.prob_attention:
             attn_layer = Attention(
                 self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )

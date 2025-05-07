@@ -37,8 +37,12 @@ class BaseModel(ABC):
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
         if hasattr(self, "config"):
-            input_shape = tuple(inputs.shape[1:])
-            self.config.input_shape = input_shape
+            if isinstance(inputs, dict):
+                self.config.input_shape = {k: tuple(v.shape[1:]) for k, v in inputs.items()}
+            elif isinstance(inputs, (list, tuple)):
+                self.config.input_shape = [tuple(v.shape[1:]) for v in inputs]
+            else:
+                self.config.input_shape = tuple(inputs.shape[1:])
 
         # only accept the inputs parameters after built
         outputs = self.model(inputs)
