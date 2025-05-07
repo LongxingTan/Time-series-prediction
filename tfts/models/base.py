@@ -36,10 +36,14 @@ class BaseModel(ABC):
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
+        if hasattr(self, "config"):
+            input_shape = tuple(inputs.shape[1:])
+            self.config.input_shape = input_shape
+
         # only accept the inputs parameters after built
         outputs = self.model(inputs)
-        # to handles the Keras symbolic tensors for tf2.3.1
-        self.model = tf.keras.Model(inputs, [outputs])
+        # to handles the Keras symbolic tensors for tf2.3.1, use []
+        self.model = tf.keras.Model(inputs, outputs)
         return self.model
 
     def to_model(self):

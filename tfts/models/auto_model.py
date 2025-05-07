@@ -111,6 +111,8 @@ class AutoModel(BaseModel):
 
             # Build model and load weights
             model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
+            inputs = tf.keras.layers.Input(config["input_shape"])
+            model.build_model(inputs)
             model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
             return cls(model, config)
         except Exception as e:
