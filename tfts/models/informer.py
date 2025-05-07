@@ -85,7 +85,7 @@ class Informer(BaseModel):
             norm_layer=LayerNormalization(),
         )
 
-        if not config.prob_attention:
+        if not self.config.prob_attention:
             attn_layer1 = Attention(
                 self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )

@@ -120,6 +120,7 @@ class AutoModel(BaseModel):
                 ]
             else:
                 inputs = tf.keras.layers.Input(shape=config.input_shape, name="input")
+
             model.build_model(inputs)
             model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
             return cls(model, config)
