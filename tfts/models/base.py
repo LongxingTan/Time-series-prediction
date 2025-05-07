@@ -226,7 +226,7 @@ class BaseConfig(ABC):
 
         try:
             with open(output_config_file, "w") as f:
-                json.dump(self.config, f, indent=4)
+                json.dump(self.to_dict(), f, indent=4)
             logger.info(f"Model config successfully saved in {output_config_file}")
         except Exception as e:
             logger.warning(f"Error saving model config to {output_config_file}: {e}")
