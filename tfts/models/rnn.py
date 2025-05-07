@@ -55,8 +55,8 @@ class RNN(BaseModel):
         self.config = config or RNNConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            rnn_size=config.rnn_hidden_size,
-            rnn_type=config.rnn_type,
+            rnn_size=self.config.rnn_hidden_size,
+            rnn_type=self.config.rnn_type,
         )
 
         self.dense1 = Dense(self.config.dense_hidden_size, activation="relu")
