@@ -11,7 +11,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-from .constants import TFTS_HUB_CACHE
+from .constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME, TFTS_HOME, TFTS_HUB_CACHE
 from .models.base import BaseModel
 from .training_args import TrainingArguments
 
@@ -141,6 +141,13 @@ class BaseTrainer(object):
         else:
             raise TypeError(f"Unsupported input type: {type(x)}")
 
+    def _save(self, output_dir: Optional[str] = None):
+        output_dir = output_dir if output_dir is not None else TFTS_HOME
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"Saving model checkpoint to {output_dir}")
+        save_model = self.model.model if hasattr(self.model, "model") else self.model
+        save_model.save_pretrained(output_dir)
+
 
 class KerasTrainer(BaseTrainer):
     """Keras trainer from tf.keras"""
@@ -215,7 +222,7 @@ class KerasTrainer(BaseTrainer):
         inputs = self.get_inputs(train_dataset)
 
         with self.get_strategy_scope():
-            # if lr_scheduler:
+            # if lr_scheduler:  # just set Optimizer(learning_rate=lr_scheduler)
             #     callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
 
             if isinstance(optimizer, (str, dict)):
@@ -260,8 +267,7 @@ class KerasTrainer(BaseTrainer):
         return self.train(**params)
 
     def predict(self, x_test: tf.Tensor) -> tf.Tensor:
-        y_test_pred = self.model(x_test)
-        return y_test_pred
+        return self.model(x_test)
 
     def get_model(self) -> tf.keras.Model:
         return self.model

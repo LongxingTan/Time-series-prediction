@@ -10,12 +10,9 @@ from typing import Any, Dict, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Lambda
 
-logger = logging.getLogger(__name__)
+from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
 
-TF2_WEIGHTS_NAME = "tf_model.h5"
-TF2_WEIGHTS_INDEX_NAME = "tf_model.h5.index.json"
-TF_WEIGHTS_NAME = "model.ckpt"
-CONFIG_NAME = "config.json"
+logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
@@ -116,7 +113,7 @@ class BaseModel(ABC):
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
-        max_shard_size: Union[int, str] = "5GB",
+        max_shard_size: Union[int, str] = "8GB",
         safe_serialization: bool = False,
     ):
         if os.path.isfile(save_directory):

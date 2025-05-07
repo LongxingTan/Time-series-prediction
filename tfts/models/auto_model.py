@@ -72,7 +72,10 @@ class AutoModel(BaseModel):
                     f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
                     f"but got {len(x[0].shape)}"
                 )
-        return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        if isinstance(self.model, BaseModel):
+            return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        else:  # after build_model, the model will become tf.keras.Model
+            return self.model(x)
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
