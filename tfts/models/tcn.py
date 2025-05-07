@@ -48,10 +48,10 @@ class TCN(BaseModel):
         self.config = config or TCNConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=config.kernel_sizes,
-            dilation_rates=config.dilation_rates,
-            filters=config.filters,
-            dense_hidden_size=config.dense_hidden_size,
+            kernel_sizes=self.config.kernel_sizes,
+            dilation_rates=self.config.dilation_rates,
+            filters=self.config.filters,
+            dense_hidden_size=self.config.dense_hidden_size,
         )
 
         self.project1 = Dense(predict_sequence_length, activation=None)

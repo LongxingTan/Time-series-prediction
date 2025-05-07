@@ -67,25 +67,25 @@ class AutoFormer(object):
         self.predict_sequence_length = predict_sequence_length
 
         # self.encoder_embedding = TokenEmbedding(config['hidden_size'])
-        self.series_decomp = SeriesDecomp(config.kernel_size)
+        self.series_decomp = SeriesDecomp(self.config.kernel_size)
         self.encoder = [
             EncoderLayer(
-                config.kernel_size,
-                config.hidden_size,
-                config.num_attention_heads,
-                config.attention_probs_dropout_prob,
+                self.config.kernel_size,
+                self.config.hidden_size,
+                self.config.num_attention_heads,
+                self.config.attention_probs_dropout_prob,
             )
-            for _ in range(config.num_layers)
+            for _ in range(self.config.num_layers)
         ]
 
         self.decoder = [
             DecoderLayer(
-                config.kernel_size,
-                config.hidden_size,
-                config.num_attention_heads,
-                config.attention_probs_dropout_prob,
+                self.config.kernel_size,
+                self.config.hidden_size,
+                self.config.num_attention_heads,
+                self.config.attention_probs_dropout_prob,
             )
-            for _ in range(config.num_decoder_layers)
+            for _ in range(self.config.num_decoder_layers)
         ]
 
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)

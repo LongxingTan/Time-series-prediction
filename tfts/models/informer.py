@@ -61,46 +61,52 @@ class Informer(BaseModel):
         super(Informer, self).__init__()
         self.config = config or InformerConfig()
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(config.hidden_size)
-        self.decoder_embedding = DataEmbedding(config.hidden_size)
+        self.encoder_embedding = DataEmbedding(self.config.hidden_size)
+        self.decoder_embedding = DataEmbedding(self.config.hidden_size)
         if not config.prob_attention:
-            attn_layer = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+            attn_layer = Attention(
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+            )
         else:
             attn_layer = ProbAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )
         self.encoder = Encoder(
             layers=[
                 EncoderLayer(
                     attn_layer=attn_layer,
-                    hidden_size=config.hidden_size,
-                    hidden_dropout_prob=config.hidden_dropout_prob,
-                    ffn_intermediate_size=config.ffn_intermediate_size,
+                    hidden_size=self.config.hidden_size,
+                    hidden_dropout_prob=self.config.hidden_dropout_prob,
+                    ffn_intermediate_size=self.config.ffn_intermediate_size,
                 )
-                for _ in range(config.num_layers)
+                for _ in range(self.config.num_layers)
             ],
-            conv_layers=[DistilConv(filters=config.hidden_size) for _ in range(config.num_layers - 1)],
+            conv_layers=[DistilConv(filters=self.config.hidden_size) for _ in range(self.config.num_layers - 1)],
             norm_layer=LayerNormalization(),
         )
 
         if not config.prob_attention:
-            attn_layer1 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+            attn_layer1 = Attention(
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+            )
         else:
             attn_layer1 = ProbAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )
 
-        attn_layer2 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+        attn_layer2 = Attention(
+            self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+        )
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(
                     attn_layer1=attn_layer1,
                     attn_layer2=attn_layer2,
-                    hidden_size=config.hidden_size,
-                    hidden_dropout_prob=config.hidden_dropout_prob,
-                    ffn_intermediate_size=config.ffn_intermediate_size,
+                    hidden_size=self.config.hidden_size,
+                    hidden_dropout_prob=self.config.hidden_dropout_prob,
+                    ffn_intermediate_size=self.config.ffn_intermediate_size,
                 )
-                for _ in range(config.num_decoder_layers)
+                for _ in range(self.config.num_decoder_layers)
             ]
         )
         self.projection = Dense(1)

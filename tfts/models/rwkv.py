@@ -49,25 +49,25 @@ class RWKV(BaseModel):
         self.config = config or RWKVConfig()
         self.predict_sequence_length = predict_sequence_length
 
-        self.emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
+        self.emb = tf.keras.layers.Embedding(self.config.vocab_size, self.config.hidden_size)
         self.ln0 = tf.keras.layers.LayerNormalization()
 
-        self.blocks = [RWKVBlock(config) for _ in range(config.n_layer)]
+        self.blocks = [RWKVBlock(self.config) for _ in range(self.config.num_layers)]
 
         self.ln_out = tf.keras.layers.LayerNormalization()
-        self.head = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+        self.head = tf.keras.layers.Dense(self.config.vocab_size, use_bias=False)
 
     def init_state(self, batch_size=1):
         states = []
-        for _ in range(self.config.n_layer):
+        for _ in range(self.config.num_layers):
             # States for attention
             att_states = [
-                tf.zeros((batch_size, self.config.n_embd)),  # aa
-                tf.zeros((batch_size, self.config.n_embd)),  # bb
-                tf.zeros((batch_size, self.config.n_embd)) - 1e30,  # pp
+                tf.zeros((batch_size, self.config.hidden_size)),  # aa
+                tf.zeros((batch_size, self.config.hidden_size)),  # bb
+                tf.zeros((batch_size, self.config.hidden_size)) - 1e30,  # pp
             ]
             # State for FFN
-            ffn_state = tf.zeros((batch_size, self.config.n_embd))
+            ffn_state = tf.zeros((batch_size, self.config.hidden_size))
             states.append((att_states, ffn_state))
         return states
 
