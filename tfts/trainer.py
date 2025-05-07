@@ -145,8 +145,8 @@ class BaseTrainer(object):
         output_dir = output_dir if output_dir is not None else TFTS_HOME
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
-        save_model = self.model.model if hasattr(self.model, "model") else self.model
-        save_model.save_pretrained(output_dir)
+        # save_model = self.model.model if hasattr(self.model, "model") else self.model
+        self.model.save_pretrained(output_dir)
 
 
 class KerasTrainer(BaseTrainer):

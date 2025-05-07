@@ -128,9 +128,9 @@ class BaseModel(ABC):
 
         try:
             self.model.save_weights(weights_file)
-            print(f"Model weights successfully saved in {weights_file}")
+            logging.info(f"Model weights successfully saved in {weights_file}")
         except Exception as e:
-            print(f"Error saving model weights to {weights_file}: {e}")
+            logging.error(f"Failed to save model weights to {weights_file}: {e}")
             return
 
     def save_weights(self, weights_path: str):
