@@ -46,26 +46,6 @@ class BaseModel(ABC):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
         return self.build_model(inputs)
 
-    @classmethod
-    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
-        config_path = os.path.join(weights_dir, "config.json")
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found at {config_path}")
-        try:
-            with open(config_path, "r") as f:
-                config = json.load(f)
-        except Exception as e:
-            raise OSError(f"Error loading config file from {config_path}. Original error: {e}")
-
-        try:
-            model = tf.keras.models.load_model(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
-            return cls(config, model)
-        except Exception as e:
-            raise OSError(
-                f"Error loading model from {weights_dir}. "
-                f"Ensure it was saved using {repr('tf.keras.models.save_model')}. Original error: {e}"
-            )
-
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
             raise FileNotFoundError(f"Weights file not found at {weights_dir}")
