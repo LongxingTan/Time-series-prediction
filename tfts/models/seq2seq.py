@@ -52,9 +52,9 @@ class Seq2seqConfig(BaseConfig):
 class Seq2seq(BaseModel):
     """Seq2seq model for time series prediction with configurable encoder-decoder architectures."""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[Seq2seqConfig] = None):
         super(Seq2seq, self).__init__()
-        self.config = config if config else Seq2seqConfig()
+        self.config = config or Seq2seqConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.encoder = Encoder(

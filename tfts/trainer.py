@@ -11,7 +11,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-from .constants import TFTS_HUB_CACHE
+from .constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME, TFTS_HOME, TFTS_HUB_CACHE
 from .models.base import BaseModel
 from .training_args import TrainingArguments
 
@@ -32,6 +32,7 @@ class BaseTrainer(object):
         **kwargs,
     ):
         self.model = model
+        self.config = model.config if hasattr(model, "config") else None
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
         self.strategy = strategy
 
@@ -141,13 +142,39 @@ class BaseTrainer(object):
         else:
             raise TypeError(f"Unsupported input type: {type(x)}")
 
+    def _save(self, output_dir: Optional[str] = None):
+        output_dir = output_dir if output_dir is not None else TFTS_HOME
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"Saving model checkpoint to {output_dir}")
+        # save_model = self.model.model if hasattr(self.model, "model") else self.model
+        # self.model.save_pretrained(output_dir)
+
+        # model save (due to after build_model, the model will be replaced to a tf.keras.model)
+        save_directory = output_dir
+        if os.path.isfile(save_directory):
+            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            return
+
+        os.makedirs(save_directory, exist_ok=True)
+        self.config.architectures = [self.__class__.__name__[2:]]
+        self.config.save_pretrained(save_directory)
+
+        weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
+
+        try:
+            self.model.save_weights(weights_file)
+            logging.info(f"Model weights successfully saved in {weights_file}")
+        except Exception as e:
+            logging.error(f"Failed to save model weights to {weights_file}: {e}")
+            return
+
 
 class KerasTrainer(BaseTrainer):
     """Keras trainer from tf.keras"""
 
     def __init__(
         self,
-        model: Union[tf.keras.Model, tf.keras.Sequential],
+        model: Union[tf.keras.Model, "BaseModel"],
         strategy: Optional[tf.distribute.Strategy] = None,
         run_eagerly: bool = True,
         args: Optional[TrainingArguments] = None,
@@ -178,7 +205,7 @@ class KerasTrainer(BaseTrainer):
         train_dataset: Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]],
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
         loss_fn: Union[Callable, tf.keras.losses.Loss, str] = "mse",
-        optimizer: Union[tf.keras.optimizers.Optimizer, str] = "adam",
+        optimizer: Union[tf.keras.optimizers.Optimizer, str, Dict] = "adam",
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
@@ -194,6 +221,9 @@ class KerasTrainer(BaseTrainer):
         Args:
             train_dataset: A tf.data.Dataset or list/tuple of tensors (x_train, y_train).
             valid_dataset: A tf.data.Dataset or list/tuple of tensors (x_valid, y_valid), optional.
+            loss_fn: loss function
+            optimizer: tf optimizer use
+            lr_scheduler: learning rate scheduler
             epochs: Number of epochs to train for. Default is 10.
             batch_size: Number of samples per batch. Default is 64.
             steps_per_epoch: Number of steps per epoch. Optional.
@@ -209,13 +239,15 @@ class KerasTrainer(BaseTrainer):
         if not callbacks:
             callbacks: List[tf.keras.callbacks.Callback] = []
 
-        inputs = self.get_inputs(train_dataset)
-
         with self.get_strategy_scope():
-            if lr_scheduler:
-                callbacks.append(lr_scheduler)
+            # if lr_scheduler:  # just set Optimizer(learning_rate=lr_scheduler)
+            #     callbacks.append(tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=True))
+
+            if isinstance(optimizer, (str, dict)):
+                optimizer = tf.keras.optimizers.get(optimizer)
 
             if not isinstance(self.model, tf.keras.Model):
+                inputs = self.get_inputs(train_dataset)
                 if "build_model" not in dir(self.model):
                     raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
                 self.model = self.model.build_model(inputs=inputs)
@@ -254,30 +286,15 @@ class KerasTrainer(BaseTrainer):
         return self.train(**params)
 
     def predict(self, x_test: tf.Tensor) -> tf.Tensor:
-        y_test_pred = self.model(x_test)
-        return y_test_pred
+        return self.model(x_test)
 
     def get_model(self) -> tf.keras.Model:
         return self.model
 
-    def save_model(self, model_dir: str, save_weights_only: bool = True, checkpoint_dir: Optional[str] = None):
+    def save_model(self, output_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
-        if checkpoint_dir is not None:
-            logger.info("checkpoint Loaded", checkpoint_dir)
-            self.model.load_weights(checkpoint_dir)
-        else:
-            logger.info("No checkpoint Loaded")
-
-        os.makedirs(model_dir, exist_ok=True)
-        self.model.save(os.path.join(model_dir, "model.h5"))
-        if self.config is not None:
-            self.config.to_json(os.path.join(model_dir, "config.json"))
-        logger.info("protobuf model successfully saved in {}".format(model_dir))
-
-        if not save_weights_only:
-            self.model.save_weights(f"{model_dir}.ckpt")
-            logger.info(f"model weights successfully saved in {model_dir}.ckpt")
-        return
+        output_dir = TFTS_HOME if output_dir is None else output_dir
+        self._save(output_dir)
 
     def plot(self, history, true: np.ndarray, pred: np.ndarray):
         import matplotlib.pyplot as plt
@@ -393,11 +410,11 @@ class Trainer(object):
 
         for epoch in range(epochs):
             train_loss, train_scores = self.train_loop(train_loader)
-            log_str = f"Epoch: {epoch + 1}, Train Loss: {train_loss:.4f}"
+            log_str = f"Epoch: {epoch + 1}, Train Loss: {train_loss:.4f}"  # noqa
 
             if valid_loader is not None:
                 valid_loss, valid_scores = self.valid_loop(valid_loader)
-                log_str += f", Valid Loss: {valid_loss:.4f}"
+                log_str += f", Valid Loss: {valid_loss:.4f}"  # noqa
                 log_str + ",".join([" Valid Metrics{}: {:.4f}".format(i, me) for i, me in enumerate(valid_scores)])
 
                 if (stop_no_improve_epochs is not None) and (eval_metric is not None):
@@ -447,12 +464,12 @@ class Trainer(object):
 
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.global_step)
-            self.optimizer.lr.assign(lr)
+            self.optimizer.learning_rate.assign(lr)
         else:
             lr = self.learning_rate
-        self.optimizer.lr.assign(lr)
+        self.optimizer.learning_rate.assign(lr)
         self.global_step.assign_add(1)
-        # logger.info('Step: {}, Loss: {}'.format(self.global_step.numpy(), loss))
+        # logger.info(f'Step: {self.global_step.numpy()}, Loss: {loss}'
         return y_pred, loss
 
     def valid_loop(self, valid_loader):

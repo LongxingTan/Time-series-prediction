@@ -2,6 +2,7 @@
 
 import collections
 import importlib
+import json
 import logging
 import os
 from typing import List, Optional, Tuple, Union
@@ -12,6 +13,9 @@ import tensorflow as tf
 
 from tfts.models.base import BaseConfig, BaseModel
 from tfts.tasks.auto_task import AnomalyHead, ClassificationHead
+
+from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
+from .auto_config import AutoConfig
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +40,7 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
 
 
 class AutoModel(BaseModel):
-    """tftf auto model
+    """tfts auto model
     input tensor: [batch_size, sequence_length, num_features]
     output tensor: [batch_size, predict_sequence_length, num_labels]
     """
@@ -72,7 +76,10 @@ class AutoModel(BaseModel):
                     f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
                     f"but got {len(x[0].shape)}"
                 )
-        return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        if isinstance(self.model, BaseModel):
+            return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        else:  # after build_model, the model will become tf.keras.Model
+            return self.model(x)
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
@@ -81,6 +88,47 @@ class AutoModel(BaseModel):
         module = importlib.import_module(f".{model_name}", "tfts.models")
         model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
+
+    @classmethod
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
+        config_path = os.path.join(weights_dir, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+        try:
+            with open(config_path, "r") as f:
+                config_dict = json.load(f)
+        except Exception as e:
+            raise OSError(f"Error loading config file from {config_path}. Original error: {e}")
+
+        try:
+            model_type = config_dict.get("model_type")
+            if model_type is None:
+                raise ValueError("Missing `model_type` in config.")
+
+            # Dynamically get the correct Config subclass
+            config = AutoConfig.for_model(model_type)
+            config.update(config_dict)  # update with the saved values
+
+            # Build model and load weights
+            model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
+            inputs = None
+            if isinstance(config.input_shape, dict):
+                inputs = {k: tf.keras.layers.Input(shape=v, name=k) for k, v in config.input_shape.items()}
+            elif isinstance(config.input_shape, list):
+                inputs = [
+                    tf.keras.layers.Input(shape=shape, name=f"input_{i}") for i, shape in enumerate(config.input_shape)
+                ]
+            else:
+                inputs = tf.keras.layers.Input(shape=config.input_shape, name="input")
+
+            model.build_model(inputs)
+            model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
+            return cls(model, config)
+        except Exception as e:
+            raise OSError(
+                f"Error loading model weights from {weights_dir}. "
+                f"Ensure weights were saved using model.save_weights(...). Original error: {e}"
+            )
 
 
 class AutoModelForPrediction(AutoModel):
@@ -93,7 +141,7 @@ class AutoModelForPrediction(AutoModel):
         return_dict: Optional[bool] = None,
     ):
 
-        model_output = self.model(x, return_dict=return_dict)
+        model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
         if self.config.skip_connect_circle:
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
@@ -124,7 +172,7 @@ class AutoModelForClassification(BaseModel):
         if self.keras_model is not None:
             logits = self.keras_model(x)
         else:
-            model_output = self.model(x, output_hidden_states=output_hidden_states)
+            model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
             logits = self.head(model_output)
         return logits
 

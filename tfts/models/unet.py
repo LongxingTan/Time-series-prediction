@@ -35,9 +35,9 @@ class UnetConfig(BaseConfig):
 class Unet(BaseModel):
     """Unet model for sequence-to-sequence prediction tasks."""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None):
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[UnetConfig] = None):
         super(Unet, self).__init__()
-        self.config = config if config else UnetConfig()
+        self.config = config or UnetConfig()
         self.predict_sequence_length = predict_sequence_length
 
         self.avg_pool1 = AveragePooling1D(pool_size=self.config.pool_sizes[0])
@@ -156,6 +156,6 @@ class Decoder(tf.keras.layers.Layer):
 
         x = Lambda(lambda x: 12 * x)(x)
         # Todo: just a tricky way to change the batch*input_seq*1 -> batch_out_seq*1, need a more general way for time
-        x = AveragePooling1D(strides=4)(x)
+        x = AveragePooling1D(pool_size=1, strides=4)(x)
 
         return x

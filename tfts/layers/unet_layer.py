@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.unet`"""
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Multiply

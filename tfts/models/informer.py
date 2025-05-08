@@ -50,72 +50,63 @@ class InformerConfig(BaseConfig):
         self.distil_conv = distil_conv
 
 
-config: Dict[str, Any] = {
-    "num_hidden_layers": 1,
-    "n_decoder_layers": 1,
-    "hidden_size": 32 * 1,
-    "num_attention_heads": 1,
-    "attention_probs_dropout_prob": 0.0,
-    "ffn_intermediate_size": 32 * 1,
-    "hidden_dropout_prob": 0.0,
-    "skip_connect_circle": False,
-    "skip_connect_mean": False,
-    "prob_attention": False,
-    "distil_conv": False,
-}
-
-
 class Informer(BaseModel):
     """Informer model for time series"""
 
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=InformerConfig(),
+        config: Optional[InformerConfig] = None,
     ):
         super(Informer, self).__init__()
-        self.config = config
+        self.config = config or InformerConfig()
         self.predict_sequence_length = predict_sequence_length
-        self.encoder_embedding = DataEmbedding(config.hidden_size)
-        self.decoder_embedding = DataEmbedding(config.hidden_size)
-        if not config.prob_attention:
-            attn_layer = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+        self.encoder_embedding = DataEmbedding(self.config.hidden_size)
+        self.decoder_embedding = DataEmbedding(self.config.hidden_size)
+        if not self.config.prob_attention:
+            attn_layer = Attention(
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+            )
         else:
             attn_layer = ProbAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )
         self.encoder = Encoder(
             layers=[
                 EncoderLayer(
                     attn_layer=attn_layer,
-                    hidden_size=config.hidden_size,
-                    hidden_dropout_prob=config.hidden_dropout_prob,
-                    ffn_intermediate_size=config.ffn_intermediate_size,
+                    hidden_size=self.config.hidden_size,
+                    hidden_dropout_prob=self.config.hidden_dropout_prob,
+                    ffn_intermediate_size=self.config.ffn_intermediate_size,
                 )
-                for _ in range(config.num_layers)
+                for _ in range(self.config.num_layers)
             ],
-            conv_layers=[DistilConv(filters=config.hidden_size) for _ in range(config.num_layers - 1)],
+            conv_layers=[DistilConv(filters=self.config.hidden_size) for _ in range(self.config.num_layers - 1)],
             norm_layer=LayerNormalization(),
         )
 
-        if not config.prob_attention:
-            attn_layer1 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+        if not self.config.prob_attention:
+            attn_layer1 = Attention(
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+            )
         else:
             attn_layer1 = ProbAttention(
-                config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob
+                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
             )
 
-        attn_layer2 = Attention(config.hidden_size, config.num_attention_heads, config.attention_probs_dropout_prob)
+        attn_layer2 = Attention(
+            self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+        )
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(
                     attn_layer1=attn_layer1,
                     attn_layer2=attn_layer2,
-                    hidden_size=config.hidden_size,
-                    hidden_dropout_prob=config.hidden_dropout_prob,
-                    ffn_intermediate_size=config.ffn_intermediate_size,
+                    hidden_size=self.config.hidden_size,
+                    hidden_dropout_prob=self.config.hidden_dropout_prob,
+                    ffn_intermediate_size=self.config.ffn_intermediate_size,
                 )
-                for _ in range(config.num_decoder_layers)
+                for _ in range(self.config.num_decoder_layers)
             ]
         )
         self.projection = Dense(1)
@@ -129,20 +120,7 @@ class Informer(BaseModel):
         return_dict: Optional[bool] = None,
     ):
         """Informer call function"""
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            decoder_feature = inputs["decoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            encoder_feature = x = inputs
-            decoder_feature = tf.cast(
-                tf.reshape(tf.range(self.predict_sequence_length), (-1, self.predict_sequence_length, 1)), tf.float32
-            )
-
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
 

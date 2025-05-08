@@ -43,17 +43,15 @@ class TCNConfig(BaseConfig):
 class TCN(BaseModel):
     """Temporal convolutional network"""
 
-    def __init__(self, predict_sequence_length: int = 1, config=None) -> None:
+    def __init__(self, predict_sequence_length: int = 1, config: Optional[TCNConfig] = None) -> None:
         super(TCN, self).__init__()
-        if config is None:
-            config = TCNConfig()
-        self.config = config
+        self.config = config or TCNConfig()
         self.predict_sequence_length = predict_sequence_length
         self.encoder = Encoder(
-            kernel_sizes=config.kernel_sizes,
-            dilation_rates=config.dilation_rates,
-            filters=config.filters,
-            dense_hidden_size=config.dense_hidden_size,
+            kernel_sizes=self.config.kernel_sizes,
+            dilation_rates=self.config.dilation_rates,
+            filters=self.config.filters,
+            dense_hidden_size=self.config.dense_hidden_size,
         )
 
         self.project1 = Dense(predict_sequence_length, activation=None)
@@ -138,8 +136,8 @@ class Encoder(object):
             dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
             outputs = self.dense_time2(inputs=dilated_conv)
             # skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
-            split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
-            skips, residuals = split_layer(outputs)
+            split_layer2 = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
+            skips, residuals = split_layer2(outputs)
             inputs += residuals
             conv_inputs.append(inputs)  # batch_size * time_sequence_length * filters
             skip_outputs.append(skips)

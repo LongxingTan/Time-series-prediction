@@ -39,18 +39,16 @@ class NBeats(BaseModel):
     def __init__(
         self,
         predict_sequence_length: int = 1,
-        config=None,
+        config: Optional[NBeatsConfig] = None,
     ):
-        if config is None:
-            config = NBeatsConfig()
         super(NBeats, self).__init__(config)
-        self.config = config
+        self.config = config or NBeatsConfig()
         self.predict_sequence_length = predict_sequence_length
 
-        self.stack_types = config.stack_types
-        self.nb_blocks_per_stack = config.nb_blocks_per_stack
-        self.hidden_size = config.hidden_size
-        self.n_block_layers = config.n_block_layers
+        self.stack_types = self.config.stack_types
+        self.nb_blocks_per_stack = self.config.nb_blocks_per_stack
+        self.hidden_size = self.config.hidden_size
+        self.n_block_layers = self.config.n_block_layers
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
