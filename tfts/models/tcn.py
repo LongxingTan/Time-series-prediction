@@ -136,8 +136,8 @@ class Encoder(object):
             dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
             outputs = self.dense_time2(inputs=dilated_conv)
             # skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
-            split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
-            skips, residuals = split_layer(outputs)
+            split_layer2 = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
+            skips, residuals = split_layer2(outputs)
             inputs += residuals
             conv_inputs.append(inputs)  # batch_size * time_sequence_length * filters
             skip_outputs.append(skips)

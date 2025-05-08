@@ -5,7 +5,7 @@ Tricks
 
 .. note::
 
-    Time series is a typical No Free lunch scenario
+    Time series forecasting is a classic example of the "No Free Lunch" scenario. Deep learning models, in particular, require careful tuning of architecture, hyper-parameters, and preprocessing strategies to achieve meaningful results on time series tasks.
 
 
 Use tfts in competition flexible

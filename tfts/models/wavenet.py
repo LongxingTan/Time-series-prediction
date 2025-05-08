@@ -154,14 +154,19 @@ class Encoder(object):
             dilated_conv = conv_time(inputs)
             split_layer = Lambda(lambda x: tf.split(x, 2, axis=2))
             conv_filter, conv_gate = split_layer(dilated_conv)
-            dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
+            dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
             outputs = self.dense_time2(inputs=dilated_conv)
-            skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=2)
+            split_layer2 = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=2))
+            skips, residuals = split_layer2(outputs)
             inputs += residuals
             conv_inputs.append(inputs)  # batch_size * time_sequence_length * filters
             skip_outputs.append(skips)
 
-        skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
+        concat_layer = Concatenate(axis=2)
+        concatenated = concat_layer(skip_outputs)
+        relu_layer = ReLU()
+        skip_outputs = relu_layer(concatenated)
+        # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
         h = self.dense_time3(skip_outputs)
         # [batch_size, time_sequence_length, filters] * time_sequence_length
         y_hat = self.dense_time4(h)
@@ -231,7 +236,8 @@ class DecoderV1(object):
                 this_input = prev_output
 
             if decoder_features is not None:
-                this_input = tf.concat([this_input, decoder_features[:, i]], axis=-1)
+                # this_input = tf.concat([this_input, decoder_features[:, i]], axis=-1)
+                this_input = Concatenate(axis=-1)([this_input, decoder_features[:, i]])
 
             x = self.dense1(this_input)
             skip_outputs = []
@@ -251,7 +257,9 @@ class DecoderV1(object):
                 split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=1))
                 skips, residuals = split_layer(out)
                 x += residuals
-                encoder_outputs[i] = tf.concat([encoder_outputs[i], tf.expand_dims(x, 1)], axis=1)
+                # encoder_outputs[i] = tf.concat([encoder_outputs[i], tf.expand_dims(x, 1)], axis=1)
+                expand = Lambda(lambda t: tf.expand_dims(t, axis=1))
+                encoder_outputs[i] = Concatenate(1)([encoder_outputs[i], expand(x)])
                 skip_outputs.append(skips)
 
             # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
@@ -263,8 +271,10 @@ class DecoderV1(object):
             this_output = self.dense6(skip_outputs)
             decoder_outputs.append(this_output)
 
-        decoder_outputs = tf.concat(decoder_outputs, axis=1)
-        return tf.expand_dims(decoder_outputs, -1)
+        # decoder_outputs = tf.concat(decoder_outputs, axis=1)
+        decoder_outputs = Concatenate(1)(decoder_outputs)
+        expand = Lambda(lambda t: tf.expand_dims(t, axis=-1))
+        return expand(decoder_outputs)
 
 
 class DecoderV2(object):
