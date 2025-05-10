@@ -114,7 +114,7 @@ class AutoModel(BaseModel):
             inputs = None
             if isinstance(config.input_shape, dict):
                 inputs = {k: tf.keras.layers.Input(shape=v, name=k) for k, v in config.input_shape.items()}
-            elif isinstance(config.input_shape, list):
+            elif isinstance(config.input_shape[0], (list, tuple)):
                 inputs = [
                     tf.keras.layers.Input(shape=shape, name=f"input_{i}") for i, shape in enumerate(config.input_shape)
                 ]

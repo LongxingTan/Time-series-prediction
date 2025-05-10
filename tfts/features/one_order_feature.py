@@ -18,3 +18,7 @@ def add_lag_feature():
 
 def add_roll_feature():
     return
+
+
+def add_moving_average_feature():
+    return
