@@ -1,7 +1,10 @@
 import hashlib
 import json
+import logging
 import os
 from typing import Any, Dict, List, Optional, Set, Union
+
+logger = logging.getLogger(__name__)
 
 
 class FeatureRegistry:

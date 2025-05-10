@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.datasets.get_data import get_air_passengers, get_data, get_sine
+from tfts.data.get_data import get_air_passengers, get_data, get_sine
 
 
 class GetDataTest(unittest.TestCase):

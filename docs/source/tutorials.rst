@@ -44,6 +44,14 @@ Feed the input data into the model
 - array for single variable prediction
 
 
+Features
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- datetime features
+- static features
+- dynamic features
+
+
 .. _train_models:
 
 Train the models

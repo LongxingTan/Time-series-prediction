@@ -2,9 +2,12 @@
 Normalization utilities for time series data.
 """
 
+import logging
 from typing import Any, Dict, Literal, Tuple, Union
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 NormalizationMethod = Literal["standard", "minmax", "robust", "log1p"]
 EPSILON = 1e-8

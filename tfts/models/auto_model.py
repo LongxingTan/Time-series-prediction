@@ -258,7 +258,7 @@ class AutoModelForSegmentation(BaseModel):
 
 
 class AutoModelForUncertainty(BaseModel):
-    """tfts model for time series uncertainty prediction"""
+    """tfts model for time series uncertainty probabilistic forecasting model, not a point forecasting"""
 
     def __init__(self, model, config):
         super().__init__(config=config)

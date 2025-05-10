@@ -29,7 +29,7 @@ class TimeSeriesSequence(Sequence):
     * holding information about static and time-varying variables known and unknown in the future
     * holding information about related categories (such as holidays)
     * down-sampling for data augmentation
-    * generating inference, validation and test datasets
+    * generating inference, validation and test data
     """
 
     def __init__(
