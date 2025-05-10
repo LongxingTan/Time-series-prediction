@@ -23,3 +23,8 @@ You can you below models in ``AutoModel``
 * NBeats
 * AutoFormer
 * Informer
+
+.. code-block:: python
+
+    config = AutoConfig.for_model("seq2seq")
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)

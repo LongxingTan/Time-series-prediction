@@ -74,6 +74,9 @@ The general setup for training and testing a model is
 
 3.1 Prepare the data
 ~~~~~~~~~~~~~~~~~~~~~~~~
+The tfts could accept any time series data of 3D data format as model input: ``(num_examples, train_sequence_length, num_features)``,
+and the model supported by tfts outputs 3D data as model output: ``(num_examples, predict_sequence_length, num_outputs)``
+
 Before training, ensure your raw data is preprocessed into a 3D format with the shape ``(batch_size, train_steps, features)``. Perform any necessary data cleaning, normalization, or transformation steps to ensure the data is ready for training.
 
 
@@ -121,11 +124,8 @@ Run with pretrained weights
     model = AutoModel.from_pretrained("tfts-model")
 
 
-3.3 Evaluate the model
-~~~~~~~~~~~~~~~~~~~~~~~
 
-
-3.4 Serve the model
+3.3 Serve the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 Once the model is trained and evaluated, deploy it for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel, ONNX, etc.). Set up an API or service to handle incoming requests, preprocess input data, and return predictions in real-time.
 
