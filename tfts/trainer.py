@@ -156,7 +156,7 @@ class BaseTrainer(object):
             return
 
         os.makedirs(save_directory, exist_ok=True)
-        self.config.architectures = [self.__class__.__name__[2:]]
+        self.config.architectures = [self.model.__class__.__name__[2:]]
         self.config.save_pretrained(save_directory)
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
@@ -176,7 +176,6 @@ class KerasTrainer(BaseTrainer):
         self,
         model: Union[tf.keras.Model, "BaseModel"],
         strategy: Optional[tf.distribute.Strategy] = None,
-        run_eagerly: bool = True,
         args: Optional[TrainingArguments] = None,
         **kwargs: Dict[str, object],
     ) -> None:
@@ -185,17 +184,12 @@ class KerasTrainer(BaseTrainer):
 
         Args:
             model: A Keras Model or Sequential instance to train.
-            loss_fn: A callable or Keras loss function. Default is MeanSquaredError.
-            optimizer: A Keras optimizer instance. Default is Adam with learning rate 0.003.
-            lr_scheduler: Optional learning rate scheduler.
             strategy: Optional distribution strategy for multi-GPU or multi-node training.
-            run_eagerly: Whether to run eagerly. Default is True.
             **kwargs: Additional arguments that are passed to the instance as attributes.
         """
         super().__init__(model, args, strategy, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
-        self.run_eagerly = run_eagerly
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -212,6 +206,7 @@ class KerasTrainer(BaseTrainer):
         steps_per_epoch: Optional[int] = None,
         metrics: Optional[Union[List[tf.keras.metrics.Metric], List[str]]] = None,
         callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
+        run_eagerly: bool = True,
         verbose: int = 1,
         **kwargs: Dict[str, object],
     ) -> tf.keras.callbacks.History:
@@ -221,14 +216,15 @@ class KerasTrainer(BaseTrainer):
         Args:
             train_dataset: A tf.data.Dataset or list/tuple of tensors (x_train, y_train).
             valid_dataset: A tf.data.Dataset or list/tuple of tensors (x_valid, y_valid), optional.
-            loss_fn: loss function
-            optimizer: tf optimizer use
-            lr_scheduler: learning rate scheduler
+            loss_fn: A callable or Keras loss function. Default is MeanSquaredError.
+            optimizer: A Keras optimizer instance. Default is Adam with learning rate 0.003.
+            lr_scheduler: Optional learning rate scheduler.
             epochs: Number of epochs to train for. Default is 10.
             batch_size: Number of samples per batch. Default is 64.
             steps_per_epoch: Number of steps per epoch. Optional.
             metrics:  List of metrics for monitoring during training. Optional.
             callbacks: List of keras callbacks during training. Optional.
+            run_eagerly: Whether to run eagerly. Default is True.
             verbose: Verbosity level. Default is 1.
             **kwargs: Additional keyword arguments for callbacks.
 
@@ -252,7 +248,7 @@ class KerasTrainer(BaseTrainer):
                     raise TypeError("Trainer model should either be `tf.keras.Model` or has `build_model()` method")
                 self.model = self.model.build_model(inputs=inputs)
 
-            self.model.compile(loss=loss_fn, optimizer=optimizer, metrics=metrics, run_eagerly=self.run_eagerly)
+            self.model.compile(loss=loss_fn, optimizer=optimizer, metrics=metrics, run_eagerly=run_eagerly)
 
             trainable_params = np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
             tf.print(f"Trainable parameters: {trainable_params}")

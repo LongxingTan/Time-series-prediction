@@ -12,6 +12,7 @@ from tensorflow.keras.layers import (
     Conv1D,
     Dense,
     Dropout,
+    Lambda,
     LayerNormalization,
     MaxPool1D,
 )
@@ -125,6 +126,10 @@ class Informer(BaseModel):
         memory = self.encoder(encoder_feature, mask=None)
 
         B, L, _ = tf.shape(decoder_feature)
+        # shape_decoder_feature = tf.keras.ops.shape(decoder_feature)
+        # B = shape_decoder_feature[0]
+        # L = shape_decoder_feature[1]
+
         casual_mask = CausalMask(B * self.config.num_attention_heads, L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
 
@@ -147,11 +152,11 @@ class Encoder(tf.keras.layers.Layer):
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
                 x = attn_layer(x, mask)
                 # x = conv_layer(x)
-            x = self.layers[-1](x, mask)
+            x = self.layers[-1](x, mask=mask)
 
         else:
             for attn_layer in self.layers:
-                x = attn_layer(x, mask)
+                x = attn_layer(x, mask=mask)
 
         if self.norm_layer is not None:
             x = self.norm_layer(x)

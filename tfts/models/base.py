@@ -39,7 +39,8 @@ class BaseModel(ABC):
         if hasattr(self, "config"):
             if isinstance(inputs, dict):
                 self.config.input_shape = {k: tuple(v.shape[1:]) for k, v in inputs.items()}
-            elif isinstance(inputs[0], (list, tuple)):
+            elif isinstance(inputs, (list, tuple)):
+                # multiple input
                 self.config.input_shape = [tuple(v.shape[1:]) for v in inputs]
             else:
                 self.config.input_shape = tuple(inputs.shape[1:])
@@ -55,7 +56,7 @@ class BaseModel(ABC):
         return self.build_model(inputs)
 
     def predict(self, x, **kwargs):
-        return self.model.predict(x, kwargs)
+        return self.model.predict(x, **kwargs)
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):

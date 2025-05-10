@@ -144,7 +144,5 @@ class InformerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("informer")
         model = AutoModel.from_config(config, predict_sequence_length)
-        trainer = KerasTrainer(
-            model,
-        )
+        trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
