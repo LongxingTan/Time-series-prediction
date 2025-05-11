@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import warnings
 
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 
 from ..features import (
@@ -36,11 +37,12 @@ class TimeSeriesSequence(Sequence):
         self,
         data,
         time_idx: str,
-        target: str,
+        target_column: str,
         train_sequence_length,
         predict_sequence_length: int = 1,
         batch_size: int = 32,
-        group_ids: List[str] = None,
+        group_column: List[str] = None,
+        drop_last: bool = False,
         feature_config: Optional[Dict] = None,
     ):
         self.data = data
@@ -48,20 +50,47 @@ class TimeSeriesSequence(Sequence):
         self.predict_sequence_length = predict_sequence_length
         self.stride = 1
         self.batch_size = batch_size
-        self.group_ids = group_ids
+        self.group_column = group_column
+        self.drop_last = drop_last
 
-        if group_ids is not None:
-            all_sequences = []
-            for _, group in data.groupby(group_ids, observed=True):
-                all_sequences.extend(self._generate_sequences(group, time_idx=time_idx, target=target))
+        self._validate_inputs()
+        self._apply_feature_transforms()
+
+        self.sequences = []
+        if group_column is not None:
+            for _, group in data.groupby(group_column, observed=True):
+                self.sequences.extend(self._generate_sequences(group, time_idx=time_idx, target_column=target_column))
+        else:
+            self.sequences.extend(self._generate_sequences(data, time_idx=time_idx, target=self.target[0]))
 
     def __len__(self):
         if self.drop_last:
             return len(self.sequences) // self.batch_size
         return (len(self.sequences) + self.batch_size - 1) // self.batch_size
 
-    def __getitem__(self, item):
-        return
+    def __getitem__(self, idx):
+        start_idx = idx * self.batch_size
+        end_idx = min(start_idx + self.batch_size, len(self.sequences))
+
+        batch_sequences = self.sequences[start_idx:end_idx]
+        encoder_inputs = np.array([seq[0] for seq in batch_sequences])
+        decoder_targets = np.array([seq[1] for seq in batch_sequences])
+        return encoder_inputs, decoder_targets
+
+    def get_tf_dataset(self):
+        """Convert to TensorFlow Dataset."""
+
+        def generator():
+            for i in range(len(self)):
+                yield self[i]
+
+        return tf.data.Dataset.from_generator(
+            generator,
+            output_signature=(
+                tf.TensorSpec(shape=(None, self.train_sequence_length), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, self.predict_sequence_length), dtype=tf.float32),
+            ),
+        )
 
     def _validate_inputs(self) -> None:
         """Validate input parameters."""
@@ -112,9 +141,9 @@ class TimeSeriesSequence(Sequence):
                 else:
                     self.logger.warning(f"Unknown transform type {transform_type} for feature {feature_name}")
 
-    def _generate_sequences(self, group, time_idx, target):
+    def _generate_sequences(self, group, time_idx, target_column):
         group = group.sort_values(by=time_idx)
-        target_values = group[target].values
+        target_values = group[target_column].values
         time_values = group[time_idx].values
 
         sequences = []
