@@ -160,6 +160,7 @@ def get_ar_data(
     add_covariates: bool = False,
     return_components: bool = False,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Dict[str, np.ndarray]]]:
+    """from: pytorch-forecasting"""
     if n_series <= 0 or timesteps <= 0:
         raise ValueError("n_series and timesteps must be positive integers")
 
