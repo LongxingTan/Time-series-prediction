@@ -51,6 +51,19 @@ class InformerConfig(BaseConfig):
         self.distil_conv = distil_conv
 
 
+class ShapeLayer(tf.keras.layers.Layer):
+    """Layer to handle shape operations in a Keras-compatible way."""
+
+    def __init__(self, num_attention_heads):
+        super().__init__()
+        self.num_attention_heads = num_attention_heads
+
+    def call(self, x):
+        batch_size = tf.shape(x)[0]
+        seq_length = tf.shape(x)[1]
+        return batch_size, seq_length
+
+
 class Informer(BaseModel):
     """Informer model for time series"""
 
@@ -64,6 +77,8 @@ class Informer(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(self.config.hidden_size)
         self.decoder_embedding = DataEmbedding(self.config.hidden_size)
+        self.shape_layer = ShapeLayer(self.config.num_attention_heads)
+        self.causal_mask = CausalMask(self.config.num_attention_heads)
 
         self.encoder = Encoder(
             hidden_size=self.config.hidden_size,
@@ -99,9 +114,8 @@ class Informer(BaseModel):
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
 
-        B, L, _ = tf.shape(decoder_feature)
-        casual_mask = CausalMask(B * self.config.num_attention_heads, L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
+        casual_mask = self.causal_mask(decoder_feature)
 
         outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
         outputs = self.projection(outputs)
@@ -292,7 +306,7 @@ class Decoder(tf.keras.layers.Layer):
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
         """Informer decoder call function"""
         for layer in self.layers:
-            x = layer(x, memory, x_mask, memory_mask)
+            x = layer(x=x, memory=memory, x_mask=x_mask, memory_mask=memory_mask)
 
         if self.norm is not None:
             x = self.norm(x)

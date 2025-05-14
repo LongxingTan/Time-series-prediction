@@ -151,10 +151,10 @@ class Transformer(BaseModel):
             decoder_feature, init_input=x[:, -1:, 0:1], encoder_memory=memory, teacher=teacher
         )
 
-        # B, L, _ = tf.shape(decoder_feature)
-        # casual_mask = CausalMask(B, L).mask
-        # decoder_outputs = self.decoder(decoder_feature, memory, x_mask=casual_mask)
-        # decoder_outputs = self.project(decoder_outputs)
+        # Example for new CausalMask usage:
+        # dummy = tf.zeros((B, L, 1))
+        # mask_layer = CausalMask(num_attention_heads=1)
+        # casual_mask = mask_layer(dummy)
 
         return decoder_outputs
 

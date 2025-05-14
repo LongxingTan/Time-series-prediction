@@ -4,21 +4,28 @@ import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
 
 
-class CausalMask:
+class CausalMask(tf.keras.layers.Layer):
     """Casual Mask is used for transformer decoder, used in first self-attention for decoder feature"""
 
-    def __init__(self, B, L):
-        mask_shape = [B, L, L]  # for multi-heads split [B, 1, L, L]
+    def __init__(self, num_attention_heads):
+        super().__init__()
+        self.num_attention_heads = num_attention_heads
+
+    def call(self, inputs):
+        batch_size = tf.shape(inputs)[0]
+        seq_length = tf.shape(inputs)[1]
+        mask_shape = [batch_size, seq_length, seq_length]  # for multi-heads split [B, 1, L, L]
         mask_a = tf.linalg.band_part(tf.ones(mask_shape), 0, -1)  # Upper triangular matrix of 0s and 1s
         mask_b = tf.linalg.band_part(tf.ones(mask_shape), 0, 0)  # Diagonal matrix of 0s and 1s
         mask = tf.cast(mask_a - mask_b, dtype=tf.float32)
+        return mask
 
-        self._mask = mask
-        tf.stop_gradient(self._mask)
-
-    @property
-    def mask(self):
-        return self._mask
+    def get_config(self):
+        config = {
+            "num_attention_heads": self.num_attention_heads,
+        }
+        base_config = super(CausalMask, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class ProbMask:

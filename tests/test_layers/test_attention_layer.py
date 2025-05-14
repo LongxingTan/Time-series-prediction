@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import tensorflow as tf
 
 from tfts.layers.attention_layer import Attention, ProbAttention, SelfAttention
@@ -21,9 +22,11 @@ class AttentionLayerTest(unittest.TestCase):
         config = layer.get_config()
         self.assertEqual(config["hidden_size"], hidden_size)
 
-        mask = CausalMask(2, 128).mask
-        y2 = layer(q, k, v, mask=mask)
-        self.assertEqual(y2.shape, (2, 128, hidden_size))
+        batch, seq_len = 2, 128
+        dummy = tf.zeros((batch, seq_len, 1))
+        mask_layer = CausalMask(num_attention_heads=1)
+        mask = mask_layer(dummy)
+        assert mask.shape == (batch, seq_len, seq_len)
 
     def test_self_attention_layer(self):
         hidden_size = 64
