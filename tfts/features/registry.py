@@ -163,10 +163,16 @@ def registry(func: Callable) -> Callable:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         result = func(*args, **kwargs)
         if isinstance(result, pd.DataFrame):
-            # Register only the new columns that were added
-            original_cols = set(args[0].columns)  # args[0] is the input DataFrame
-            new_cols = [col for col in result.columns if col not in original_cols]
-            feature_registry.register(new_cols)
+            # Get the input DataFrame from either args or kwargs
+            input_df = kwargs.get("data") if "data" in kwargs else (args[0] if args else None)
+            if input_df is not None and isinstance(input_df, pd.DataFrame):
+                # Register only the new columns that were added
+                original_cols = set(input_df.columns)
+                new_cols = [col for col in result.columns if col not in original_cols]
+                feature_registry.register(new_cols)
+            else:
+                # If we can't determine the input DataFrame, register all columns
+                feature_registry.register(result.columns.tolist())
         else:
             feature_registry.register(result)
         return result
