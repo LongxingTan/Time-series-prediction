@@ -506,8 +506,10 @@ class Trainer(object):
 
     def save_model(self, model_dir, only_pb=True):
         # save the model
-        tf.saved_model.save(self.model, model_dir)
-        logger.info(f"Protobuf model successfully saved in {model_dir}")
+        if not model_dir.endswith(".keras"):
+            model_dir = f"{model_dir}.keras"
+        self.model.save(model_dir)
+        logger.info(f"Model successfully saved in {model_dir}")
 
         if not only_pb:
             self.model.save_weights(f"{model_dir}.ckpt")

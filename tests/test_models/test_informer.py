@@ -49,7 +49,6 @@ class InformerTest(unittest.TestCase):
         ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         num_hidden_layers = 4
-        # attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
         layer = Encoder(
             hidden_size=hidden_size,
@@ -62,7 +61,7 @@ class InformerTest(unittest.TestCase):
             distil_conv=True,
         )
         x = tf.random.normal([2, 100, hidden_size])  # after embedding
-        y = layer(x)
+        y = layer(x, mask=None)  # Explicitly pass mask as None
         self.assertEqual(y.shape, (2, 100, hidden_size))
 
     def test_decoder_layer(self):
