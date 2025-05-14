@@ -5,11 +5,10 @@ It includes lag features, rolling window features, and basic transformations.
 """
 
 import logging
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 from .registry import FeatureRegistry, registry
 

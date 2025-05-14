@@ -2,7 +2,7 @@
 
 import logging
 
-from .registry import FeatureRegistry
+from .registry import FeatureRegistry, registry
 
 logger = logging.getLogger(__name__)
 

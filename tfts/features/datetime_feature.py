@@ -5,7 +5,7 @@ It supports basic datetime features (hour, day, month, etc.), cyclical features,
 """
 
 import logging
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -124,11 +124,9 @@ def add_datetime_feature(
         "hour_cos",
     }
 
-    # Default features if none specified
     if features is None:
         features = list(valid_features)
     else:
-        # Validate feature names
         invalid_features = [f for f in features if f not in valid_features]
         if invalid_features:
             raise KeyError(f"Invalid feature names: {invalid_features}. Valid features are: {sorted(valid_features)}")

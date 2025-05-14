@@ -164,7 +164,7 @@ class TimeSeriesSequenceTest(unittest.TestCase):
         self.assertTrue(any(col.startswith("value_") and col.endswith(("_log1p", "_sqrt")) for col in seq.data.columns))
 
         # Check if moving average features were added
-        # self.assertTrue(any(col.startswith("value_") and col.endswith(("_sma_", "_ema_")) for col in seq.data.columns))
+        # self.assertTrue(any(col.startswith("value") and col.endswith(("_sma_", "_ema_")) for col in seq.data.columns))
 
     def test_sequence_generation(self):
         """Test sequence generation."""
