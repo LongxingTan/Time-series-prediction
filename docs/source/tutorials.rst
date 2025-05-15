@@ -51,6 +51,17 @@ Features
 - static features
 - dynamic features
 
+.. code-block:: python
+
+    from tfts.features import feature_registry, registry
+
+    feature_registry = feature_registry
+    feature_registry.register(["some features"])
+
+    @registry
+    def add_custom_features():
+        return
+
 
 .. _train_models:
 
