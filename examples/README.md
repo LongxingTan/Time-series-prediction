@@ -11,7 +11,7 @@ Get started with these basic examples:
 ## 📓 Notebooks
 Dive deeper with these notebooks:
 - [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/single_step_weather_prediction.ipynb): A guided example on predicting the next time point in weather data.
-- [multi steps prediction](multi_steps_sales_prediction.ipynb): Learn how to forecast multiple future time points in a sales dataset.
+- [multi steps prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/multi_steps_sales_prediction.ipynb): Learn how to forecast multiple future time points in a sales dataset.
 
 
 ## 🏆 More examples
