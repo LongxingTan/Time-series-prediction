@@ -61,7 +61,7 @@ class InformerTest(unittest.TestCase):
             distil_conv=True,
         )
         x = tf.random.normal([2, 100, hidden_size])  # after embedding
-        y = layer(x, mask=None)  # Explicitly pass mask as None
+        y = layer(x, mask=None)
         self.assertEqual(y.shape, (2, 100, hidden_size))
 
     def test_decoder_layer(self):
