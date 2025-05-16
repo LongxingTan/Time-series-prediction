@@ -9,3 +9,4 @@ from .auto_model import (
     AutoModelForSegmentation,
     AutoModelForUncertainty,
 )
+from .base import BaseConfig, BaseModel
