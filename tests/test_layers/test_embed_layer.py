@@ -31,7 +31,7 @@ class EmbedLayerTest(unittest.TestCase):
         x = tf.ones([2, 128, 10])
         layer = PositionalEncoding()
         y = layer(x)
-        self.assertEqual(y.shape, (128, 10))
+        self.assertEqual(y.shape, (2, 128, 10))
 
     def test_data_embedding(self):
         embed_size = 64

@@ -11,7 +11,7 @@ Some experiments of tfts in Kaggle Dataset
 Models supported
 ------------------
 
-You can you below models in ``AutoModel``
+You can use below models with ``AutoModel``
 
 * RNN
 * Seq2seq
