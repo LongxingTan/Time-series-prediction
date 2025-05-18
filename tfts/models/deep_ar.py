@@ -14,7 +14,7 @@ from .base import BaseConfig, BaseModel
 
 
 class DeepARConfig(BaseConfig):
-    model_type: str = "deepar"
+    model_type: str = "deep_ar"
 
     def __init__(
         self,

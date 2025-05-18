@@ -22,6 +22,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("dlinear", "DLinearConfig"),
         ("rwkv", "RWKVConfig"),
         ("patches_tst", "PatchTSTConfig"),
+        ("deep_ar", "DeepARConfig"),
     ]
 )
 
