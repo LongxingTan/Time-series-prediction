@@ -2,7 +2,6 @@ import logging
 import unittest
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer

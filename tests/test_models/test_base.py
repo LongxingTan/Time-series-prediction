@@ -2,8 +2,6 @@ import os
 import tempfile
 import unittest
 
-import tensorflow as tf
-
 from tfts.models.base import BaseConfig, BaseModel
 
 

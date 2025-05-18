@@ -1,6 +1,5 @@
 """Tests for TimeSeriesSequence class."""
 
-from datetime import datetime, timedelta
 import unittest
 
 import numpy as np

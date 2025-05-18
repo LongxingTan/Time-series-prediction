@@ -36,6 +36,7 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("dlinear", "DLinear"),
         ("rwkv", "RWKV"),
         ("patches_tst", "PatchTST"),
+        ("deep_ar", "DeepAR"),
     ]
 )
 

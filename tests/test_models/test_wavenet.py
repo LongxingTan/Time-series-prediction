@@ -2,7 +2,6 @@ import unittest
 
 import tensorflow as tf
 
-from tfts import AutoModel, KerasTrainer, Trainer
 from tfts.models.wavenet import DecoderV1, DecoderV2, Encoder, WaveNet, WaveNetConfig
 
 

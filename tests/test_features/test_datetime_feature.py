@@ -1,6 +1,5 @@
 """Tests for datetime features."""
 
-from datetime import datetime, timedelta
 import unittest
 
 import numpy as np
