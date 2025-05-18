@@ -29,13 +29,6 @@ class GenericBlock(tf.keras.layers.Layer):
         self, train_sequence_length: int, predict_sequence_length: int, hidden_size: int, n_block_layers: int = 4
     ):
         super(GenericBlock, self).__init__()
-        if train_sequence_length <= 0 or predict_sequence_length <= 0:
-            raise ValueError("Sequence lengths must be positive integers")
-        if hidden_size <= 0:
-            raise ValueError("Hidden size must be a positive integer")
-        if n_block_layers <= 0:
-            raise ValueError("Number of block layers must be a positive integer")
-
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
@@ -104,14 +97,6 @@ class TrendBlock(tf.keras.layers.Layer):
         polynomial_term: int = 2,
     ):
         super().__init__()
-        if train_sequence_length <= 0 or predict_sequence_length <= 0:
-            raise ValueError("Sequence lengths must be positive integers")
-        if hidden_size <= 0:
-            raise ValueError("Hidden size must be a positive integer")
-        if n_block_layers <= 0:
-            raise ValueError("Number of block layers must be a positive integer")
-        if polynomial_term < 0:
-            raise ValueError("Polynomial term must be non-negative")
 
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
@@ -200,15 +185,6 @@ class SeasonalityBlock(tf.keras.layers.Layer):
         num_harmonics: int = 1,
     ):
         super().__init__()
-        if train_sequence_length <= 0 or predict_sequence_length <= 0:
-            raise ValueError("Sequence lengths must be positive integers")
-        if hidden_size <= 0:
-            raise ValueError("Hidden size must be a positive integer")
-        if n_block_layers <= 0:
-            raise ValueError("Number of block layers must be a positive integer")
-        if num_harmonics <= 0:
-            raise ValueError("Number of harmonics must be a positive integer")
-
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size

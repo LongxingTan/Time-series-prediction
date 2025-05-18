@@ -6,6 +6,7 @@
 from typing import Optional
 
 import tensorflow as tf
+from tensorflow.keras.layers import Lambda
 
 from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 
@@ -61,9 +62,10 @@ class NBeats(BaseModel):
         else:  # for single variable prediction
             x = inputs
 
-        x = tf.squeeze(x, 2)  # 3 dim for all models
-        # Todo: if train_length and predict_sequence_length is both 12, train fail
-        self.train_sequence_length = x.get_shape().as_list()[1]
+        shape_fn = Lambda(lambda t: tf.shape(t)[1])
+        squeeze_fn = Lambda(lambda t: tf.squeeze(t, 2))
+        self.train_sequence_length = shape_fn(x)
+        x = squeeze_fn(x)
 
         self.stacks = []
         for stack_id in range(len(self.stack_types)):
@@ -71,12 +73,15 @@ class NBeats(BaseModel):
 
         forecast = tf.zeros([tf.shape(x)[0], self.predict_sequence_length], dtype=tf.float32)
         backcast = x
+
         for stack_id in range(len(self.stacks)):
             for block_id in range(len(self.stacks[stack_id])):
                 b, f = self.stacks[stack_id][block_id](backcast)
-                backcast = backcast - b
-                forecast = forecast + f
-        forecast = tf.expand_dims(forecast, -1)
+                backcast = Lambda(lambda x: x[0] - x[1])([backcast, b])
+                forecast = Lambda(lambda x: x[0] + x[1])([forecast, f])
+
+        # Final expansion using Keras layer
+        forecast = Lambda(lambda x: tf.expand_dims(x, -1))(forecast)
         return forecast
 
     def create_stack(self, stack_id):

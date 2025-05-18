@@ -79,7 +79,6 @@ class TimeSeriesSequence(Sequence):
         self.feature_config = feature_config or {}
         self.mode = mode
         self.group_ids = group_column or []
-        self.logger = logger
 
         # Initialize feature registry
         self.feature_registry = FeatureRegistry()
@@ -96,7 +95,7 @@ class TimeSeriesSequence(Sequence):
         else:
             self.sequences.extend(self._generate_sequences(data, time_idx=time_idx, target_column=target_column))
 
-        self.logger.info(
+        logger.info(
             f"Initialized TimeSeriesSequence with {len(self.sequences)} sequences, "
             f"batch_size={batch_size}, mode={mode}"
         )
@@ -119,33 +118,104 @@ class TimeSeriesSequence(Sequence):
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: Tuple of (encoder_inputs, decoder_targets)
+                encoder_inputs shape: (batch_size, train_sequence_length, num_targets)
+                decoder_targets shape: (batch_size, predict_sequence_length, num_targets)
         """
         start_idx = idx * self.batch_size
         end_idx = min(start_idx + self.batch_size, len(self.sequences))
 
         batch_sequences = self.sequences[start_idx:end_idx]
-        encoder_inputs = np.array([seq[0] for seq in batch_sequences])
-        decoder_targets = np.array([seq[1] for seq in batch_sequences])
+
+        # Stack encoder inputs and decoder targets using np.stack
+        encoder_inputs = np.stack([seq[0] for seq in batch_sequences])
+        decoder_targets = np.stack([seq[1] for seq in batch_sequences])
+
         return encoder_inputs, decoder_targets
 
     def get_tf_dataset(self) -> tf.data.Dataset:
         """Convert to TensorFlow Dataset.
 
         Returns:
-            tf.data.Dataset: TensorFlow dataset
+            tf.data.Dataset: TensorFlow dataset with 3D tensors
         """
 
         def generator():
             for i in range(len(self)):
                 yield self[i]
 
+        # Get number of target variables
+        num_targets = len(self.target)
+
         return tf.data.Dataset.from_generator(
             generator,
             output_signature=(
-                tf.TensorSpec(shape=(None, self.train_sequence_length), dtype=tf.float32),
-                tf.TensorSpec(shape=(None, self.predict_sequence_length), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, self.train_sequence_length, num_targets), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, self.predict_sequence_length, num_targets), dtype=tf.float32),
             ),
         )
+
+    def _generate_sequences(
+        self, group: pd.DataFrame, time_idx: str, target_column: str
+    ) -> List[Tuple[np.ndarray, np.ndarray, int]]:
+        """Generate sequences from a group of data.
+
+        Args:
+            group (pd.DataFrame): Group of data to generate sequences from
+            time_idx (str): Name of the time index column
+            target_column (str): Name of the target column
+
+        Returns:
+            List[Tuple[np.ndarray, np.ndarray, int]]: List of (encoder_input, decoder_target, start_idx) tuples
+                Each sequence is a 2D array with shape (length, num_features)
+        """
+        group = group.sort_values(by=time_idx)
+        target_values = group[target_column].values
+        time_values = group[time_idx].values
+
+        # Convert time values to numeric if they are datetime
+        if pd.api.types.is_datetime64_any_dtype(time_values):
+            time_values = time_values.astype(np.int64) // 10**9  # Convert to seconds
+
+        sequences = []
+        max_start_idx = len(group) - self.train_sequence_length - self.predict_sequence_length + 1
+
+        for i in range(0, max_start_idx, self.stride):
+            # Get indices for encoder sequence
+            encoder_start = i
+            encoder_end = i + self.train_sequence_length
+            encoder_indices = np.arange(encoder_start, encoder_end)
+
+            # Get indices for decoder sequence
+            decoder_start = encoder_end
+            decoder_end = decoder_start + self.predict_sequence_length
+            decoder_indices = np.arange(decoder_start, decoder_end)
+
+            # Check if sequences are continuous
+            encoder_time_diffs = np.diff(time_values[encoder_indices])
+            decoder_time_diffs = np.diff(time_values[decoder_indices])
+
+            # For datetime values, check if differences are consistent
+            if pd.api.types.is_datetime64_any_dtype(group[time_idx]):
+                expected_diff = (group[time_idx].iloc[1] - group[time_idx].iloc[0]).total_seconds()
+                is_continuous = np.all(np.abs(encoder_time_diffs - expected_diff) < 1e-6) and np.all(
+                    np.abs(decoder_time_diffs - expected_diff) < 1e-6
+                )
+            else:
+                is_continuous = np.all(encoder_time_diffs == encoder_time_diffs[0]) and np.all(
+                    decoder_time_diffs == decoder_time_diffs[0]
+                )
+
+            if (
+                len(encoder_indices) == self.train_sequence_length
+                and len(decoder_indices) == self.predict_sequence_length
+                and is_continuous
+            ):
+                # Ensure 2D arrays with shape (length, 1) for single feature
+                encoder_sequence = target_values[encoder_indices].reshape(-1, 1)
+                decoder_sequence = target_values[decoder_indices].reshape(-1, 1)
+                sequences.append((encoder_sequence, decoder_sequence, i))
+
+        return sequences
 
     def _validate_inputs(self) -> None:
         """Validate input parameters."""
@@ -235,68 +305,7 @@ class TimeSeriesSequence(Sequence):
                             group_cols=self.group_ids if self.group_ids else None,
                         )
                     else:
-                        self.logger.warning(f"Unknown transform type {transform_type} for feature {feature_name}")
+                        logger.warning(f"Unknown transform type {transform_type} for feature {feature_name}")
                 except Exception as e:
-                    self.logger.error(f"Error applying feature transform {transform_type} for {feature_name}: {str(e)}")
+                    logger.error(f"Error applying feature transform {transform_type} for {feature_name}: {str(e)}")
                     raise
-
-    def _generate_sequences(
-        self, group: pd.DataFrame, time_idx: str, target_column: str
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
-        """Generate sequences from a group of data.
-
-        Args:
-            group (pd.DataFrame): Group of data to generate sequences from
-            time_idx (str): Name of the time index column
-            target_column (str): Name of the target column
-
-        Returns:
-            List[Tuple[np.ndarray, np.ndarray]]: List of (encoder_input, decoder_target) pairs
-        """
-        group = group.sort_values(by=time_idx)
-        target_values = group[target_column].values
-        time_values = group[time_idx].values
-
-        # Convert time values to numeric if they are datetime
-        if pd.api.types.is_datetime64_any_dtype(time_values):
-            time_values = time_values.astype(np.int64) // 10**9  # Convert to seconds
-
-        sequences = []
-        max_start_idx = len(group) - self.train_sequence_length - self.predict_sequence_length + 1
-
-        for i in range(0, max_start_idx, self.stride):
-            # Get indices for encoder sequence
-            encoder_start = i
-            encoder_end = i + self.train_sequence_length
-            encoder_indices = np.arange(encoder_start, encoder_end)
-
-            # Get indices for decoder sequence
-            decoder_start = encoder_end
-            decoder_end = decoder_start + self.predict_sequence_length
-            decoder_indices = np.arange(decoder_start, decoder_end)
-
-            # Check if sequences are continuous
-            encoder_time_diffs = np.diff(time_values[encoder_indices])
-            decoder_time_diffs = np.diff(time_values[decoder_indices])
-
-            # For datetime values, check if differences are consistent
-            if pd.api.types.is_datetime64_any_dtype(group[time_idx]):
-                expected_diff = (group[time_idx].iloc[1] - group[time_idx].iloc[0]).total_seconds()
-                is_continuous = np.all(np.abs(encoder_time_diffs - expected_diff) < 1e-6) and np.all(
-                    np.abs(decoder_time_diffs - expected_diff) < 1e-6
-                )
-            else:
-                is_continuous = np.all(encoder_time_diffs == encoder_time_diffs[0]) and np.all(
-                    decoder_time_diffs == decoder_time_diffs[0]
-                )
-
-            if (
-                len(encoder_indices) == self.train_sequence_length
-                and len(decoder_indices) == self.predict_sequence_length
-                and is_continuous
-            ):
-                encoder_sequence = target_values[encoder_indices]
-                decoder_sequence = target_values[decoder_indices]
-                sequences.append((encoder_sequence, decoder_sequence))
-
-        return sequences
