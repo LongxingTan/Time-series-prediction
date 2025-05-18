@@ -10,7 +10,7 @@ class PositionLayerTest(unittest.TestCase):
         layer = PositionalEncoding(max_len=512)
         x = tf.random.normal([2, 128, 512])
         positional_encoding = layer(x)
-        self.assertEqual(positional_encoding.shape, (128, 512))
+        self.assertEqual(positional_encoding.shape, (2, 128, 512))
 
         # import matplotlib.pyplot as plt
         # plt.figure(figsize=(8, 6))

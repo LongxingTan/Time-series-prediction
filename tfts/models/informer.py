@@ -12,6 +12,7 @@ from tensorflow.keras.layers import (
     Conv1D,
     Dense,
     Dropout,
+    Lambda,
     LayerNormalization,
     MaxPool1D,
 )
@@ -63,54 +64,29 @@ class Informer(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(self.config.hidden_size)
         self.decoder_embedding = DataEmbedding(self.config.hidden_size)
-        if not self.config.prob_attention:
-            attn_layer = Attention(
-                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
-            )
-        else:
-            attn_layer = ProbAttention(
-                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
-            )
+        self.causal_mask = CausalMask(self.config.num_attention_heads)
+
         self.encoder = Encoder(
-            layers=[
-                EncoderLayer(
-                    attn_layer=attn_layer,
-                    hidden_size=self.config.hidden_size,
-                    hidden_dropout_prob=self.config.hidden_dropout_prob,
-                    ffn_intermediate_size=self.config.ffn_intermediate_size,
-                )
-                for _ in range(self.config.num_layers)
-            ],
-            conv_layers=[DistilConv(filters=self.config.hidden_size) for _ in range(self.config.num_layers - 1)],
-            norm_layer=LayerNormalization(),
+            hidden_size=self.config.hidden_size,
+            num_layers=self.config.num_layers,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
+            ffn_intermediate_size=self.config.ffn_intermediate_size,
+            hidden_dropout_prob=self.config.hidden_dropout_prob,
+            prob_attention=self.config.prob_attention,
+            distil_conv=self.config.distil_conv,
         )
 
-        if not self.config.prob_attention:
-            attn_layer1 = Attention(
-                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
-            )
-        else:
-            attn_layer1 = ProbAttention(
-                self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
-            )
-
-        attn_layer2 = Attention(
-            self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
-        )
         self.decoder = Decoder(
-            layers=[
-                DecoderLayer(
-                    attn_layer1=attn_layer1,
-                    attn_layer2=attn_layer2,
-                    hidden_size=self.config.hidden_size,
-                    hidden_dropout_prob=self.config.hidden_dropout_prob,
-                    ffn_intermediate_size=self.config.ffn_intermediate_size,
-                )
-                for _ in range(self.config.num_decoder_layers)
-            ]
+            hidden_size=self.config.hidden_size,
+            num_layers=self.config.num_decoder_layers,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
+            ffn_intermediate_size=self.config.ffn_intermediate_size,
+            hidden_dropout_prob=self.config.hidden_dropout_prob,
+            prob_attention=self.config.prob_attention,
         )
         self.projection = Dense(1)
-        # self.projection = Dense(predict_sequence_length, activation=None)
 
     def __call__(
         self,
@@ -124,9 +100,8 @@ class Informer(BaseModel):
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
 
-        B, L, _ = tf.shape(decoder_feature)
-        casual_mask = CausalMask(B * self.config.num_attention_heads, L).mask
         decoder_feature = self.decoder_embedding(decoder_feature)
+        casual_mask = self.causal_mask(decoder_feature)
 
         outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
         outputs = self.projection(outputs)
@@ -135,27 +110,79 @@ class Informer(BaseModel):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, layers, conv_layers=None, norm_layer=None) -> None:
+    def __init__(
+        self,
+        hidden_size,
+        num_layers,
+        num_attention_heads,
+        attention_probs_dropout_prob,
+        ffn_intermediate_size,
+        hidden_dropout_prob,
+        prob_attention=False,
+        distil_conv=False,
+    ) -> None:
         super(Encoder, self).__init__()
-        self.layers = layers
-        self.conv_layers = conv_layers if conv_layers is not None else None
-        self.norm_layer = norm_layer
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.prob_attention = prob_attention
+        self.distil_conv = distil_conv
+
+    def build(self, input_shape):
+        if not self.prob_attention:
+            attn_layer = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+        else:
+            attn_layer = ProbAttention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+
+        self.layers = [
+            EncoderLayer(
+                attn_layer=attn_layer,
+                hidden_size=self.hidden_size,
+                hidden_dropout_prob=self.hidden_dropout_prob,
+                ffn_intermediate_size=self.ffn_intermediate_size,
+            )
+            for _ in range(self.num_layers)
+        ]
+
+        if self.distil_conv:
+            self.conv_layers = [DistilConv(filters=self.hidden_size) for _ in range(self.num_layers - 1)]
+        else:
+            self.conv_layers = None
+
+        self.norm_layer = LayerNormalization()
+        super(Encoder, self).build(input_shape)
 
     def call(self, x, mask=None):
         """Informer encoder call function"""
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
-                x = attn_layer(x, mask)
+                x = attn_layer(x, mask=mask)
                 # x = conv_layer(x)
-            x = self.layers[-1](x, mask)
-
+            x = self.layers[-1](x, mask=mask)
         else:
             for attn_layer in self.layers:
-                x = attn_layer(x, mask)
+                x = attn_layer(x, mask=mask)
 
         if self.norm_layer is not None:
             x = self.norm_layer(x)
         return x
+
+    def get_config(self):
+        config = {
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
+            "prob_attention": self.prob_attention,
+            "distil_conv": self.distil_conv,
+        }
+        base_config = super(Encoder, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class EncoderLayer(tf.keras.layers.Layer):
@@ -222,19 +249,67 @@ class DistilConv(tf.keras.layers.Layer):
 
 
 class Decoder(tf.keras.layers.Layer):
-    def __init__(self, layers, norm_layer=None):
+    def __init__(
+        self,
+        hidden_size,
+        num_layers,
+        num_attention_heads,
+        attention_probs_dropout_prob,
+        ffn_intermediate_size,
+        hidden_dropout_prob,
+        prob_attention=False,
+    ):
         super().__init__()
-        self.layers = layers
-        self.norm = norm_layer
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.prob_attention = prob_attention
+
+    def build(self, input_shape):
+        if not self.prob_attention:
+            attn_layer1 = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+        else:
+            attn_layer1 = ProbAttention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+
+        attn_layer2 = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
+
+        self.layers = [
+            DecoderLayer(
+                attn_layer1=attn_layer1,
+                attn_layer2=attn_layer2,
+                hidden_size=self.hidden_size,
+                hidden_dropout_prob=self.hidden_dropout_prob,
+                ffn_intermediate_size=self.ffn_intermediate_size,
+            )
+            for _ in range(self.num_layers)
+        ]
+        self.norm = LayerNormalization()
+        super(Decoder, self).build(input_shape)
 
     def call(self, x, memory=None, x_mask=None, memory_mask=None):
         """Informer decoder call function"""
         for layer in self.layers:
-            x = layer(x, memory, x_mask, memory_mask)
+            x = layer(x=x, memory=memory, x_mask=x_mask, memory_mask=memory_mask)
 
         if self.norm is not None:
             x = self.norm(x)
         return x
+
+    def get_config(self):
+        config = {
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
+            "prob_attention": self.prob_attention,
+        }
+        base_config = super(Decoder, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class DecoderLayer(tf.keras.layers.Layer):

@@ -49,18 +49,19 @@ class InformerTest(unittest.TestCase):
         ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         num_hidden_layers = 4
-        attn_layer = ProbAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
-        layers = [
-            EncoderLayer(attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
-            for _ in range(num_hidden_layers)
-        ]
-        conv_layers = [DistilConv(hidden_size) for _ in range(num_hidden_layers - 1)]
-        norm_layer = LayerNormalization()
-
-        layer = Encoder(layers, conv_layers=conv_layers, norm_layer=norm_layer)
+        layer = Encoder(
+            hidden_size=hidden_size,
+            num_layers=num_hidden_layers,
+            num_attention_heads=num_attention_heads,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            ffn_intermediate_size=ffn_intermediate_size,
+            hidden_dropout_prob=hidden_dropout_prob,
+            prob_attention=True,
+            distil_conv=True,
+        )
         x = tf.random.normal([2, 100, hidden_size])  # after embedding
-        y = layer(x)
+        y = layer(x, mask=None)
         self.assertEqual(y.shape, (2, 100, hidden_size))
 
     def test_decoder_layer(self):
@@ -88,16 +89,16 @@ class InformerTest(unittest.TestCase):
         ffn_intermediate_size = 64
         hidden_dropout_prob = 0.1
         n_decoder_layers = 4
-        attn_layer1 = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
-        attn_layer2 = Attention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
 
-        layers = [
-            DecoderLayer(attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob)
-            for _ in range(n_decoder_layers)
-        ]
-        norm_layer = LayerNormalization()
-
-        decoder = Decoder(layers, norm_layer)
+        decoder = Decoder(
+            hidden_size=hidden_size,
+            num_layers=n_decoder_layers,
+            num_attention_heads=num_attention_heads,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            ffn_intermediate_size=ffn_intermediate_size,
+            hidden_dropout_prob=hidden_dropout_prob,
+            prob_attention=False,
+        )
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])
         y = decoder(x, memory=memory)
@@ -144,7 +145,5 @@ class InformerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("informer")
         model = AutoModel.from_config(config, predict_sequence_length)
-        trainer = KerasTrainer(
-            model,
-        )
+        trainer = KerasTrainer(model)
         trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)

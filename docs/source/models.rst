@@ -11,7 +11,7 @@ Some experiments of tfts in Kaggle Dataset
 Models supported
 ------------------
 
-You can you below models in ``AutoModel``
+You can use below models with ``AutoModel``
 
 * RNN
 * Seq2seq
@@ -23,3 +23,8 @@ You can you below models in ``AutoModel``
 * NBeats
 * AutoFormer
 * Informer
+
+.. code-block:: python
+
+    config = AutoConfig.for_model("seq2seq")
+    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)

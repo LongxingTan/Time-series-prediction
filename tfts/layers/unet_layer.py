@@ -1,14 +1,18 @@
 """Layer for :py:class:`~tfts.models.unet`"""
 
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Multiply
 
 
 class ConvbrLayer(tf.keras.layers.Layer):
-    def __init__(self, units: int, kernel_size: int, strides: int, dilation: int):
-        super(ConvbrLayer, self).__init__()
+    """
+    1D Convolution + BatchNorm + ReLU block.
+    """
+
+    def __init__(self, units: int, kernel_size: int, strides: int, dilation: int, **kwargs):
+        super().__init__(**kwargs)
         self.units = units
         self.kernel_size = kernel_size
         self.strides = strides
@@ -20,74 +24,76 @@ class ConvbrLayer(tf.keras.layers.Layer):
         )
         self.bn = BatchNormalization()
         self.relu = Activation("relu")
-        super(ConvbrLayer, self).build(input_shape)
+        super().build(input_shape)
 
-    def call(self, x):
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
+    def call(self, x: tf.Tensor) -> tf.Tensor:
+        """
+        Forward pass for ConvbrLayer.
+        Args:
+            x: Input tensor of shape (batch, seq_len, features)
+        Returns:
+            Output tensor after conv, batchnorm, relu.
         """
         x = self.conv1(x)
         x = self.bn(x)
         x = self.relu(x)
         return x
 
-    def get_config(self):
-        config = {"units": self.units, "kernel_size": self.kernel_size}
+    def get_config(self) -> Dict[str, Any]:
+        config = {
+            "units": self.units,
+            "kernel_size": self.kernel_size,
+            "strides": self.strides,
+            "dilation": self.dilation,
+        }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class SeBlock(tf.keras.layers.Layer):
-    """Squeeze-and-Excitation Networks"""
+    """
+    Squeeze-and-Excitation block for channel-wise attention.
+    """
 
-    def __init__(self, units):
-        super(SeBlock, self).__init__()
+    def __init__(self, units: int, **kwargs):
+        super().__init__(**kwargs)
         self.units = units
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         self.pool = GlobalAveragePooling1D()
         self.fc1 = Dense(self.units // 8, activation="relu")
         self.fc2 = Dense(self.units, activation="sigmoid")
-        super(SeBlock, self).build(input_shape)
+        super().build(input_shape)
 
-    def call(self, x):
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
+    def call(self, x: tf.Tensor) -> tf.Tensor:
         """
-        input = x
+        Forward pass for SeBlock.
+        Args:
+            x: Input tensor of shape (batch, seq_len, channels)
+        Returns:
+            Output tensor with channel-wise recalibration.
+        """
+        input_tensor = x
         x = self.pool(x)
         x = self.fc1(x)
         x = self.fc2(x)
-        x_out = Multiply()([input, x])
+        x = tf.expand_dims(x, axis=1)  # (batch, 1, channels)
+        x_out = Multiply()([input_tensor, x])
         return x_out
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = {"units": self.units}
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
 class ReBlock(tf.keras.layers.Layer):
-    def __init__(self, units, kernel_size, strides, dilation, use_se):
-        super(ReBlock, self).__init__()
+    """
+    Residual block with two Convbr layers and optional SE block.
+    """
+
+    def __init__(self, units: int, kernel_size: int, strides: int, dilation: int, use_se: bool, **kwargs):
+        super().__init__(**kwargs)
         self.units = units
         self.kernel_size = kernel_size
         self.strides = strides
@@ -95,24 +101,19 @@ class ReBlock(tf.keras.layers.Layer):
         self.use_se = use_se
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        super().build(input_shape)
         self.conv_br1 = ConvbrLayer(self.units, self.kernel_size, self.strides, self.dilation)
         self.conv_br2 = ConvbrLayer(self.units, self.kernel_size, self.strides, self.dilation)
         if self.use_se:
             self.se_block = SeBlock(units=self.units)
+        super().build(input_shape)
 
-    def call(self, x):
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
+    def call(self, x: tf.Tensor) -> tf.Tensor:
+        """
+        Forward pass for ReBlock.
+        Args:
+            x: Input tensor.
+        Returns:
+            Output tensor after two Convbr layers, optional SE, and residual add.
         """
         x_re = self.conv_br1(x)
         x_re = self.conv_br2(x_re)
@@ -121,26 +122,13 @@ class ReBlock(tf.keras.layers.Layer):
             x_re = Add()([x, x_re])
         return x_re
 
-    def get_config(self):
-        config = {"units": self.units}
+    def get_config(self) -> Dict[str, Any]:
+        config = {
+            "units": self.units,
+            "kernel_size": self.kernel_size,
+            "strides": self.strides,
+            "dilation": self.dilation,
+            "use_se": self.use_se,
+        }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-
-def conv_br(x, units, kernel_size, strides=1, dilation=1):
-    # a function is easier to reuse
-    convbr = ConvbrLayer(units=units, kernel_size=kernel_size, strides=strides, dilation=dilation)
-    out = convbr(x)
-    return out
-
-
-def se_block(x, units):
-    seblock = SeBlock(units)
-    out = seblock(x)
-    return out
-
-
-def re_block(x, units, kernel_size, strides=1, dilation=1, use_se=True):
-    reblock = ReBlock(units, kernel_size, strides, dilation, use_se=use_se)
-    out = reblock(x)
-    return out

@@ -60,9 +60,8 @@ class DataEmbedding(tf.keras.layers.Layer):
         self.embed_size = embed_size
         self.positional_type = positional_type
 
-    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
-        super(DataEmbedding, self).build(input_shape)
-        # Value embedding layer
+        # Value embedding layer: the below section is put in init, so it could build while DataEmbedding is call
+        # Otherwise, while load the weights, the TokenEmbedding is not built
         self.value_embedding = TokenEmbedding(self.embed_size)
 
         # Positional embedding layer based on specified type
@@ -154,6 +153,10 @@ class TokenEmbedding(tf.keras.layers.Layer):
         Args:
             input_shape (Tuple[Optional[int], ...]): The input shape to the layer.
         """
+        input_dim = input_shape[-1]
+        if input_dim is None:
+            raise ValueError("The last dimension of input_shape must be defined.")
+
         self.token_weights = self.add_weight(
             name="token_weights",
             shape=[input_shape[-1], self.embed_size],

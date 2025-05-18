@@ -6,9 +6,17 @@
 from typing import Optional
 
 import tensorflow as tf
+from tensorflow.keras.layers import Lambda, Layer
 
-from tfts.layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
-
+from ..layers.nbeats_layer import (
+    BackcastMinusLayer,
+    ForecastPlusLayer,
+    GenericBlock,
+    SeasonalityBlock,
+    TrendBlock,
+    ZerosLayer,
+)
+from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
 
 
@@ -50,6 +58,14 @@ class NBeats(BaseModel):
         self.hidden_size = self.config.hidden_size
         self.n_block_layers = self.config.n_block_layers
 
+        # Create custom layers
+        self.shape_layer = ShapeLayer()
+        self.squeeze_layer = Lambda(lambda t: tf.squeeze(t, 2))
+        self.zeros_layer = ZerosLayer(predict_sequence_length)
+        self.expand_dims_layer = Lambda(lambda x: tf.expand_dims(x, -1))
+        self.backcast_minus_layer = BackcastMinusLayer()
+        self.forecast_plus_layer = ForecastPlusLayer()
+
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
 
     def __call__(
@@ -61,22 +77,24 @@ class NBeats(BaseModel):
         else:  # for single variable prediction
             x = inputs
 
-        x = tf.squeeze(x, 2)  # 3 dim for all models
-        # Todo: if train_length and predict_sequence_length is both 12, train fail
-        self.train_sequence_length = x.get_shape().as_list()[1]
+        _, self.train_sequence_length, _ = self.shape_layer(x)
+        x = self.squeeze_layer(x)
 
         self.stacks = []
         for stack_id in range(len(self.stack_types)):
             self.stacks.append(self.create_stack(stack_id))
 
-        forecast = tf.zeros([tf.shape(x)[0], self.predict_sequence_length], dtype=tf.float32)
+        forecast = self.zeros_layer(x)
         backcast = x
+
         for stack_id in range(len(self.stacks)):
             for block_id in range(len(self.stacks[stack_id])):
                 b, f = self.stacks[stack_id][block_id](backcast)
-                backcast = backcast - b
-                forecast = forecast + f
-        forecast = tf.expand_dims(forecast, -1)
+                backcast = self.backcast_minus_layer([backcast, b])
+                forecast = self.forecast_plus_layer([forecast, f])
+
+        # Final expansion using Keras layer
+        forecast = self.expand_dims_layer(forecast)
         return forecast
 
     def create_stack(self, stack_id):

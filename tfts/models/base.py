@@ -40,19 +40,27 @@ class BaseModel(ABC):
             if isinstance(inputs, dict):
                 self.config.input_shape = {k: tuple(v.shape[1:]) for k, v in inputs.items()}
             elif isinstance(inputs, (list, tuple)):
+                # multiple input
                 self.config.input_shape = [tuple(v.shape[1:]) for v in inputs]
             else:
                 self.config.input_shape = tuple(inputs.shape[1:])
 
-        # only accept the inputs parameters after built
-        outputs = self.model(inputs)
-        # to handles the Keras symbolic tensors for tf2.3.1, use []
-        self.model = tf.keras.Model(inputs, outputs)
-        return self.model
+        if self.model is not None:
+            # only accept the inputs parameters after built
+            outputs = self.model(inputs)
+            # to handles the Keras symbolic tensors for tf2.3.1, use []
+            self.model = tf.keras.Model(inputs, outputs)
+            return self.model
+        else:
+            outputs = self(inputs)
+            return tf.keras.Model(inputs, outputs)
 
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
         return self.build_model(inputs)
+
+    def predict(self, x, **kwargs):
+        return self.model.predict(x, **kwargs)
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):

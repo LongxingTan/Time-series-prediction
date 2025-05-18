@@ -1,6 +1,6 @@
 """tfts package for time series prediction with TensorFlow"""
 
-from tfts.datasets.get_data import get_data
+from tfts.data.get_data import get_data
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import (
     AutoModel,

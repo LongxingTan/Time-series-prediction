@@ -9,23 +9,37 @@ TFTS Documentation
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-TFTS (TensorFlow Time Series) supports state-of-the-art deep learning time series models for both business cases and data competitions. The package provides:
+TFTS (TensorFlow Time Series) supports state-of-the-art deep learning time series models for production, research and data competitions. Specifically, the package provides:
 
-* Flexible and powerful design for time series task
-* Advanced SOTA deep learning models
-* TFTS documentation lives at `time-series-prediction.readthedocs.io <https://time-series-prediction.readthedocs.io>`_
+* Flexible and powerful modular design for time series task
+* Easy-to-use advanced SOTA deep learning models
+* Allow training on CPUs, single and multiple GPUs, TPU
 
 
 Quick Start
 -----------------
-The tfts could accept any time series data of 3D data format as model input: ``(num_examples, train_sequence_length, num_features)``,
-and the model supported by tfts outputs 3D data as model output: ``(num_examples, predict_sequence_length, num_outputs)``
 
+1. Requirements
+~~~~~~~~~~~~~~~~~~
+
+To get started with `tfts`, follow the steps below:
+
+* Python 3.7 or higher
+* `TensorFlow 2.x <https://www.tensorflow.org/install/pip>`_ installation instructions
+
+
+2. Installation
+~~~~~~~~~~~~~~~~~~
+Now you are ready, proceed with
+
+.. code-block:: shell
+
+    $ pip install tfts
+
+2. Learn more
+~~~~~~~~~~~~~~~~~~
 
 Visit :ref:`Quick start <quick-start>` to learn more about the package.
-
-- :ref:`detailed installation instructions<installation>`
-- :ref:`how to use it<usage>`
 
 
 Tutorials
@@ -38,17 +52,15 @@ The :ref:`Tutorials <tutorials>` section provides guidance on
 
 Models
 ---------
-The tfts library supports the SOTA deep learning models for time series.
 
-- `TFTS BERT model <https://github.com/LongxingTan/KDDCup2022-Baidu>`_ wins the 3rd place in `Baidu KDD Cup 2022 <https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction>`_
-- `TFTS Seq2Seq model <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_ wins the 4th place in `Alibaba Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_
-- :ref:`Learn more models <models>`
+1. Design a Custom Model with TFTS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 .. code-block:: python
 
    import tensorflow as tf
    from tfts import AutoConfig, AutoModel
-
 
    def build_model(use_model, input_shape):
       inputs = tf.keras.layers.Input(input_shape)
@@ -64,13 +76,22 @@ The tfts library supports the SOTA deep learning models for time series.
       model.compile(optimizer, loss_fn)
       return model
 
-
    model = build_model(use_model="bert", input_shape=(24, 3))
    model.summary()
 
 
+2. More highlights
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The tfts library supports the SOTA deep learning models for time series.
+
+- `TFTS BERT model <https://github.com/LongxingTan/KDDCup2022-Baidu>`_ — 3rd place in `Baidu KDD Cup 2022 <https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction>`_
+- `TFTS Seq2Seq model <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_ — 4th place in `Alibaba Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_
+- :ref:`Learn more models <models>`
+
+
 Tricks
--------
+----------
 Visit :ref:`Tricks <tricks>` if you want to know more tricks to improve the prediction performance.
 
 

@@ -37,8 +37,7 @@ class AutoFormerTest(unittest.TestCase):
 
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])
-        init_trend = tf.random.normal([2, 50, hidden_size])
-        y1, y2 = layer(x, memory, init_trend)
+        # init_trend = tf.random.normal([2, 50, hidden_size])
+        y1 = layer(x, memory)
 
         self.assertEqual(y1.shape, (2, 50, hidden_size))
-        self.assertEqual(y2.shape, (2, 50, hidden_size))

@@ -4,7 +4,7 @@
 
 import logging
 import random
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -12,19 +12,16 @@ import pandas as pd
 from tfts.constants import TFTS_ASSETS_CACHE
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
-
-air_passenger_url = (
+AIR_PASSENGER_URL = (
     "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
 )
 
 
 def get_data(
-    name: str = "sine",
-    train_length: int = 24,
-    predict_sequence_length: int = 8,
-    test_size: float = 0.1,
-) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], None]:
+    name: str = "sine", train_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.1, **kwargs
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], pd.DataFrame]:
     assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
     if name == "sine":
         return get_sine(train_length, predict_sequence_length, test_size=test_size)
@@ -32,6 +29,8 @@ def get_data(
     elif name == "airpassengers":
         return get_air_passengers(train_length, predict_sequence_length, test_size=test_size)
 
+    elif name == "ar":
+        return get_ar_data(**kwargs)
     else:
         raise ValueError(f"unsupported data of {name} yet, try 'sine', 'airpassengers'")
 
@@ -96,8 +95,7 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
         Tuple of training and validation data, each containing inputs and outputs.
 
     """
-    # air_passenger_url = "../examples/data/international-airline-passengers.csv"
-    df = pd.read_csv(air_passenger_url, parse_dates=None, date_parser=None, nrows=144)
+    df = pd.read_csv(AIR_PASSENGER_URL, parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values
     v = (v - np.max(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
 
@@ -146,4 +144,93 @@ def get_stock_data(ticker: str = "NVDA", start_date="2023-09-01", end_date="2024
         return data
 
     except Exception as e:
-        raise ValueError(f"Error retrieving stock data: {str(e)}")
+        logger.exception("Stock data retrieval failed.")
+        raise RuntimeError(f"Failed to fetch stock data: {e}")
+
+
+def get_ar_data(
+    n_series: int = 10,
+    timesteps: int = 400,
+    seasonality: float = 3.0,
+    trend: float = 3.0,
+    noise: float = 0.1,
+    level: float = 1.0,
+    exp: bool = False,
+    seed: Optional[int] = 213,
+    add_covariates: bool = False,
+    return_components: bool = False,
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Dict[str, np.ndarray]]]:
+    """from: pytorch-forecasting"""
+    if n_series <= 0 or timesteps <= 0:
+        raise ValueError("n_series and timesteps must be positive integers")
+
+    if noise < 0:
+        raise ValueError("noise parameter must be non-negative")
+
+    # Set random seed for reproducibility if provided
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Sample parameters for each series
+    linear_trends = np.random.normal(size=n_series)[:, None] / timesteps
+    quadratic_trends = np.random.normal(size=n_series)[:, None] / timesteps**2
+    seasonalities = np.random.normal(size=n_series)[:, None]
+    levels = level * np.random.normal(size=n_series)[:, None]
+
+    # Generate time index
+    x = np.arange(timesteps)[None, :]
+
+    # Calculate trend component (linear + quadratic)
+    trend_component = (x * linear_trends + x**2 * quadratic_trends) * trend
+
+    # Calculate seasonal component
+    seasonal_component = seasonalities * np.sin(2 * np.pi * seasonality * x / timesteps)
+
+    # Combine components
+    series = trend_component + seasonal_component
+
+    # Apply level scaling
+    series = levels + series
+
+    # Add noise
+    series = series * (1 + noise * np.random.normal(size=series.shape))
+
+    # Apply exponential transform if requested
+    if exp:
+        series = np.exp(series)
+
+    # Create DataFrame
+    data = (
+        pd.DataFrame(series)
+        .stack()
+        .reset_index()
+        .rename(columns={"level_0": "series", "level_1": "time_idx", 0: "value"})
+    )
+
+    # Add covariates if requested
+    if add_covariates:
+        # Add day of week (assuming each timestep is a day)
+        data["day_of_week"] = data["time_idx"] % 7
+
+        # Add month of year (assuming each timestep is a day)
+        data["month"] = data["time_idx"] % 365 // 30 + 1
+
+        # Add a categorical variable
+        data["category"] = np.random.choice(["A", "B", "C"], size=len(data))
+
+        # Add a binary variable that changes with time
+        data["special_event"] = (np.sin(2 * np.pi * data["time_idx"] / 20) > 0.8).astype(int)
+
+    # Prepare components dictionary if return_components is True
+    components = {
+        "linear_trends": linear_trends,
+        "quadratic_trends": quadratic_trends,
+        "seasonalities": seasonalities,
+        "levels": levels,
+        "series": series,
+    }
+
+    if return_components:
+        return data, components
+    else:
+        return data
