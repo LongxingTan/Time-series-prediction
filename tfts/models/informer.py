@@ -51,19 +51,6 @@ class InformerConfig(BaseConfig):
         self.distil_conv = distil_conv
 
 
-class ShapeLayer(tf.keras.layers.Layer):
-    """Layer to handle shape operations in a Keras-compatible way."""
-
-    def __init__(self, num_attention_heads):
-        super().__init__()
-        self.num_attention_heads = num_attention_heads
-
-    def call(self, x):
-        batch_size = tf.shape(x)[0]
-        seq_length = tf.shape(x)[1]
-        return batch_size, seq_length
-
-
 class Informer(BaseModel):
     """Informer model for time series"""
 
@@ -77,7 +64,6 @@ class Informer(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.encoder_embedding = DataEmbedding(self.config.hidden_size)
         self.decoder_embedding = DataEmbedding(self.config.hidden_size)
-        self.shape_layer = ShapeLayer(self.config.num_attention_heads)
         self.causal_mask = CausalMask(self.config.num_attention_heads)
 
         self.encoder = Encoder(

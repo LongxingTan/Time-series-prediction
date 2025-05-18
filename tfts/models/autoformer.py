@@ -13,6 +13,9 @@ from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
+from ..layers.util_layer import ShapeLayer
+from .base import BaseConfig, BaseModel
+
 
 class AutoFormerConfig(object):
     """
@@ -59,40 +62,40 @@ class AutoFormerConfig(object):
         self.classifier_dropout = classifier_dropout
 
 
-class AutoFormer(object):
+class AutoFormer(BaseModel):
     """AutoFormer model"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[AutoFormerConfig] = None) -> None:
+        super().__init__()
         self.config = config or AutoFormerConfig()
         self.predict_sequence_length = predict_sequence_length
-
-        # self.encoder_embedding = TokenEmbedding(config['hidden_size'])
+        self.shape_layer = ShapeLayer()
         self.series_decomp = SeriesDecomp(self.config.kernel_size)
-        self.encoder = [
-            EncoderLayer(
-                self.config.kernel_size,
-                self.config.hidden_size,
-                self.config.num_attention_heads,
-                self.config.attention_probs_dropout_prob,
-            )
-            for _ in range(self.config.num_layers)
-        ]
+        self.encoder = Encoder(
+            kernel_size=self.config.kernel_size,
+            hidden_size=self.config.hidden_size,
+            num_layers=self.config.num_layers,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
+            ffn_intermediate_size=self.config.ffn_intermediate_size,
+            hidden_dropout_prob=self.config.hidden_dropout_prob,
+        )
 
-        self.decoder = [
-            DecoderLayer(
-                self.config.kernel_size,
-                self.config.hidden_size,
-                self.config.num_attention_heads,
-                self.config.attention_probs_dropout_prob,
-            )
-            for _ in range(self.config.num_decoder_layers)
-        ]
+        self.decoder = Decoder(
+            kernel_size=self.config.kernel_size,
+            hidden_size=self.config.hidden_size,
+            num_layers=self.config.num_decoder_layers,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
+            ffn_intermediate_size=self.config.ffn_intermediate_size,
+            hidden_dropout_prob=self.config.hidden_dropout_prob,
+        )
 
         self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.project1 = Dense(predict_sequence_length, activation=None)
-        self.drop1 = Dropout(0.0)
+        self.project1 = Dense(self.predict_sequence_length, activation=None)
+        self.drop1 = Dropout(self.config.hidden_dropout_prob)
         self.dense1 = Dense(512, activation="relu")
-        self.drop2 = Dropout(0.0)
+        self.drop2 = Dropout(self.config.hidden_dropout_prob)
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(
@@ -111,7 +114,6 @@ class AutoFormer(object):
                 - A list/tuple of (x, encoder_feature, decoder_feature)
                 - A dictionary with keys 'x' and 'encoder_feature'
             teacher: Optional teacher forcing input.
-            training: Whether the model is in training mode.
             output_hidden_states: Whether to return all hidden states.
             return_dict: Whether to return a dictionary or tensor as output.
 
@@ -119,75 +121,91 @@ class AutoFormer(object):
             If return_dict is True, returns a dictionary with model outputs.
             Otherwise, returns the output tensor.
         """
-        if isinstance(inputs, (list, tuple)):
-            x, encoder_feature, decoder_feature = inputs
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        elif isinstance(inputs, dict):
-            x = inputs["x"]
-            encoder_feature = inputs["encoder_feature"]
-            encoder_feature = tf.concat([x, encoder_feature], axis=-1)
-        else:
-            encoder_feature = x = inputs
+        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
+        batch_size, _, n_feature = self.shape_layer(encoder_feature)
 
-        batch_size, _, n_feature = tf.shape(encoder_feature)
-        # # de-comp
-        # seasonal_init, trend_init = self.series_decomp(encoder_feature)
-        # # decoder input
-        # seasonal_init = tf.concat(
-        #     [seasonal_init, tf.zeros([batch_size, self.predict_sequence_length, n_feature])], axis=1
-        # )
-        # trend_init = tf.concat(
-        #     [
-        #         trend_init,
-        #         tf.repeat(
-        #             tf.reduce_mean(encoder_feature, axis=1)[:, tf.newaxis, :],
-        #             repeats=self.predict_sequence_length,
-        #             axis=1,
-        #         ),
-        #     ],
-        #     axis=1,
-        # )
-
-        # encoder
-        for layer in self.encoder:
-            x = layer(x)
-
-        encoder_output = x[:, -1]
+        # Encoder
+        encoder_output = self.encoder(x)
         encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense1(encoder_output)
-        # encoder_output = self.bn2(encoder_output)
         encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
         encoder_output = self.drop2(encoder_output)
 
-        outputs = self.project1(encoder_output)
+        # Decoder
+        decoder_output = self.decoder(decoder_feature, encoder_output)
+        outputs = self.project1(decoder_output)
         outputs = tf.expand_dims(outputs, -1)
         return outputs
 
-        # encoder_output = x
-        # trend_part= trend_init[..., 0:1]
 
-        # for layer in self.decoder:
-        #     seasonal_part, trend_part = layer(seasonal_init, encoder_output, trend_part)
+class Encoder(tf.keras.layers.Layer):
+    """Encoder for Autoformer architecture."""
 
-        # trend_part = trend_part[:, -self.predict_sequence_length:, :]
-        # seasonal_part = seasonal_part[:, -self.predict_sequence_length:, :]
-        # seasonal_part = self.project(seasonal_part)
-        # return trend_part + seasonal_part
+    def __init__(
+        self,
+        kernel_size: int,
+        hidden_size: int,
+        num_layers: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float,
+        ffn_intermediate_size: int,
+        hidden_dropout_prob: float,
+    ) -> None:
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+
+    def build(self, input_shape):
+        self.layers = [
+            EncoderLayer(
+                kernel_size=self.kernel_size,
+                d_model=self.hidden_size,
+                num_attention_heads=self.num_attention_heads,
+                dropout_rate=self.hidden_dropout_prob,
+            )
+            for _ in range(self.num_layers)
+        ]
+        self.norm = LayerNormalization()
+        super().build(input_shape)
+
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
+        """Process input through the encoder.
+
+        Args:
+            x: Input tensor of shape [batch_size, time_steps, features]
+            mask: Optional attention mask
+
+        Returns:
+            Processed tensor after applying encoder operations
+        """
+        for layer in self.layers:
+            x = layer(x)
+        if self.norm is not None:
+            x = self.norm(x)
+        return x
+
+    def get_config(self):
+        config = {
+            "kernel_size": self.kernel_size,
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
+        }
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    """Encoder Layer for Autoformer architecture.
-
-    This layer implements the encoder block of the Autoformer architecture,
-    which combines auto-correlation attention with series decomposition.
-
-    Attributes:
-        kernel_size: Size of the kernel for series decomposition.
-        d_model: The dimension of the model/embedding.
-        num_attention_heads: Number of attention heads.
-        dropout_rate: Dropout rate for regularization.
-    """
+    """Encoder Layer for Autoformer architecture."""
 
     def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
         super().__init__()
@@ -202,36 +220,113 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.autocorrelation = AutoCorrelation(self.d_model, self.num_attention_heads)
         self.drop = Dropout(self.dropout_rate)
         self.dense = Dense(input_shape[-1])
+        self.norm1 = LayerNormalization()
+        self.norm2 = LayerNormalization()
+        super().build(input_shape)
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """Process input through the encoder layer.
 
         Args:
             x: Input tensor of shape [batch_size, time_steps, features]
-            training: Whether the layer is being called during training
 
         Returns:
             Processed tensor after applying encoder operations
         """
-        x, _ = self.series_decomp1(self.autocorrelation(x, x, x) + x)
-        x, _ = self.series_decomp2(self.drop(self.dense(x)) + x)
+        # First sub-layer
+        residual = x
+        x = self.autocorrelation(x, x, x)
+        x = self.drop(x)
+        x = x + residual
+        x = self.norm1(x)
+
+        # Second sub-layer
+        residual = x
+        x = self.dense(x)
+        x = self.drop(x)
+        x = x + residual
+        x = self.norm2(x)
+
         return x
 
 
+class Decoder(tf.keras.layers.Layer):
+    """Decoder for Autoformer architecture."""
+
+    def __init__(
+        self,
+        kernel_size: int,
+        hidden_size: int,
+        num_layers: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float,
+        ffn_intermediate_size: int,
+        hidden_dropout_prob: float,
+    ) -> None:
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.num_attention_heads = num_attention_heads
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.ffn_intermediate_size = ffn_intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+
+    def build(self, input_shape):
+        self.layers = [
+            DecoderLayer(
+                kernel_size=self.kernel_size,
+                d_model=self.hidden_size,
+                num_attention_heads=self.num_attention_heads,
+                drop_rate=self.hidden_dropout_prob,
+            )
+            for _ in range(self.num_layers)
+        ]
+        self.norm = LayerNormalization()
+        super().build(input_shape)
+
+    def call(
+        self,
+        x: tf.Tensor,
+        memory: tf.Tensor,
+        x_mask: Optional[tf.Tensor] = None,
+        memory_mask: Optional[tf.Tensor] = None,
+    ) -> tf.Tensor:
+        """Process input through the decoder.
+
+        Args:
+            x: Input tensor of shape [batch_size, time_steps, features]
+            memory: Memory tensor from encoder
+            x_mask: Optional attention mask for decoder input
+            memory_mask: Optional attention mask for encoder memory
+
+        Returns:
+            Processed tensor after applying decoder operations
+        """
+        for layer in self.layers:
+            x = layer(x, memory)
+        if self.norm is not None:
+            x = self.norm(x)
+        return x
+
+    def get_config(self):
+        config = {
+            "kernel_size": self.kernel_size,
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "num_attention_heads": self.num_attention_heads,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            "ffn_intermediate_size": self.ffn_intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
+        }
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
 class DecoderLayer(tf.keras.layers.Layer):
-    """Decoder Layer for Autoformer architecture.
+    """Decoder Layer for Autoformer architecture."""
 
-    This layer implements the decoder block of the Autoformer architecture,
-    which combines auto-correlation attention with series decomposition.
-
-    Attributes:
-        kernel_size: Size of the kernel for series decomposition.
-        d_model: The dimension of the model/embedding.
-        num_attention_heads: Number of attention heads.
-        drop_rate: Dropout rate for regularization.
-    """
-
-    def __init__(self, kernel_size, d_model, num_attention_heads, drop_rate=0.1) -> None:
+    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, drop_rate: float = 0.1) -> None:
         super().__init__()
         self.kernel_size = kernel_size
         self.d_model = d_model
@@ -239,10 +334,9 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.drop_rate = drop_rate
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
-        """Build the layer with input shape information."""
-        self.series_decomp1 = SeriesDecomp(self.kernel_size, name="series_decomp1")
-        self.series_decomp2 = SeriesDecomp(self.kernel_size, name="series_decomp2")
-        self.series_decomp3 = SeriesDecomp(self.kernel_size, name="series_decomp3")
+        self.series_decomp1 = SeriesDecomp(self.kernel_size)
+        self.series_decomp2 = SeriesDecomp(self.kernel_size)
+        self.series_decomp3 = SeriesDecomp(self.kernel_size)
         self.autocorrelation1 = AutoCorrelation(self.d_model, self.num_attention_heads)
         self.autocorrelation2 = AutoCorrelation(self.d_model, self.num_attention_heads)
         self.conv1 = Conv1D(self.d_model, kernel_size=3, strides=1, padding="same")
@@ -251,25 +345,42 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.dense1 = Dense(input_shape[-1])
         self.conv2 = Conv1D(input_shape[-1], kernel_size=3, strides=1, padding="same")
         self.activation = ReLU()
+        self.norm1 = LayerNormalization()
+        self.norm2 = LayerNormalization()
+        self.norm3 = LayerNormalization()
+        super().build(input_shape)
 
-    def call(self, x, cross, init_trend):
-        """Process inputs through the decoder layer.
+    def call(self, x: tf.Tensor, memory: tf.Tensor) -> tf.Tensor:
+        """Process input through the decoder layer.
 
         Args:
             x: Input tensor of shape [batch_size, time_steps, features]
-            cross: Cross attention tensor of shape [batch_size, time_steps, features]
-            init_trend: Initial trend component of shape [batch_size, time_steps, 1]
-            training: Whether the layer is being called during training
+            memory: Memory tensor from encoder
 
         Returns:
-            Tuple of (seasonal component, updated trend component)
+            Processed tensor after applying decoder operations
         """
-        x, trend1 = self.series_decomp1(self.drop(self.autocorrelation1(x, x, x)) + x)
-        x, trend2 = self.series_decomp2(self.drop(self.autocorrelation2(x, cross, cross)) + x)
-        x = self.conv2(self.drop(self.activation(self.conv1(x))))
-        x, trend3 = self.series_decomp3(self.drop(self.dense1(x)) + x)
+        # Self-attention sub-layer
+        residual = x
+        x = self.autocorrelation1(x, x, x)
+        x = self.drop(x)
+        x = x + residual
+        x = self.norm1(x)
 
-        trend = trend1 + trend2 + trend3
-        trend = self.drop(self.project(trend))
-        final_trend = init_trend + trend
-        return x, final_trend
+        # Cross-attention sub-layer
+        residual = x
+        x = self.autocorrelation2(x, memory, memory)
+        x = self.drop(x)
+        x = x + residual
+        x = self.norm2(x)
+
+        # Feed-forward sub-layer
+        residual = x
+        x = self.conv1(x)
+        x = self.activation(x)
+        x = self.drop(x)
+        x = self.conv2(x)
+        x = x + residual
+        x = self.norm3(x)
+
+        return x
