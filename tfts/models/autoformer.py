@@ -91,8 +91,7 @@ class AutoFormer(BaseModel):
             hidden_dropout_prob=self.config.hidden_dropout_prob,
         )
 
-        self.project = Conv1D(1, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.project1 = Dense(self.predict_sequence_length, activation=None)
+        self.project1 = Dense(1, activation=None)
         self.drop1 = Dropout(self.config.hidden_dropout_prob)
         self.dense1 = Dense(512, activation="relu")
         self.drop2 = Dropout(self.config.hidden_dropout_prob)
@@ -126,17 +125,12 @@ class AutoFormer(BaseModel):
 
         # Encoder
         encoder_output = self.encoder(x)
-        encoder_output = self.drop1(encoder_output)
         encoder_output = self.dense1(encoder_output)
-        encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
 
         # Decoder
         decoder_output = self.decoder(decoder_feature, encoder_output)
         outputs = self.project1(decoder_output)
-        expand_dims_layer = Lambda(lambda x: tf.expand_dims(x, axis=-1))
-        outputs = expand_dims_layer(outputs)
         return outputs
 
 
@@ -383,5 +377,4 @@ class DecoderLayer(tf.keras.layers.Layer):
         x = self.conv2(x)
         x = x + residual
         x = self.norm3(x)
-
         return x

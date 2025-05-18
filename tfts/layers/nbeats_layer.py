@@ -68,39 +68,6 @@ class GenericBlock(tf.keras.layers.Layer):
         return x[:, : self.train_sequence_length], x[:, -self.predict_sequence_length :]
 
 
-class TimeBasesLayer(Layer):
-    """Layer to create polynomial or Fourier bases for time series."""
-
-    def __init__(self, sequence_length, polynomial_size, **kwargs):
-        super().__init__(**kwargs)
-        self.sequence_length = sequence_length
-        self.polynomial_size = polynomial_size
-
-        # Pre-compute time bases during initialization
-        bases = []
-        for i in range(self.polynomial_size):
-            # Create normalized time indices (0 to 1)
-            time_range = np.arange(self.sequence_length, dtype=np.float32) / self.sequence_length
-            # Compute power for this basis
-            power_basis = np.power(time_range, float(i))
-            bases.append(power_basis)
-
-        # Shape: (polynomial_size, sequence_length)
-        self.bases = tf.convert_to_tensor(np.stack(bases), dtype=tf.float32)
-
-    def build(self, input_shape):
-        super().build(input_shape)
-
-    def call(self, inputs):
-        # inputs are used to get batch size
-        batch_size = tf.shape(inputs)[0]
-        # We're returning shape (batch_size, polynomial_size, sequence_length)
-        return tf.tile(tf.expand_dims(self.bases, 0), [batch_size, 1, 1])
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.polynomial_size, self.sequence_length)
-
-
 class TrendBlock(tf.keras.layers.Layer):
     """Trend block that learns trend patterns using polynomial basis functions.
 
@@ -137,9 +104,22 @@ class TrendBlock(tf.keras.layers.Layer):
         self.n_block_layers = n_block_layers
         self.polynomial_size = polynomial_term + 1
 
-        # Create layers for the time bases
-        self.backcast_bases_layer = TimeBasesLayer(train_sequence_length, self.polynomial_size)
-        self.forecast_bases_layer = TimeBasesLayer(predict_sequence_length, self.polynomial_size)
+        self.forecast_time = tf.concat(
+            [
+                tf.math.pow(tf.range(predict_sequence_length, dtype=tf.float32) / predict_sequence_length, i)[None, :]
+                for i in range(self.polynomial_size)
+            ],
+            axis=0,
+        )
+        self.backcast_time = tf.concat(
+            [
+                tf.math.pow(
+                    tf.range(train_sequence_length, dtype=tf.float32) / tf.cast(train_sequence_length, tf.float32), i
+                )[None, :]
+                for i in range(self.polynomial_size)
+            ],
+            axis=0,
+        )
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         """Build the layer's weights.
@@ -149,8 +129,10 @@ class TrendBlock(tf.keras.layers.Layer):
         input_shape : Tuple[Optional[int], ...]
             Shape of the input tensor
         """
+
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(2 * self.polynomial_size, use_bias=False, activation=None)
+
         super().build(input_shape)
 
     def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
@@ -172,140 +154,61 @@ class TrendBlock(tf.keras.layers.Layer):
         for layer in self.layers:
             x = layer(x)
         x = self.theta(x)
-
-        # Get time bases for backcast and forecast
-        backcast_time = self.backcast_bases_layer(x)  # Shape: (batch_size, polynomial_size, train_sequence_length)
-        forecast_time = self.forecast_bases_layer(x)  # Shape: (batch_size, polynomial_size, predict_sequence_length)
-
-        # Split theta parameters for backcast and forecast
-        backcast_params = x[:, : self.polynomial_size]  # Shape: (batch_size, polynomial_size)
-        forecast_params = x[:, self.polynomial_size :]  # Shape: (batch_size, polynomial_size)
-
-        # Reshape params for batch matmul
-        backcast_params = tf.expand_dims(backcast_params, axis=-1)  # (batch_size, polynomial_size, 1)
-        forecast_params = tf.expand_dims(forecast_params, axis=-1)  # (batch_size, polynomial_size, 1)
-
-        # Compute backcast and forecast
-        backcast = tf.matmul(backcast_time, backcast_params)  # (batch_size, train_sequence_length, 1)
-        forecast = tf.matmul(forecast_time, forecast_params)  # (batch_size, predict_sequence_length, 1)
-
-        # Reshape to remove last dimension
-        backcast = tf.squeeze(backcast, axis=-1)  # (batch_size, train_sequence_length)
-        forecast = tf.squeeze(forecast, axis=-1)  # (batch_size, predict_sequence_length)
-
+        backcast = tf.einsum("bp,pt->bt", x[:, self.polynomial_size :], self.backcast_time)
+        forecast = tf.einsum("bp,pt->bt", x[:, : self.polynomial_size], self.forecast_time)
         return backcast, forecast
 
     def compute_output_shape(self, input_shape):
         return [(input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length)]
 
 
-class FourierBasesLayer(Layer):
-    """Layer to create Fourier bases for time series."""
-
-    def __init__(self, sequence_length, num_harmonics, is_backcast=True, **kwargs):
-        super().__init__(**kwargs)
-        self.sequence_length = sequence_length
-        self.num_harmonics = num_harmonics
-        self.is_backcast = is_backcast
-
-        # Create normalized time grid
-        t = np.arange(self.sequence_length, dtype=np.float32) / self.sequence_length
-
-        # Generate frequencies
-        if self.is_backcast:
-            factor = -2.0 * np.pi  # Negative for backcast
-        else:
-            factor = 2.0 * np.pi  # Positive for forecast
-
-        # First frequency is zero (DC component)
-        frequencies = [np.zeros_like(t)]
-
-        # Add harmonic frequencies
-        for h in range(1, self.num_harmonics + 1):
-            frequencies.append(h * np.ones_like(t))
-
-        # Stack frequencies
-        frequencies = np.stack(frequencies)  # (num_harmonics+1, sequence_length)
-
-        # Compute time grid * frequencies
-        grid = factor * np.expand_dims(t, 0) * frequencies  # (num_harmonics+1, sequence_length)
-
-        # Compute sin and cos templates
-        self.cos_template = tf.convert_to_tensor(np.cos(grid), dtype=tf.float32)
-        self.sin_template = tf.convert_to_tensor(np.sin(grid), dtype=tf.float32)
-
-    def build(self, input_shape):
-        super().build(input_shape)
-
-    def call(self, inputs):
-        # inputs are used to get batch size
-        batch_size = tf.shape(inputs)[0]
-        cos_bases = tf.tile(tf.expand_dims(self.cos_template, 0), [batch_size, 1, 1])
-        sin_bases = tf.tile(tf.expand_dims(self.sin_template, 0), [batch_size, 1, 1])
-        return cos_bases, sin_bases
-
-    def compute_output_shape(self, input_shape):
-        return [
-            (input_shape[0], self.num_harmonics + 1, self.sequence_length),
-            (input_shape[0], self.num_harmonics + 1, self.sequence_length),
-        ]
-
-
 class SeasonalityBlock(tf.keras.layers.Layer):
-    """Seasonality block that learns seasonal patterns using Fourier basis functions.
+    """Seasonality block"""
 
-    This block uses Fourier basis functions to model seasonal patterns in the time series data.
-    It outputs both backcast (reconstruction of input) and forecast (prediction) components.
-
-    Parameters
-    ----------
-    train_sequence_length : int
-        Length of the input sequence
-    predict_sequence_length : int
-        Length of the prediction sequence
-    hidden_size : int
-        Number of units in the hidden layers
-    n_block_layers : int, optional
-        Number of fully connected layers in the block, by default 4
-    num_harmonics : int, optional
-        Number of harmonics to use in the Fourier basis, by default 1
-    """
-
-    def __init__(
-        self,
-        train_sequence_length: int,
-        predict_sequence_length: int,
-        hidden_size: int,
-        n_block_layers: int = 4,
-        num_harmonics: int = 1,
-    ):
+    def __init__(self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1):
         super().__init__()
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
         self.n_block_layers = n_block_layers
         self.num_harmonics = num_harmonics
+        self.theta_size = 4 * int(np.ceil(num_harmonics / 2 * predict_sequence_length) - (num_harmonics - 1))
 
-        # Each harmonic has a sin and cos component for both backcast and forecast
-        self.theta_size = 4 * (self.num_harmonics + 1)  # +1 for the DC component
-
-        # Create fourier bases layers
-        self.backcast_bases = FourierBasesLayer(train_sequence_length, num_harmonics, is_backcast=True)
-        self.forecast_bases = FourierBasesLayer(predict_sequence_length, num_harmonics, is_backcast=False)
+        self.frequency = tf.concat(
+            [
+                tf.zeros(1, dtype=tf.float32),
+                tf.range(num_harmonics, num_harmonics / 2 * predict_sequence_length, dtype=tf.float32),
+            ],
+            axis=0,
+        )
+        self.backcast_grid = (
+            -2
+            * np.pi
+            * (
+                tf.range(self.train_sequence_length, dtype=tf.float32)[:, None]
+                / tf.cast(train_sequence_length, tf.float32)
+            )
+            * self.frequency
+        )
+        self.forecast_grid = (
+            2
+            * np.pi
+            * (
+                tf.range(predict_sequence_length, dtype=tf.float32)[:, None]
+                / tf.cast(predict_sequence_length, tf.float32)
+            )
+            * self.frequency
+        )
+        self.backcast_cos_template = tf.transpose(tf.cos(self.backcast_grid))
+        self.backcast_sin_template = tf.transpose(tf.sin(self.backcast_grid))
+        self.forecast_cos_template = tf.transpose(tf.cos(self.forecast_grid))
+        self.forecast_sin_template = tf.transpose(tf.sin(self.forecast_grid))
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        """Build the layer's weights.
-
-        Parameters
-        ----------
-        input_shape : Tuple[Optional[int], ...]
-            Shape of the input tensor
-        """
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(self.theta_size, use_bias=False, activation=None)
-        super().build(input_shape)
 
-    def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+    def call(self, inputs):
         """Compute the output of the Seasonality Block.
 
         Parameters
@@ -325,37 +228,21 @@ class SeasonalityBlock(tf.keras.layers.Layer):
             x = layer(x)
         x = self.theta(x)
 
-        # Split theta parameters into 4 groups
-        params_per_group = self.theta_size // 4
-        forecast_cos_params = x[:, :params_per_group]  # (batch_size, params_per_group)
-        forecast_sin_params = x[:, params_per_group : 2 * params_per_group]  # (batch_size, params_per_group)
-        backcast_cos_params = x[:, 2 * params_per_group : 3 * params_per_group]  # (batch_size, params_per_group)
-        backcast_sin_params = x[:, 3 * params_per_group :]  # (batch_size, params_per_group)
+        config_per_harmonic = self.theta_size // 4
 
-        # Get Fourier bases
-        backcast_cos_bases, backcast_sin_bases = self.backcast_bases(x)
-        forecast_cos_bases, forecast_sin_bases = self.forecast_bases(x)
+        backcast_harmonics_cos = tf.einsum(
+            "bp,pt->bt", inputs[:, 2 * config_per_harmonic : 3 * config_per_harmonic], self.backcast_cos_template
+        )
+        backcast_harmonics_sin = tf.einsum("bp,pt->bt", x[:, 3 * config_per_harmonic :], self.backcast_sin_template)
+        backcast = backcast_harmonics_sin + backcast_harmonics_cos
 
-        # Reshape params for batch matmul
-        backcast_cos_params = tf.expand_dims(backcast_cos_params, axis=-1)  # (batch_size, params_per_group, 1)
-        backcast_sin_params = tf.expand_dims(backcast_sin_params, axis=-1)  # (batch_size, params_per_group, 1)
-        forecast_cos_params = tf.expand_dims(forecast_cos_params, axis=-1)  # (batch_size, params_per_group, 1)
-        forecast_sin_params = tf.expand_dims(forecast_sin_params, axis=-1)  # (batch_size, params_per_group, 1)
-
-        # Compute backcast and forecast components
-        backcast_cos = tf.matmul(backcast_cos_bases, backcast_cos_params)  # (batch_size, train_sequence_length, 1)
-        backcast_sin = tf.matmul(backcast_sin_bases, backcast_sin_params)  # (batch_size, train_sequence_length, 1)
-        forecast_cos = tf.matmul(forecast_cos_bases, forecast_cos_params)  # (batch_size, predict_sequence_length, 1)
-        forecast_sin = tf.matmul(forecast_sin_bases, forecast_sin_params)  # (batch_size, predict_sequence_length, 1)
-
-        # Combine components and reshape
-        backcast = tf.squeeze(backcast_cos + backcast_sin, axis=-1)  # (batch_size, train_sequence_length)
-        forecast = tf.squeeze(forecast_cos + forecast_sin, axis=-1)  # (batch_size, predict_sequence_length)
+        forecast_harmonics_cos = tf.einsum("bp,pt->bt", x[:, :config_per_harmonic], self.forecast_cos_template)
+        forecast_harmonics_sin = tf.einsum(
+            "bp,pt->bt", x[:, config_per_harmonic : 2 * config_per_harmonic], self.forecast_sin_template
+        )
+        forecast = forecast_harmonics_sin + forecast_harmonics_cos
 
         return backcast, forecast
-
-    def compute_output_shape(self, input_shape):
-        return [(input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length)]
 
 
 class BackcastMinusLayer(tf.keras.layers.Layer):

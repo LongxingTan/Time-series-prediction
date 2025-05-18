@@ -213,7 +213,7 @@ class TimeSeriesSequence(Sequence):
                 # Ensure 2D arrays with shape (length, 1) for single feature
                 encoder_sequence = target_values[encoder_indices].reshape(-1, 1)
                 decoder_sequence = target_values[decoder_indices].reshape(-1, 1)
-                sequences.append((encoder_sequence, decoder_sequence, i))
+                sequences.append((encoder_sequence, decoder_sequence))
 
         return sequences
 
