@@ -342,3 +342,38 @@ class SeasonalityBlock(tf.keras.layers.Layer):
         forecast = tf.squeeze(forecast_cos + forecast_sin, axis=-1)  # (batch_size, predict_sequence_length)
 
         return backcast, forecast
+
+
+class BackcastMinusLayer(tf.keras.layers.Layer):
+    """Layer for computing backcast minus operation"""
+
+    def call(self, inputs):
+        backcast, b = inputs
+        return backcast - b
+
+
+class ForecastPlusLayer(tf.keras.layers.Layer):
+    """Layer for computing forecast plus operation"""
+
+    def call(self, inputs):
+        forecast, f = inputs
+        return forecast + f
+
+
+class ShapeLayer(tf.keras.layers.Layer):
+    """Layer for getting tensor shape"""
+
+    def call(self, x):
+        return tf.shape(x)[1]
+
+
+class ZerosLayer(tf.keras.layers.Layer):
+    """Layer for creating zeros tensor with proper shape"""
+
+    def __init__(self, predict_length, **kwargs):
+        super(ZerosLayer, self).__init__(**kwargs)
+        self.predict_length = predict_length
+
+    def call(self, x):
+        batch_size = tf.shape(x)[0]
+        return tf.zeros([batch_size, self.predict_length], dtype=tf.float32)

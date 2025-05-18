@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, Lambda, LayerNormalization, ReLU
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
@@ -17,7 +17,7 @@ from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
 
 
-class AutoFormerConfig(object):
+class AutoFormerConfig(BaseConfig):
     """
     Configuration class to store the configuration of a [`AutoFormer`]
     """
@@ -135,7 +135,8 @@ class AutoFormer(BaseModel):
         # Decoder
         decoder_output = self.decoder(decoder_feature, encoder_output)
         outputs = self.project1(decoder_output)
-        outputs = tf.expand_dims(outputs, -1)
+        expand_dims_layer = Lambda(lambda x: tf.expand_dims(x, axis=-1))
+        outputs = expand_dims_layer(outputs)
         return outputs
 
 
