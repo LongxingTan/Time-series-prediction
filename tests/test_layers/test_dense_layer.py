@@ -29,4 +29,4 @@ class DenseLayerTest(unittest.TestCase):
 
         config = layer.get_config()
         self.assertEqual(config["hidden_size"], hidden_size)
-        self.assertEqual(config["filter_size"], filter_size)
+        self.assertEqual(config["intermediate_size"], filter_size)

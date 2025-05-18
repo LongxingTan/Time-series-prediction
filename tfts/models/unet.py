@@ -22,6 +22,7 @@ from tensorflow.keras.layers import (
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.unet_layer import ConvbrLayer, ReBlock, SeBlock
 
+from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
 
 
@@ -42,7 +43,7 @@ class UnetConfig(BaseConfig):
         use_attention: bool = False,
         use_se: bool = False,
         use_layer_norm: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super(UnetConfig, self).__init__()
         self.units = units
@@ -67,6 +68,21 @@ class Unet(BaseModel):
         super(Unet, self).__init__()
         self.config = config or UnetConfig()
         self.predict_sequence_length = predict_sequence_length
+
+        # Validate sequence length requirements
+        min_sequence_length = (
+            self.config.pool_sizes[0]
+            * self.config.pool_sizes[1]
+            * self.config.upsampling_factors[0]
+            * self.config.upsampling_factors[1]
+            * self.config.upsampling_factors[2]
+        )
+        if predict_sequence_length > min_sequence_length:
+            raise ValueError(
+                f"predict_sequence_length ({predict_sequence_length}) must be less than or equal to "
+                f"the minimum sequence length ({min_sequence_length}) determined by pooling and upsampling factors. "
+                f"Current pool_sizes={self.config.pool_sizes}, upsampling_factors={self.config.upsampling_factors}"
+            )
 
         # Input embedding
         self.embedding = DataEmbedding(self.config.units, positional_type="positional encoding")
@@ -124,6 +140,22 @@ class Unet(BaseModel):
         Returns:
             Tensor: Output predictions of shape (batch_size, predict_sequence_length, 1).
         """
+        # Validate input sequence length
+        # _, input_sequence_length, _ = ShapeLayer()(x)
+        # min_sequence_length = (
+        #     self.config.pool_sizes[0]
+        #     * self.config.pool_sizes[1]
+        #     * self.config.upsampling_factors[0]
+        #     * self.config.upsampling_factors[1]
+        #     * self.config.upsampling_factors[2]
+        # )
+        # if input_sequence_length < min_sequence_length:
+        #     raise ValueError(
+        #         f"Input sequence length ({input_sequence_length}) must be greater than or equal to "
+        #         f"the minimum sequence length ({min_sequence_length}) determined by pooling and upsampling factors. "
+        #         f"Current pool_sizes={self.config.pool_sizes}, upsampling_factors={self.config.upsampling_factors}"
+        #     )
+
         # Prepare inputs
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
 

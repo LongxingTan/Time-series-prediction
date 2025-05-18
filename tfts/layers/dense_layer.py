@@ -78,14 +78,14 @@ class DenseTemp(tf.keras.layers.Layer):
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int, filter_size: int, relu_dropout: float = 0.0):
+    def __init__(self, hidden_size: int, intermediate_size: int, hidden_dropout_prob: float = 0.0):
         super(FeedForwardNetwork, self).__init__()
         self.hidden_size = hidden_size
-        self.filter_size = filter_size
-        self.relu_dropout = relu_dropout
+        self.intermediate_size = intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
-        self.filter_dense_layer = Dense(self.filter_size, use_bias=True, activation="relu")
+        self.intermediate_dense_layer = Dense(self.intermediate_size, use_bias=True, activation="relu")
         self.output_dense_layer = Dense(self.hidden_size, use_bias=True)
         super(FeedForwardNetwork, self).build(input_shape)
 
@@ -102,15 +102,15 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
         tf.Tensor
             FFN 3D outputs
         """
-        output = self.filter_dense_layer(x)
+        output = self.intermediate_dense_layer(x)
         output = self.output_dense_layer(output)
         return output
 
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
-            "filter_size": self.filter_size,
-            "relu_dropout": self.relu_dropout,
+            "intermediate_size": self.intermediate_size,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(FeedForwardNetwork, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

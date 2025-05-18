@@ -21,6 +21,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("nbeats", "NBeatsConfig"),
         ("dlinear", "DLinearConfig"),
         ("rwkv", "RWKVConfig"),
+        ("patches_tst", "PatchTSTConfig"),
     ]
 )
 

@@ -75,7 +75,9 @@ class TFTransformer(BaseModel):
         # Temporal fusion decoder (combining LSTM, attention, and gating)
         self.temporal_decoder = tf.keras.layers.LSTM(self.config.hidden_size, return_sequences=True)
         self.attention = Attention(
-            self.config.hidden_size, self.config.num_attention_heads, self.config.attention_probs_dropout_prob
+            hidden_size=self.config.hidden_size,
+            num_attention_heads=self.config.num_attention_heads,
+            attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
         )
         self.gate = Dense(self.config.hidden_size, activation="sigmoid")
 

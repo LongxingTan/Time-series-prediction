@@ -8,10 +8,11 @@ from typing import Dict, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 
-from tfts.layers.attention import MultiHeadAttention
-from tfts.layers.data_embedding import DataEmbedding
-from tfts.layers.feed_forward import FeedForward
+from tfts.layers.attention_layer import Attention
+from tfts.layers.dense_layer import FeedForwardNetwork
+from tfts.layers.embed_layer import DataEmbedding
 
+from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
 
 
@@ -99,8 +100,7 @@ class PatchTST(BaseModel):
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
 
         # Create patches
-        batch_size = tf.shape(encoder_feature)[0]
-        seq_length = tf.shape(encoder_feature)[1]
+        batch_size, seq_length, _ = ShapeLayer()(encoder_feature)
         num_patches = seq_length // self.config.patch_size
 
         # Reshape to patches
@@ -137,7 +137,7 @@ class TransformerBlock(tf.keras.layers.Layer):
 
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.attention = MultiHeadAttention(
+        self.attention = Attention(
             hidden_size=config.hidden_size,
             num_attention_heads=config.num_attention_heads,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
@@ -146,7 +146,7 @@ class TransformerBlock(tf.keras.layers.Layer):
         self.attention_norm = LayerNormalization(epsilon=config.layer_norm_eps)
         self.attention_dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
-        self.feed_forward = FeedForward(
+        self.feed_forward = FeedForwardNetwork(
             hidden_size=config.hidden_size,
             intermediate_size=config.ffn_intermediate_size,
             hidden_dropout_prob=config.hidden_dropout_prob,

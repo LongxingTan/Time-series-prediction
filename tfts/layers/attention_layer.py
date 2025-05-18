@@ -103,10 +103,6 @@ class Attention(tf.keras.layers.Layer):
             return outputs, score
         return outputs
 
-    def compute_output_shape(self, input_shape):
-        output_shape = (*input_shape[0][:-1], self.hidden_size)
-        return output_shape
-
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
