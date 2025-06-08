@@ -5,7 +5,7 @@ It supports various feature transformations, data augmentation, and efficient da
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 import warnings
 
 import numpy as np
@@ -65,6 +65,7 @@ class TimeSeriesSequence(Sequence):
         feature_config: Optional[Dict] = None,
         mode: str = "train",
         stride: int = 1,
+        processor: Optional[List[Callable]] = None,
     ):
         """Initialize the TimeSeriesSequence."""
         self.data = data
