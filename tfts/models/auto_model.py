@@ -41,7 +41,6 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
 )
 
 
-@tf.keras.saving.register_keras_serializable(package="tfts")
 class AutoModel(BaseModel):
     """tfts auto model
     input tensor: [batch_size, sequence_length, num_features]
