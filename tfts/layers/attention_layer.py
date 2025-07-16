@@ -115,9 +115,7 @@ class Attention(tf.keras.layers.Layer):
         else:
             raise ValueError("Expected input_shape to be a list or tuple of three elements (q, k, v)")
 
-        batch_size = q_shape[0]
-        seq_len_q = q_shape[1]
-        return (batch_size, seq_len_q, self.hidden_size)
+        return (q_shape[0], q_shape[1], self.hidden_size)
 
 
 class SelfAttention(tf.keras.layers.Layer):
@@ -166,9 +164,7 @@ class SelfAttention(tf.keras.layers.Layer):
         """
         Compute the output shape of the self-attention layer.
         """
-        batch_size = input_shape[0]
-        sequence_length = input_shape[1]
-        return (batch_size, sequence_length, self.hidden_size)
+        return (input_shape[0], input_shape[1], self.hidden_size)
 
 
 class ProbAttention(tf.keras.layers.Layer):
