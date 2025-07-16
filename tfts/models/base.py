@@ -155,6 +155,9 @@ class BaseModel(ABC):
         else:
             raise RuntimeError("Model has not been built yet. Please build the model first.")
 
+    def get_config(self):
+        return self.config.to_dict() if self.config else {}
+
 
 class BaseConfig(ABC):
     """Base class for tfts config."""
