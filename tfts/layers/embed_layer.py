@@ -60,7 +60,6 @@ class DataEmbedding(tf.keras.layers.Layer):
         self.embed_size = embed_size
         self.positional_type = positional_type
 
-    def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         # Value embedding layer: the below section is put in init, so it could build while DataEmbedding is call
         # Otherwise, while load the weights, the TokenEmbedding is not built
         self.value_embedding = TokenEmbedding(self.embed_size)
@@ -74,7 +73,6 @@ class DataEmbedding(tf.keras.layers.Layer):
             self.positional_embedding = RelativePositionEmbedding()
         else:
             self.positional_embedding = None
-        super().build(input_shape)
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """
@@ -148,7 +146,6 @@ class TokenEmbedding(tf.keras.layers.Layer):
         """
         super(TokenEmbedding, self).__init__(**kwargs)
         self.embed_size = embed_size
-        self.token_weights = None
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         """
