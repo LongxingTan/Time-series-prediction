@@ -102,7 +102,8 @@ class BaseModel(ABC):
                             (tf.shape(encoder_feature)[0], 1, 1),
                         ),
                         tf.float32,
-                    )
+                    ),
+                    output_shape=(self.predict_sequence_length, 1),
                 )(encoder_feature)
         return x, encoder_feature, decoder_feature
 
