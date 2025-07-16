@@ -131,6 +131,9 @@ class AutoModel(BaseModel):
                 f"Ensure weights were saved using model.save_weights(...). Original error: {e}"
             )
 
+    def get_config(self):
+        return self.config.to_dict() if self.config else {}
+
 
 class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
