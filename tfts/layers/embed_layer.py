@@ -187,6 +187,10 @@ class TokenEmbedding(tf.keras.layers.Layer):
         base_config = super(TokenEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
     def compute_output_shape(self, input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
         return input_shape[0], input_shape[1], self.embed_size
 
