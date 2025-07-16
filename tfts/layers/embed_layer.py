@@ -46,7 +46,7 @@ class DataEmbedding(tf.keras.layers.Layer):
         ```
     """
 
-    def __init__(self, embed_size: int, positional_type: Optional[str] = "positional encoding"):
+    def __init__(self, embed_size: int, positional_type: Optional[str] = "positional encoding", **kwargs):
         """
         Initialize the DataEmbedding layer.
 
@@ -56,7 +56,7 @@ class DataEmbedding(tf.keras.layers.Layer):
                 Options: "positional encoding", "positional embedding", "relative encoding", or None.
                 Defaults to None.
         """
-        super(DataEmbedding, self).__init__()
+        super(DataEmbedding, self).__init__(**kwargs)
         self.embed_size = embed_size
         self.positional_type = positional_type
 
@@ -100,12 +100,18 @@ class DataEmbedding(tf.keras.layers.Layer):
         return input_shape[0], input_shape[1], self.embed_size
 
     def get_config(self) -> Dict[str, Any]:
-        config = {
-            "embed_size": self.embed_size,
-            "positional_type": self.positional_type,
-        }
-        base_config = super(DataEmbedding, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        config = super(DataEmbedding, self).get_config()
+        config.update(
+            {
+                "embed_size": self.embed_size,
+                "positional_type": self.positional_type,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
@@ -135,14 +141,14 @@ class TokenEmbedding(tf.keras.layers.Layer):
         ```
     """
 
-    def __init__(self, embed_size: int):
+    def __init__(self, embed_size: int, **kwargs):
         """
         Initialize the TokenEmbedding layer.
 
         Args:
             embed_size (int): The size of the embedding output dimension.
         """
-        super(TokenEmbedding, self).__init__()
+        super(TokenEmbedding, self).__init__(**kwargs)
         self.embed_size = embed_size
         self.token_weights = None
 
@@ -235,11 +241,11 @@ class TemporalEmbedding(tf.keras.layers.Layer):
         self.hour_embed = Embedding(self.hour_size, 6)
 
     def call(self, x, **kwargs):
-        """_summary_
+        """Temporal related embedding
 
         Parameters
         ----------
-        x : _type_
+        x : tf.Tensor
             _description_
         """
         return
