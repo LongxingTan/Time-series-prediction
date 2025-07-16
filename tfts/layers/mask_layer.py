@@ -7,8 +7,8 @@ from tensorflow.keras import activations, constraints, initializers, regularizer
 class CausalMask(tf.keras.layers.Layer):
     """Casual Mask is used for transformer decoder, used in first self-attention for decoder feature"""
 
-    def __init__(self, num_attention_heads):
-        super().__init__()
+    def __init__(self, num_attention_heads, **kwargs):
+        super().__init__(**kwargs)
         self.num_attention_heads = num_attention_heads
 
     def call(self, inputs):

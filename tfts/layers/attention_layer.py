@@ -13,10 +13,7 @@ class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
     def __init__(
-        self,
-        hidden_size: int,
-        num_attention_heads: int = 1,
-        attention_probs_dropout_prob: float = 0.0,
+        self, hidden_size: int, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
     ) -> None:
         """Initialize the Attention layer.
 
@@ -29,7 +26,7 @@ class Attention(tf.keras.layers.Layer):
         attention_probs_dropout_prob : float, optional
             Dropout rate for the attention weights. Defaults to 0.0.
         """
-        super(Attention, self).__init__()
+        super(Attention, self).__init__(**kwargs)
         if hidden_size % num_attention_heads != 0:
             raise ValueError(
                 f"Hidden size {hidden_size} must be divisible by the number of heads {num_attention_heads}."
@@ -121,7 +118,7 @@ class SelfAttention(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float = 0.0,
         **kwargs: Dict[str, Any],
     ) -> None:
-        super(SelfAttention, self).__init__()
+        super(SelfAttention, self).__init__(**kwargs)
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
@@ -160,7 +157,7 @@ class ProbAttention(tf.keras.layers.Layer):
     def __init__(
         self, hidden_size: int = 128, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.mask_flag = True
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -271,7 +268,7 @@ class SparseAttention(tf.keras.layers.Layer):
     """
 
     def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
@@ -295,7 +292,7 @@ class SparseAttention(tf.keras.layers.Layer):
 
 class FastAttention(tf.keras.layers.Layer):
     def __init__(self, **kwargs) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
