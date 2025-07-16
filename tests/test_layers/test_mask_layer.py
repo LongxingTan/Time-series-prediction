@@ -1,6 +1,5 @@
 import unittest
 
-import numpy as np
 import tensorflow as tf
 
 from tfts.layers.mask_layer import CausalMask, ProbMask

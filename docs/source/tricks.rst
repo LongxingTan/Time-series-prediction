@@ -45,3 +45,28 @@ There is no free launch, and it's impossible to forecast the future. So we shoul
     * add a hidden-sizes dense layer at last
     * encoder-decoder structure
     * encoder-forecasting structure
+
+
+.. code-block:: python
+
+    # use tfts auto-regressive generate multiple steps
+    from tfts.data import TimeSeriesSequence
+    # Generate predictions
+    last_sequence = data.tail(10)
+
+    # Function to add features after each prediction
+    def add_features(new_df, history_df):
+        # Add any features needed for the next prediction
+        # For example, you could add lag features, moving averages, etc.
+        return new_df
+
+    # Generate predictions
+    predictions = model.generate(
+        last_sequence,
+        generation_config={
+            'steps': 30,
+            'time_idx': 'time_idx',
+            'time_step': 1,
+            'add_features_func': add_features
+        }
+    )

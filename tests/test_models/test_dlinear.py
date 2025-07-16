@@ -1,7 +1,6 @@
 from typing import Any, Dict
 import unittest
 
-import numpy as np
 import tensorflow as tf
 
 import tfts

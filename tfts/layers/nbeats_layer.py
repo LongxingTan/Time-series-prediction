@@ -7,6 +7,103 @@ import tensorflow as tf
 from tensorflow.keras.layers import Activation, Dense, Layer
 
 
+def generic_model(theta: tf.Tensor, t_b: tf.Tensor, t_f: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Generate the generic backcast and forecast using linear projections.
+
+    Parameters
+    ----------
+    theta : tf.Tensor
+        Basis expansion coefficients
+    t_b : tf.Tensor
+        Input time index for backcast
+    t_f : tf.Tensor
+        Output time index for forecast
+
+    Returns
+    -------
+    Tuple[tf.Tensor, tf.Tensor]
+        A tuple of (backcast, forecast) tensors
+    """
+    backcast = theta[:, : len(t_b)]
+    forecast = theta[:, -len(t_f) :]
+    return backcast, forecast
+
+
+def trend_model(theta: tf.Tensor, t_b: tf.Tensor, t_f: tf.Tensor, polynomial_size: int) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Generate the trend backcast and forecast using polynomial basis functions.
+
+    Parameters
+    ----------
+    theta : tf.Tensor
+        Basis expansion coefficients
+    t_b : tf.Tensor
+        Input time index for backcast
+    t_f : tf.Tensor
+        Output time index for forecast
+    polynomial_size : int
+        Number of polynomial terms
+
+    Returns
+    -------
+    Tuple[tf.Tensor, tf.Tensor]
+        A tuple of (backcast, forecast) tensors
+    """
+    backcast = tf.einsum("bp,pt->bt", theta[:, polynomial_size:], t_b)
+    forecast = tf.einsum("bp,pt->bt", theta[:, :polynomial_size], t_f)
+    return backcast, forecast
+
+
+def seasonality_model(
+    theta: tf.Tensor,
+    t_b: tf.Tensor,
+    t_f: tf.Tensor,
+    config_per_harmonic: int,
+    backcast_cos_template: tf.Tensor,
+    backcast_sin_template: tf.Tensor,
+    forecast_cos_template: tf.Tensor,
+    forecast_sin_template: tf.Tensor,
+) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Generate the seasonality backcast and forecast using Fourier basis functions.
+
+    Parameters
+    ----------
+    theta : tf.Tensor
+        Basis expansion coefficients
+    t_b : tf.Tensor
+        Input time index for backcast
+    t_f : tf.Tensor
+        Output time index for forecast
+    config_per_harmonic : int
+        Number of coefficients per harmonic
+    backcast_cos_template : tf.Tensor
+        Cosine template for backcast
+    backcast_sin_template : tf.Tensor
+        Sine template for backcast
+    forecast_cos_template : tf.Tensor
+        Cosine template for forecast
+    forecast_sin_template : tf.Tensor
+        Sine template for forecast
+
+    Returns
+    -------
+    Tuple[tf.Tensor, tf.Tensor]
+        A tuple of (backcast, forecast) tensors
+    """
+    backcast_harmonics_cos = tf.einsum(
+        "bp,pt->bt", theta[:, 2 * config_per_harmonic : 3 * config_per_harmonic], backcast_cos_template
+    )
+    backcast_harmonics_sin = tf.einsum("bp,pt->bt", theta[:, 3 * config_per_harmonic :], backcast_sin_template)
+    backcast = backcast_harmonics_sin + backcast_harmonics_cos
+
+    forecast_harmonics_cos = tf.einsum("bp,pt->bt", theta[:, :config_per_harmonic], forecast_cos_template)
+    forecast_harmonics_sin = tf.einsum(
+        "bp,pt->bt", theta[:, config_per_harmonic : 2 * config_per_harmonic], forecast_sin_template
+    )
+    forecast = forecast_harmonics_sin + forecast_harmonics_cos
+
+    return backcast, forecast
+
+
 class GenericBlock(tf.keras.layers.Layer):
     """Generic block that learns arbitrary patterns in time series data.
 
@@ -65,7 +162,7 @@ class GenericBlock(tf.keras.layers.Layer):
         for layer in self.layers:
             x = layer(x)
         x = self.theta(x)
-        return x[:, : self.train_sequence_length], x[:, -self.predict_sequence_length :]
+        return generic_model(x, tf.range(self.train_sequence_length), tf.range(self.predict_sequence_length))
 
 
 class TrendBlock(tf.keras.layers.Layer):
@@ -154,9 +251,7 @@ class TrendBlock(tf.keras.layers.Layer):
         for layer in self.layers:
             x = layer(x)
         x = self.theta(x)
-        backcast = tf.einsum("bp,pt->bt", x[:, self.polynomial_size :], self.backcast_time)
-        forecast = tf.einsum("bp,pt->bt", x[:, : self.polynomial_size], self.forecast_time)
-        return backcast, forecast
+        return trend_model(x, self.backcast_time, self.forecast_time, self.polynomial_size)
 
     def compute_output_shape(self, input_shape):
         return [(input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length)]
@@ -230,41 +325,16 @@ class SeasonalityBlock(tf.keras.layers.Layer):
 
         config_per_harmonic = self.theta_size // 4
 
-        backcast_harmonics_cos = tf.einsum(
-            "bp,pt->bt", inputs[:, 2 * config_per_harmonic : 3 * config_per_harmonic], self.backcast_cos_template
+        return seasonality_model(
+            x,
+            self.backcast_grid,
+            self.forecast_grid,
+            config_per_harmonic,
+            self.backcast_cos_template,
+            self.backcast_sin_template,
+            self.forecast_cos_template,
+            self.forecast_sin_template,
         )
-        backcast_harmonics_sin = tf.einsum("bp,pt->bt", x[:, 3 * config_per_harmonic :], self.backcast_sin_template)
-        backcast = backcast_harmonics_sin + backcast_harmonics_cos
-
-        forecast_harmonics_cos = tf.einsum("bp,pt->bt", x[:, :config_per_harmonic], self.forecast_cos_template)
-        forecast_harmonics_sin = tf.einsum(
-            "bp,pt->bt", x[:, config_per_harmonic : 2 * config_per_harmonic], self.forecast_sin_template
-        )
-        forecast = forecast_harmonics_sin + forecast_harmonics_cos
-
-        return backcast, forecast
-
-
-class BackcastMinusLayer(tf.keras.layers.Layer):
-    """Layer for computing backcast minus operation"""
-
-    def call(self, inputs):
-        backcast, b = inputs
-        return backcast - b
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0]  # Return shape of first input
-
-
-class ForecastPlusLayer(tf.keras.layers.Layer):
-    """Layer for computing forecast plus operation"""
-
-    def call(self, inputs):
-        forecast, f = inputs
-        return forecast + f
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0]  # Return shape of first input
 
 
 class ZerosLayer(tf.keras.layers.Layer):

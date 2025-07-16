@@ -8,7 +8,7 @@ from typing import Dict, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, Dense
 
-from tfts.layers.data_embedding import DataEmbedding
+from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
 
 from .base import BaseConfig, BaseModel
@@ -159,10 +159,17 @@ class RWKVBlock(tf.keras.layers.Layer):
 
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
+        self.config = config
         self.ln1 = tf.keras.layers.LayerNormalization()
         self.attention = TimeMixing(config)
         self.ln2 = tf.keras.layers.LayerNormalization()
         self.feed_forward = ChannelMixing(config)
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        # Ensure the attention and feed_forward layers are built
+        self.attention.build(input_shape)
+        self.feed_forward.build(input_shape)
 
     def call(self, x, states):
         """block

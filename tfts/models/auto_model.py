@@ -35,6 +35,8 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("nbeats", "NBeats"),
         ("dlinear", "DLinear"),
         ("rwkv", "RWKV"),
+        ("patches_tst", "PatchTST"),
+        ("deep_ar", "DeepAR"),
     ]
 )
 
@@ -56,7 +58,7 @@ class AutoModel(BaseModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-        """automodel callable
+        """auto_model callable
 
         Parameters
         ----------
@@ -111,7 +113,6 @@ class AutoModel(BaseModel):
 
             # Build model and load weights
             model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
-            inputs = None
             if isinstance(config.input_shape, dict):
                 inputs = {k: tf.keras.layers.Input(shape=v, name=k) for k, v in config.input_shape.items()}
             elif isinstance(config.input_shape[0], (list, tuple)):
@@ -129,6 +130,9 @@ class AutoModel(BaseModel):
                 f"Error loading model weights from {weights_dir}. "
                 f"Ensure weights were saved using model.save_weights(...). Original error: {e}"
             )
+
+    def get_config(self):
+        return self.config.to_dict() if self.config else {}
 
 
 class AutoModelForPrediction(AutoModel):

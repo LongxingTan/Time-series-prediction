@@ -8,7 +8,4 @@ class ShapeLayer(tf.keras.layers.Layer):
         super().__init__()
 
     def call(self, x):
-        batch_size = tf.shape(x)[0]
-        seq_length = tf.shape(x)[1]
-        num_feature = tf.shape(x)[2]
-        return batch_size, seq_length, num_feature
+        return tf.shape(x)

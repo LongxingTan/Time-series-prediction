@@ -8,22 +8,22 @@ class TimeMixing(tf.keras.layers.Layer):
 
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.n_embd = config.n_embd
+        self.n_embd = config.hidden_size
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
 
         # Trainable parameters
-        self.time_mix_k = self.add_weight("time_mix_k", (1, self.n_embd), initializer="zeros")
-        self.time_mix_v = self.add_weight("time_mix_v", (1, self.n_embd), initializer="zeros")
-        self.time_mix_r = self.add_weight("time_mix_r", (1, self.n_embd), initializer="zeros")
-        self.time_first = self.add_weight("time_first", (1, self.n_embd), initializer="zeros")
-        self.time_decay = self.add_weight("time_decay", (1, self.n_embd), initializer="zeros")
+        self.time_mix_k = self.add_weight(name="time_mix_k", shape=(1, self.n_embd), initializer="zeros")
+        self.time_mix_v = self.add_weight(name="time_mix_v", shape=(1, self.n_embd), initializer="zeros")
+        self.time_mix_r = self.add_weight(name="time_mix_r", shape=(1, self.n_embd), initializer="zeros")
+        self.time_first = self.add_weight(name="time_first", shape=(1, self.n_embd), initializer="zeros")
+        self.time_decay = self.add_weight(name="time_decay", shape=(1, self.n_embd), initializer="zeros")
 
         self.key = tf.keras.layers.Dense(self.n_embd, use_bias=False)
         self.value = tf.keras.layers.Dense(self.n_embd, use_bias=False)
         self.receptance = tf.keras.layers.Dense(self.n_embd, use_bias=False)
-        self.output = tf.keras.layers.Dense(self.n_embd, use_bias=False)
+        self.output_layer = tf.keras.layers.Dense(self.n_embd, use_bias=False)
 
     def call(self, x, state):
         """time mixing
@@ -65,7 +65,7 @@ class TimeMixing(tf.keras.layers.Layer):
 
         new_state = [new_aa, new_bb, new_pp]
 
-        return self.output(r * wkv), new_state
+        return self.output_layer(r * wkv), new_state
 
 
 class ChannelMixing(tf.keras.layers.Layer):
@@ -73,13 +73,13 @@ class ChannelMixing(tf.keras.layers.Layer):
 
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.n_embd = config.n_embd
+        self.n_embd = config.hidden_size
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
 
-        self.time_mix_k = self.add_weight("time_mix_k", (1, self.n_embd), initializer="zeros")
-        self.time_mix_r = self.add_weight("time_mix_r", (1, self.n_embd), initializer="zeros")
+        self.time_mix_k = self.add_weight(name="time_mix_k", shape=(1, self.n_embd), initializer="zeros")
+        self.time_mix_r = self.add_weight(name="time_mix_r", shape=(1, self.n_embd), initializer="zeros")
 
         self.key = tf.keras.layers.Dense(self.n_embd, use_bias=False)
         self.value = tf.keras.layers.Dense(self.n_embd, use_bias=False)

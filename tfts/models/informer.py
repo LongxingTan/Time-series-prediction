@@ -12,13 +12,12 @@ from tensorflow.keras.layers import (
     Conv1D,
     Dense,
     Dropout,
-    Lambda,
     LayerNormalization,
     MaxPool1D,
 )
 
 from tfts.layers.attention_layer import Attention, ProbAttention
-from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
@@ -120,8 +119,9 @@ class Encoder(tf.keras.layers.Layer):
         hidden_dropout_prob,
         prob_attention=False,
         distil_conv=False,
+        **kwargs
     ) -> None:
-        super(Encoder, self).__init__()
+        super(Encoder, self).__init__(**kwargs)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_attention_heads = num_attention_heads
@@ -186,8 +186,8 @@ class Encoder(tf.keras.layers.Layer):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob) -> None:
-        super().__init__()
+    def __init__(self, attn_layer, hidden_size, ffn_intermediate_size, hidden_dropout_prob, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.attn_layer = attn_layer
         self.hidden_size = hidden_size
         self.ffn_intermediate_size = ffn_intermediate_size
@@ -228,8 +228,8 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class DistilConv(tf.keras.layers.Layer):
-    def __init__(self, filters) -> None:
-        super().__init__()
+    def __init__(self, filters, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.filters = filters
 
     def build(self, input_shape):
@@ -258,8 +258,9 @@ class Decoder(tf.keras.layers.Layer):
         ffn_intermediate_size,
         hidden_dropout_prob,
         prob_attention=False,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_attention_heads = num_attention_heads
@@ -313,8 +314,10 @@ class Decoder(tf.keras.layers.Layer):
 
 
 class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob) -> None:
-        super().__init__()
+    def __init__(
+        self, attn_layer1, attn_layer2, hidden_size, ffn_intermediate_size, hidden_dropout_prob, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
         self.attn1 = attn_layer1
         self.attn2 = attn_layer2
         self.hidden_size = hidden_size

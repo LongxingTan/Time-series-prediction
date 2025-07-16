@@ -185,7 +185,11 @@ class Encoder(tf.keras.layers.Layer):
             attention_layer = SelfAttention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            ffn_layer = FeedForwardNetwork(self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob)
+            ffn_layer = FeedForwardNetwork(
+                self.hidden_size,
+                intermediate_size=self.ffn_intermediate_size,
+                hidden_dropout_prob=self.hidden_dropout_prob,
+            )
             ln_layer1 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])

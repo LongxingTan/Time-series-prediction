@@ -2,9 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-import tfts
-from tfts import AutoModel, KerasTrainer, Trainer
-from tfts.models.deepar import DeepAR
+from tfts.models.deep_ar import DeepAR
 
 
 class DeepARTest(unittest.TestCase):

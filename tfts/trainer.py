@@ -136,11 +136,9 @@ class BaseTrainer(object):
         elif isinstance(x, (list, tuple)):
             logger.debug("Preparing inputs from list or tuple")
             return [Input(shape=item.shape[1:], name=f"input_{i}") for i, item in enumerate(x)]
-        elif isinstance(x, (np.ndarray, pd.DataFrame)):
+        else:
             logger.debug("Preparing single input")
             return Input(shape=x.shape[1:], name="input")
-        else:
-            raise TypeError(f"Unsupported input type: {type(x)}")
 
     def _save(self, output_dir: Optional[str] = None):
         output_dir = output_dir if output_dir is not None else TFTS_HOME
@@ -200,7 +198,6 @@ class KerasTrainer(BaseTrainer):
         valid_dataset: Optional[Union[tf.data.Dataset, List[tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]] = None,
         loss_fn: Union[Callable, tf.keras.losses.Loss, str] = "mse",
         optimizer: Union[tf.keras.optimizers.Optimizer, str, Dict] = "adam",
-        lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         batch_size: int = 64,
         steps_per_epoch: Optional[int] = None,
@@ -218,7 +215,6 @@ class KerasTrainer(BaseTrainer):
             valid_dataset: A tf.data.Dataset or list/tuple of tensors (x_valid, y_valid), optional.
             loss_fn: A callable or Keras loss function. Default is MeanSquaredError.
             optimizer: A Keras optimizer instance. Default is Adam with learning rate 0.003.
-            lr_scheduler: Optional learning rate scheduler.
             epochs: Number of epochs to train for. Default is 10.
             batch_size: Number of samples per batch. Default is 64.
             steps_per_epoch: Number of steps per epoch. Optional.

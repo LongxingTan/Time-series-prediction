@@ -7,7 +7,39 @@ from tensorflow.keras import activations, constraints, initializers, regularizer
 
 
 class ConvTemp(tf.keras.layers.Layer):
-    """Temporal convolutional layer"""
+    """Temporal convolutional layer for time series processing.
+
+    This layer implements a 1D convolutional layer with optional causal padding,
+    which is commonly used in time series models like WaveNet. The layer can be
+    configured to use dilated convolutions and causal padding to ensure temporal
+    dependencies are properly captured.
+
+    Parameters
+    ----------
+    filters : int
+        The number of output filters in the convolution.
+    kernel_size : int
+        The length of the 1D convolution window.
+    strides : int, optional
+        The stride length of the convolution. Defaults to 1.
+    dilation_rate : int, optional
+        The dilation rate to use for dilated convolution. Defaults to 1.
+    activation : str, optional
+        Activation function to use. Defaults to "relu".
+    causal : bool, optional
+        Whether to use causal padding. If True, ensures no information leakage
+        from future timesteps. Defaults to True.
+    kernel_initializer : str, optional
+        Initializer for the kernel weights matrix. Defaults to "glorot_uniform".
+    name : str, optional
+        Name of the layer. Defaults to None.
+
+    Input shape:
+        - 3D tensor with shape `(batch_size, sequence_length, features)`
+
+    Output shape:
+        - 3D tensor with shape `(batch_size, new_sequence_length, filters)`
+    """
 
     def __init__(
         self,
@@ -30,7 +62,13 @@ class ConvTemp(tf.keras.layers.Layer):
         self.activation = activation
 
     def build(self, input_shape: Tuple[int]) -> None:
+        """Build the layer by creating the convolutional layer.
 
+        Parameters
+        ----------
+        input_shape : Tuple[int]
+            Shape of the input tensor
+        """
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
             kernel_initializer=initializers.get(self.kernel_initializer),
@@ -42,17 +80,17 @@ class ConvTemp(tf.keras.layers.Layer):
         super(ConvTemp, self).build(input_shape)
 
     def call(self, inputs):
-        """forward pass
+        """Forward pass of the layer.
 
         Parameters
         ----------
-        inputs : inputs
-            tensor with batch * sequence * features
+        inputs : tf.Tensor
+            Input tensor with shape (batch_size, sequence_length, features)
 
         Returns
         -------
         tf.Tensor
-            _description_
+            Output tensor after applying temporal convolution
         """
         if self.causal:
             padding_size = (self.kernel_size - 1) * self.dilation_rate
@@ -63,6 +101,13 @@ class ConvTemp(tf.keras.layers.Layer):
         return outputs
 
     def get_config(self):
+        """Get the configuration of the layer.
+
+        Returns
+        -------
+        dict
+            Configuration dictionary containing layer parameters
+        """
         config = {
             "filters": self.filters,
             "kernel_size": self.kernel_size,

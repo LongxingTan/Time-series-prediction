@@ -243,6 +243,14 @@ class DecoderV1(object):
             skip_outputs = []
 
             for i, dilation in enumerate(self.dilation_rates):
+                safe_dilation = min(dilation, encoder_outputs[i].shape[1])
+                if dilation > encoder_outputs[i].shape[1]:
+                    logger.warning(
+                        f"Dilation {dilation} exceeds context length {encoder_outputs[i].shape[1]}. "
+                        "Using {safe_dilation} instead."
+                    )
+                    dilation = safe_dilation
+
                 state = encoder_outputs[i][:, -dilation, :]
                 # use 2 dense layer to calculate a kernel=2 convolution
                 dilated_conv = self.dense2(state) + self.dense3(x)

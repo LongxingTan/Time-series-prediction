@@ -29,7 +29,7 @@
 [![Code Coverage][coverage-image]][coverage-url]
 [![Contributing][contributing-image]][contributing-url]
 
-**[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](https://time-series-prediction.readthedocs.io/en/latest/CHANGELOG.html)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
+**[文档](https://time-series-prediction.readthedocs.io)** | **[教程](https://time-series-prediction.readthedocs.io/en/latest/tutorials.html)** | **[发布日志](./CHANGELOG.md)** | **[English](https://github.com/LongxingTan/Time-series-prediction/blob/master/README.md)**
 
 青山遮不住，毕竟东流去。江晚正愁余，山深闻鹧鸪。<br>
 **东流TFTS** (TensorFlow Time Series) 是一个高效易用的时间序列框架，基于TensorFlow/ Keras。

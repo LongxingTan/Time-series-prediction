@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 
 from tfts.layers.mask_layer import ProbMask
 
@@ -13,10 +13,7 @@ class Attention(tf.keras.layers.Layer):
     """Multi-head attention layer"""
 
     def __init__(
-        self,
-        hidden_size: int,
-        num_attention_heads: int = 1,
-        attention_probs_dropout_prob: float = 0.0,
+        self, hidden_size: int, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
     ) -> None:
         """Initialize the Attention layer.
 
@@ -29,7 +26,7 @@ class Attention(tf.keras.layers.Layer):
         attention_probs_dropout_prob : float, optional
             Dropout rate for the attention weights. Defaults to 0.0.
         """
-        super(Attention, self).__init__()
+        super(Attention, self).__init__(**kwargs)
         if hidden_size % num_attention_heads != 0:
             raise ValueError(
                 f"Hidden size {hidden_size} must be divisible by the number of heads {num_attention_heads}."
@@ -103,10 +100,6 @@ class Attention(tf.keras.layers.Layer):
             return outputs, score
         return outputs
 
-    def compute_output_shape(self, input_shape):
-        output_shape = (*input_shape[0][:-1], self.hidden_size)
-        return output_shape
-
     def get_config(self):
         config = {
             "hidden_size": self.hidden_size,
@@ -115,6 +108,14 @@ class Attention(tf.keras.layers.Layer):
         }
         base_config = super(Attention, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape):
+        if isinstance(input_shape, (list, tuple)) and len(input_shape) == 3:
+            q_shape = input_shape[0]
+        else:
+            raise ValueError("Expected input_shape to be a list or tuple of three elements (q, k, v)")
+
+        return (q_shape[0], q_shape[1], self.hidden_size)
 
 
 class SelfAttention(tf.keras.layers.Layer):
@@ -125,7 +126,7 @@ class SelfAttention(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float = 0.0,
         **kwargs: Dict[str, Any],
     ) -> None:
-        super(SelfAttention, self).__init__()
+        super(SelfAttention, self).__init__(**kwargs)
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
@@ -159,12 +160,18 @@ class SelfAttention(tf.keras.layers.Layer):
         base_config = super(SelfAttention, self).get_config()
         return base_config
 
+    def compute_output_shape(self, input_shape):
+        """
+        Compute the output shape of the self-attention layer.
+        """
+        return (input_shape[0], input_shape[1], self.hidden_size)
+
 
 class ProbAttention(tf.keras.layers.Layer):
     def __init__(
         self, hidden_size: int = 128, num_attention_heads: int = 1, attention_probs_dropout_prob: float = 0.0, **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.mask_flag = True
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -268,6 +275,11 @@ class ProbAttention(tf.keras.layers.Layer):
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        sequence_length = input_shape[1]
+        return (batch_size, sequence_length, self.hidden_size)
+
 
 class SparseAttention(tf.keras.layers.Layer):
     """
@@ -275,7 +287,8 @@ class SparseAttention(tf.keras.layers.Layer):
     """
 
     def __init__(self, hidden_size: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
+        self.hidden_size = hidden_size
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         super().build(input_shape)
@@ -296,10 +309,15 @@ class SparseAttention(tf.keras.layers.Layer):
         base_config = super().get_config()
         return base_config
 
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        sequence_length = input_shape[1]
+        return (batch_size, sequence_length, self.hidden_size)
+
 
 class FastAttention(tf.keras.layers.Layer):
     def __init__(self, **kwargs) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
         super().build(input_shape)
