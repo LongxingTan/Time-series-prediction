@@ -41,6 +41,7 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
 )
 
 
+@tf.keras.saving.register_keras_serializable(package="tfts")
 class AutoModel(BaseModel):
     """tfts auto model
     input tensor: [batch_size, sequence_length, num_features]
@@ -58,7 +59,7 @@ class AutoModel(BaseModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-        """automodel callable
+        """auto_model callable
 
         Parameters
         ----------
