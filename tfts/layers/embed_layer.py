@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, LSTM, Conv1D, Dense, Dropout, Embedding
+from tensorflow.keras.layers import GRU, Embedding
 
 from .position_layer import PositionalEmbedding, PositionalEncoding, RelativePositionEmbedding
 

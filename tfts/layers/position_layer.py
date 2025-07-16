@@ -80,6 +80,9 @@ class PositionalEmbedding(tf.keras.layers.Layer):
         base_config = super(PositionalEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    def compute_output_shape(self, input_shape: Tuple[int, int, int]) -> Tuple[int, int, int]:
+        return input_shape
+
 
 class PositionalEncoding(tf.keras.layers.Layer):
     """Positional encoding layer that adds positional information to input embeddings.
@@ -161,6 +164,9 @@ class PositionalEncoding(tf.keras.layers.Layer):
         config = {"max_len": self.max_len}
         base_config = super(PositionalEncoding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape: Tuple[int, int, int]) -> Tuple[int, int, int]:
+        return input_shape
 
 
 class RelativePositionEmbedding(tf.keras.layers.Layer):
@@ -255,6 +261,12 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
         base_config = super(RelativePositionEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    def compute_output_shape(
+        self, input_shape: Tuple[Tuple[int, int, int], Tuple[int, int, int]]
+    ) -> Tuple[int, int, int, int]:
+        query_shape, value_shape = input_shape
+        return (query_shape[0], query_shape[1], value_shape[1], self.output_dim)
+
 
 class RotaryPositionEmbedding(tf.keras.layers.Layer):
     """Rotary position embedding layer that adds rotary positional information.
@@ -335,3 +347,6 @@ class RotaryPositionEmbedding(tf.keras.layers.Layer):
         config = {"dim": self.dim}
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape: Tuple[int, int, int]) -> Tuple[int, int, int]:
+        return input_shape
