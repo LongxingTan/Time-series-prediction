@@ -158,6 +158,11 @@ class BaseModel(ABC):
     def get_config(self):
         return self.config.to_dict() if self.config else {}
 
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        output_dim = self.config.hidden_size if self.config and hasattr(self.config, "hidden_size") else 1
+        return (batch_size, self.predict_sequence_length, output_dim)
+
 
 class BaseConfig(ABC):
     """Base class for tfts config."""

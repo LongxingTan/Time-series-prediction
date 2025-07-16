@@ -27,6 +27,11 @@ class CausalMask(tf.keras.layers.Layer):
         base_config = super(CausalMask, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        seq_length = input_shape[1]
+        return (batch_size, seq_length, seq_length)
+
 
 class ProbMask:
     """ProbMask for informer"""

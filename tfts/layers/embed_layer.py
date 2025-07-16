@@ -96,9 +96,6 @@ class DataEmbedding(tf.keras.layers.Layer):
 
         return combined_embedding
 
-    def compute_output_shape(self, input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
-        return input_shape[0], input_shape[1], self.embed_size
-
     def get_config(self) -> Dict[str, Any]:
         config = super(DataEmbedding, self).get_config()
         config.update(
@@ -109,9 +106,8 @@ class DataEmbedding(tf.keras.layers.Layer):
         )
         return config
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
+    def compute_output_shape(self, input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+        return input_shape[0], input_shape[1], self.embed_size
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
@@ -187,13 +183,13 @@ class TokenEmbedding(tf.keras.layers.Layer):
         y = tf.einsum("bsf,fk->bsk", x, self.token_weights)
         return y
 
-    def compute_output_shape(self, input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
-        return input_shape[0], input_shape[1], self.embed_size
-
     def get_config(self) -> Dict[str, Any]:
         config = {"embed_size": self.embed_size}
         base_config = super(TokenEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+        return input_shape[0], input_shape[1], self.embed_size
 
 
 class TokenRnnEmbedding(tf.keras.layers.Layer):

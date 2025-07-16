@@ -12,13 +12,12 @@ from tensorflow.keras.layers import (
     Conv1D,
     Dense,
     Dropout,
-    Lambda,
     LayerNormalization,
     MaxPool1D,
 )
 
 from tfts.layers.attention_layer import Attention, ProbAttention
-from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
