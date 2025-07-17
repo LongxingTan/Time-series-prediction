@@ -151,6 +151,32 @@ class Encoder(tf.keras.layers.Layer):
         # outputs = self.dense(outputs)  # => batch_size * input_seq_length * dense_size
         return outputs, state
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "rnn_size": self.rnn_size,
+                "rnn_type": self.rnn_type,
+                "rnn_dropout": self.rnn_dropout,
+                "dense_size": self.dense_size,
+                "return_state": self.return_state,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        batch_size, seq_len, _ = input_shape
+        rnn_output_shape = (batch_size, seq_len, self.rnn_size)
+
+        # State shape depends on RNN type
+        if self.rnn_type == "gru":
+            state_shape = (batch_size, self.dense_size)
+        elif self.rnn_type == "lstm":
+            state_shape = ((batch_size, self.dense_size), (batch_size, self.dense_size))
+        else:
+            raise ValueError(f"No supported rnn type of {self.rnn_type}")
+        return rnn_output_shape, state_shape
+
 
 class DecoderV1(tf.keras.layers.Layer):
     def __init__(
@@ -255,6 +281,27 @@ class DecoderV1(tf.keras.layers.Layer):
 
         decoder_outputs = tf.concat(decoder_outputs, axis=-1)
         return tf.expand_dims(decoder_outputs, -1)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "rnn_size": self.rnn_size,
+                "rnn_type": self.rnn_type,
+                "predict_sequence_length": self.predict_sequence_length,
+                "use_attention": self.use_attention,
+                "attention_size": self.attention_size,
+                "num_attention_heads": self.num_attention_heads,
+                "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        # input_shape: (decoder_features, decoder_init_input, init_state, ...)
+        decoder_init_input_shape = input_shape[1]
+        batch_size = decoder_init_input_shape[0]
+        return (batch_size, self.predict_sequence_length, 1)
 
 
 class DecoderV2(tf.keras.layers.Layer):

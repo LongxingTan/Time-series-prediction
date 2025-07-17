@@ -213,7 +213,7 @@ class Encoder(tf.keras.layers.Layer):
             elif self.rnn_type == "gru":
                 # GRU: (output, state)
                 return ((batch_size, seq_length, rnn_output_size), (batch_size, rnn_output_size))
-            else:  # LSTM
+            else:
                 # LSTM: (output, state_h, state_c)
                 return ((batch_size, seq_length, rnn_output_size), (batch_size, 2 * rnn_output_size))
 
