@@ -141,7 +141,7 @@ class Encoder(tf.keras.layers.Layer):
             - For LSTM: tuple of (batch_size, dense_size), (batch_size, dense_size)
         """
         if self.rnn_type == "gru":
-            outputs, state = self.rnn(inputs)
+            outputs, _, state = self.rnn(inputs)
             state = self.dense(state)
         elif self.rnn_type == "lstm":
             outputs, state_h, state_c = self.rnn(inputs)
