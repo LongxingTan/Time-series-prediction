@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Lambda
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
+from ..layers import CreateDecoderFeature
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +96,7 @@ class BaseModel(ABC):
         else:
             encoder_feature = x = inputs
             if not ignore_decoder_inputs:
-                batch_size = tf.shape(encoder_feature)[0]
-                decoder_feature = self._create_decoder_feature(batch_size, self.predict_sequence_length)
+                decoder_feature = CreateDecoderFeature(self.predict_sequence_length)(encoder_feature)
         return x, encoder_feature, decoder_feature
 
     def _create_decoder_feature(batch_size, predict_sequence_length):
