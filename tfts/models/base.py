@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Lambda
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
-from ..layers import CreateDecoderFeature
+from ..layers.util_layer import CreateDecoderFeature
 
 logger = logging.getLogger(__name__)
 
