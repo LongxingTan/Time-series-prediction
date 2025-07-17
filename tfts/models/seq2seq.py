@@ -105,7 +105,10 @@ class Seq2seq(BaseModel):
 class Encoder(tf.keras.layers.Layer):
     def __init__(self, rnn_size, rnn_type="gru", rnn_dropout=0, dense_size=32, return_state=False, **kwargs):
         super().__init__(**kwargs)
+        self.rnn_size = rnn_size
         self.rnn_type = rnn_type.lower()
+        self.rnn_dropout = rnn_dropout
+        self.dense_size = dense_size
         self.return_state = return_state
         if rnn_type == "gru":
             self.rnn = GRU(
