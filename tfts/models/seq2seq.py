@@ -110,22 +110,29 @@ class Encoder(tf.keras.layers.Layer):
         self.rnn_dropout = rnn_dropout
         self.dense_size = dense_size
         self.return_state = return_state
-        if rnn_type == "gru":
+
+    def build(self, input_shape):
+        if self.rnn_type == "gru":
             self.rnn = GRU(
-                units=rnn_size, activation="tanh", return_state=True, return_sequences=True, dropout=rnn_dropout
-            )
-        elif rnn_type == "lstm":
-            self.rnn = LSTM(
-                units=rnn_size,
+                units=self.rnn_size,
                 activation="tanh",
                 return_state=True,
                 return_sequences=True,
-                dropout=rnn_dropout,
+                dropout=self.rnn_dropout,
+            )
+        elif self.rnn_type == "lstm":
+            self.rnn = LSTM(
+                units=self.rnn_size,
+                activation="tanh",
+                return_state=True,
+                return_sequences=True,
+                dropout=self.rnn_dropout,
             )
         else:
-            raise ValueError(f"No supported RNN type: {rnn_type}")
+            raise ValueError(f"No supported RNN type: {self.rnn_type}")
 
-        self.dense = Dense(units=dense_size, activation="tanh")
+        self.dense = Dense(units=self.dense_size, activation="tanh")
+        super(Encoder, self).build(input_shape)
 
     def call(self, inputs):
         """Process input through the encoder RNN and dense layers.
@@ -141,13 +148,8 @@ class Encoder(tf.keras.layers.Layer):
             - For LSTM: tuple of (batch_size, dense_size), (batch_size, dense_size)
         """
         if self.rnn_type == "gru":
-            # GRU behavior varies by TensorFlow version:
             rnn_outputs = self.rnn(inputs)
-            if len(rnn_outputs) == 2:
-                outputs, state = rnn_outputs
-            else:  # len(rnn_outputs) == 3
-                outputs, _, state = rnn_outputs
-
+            outputs, state = rnn_outputs
             state = self.dense(state)
         elif self.rnn_type == "lstm":
             outputs, state_h, state_c = self.rnn(inputs)
