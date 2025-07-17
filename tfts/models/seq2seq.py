@@ -301,9 +301,11 @@ class DecoderV1(tf.keras.layers.Layer):
         return config
 
     def compute_output_shape(self, input_shape):
-        # input_shape: (decoder_features, decoder_init_input, init_state, ...)
         decoder_init_input_shape = input_shape[1]
-        batch_size = decoder_init_input_shape[0]
+        if isinstance(decoder_init_input_shape, (list, tuple)):
+            batch_size = decoder_init_input_shape[0]
+        else:
+            batch_size = None
         return (batch_size, self.predict_sequence_length, 1)
 
 
