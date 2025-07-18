@@ -19,7 +19,7 @@ from tfts import AutoConfig, AutoModel, KerasTrainer
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
-    parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
+    parser.add_argument("--use_model", type=str, default="bert", help="model for train")
     parser.add_argument("--use_data", type=str, default="sine", help="dataset: sine or air passengers")
     parser.add_argument("--train_length", type=int, default=24, help="sequence length for train")
     parser.add_argument("--predict_sequence_length", type=int, default=12, help="sequence length for predict")

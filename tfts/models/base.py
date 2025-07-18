@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Lambda
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
+from ..layers.util_layer import CreateDecoderFeature
 
 logger = logging.getLogger(__name__)
 
@@ -95,17 +96,13 @@ class BaseModel(ABC):
         else:
             encoder_feature = x = inputs
             if not ignore_decoder_inputs:
-                decoder_feature = Lambda(
-                    lambda encoder_feature: tf.cast(
-                        tf.tile(
-                            tf.reshape(tf.range(self.predict_sequence_length), (1, self.predict_sequence_length, 1)),
-                            (tf.shape(encoder_feature)[0], 1, 1),
-                        ),
-                        tf.float32,
-                    ),
-                    output_shape=(self.predict_sequence_length, 1),
-                )(encoder_feature)
+                decoder_feature = CreateDecoderFeature(self.predict_sequence_length)(encoder_feature)
         return x, encoder_feature, decoder_feature
+
+    def _create_decoder_feature(batch_size, predict_sequence_length):
+        time_range = tf.range(predict_sequence_length)
+        tiled = tf.tile(tf.reshape(time_range, (1, predict_sequence_length, 1)), (batch_size, 1, 1))
+        return tf.cast(tiled, tf.float32)
 
     def save_pretrained(
         self,

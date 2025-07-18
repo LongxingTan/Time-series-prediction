@@ -218,16 +218,22 @@ class Encoder(tf.keras.layers.Layer):
         return x
 
     def get_config(self):
-        config = {
-            "num_hidden_layers": self.num_hidden_layers,
-            "hidden_size": self.hidden_size,
-            "num_attention_heads": self.num_attention_heads,
-            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
-            "ffn_intermediate_size": self.ffn_intermediate_size,
-            "hidden_dropout_prob": self.hidden_dropout_prob,
-        }
-        base_config = super(Encoder, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        config = super().get_config()
+        config.update(
+            {
+                "num_hidden_layers": self.num_hidden_layers,
+                "hidden_size": self.hidden_size,
+                "num_attention_heads": self.num_attention_heads,
+                "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+                "ffn_intermediate_size": self.ffn_intermediate_size,
+                "hidden_dropout_prob": self.hidden_dropout_prob,
+                "layer_norm_eps": self.layer_norm_eps,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 
 class Decoder(tf.keras.layers.Layer):
@@ -332,6 +338,24 @@ class Decoder(tf.keras.layers.Layer):
         mask = tf.cast(i >= j, dtype="int32")
         return tf.reshape(mask, (1, sequence_length, sequence_length))
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "num_decoder_layers": self.num_decoder_layers,
+                "hidden_size": self.hidden_size,
+                "num_attention_heads": self.num_attention_heads,
+                "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+                "ffn_intermediate_size": self.ffn_intermediate_size,
+                "hidden_dropout_prob": self.hidden_dropout_prob,
+                "layer_norm_eps": self.layer_norm_eps,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
 
 class DecoderLayer(tf.keras.layers.Layer):
     def __init__(
@@ -398,6 +422,9 @@ class DecoderLayer(tf.keras.layers.Layer):
         }
         base_config = super(DecoderLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 
 class TransformerBlock(tf.keras.layers.Layer):

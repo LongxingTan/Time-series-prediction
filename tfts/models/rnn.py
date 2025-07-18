@@ -122,6 +122,7 @@ class Encoder(tf.keras.layers.Layer):
                 activation="tanh",
                 return_sequences=True,
                 return_state=return_state,
+                reset_after=False,
                 dropout=self.rnn_dropout if self.rnn_dropout > 0 else 0.0,
             )
 
@@ -213,7 +214,7 @@ class Encoder(tf.keras.layers.Layer):
             elif self.rnn_type == "gru":
                 # GRU: (output, state)
                 return ((batch_size, seq_length, rnn_output_size), (batch_size, rnn_output_size))
-            else:  # LSTM
+            else:
                 # LSTM: (output, state_h, state_c)
                 return ((batch_size, seq_length, rnn_output_size), (batch_size, 2 * rnn_output_size))
 

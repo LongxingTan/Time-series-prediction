@@ -91,11 +91,11 @@ class AutoFormer(BaseModel):
             hidden_dropout_prob=self.config.hidden_dropout_prob,
         )
 
-        self.project1 = Dense(1, activation=None)
         self.drop1 = Dropout(self.config.hidden_dropout_prob)
         self.dense1 = Dense(512, activation="relu")
         self.drop2 = Dropout(self.config.hidden_dropout_prob)
         self.dense2 = Dense(1024, activation="relu")
+        self.project1 = Dense(1, activation=None)
 
     def __call__(
         self,
@@ -121,7 +121,7 @@ class AutoFormer(BaseModel):
             Otherwise, returns the output tensor.
         """
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
-        batch_size, _, n_feature = self.shape_layer(encoder_feature)
+        # batch_size, _, n_feature = self.shape_layer(encoder_feature)
 
         # Encoder
         encoder_output = self.encoder(x)
@@ -197,6 +197,10 @@ class Encoder(tf.keras.layers.Layer):
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape):
+        batch_size, time_steps, _ = input_shape
+        return (batch_size, time_steps, self.hidden_size)
 
 
 class EncoderLayer(tf.keras.layers.Layer):
@@ -316,6 +320,10 @@ class Decoder(tf.keras.layers.Layer):
         }
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape):
+        batch_size, time_steps, _ = input_shape
+        return (batch_size, time_steps, self.hidden_size)
 
 
 class DecoderLayer(tf.keras.layers.Layer):

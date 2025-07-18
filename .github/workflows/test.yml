@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest] # add windows-2019 when poetry allows installation with `-f` flag
-        python-version: [3.9, '3.12']
+        python-version: [3.9, '3.11']
         tf-version: [2.13.1, 2.15.1]
 
         exclude:
@@ -92,7 +92,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Create pip cache directory manually
         run: |
