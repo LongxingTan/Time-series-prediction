@@ -99,11 +99,6 @@ class BaseModel(ABC):
                 decoder_feature = CreateDecoderFeature(self.predict_sequence_length)(encoder_feature)
         return x, encoder_feature, decoder_feature
 
-    def _create_decoder_feature(batch_size, predict_sequence_length):
-        time_range = tf.range(predict_sequence_length)
-        tiled = tf.tile(tf.reshape(time_range, (1, predict_sequence_length, 1)), (batch_size, 1, 1))
-        return tf.cast(tiled, tf.float32)
-
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
