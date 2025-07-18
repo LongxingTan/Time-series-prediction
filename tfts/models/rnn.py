@@ -122,6 +122,7 @@ class Encoder(tf.keras.layers.Layer):
                 activation="tanh",
                 return_sequences=True,
                 return_state=return_state,
+                reset_after=False,
                 dropout=self.rnn_dropout if self.rnn_dropout > 0 else 0.0,
             )
 

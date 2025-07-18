@@ -119,6 +119,7 @@ class Encoder(tf.keras.layers.Layer):
                 return_state=True,
                 return_sequences=True,
                 dropout=self.rnn_dropout,
+                reset_after=False,
             )
         elif self.rnn_type == "lstm":
             self.rnn = LSTM(
