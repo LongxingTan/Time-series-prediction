@@ -169,8 +169,9 @@ class Encoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ):
-        super(Encoder, self).__init__()
+        super(Encoder, self).__init__(**kwargs)
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -249,8 +250,9 @@ class Decoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ) -> None:
-        super(Decoder, self).__init__()
+        super(Decoder, self).__init__(**kwargs)
         self.predict_sequence_length = predict_sequence_length
         self.num_decoder_layers = num_decoder_layers
         self.hidden_size = hidden_size
@@ -367,8 +369,9 @@ class DecoderLayer(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ) -> None:
-        super(DecoderLayer, self).__init__()
+        super(DecoderLayer, self).__init__(**kwargs)
         self.num_decoder_layers = num_decoder_layers
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads

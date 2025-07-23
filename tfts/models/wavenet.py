@@ -119,11 +119,11 @@ class WaveNet(BaseModel):
         return decoder_outputs
 
 
-class Encoder(object):
+class Encoder(tf.keras.layers.Layer):
     """Encoder block for the WaveNet model."""
 
     def __init__(
-        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int
+        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int, **kwargs
     ) -> None:
         """
         Initializes the encoder block.
@@ -134,6 +134,7 @@ class Encoder(object):
             dilation_rates: Dilation rates for the convolutions.
             dense_hidden_size: Hidden size for the dense layers.
         """
+        super(Encoder, self).__init__(**kwargs)
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -145,7 +146,7 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
-    def __call__(self, x: tf.Tensor):
+    def call(self, x: tf.Tensor):
         inputs = self.dense_time1(inputs=x)
 
         skip_outputs = []
@@ -173,11 +174,16 @@ class Encoder(object):
         return y_hat, conv_inputs[:-1]
 
 
-class DecoderV1(object):
+class DecoderV1(tf.keras.layers.Layer):
     """Decoder block for WaveNet V1."""
 
     def __init__(
-        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+        self,
+        filters: int,
+        dilation_rates: List[int],
+        dense_hidden_size: int,
+        predict_sequence_length: int = 24,
+        **kwargs,
     ) -> None:
         """
         Initializes the decoder block.
@@ -188,6 +194,7 @@ class DecoderV1(object):
             dense_hidden_size: Size of the dense hidden layer.
             predict_sequence_length: Length of the predicted sequence.
         """
+        super().__init__(**kwargs)
         self.filters: int = filters
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
@@ -285,12 +292,18 @@ class DecoderV1(object):
         return expand(decoder_outputs)
 
 
-class DecoderV2(object):
+class DecoderV2(tf.keras.layers.Layer):
     """Decoder need avoid future data leaks"""
 
     def __init__(
-        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+        self,
+        filters: int,
+        dilation_rates: List[int],
+        dense_hidden_size: int,
+        predict_sequence_length: int = 24,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         self.filters = filters
         self.dilation_rates = dilation_rates
         self.predict_sequence_length = predict_sequence_length

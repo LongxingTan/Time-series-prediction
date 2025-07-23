@@ -146,8 +146,9 @@ class Encoder(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float,
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -206,8 +207,10 @@ class Encoder(tf.keras.layers.Layer):
 class EncoderLayer(tf.keras.layers.Layer):
     """Encoder Layer for Autoformer architecture."""
 
-    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
-        super().__init__()
+    def __init__(
+        self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads
@@ -261,8 +264,9 @@ class Decoder(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float,
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -329,8 +333,10 @@ class Decoder(tf.keras.layers.Layer):
 class DecoderLayer(tf.keras.layers.Layer):
     """Decoder Layer for Autoformer architecture."""
 
-    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, drop_rate: float = 0.1) -> None:
-        super().__init__()
+    def __init__(
+        self, kernel_size: int, d_model: int, num_attention_heads: int, drop_rate: float = 0.1, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads

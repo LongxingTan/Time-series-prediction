@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
-    Activation,
     AveragePooling1D,
     Concatenate,
     Conv1D,
@@ -198,8 +197,9 @@ class Encoder(tf.keras.layers.Layer):
         num_attention_heads: int = 4,
         attention_probs_dropout_prob: float = 0.1,
         hidden_dropout_prob: float = 0.1,
+        **kwargs,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.units = units
         self.kernel_size = kernel_size
         self.depth = depth
@@ -323,8 +323,9 @@ class Decoder(tf.keras.layers.Layer):
         num_attention_heads: int = 4,
         attention_probs_dropout_prob: float = 0.1,
         hidden_dropout_prob: float = 0.1,
+        **kwargs,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.upsampling_factors = upsampling_factors
         self.units = units
         self.kernel_size = kernel_size

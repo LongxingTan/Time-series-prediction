@@ -328,8 +328,9 @@ class DecoderV2(tf.keras.layers.Layer):
         attention_sizes=32,
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
+        **kwargs,
     ):
-        super(DecoderV2, self).__init__()
+        super(DecoderV2, self).__init__(**kwargs)
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
         self.predict_sequence_length = predict_sequence_length
