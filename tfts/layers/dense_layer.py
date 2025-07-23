@@ -76,10 +76,16 @@ class DenseTemp(tf.keras.layers.Layer):
         base_config = super(DenseTemp, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+    def compute_output_shape(self, input_shape):
+        """
+        Computes the output shape of the layer.
+        """
+        return tf.TensorShape(input_shape[:-1] + (self.hidden_size,))
+
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
-    def __init__(self, hidden_size: int, intermediate_size: int, hidden_dropout_prob: float = 0.0):
-        super(FeedForwardNetwork, self).__init__()
+    def __init__(self, hidden_size: int, intermediate_size: int, hidden_dropout_prob: float = 0.0, **kwargs):
+        super(FeedForwardNetwork, self).__init__(**kwargs)
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob

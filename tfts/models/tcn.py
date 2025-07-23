@@ -55,11 +55,9 @@ class TCN(BaseModel):
         )
 
         self.project1 = Dense(predict_sequence_length, activation=None)
-
-        self.drop1 = Dropout(0.25)
+        self.drop1 = Dropout(0.0)
         self.dense1 = Dense(512, activation="relu")
-
-        self.drop2 = Dropout(0.25)
+        self.drop2 = Dropout(0.0)
         self.dense2 = Dense(1024, activation="relu")
 
     def __call__(
@@ -76,7 +74,7 @@ class TCN(BaseModel):
         inputs : tf.Tensor
             3D input tensor
         teacher : tf.Tensor, optional
-            _description_, by default None
+            teacher forcing, by default None
 
         Returns
         -------
@@ -103,7 +101,7 @@ class TCN(BaseModel):
         outputs = self.project1(encoder_output)
         outputs = Reshape((outputs.shape[1], 1))(outputs)
 
-        # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))   # stupid
+        # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))
         # outputs = self.dense3(encoder_outputs)
         return outputs
 
@@ -133,7 +131,7 @@ class Encoder(tf.keras.layers.Layer):
         self.dense_time2 = DenseTemp(hidden_size=self.filters + self.filters, name="encoder_dense_time2")
         self.dense_time2.build((None, time_steps, self.filters))
         self.dense_time3 = DenseTemp(hidden_size=self.dense_hidden_size, activation="relu", name="encoder_dense_time3")
-        self.dense_time3.build((None, time_steps, self.filters))
+        self.dense_time3.build((None, time_steps, len(self.conv_times) * self.filters))
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
         self.dense_time4.build((None, time_steps, self.dense_hidden_size))
         self.built = True
@@ -159,11 +157,8 @@ class Encoder(tf.keras.layers.Layer):
             conv_inputs.append(inputs)  # batch_size * time_sequence_length * filters
             skip_outputs.append(skips)
 
-        # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=2))
-        concat_layer = Concatenate(axis=2)
-        concatenated = concat_layer(skip_outputs)
-        relu_layer = ReLU()
-        skip_outputs = relu_layer(concatenated)
+        concatenated = Concatenate(axis=2)(skip_outputs)
+        skip_outputs = ReLU()(concatenated)
         h = self.dense_time3(skip_outputs)
         # y_hat = self.dense_time4(h)
         return conv_inputs[:-1], h
