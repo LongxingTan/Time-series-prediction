@@ -108,20 +108,32 @@ class TCN(BaseModel):
         return outputs
 
 
-class Encoder(object):
-    def __init__(self, kernel_sizes, dilation_rates, filters, dense_hidden_size):
+class Encoder(tf.keras.layers.Layer):
+    def __init__(self, kernel_sizes, dilation_rates, filters, dense_hidden_size, **kwargs):
+        super().__init__(**kwargs)
+        self.kernel_sizes = kernel_sizes
+        self.dilation_rates = dilation_rates
         self.filters = filters
+        self.dense_hidden_size = dense_hidden_size
         self.conv_times = []
-        for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
-            self.conv_times.append(
-                ConvTemp(filters=2 * filters, kernel_size=kernel_size, causal=True, dilation_rate=dilation)
-            )
-        self.dense_time1 = DenseTemp(hidden_size=filters, activation="tanh", name="encoder_dense_time1")
-        self.dense_time2 = DenseTemp(hidden_size=filters + filters, name="encoder_dense_time2")
-        self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
-        self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
-    def __call__(self, x: tf.Tensor):
+    def build(self, input_shape):
+        super(Encoder, self).build(input_shape)
+        for i, (kernel_size, dilation) in enumerate(zip(self.kernel_sizes, self.dilation_rates)):
+            conv_temp = ConvTemp(filters=2 * self.filters, kernel_size=kernel_size, causal=True, dilation_rate=dilation)
+            conv_temp.build()
+            self.conv_times.append(conv_temp)
+        self.dense_time1 = DenseTemp(hidden_size=self.filters, activation="tanh", name="encoder_dense_time1")
+        self.dense_time1.build()
+        self.dense_time2 = DenseTemp(hidden_size=self.filters + self.filters, name="encoder_dense_time2")
+        self.dense_time2.build()
+        self.dense_time3 = DenseTemp(hidden_size=self.dense_hidden_size, activation="relu", name="encoder_dense_time3")
+        self.dense_time3.build()
+        self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
+        self.dense_time4.build()
+        self.built = True
+
+    def call(self, x: tf.Tensor):
         # => batch_size * time_sequence_length * filters
         inputs = self.dense_time1(inputs=x)
 
@@ -150,3 +162,35 @@ class Encoder(object):
         h = self.dense_time3(skip_outputs)
         # y_hat = self.dense_time4(h)
         return conv_inputs[:-1], h
+
+    def get_config(self):
+        config = super(Encoder, self).get_config()
+        config.update(
+            {
+                "kernel_sizes": self.kernel_sizes,
+                "dilation_rates": self.dilation_rates,
+                "filters": self.filters,
+                "dense_hidden_size": self.dense_hidden_size,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        """Compute the output shape of the layer."""
+        if isinstance(input_shape, list):
+            input_shape = input_shape[0]
+
+        batch_size = input_shape[0]
+        time_sequence_length = input_shape[1]
+
+        # After dense_time1: (batch_size, time_sequence_length, filters)
+        intermediate_shape = (batch_size, time_sequence_length, self.filters)
+
+        # conv_inputs contains intermediate representations after each conv layer
+        # conv_inputs[:-1] excludes the last element, so we have len(self.conv_times) shapes
+        conv_inputs_shapes = [intermediate_shape] * len(self.conv_times)
+
+        # After dense_time3: (batch_size, time_sequence_length, dense_hidden_size)
+        h_shape = (batch_size, time_sequence_length, self.dense_hidden_size)
+
+        return (conv_inputs_shapes, h_shape)
