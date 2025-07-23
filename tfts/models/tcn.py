@@ -119,18 +119,23 @@ class Encoder(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         super(Encoder, self).build(input_shape)
+        _, time_steps, input_dim = input_shape
+
+        self.dense_time1 = DenseTemp(hidden_size=self.filters, activation="tanh", name="encoder_dense_time1")
+        self.dense_time1.build((None, time_steps, input_dim))
+
+        conv_input_shape = (None, time_steps, self.filters)
         for i, (kernel_size, dilation) in enumerate(zip(self.kernel_sizes, self.dilation_rates)):
             conv_temp = ConvTemp(filters=2 * self.filters, kernel_size=kernel_size, causal=True, dilation_rate=dilation)
-            conv_temp.build()
+            conv_temp.build(conv_input_shape)
             self.conv_times.append(conv_temp)
-        self.dense_time1 = DenseTemp(hidden_size=self.filters, activation="tanh", name="encoder_dense_time1")
-        self.dense_time1.build()
+
         self.dense_time2 = DenseTemp(hidden_size=self.filters + self.filters, name="encoder_dense_time2")
-        self.dense_time2.build()
+        self.dense_time2.build((None, time_steps, self.filters))
         self.dense_time3 = DenseTemp(hidden_size=self.dense_hidden_size, activation="relu", name="encoder_dense_time3")
-        self.dense_time3.build()
+        self.dense_time3.build((None, time_steps, self.filters))
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
-        self.dense_time4.build()
+        self.dense_time4.build((None, time_steps, self.dense_hidden_size))
         self.built = True
 
     def call(self, x: tf.Tensor):
