@@ -217,17 +217,11 @@ class DecoderV1(tf.keras.layers.Layer):
         rnn_input_size = input_shape[1]
         if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
-
-            dummy_input = tf.TensorShape([None, rnn_input_size])
-            dummy_state = tf.TensorShape([None, self.rnn_size])
-            self.rnn_cell.build([dummy_input, dummy_state])
+            self.rnn_cell.build([[None, rnn_input_size], [None, self.rnn_size]])
         elif self.rnn_type == "lstm":
             self.rnn_cell = LSTMCell(units=self.rnn_size)
-
-            dummy_input = tf.TensorShape([None, rnn_input_size])
-            dummy_state = [tf.TensorShape([None, self.rnn_size]), tf.TensorShape([None, self.rnn_size])]
-            self.rnn_cell.build([dummy_input, dummy_state])
-
+            dummy_state = [[None, self.rnn_size], [None, self.rnn_size]]
+            self.rnn_cell.build([[None, rnn_input_size], dummy_state])
         else:
             raise ValueError(f"No supported rnn type of {self.rnn_type}")
         self.rnn_cell.build()
