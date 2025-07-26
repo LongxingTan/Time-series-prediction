@@ -158,6 +158,7 @@ class Encoder(tf.keras.layers.Layer):
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
+        super().build(input_shape)
         self.layers = [
             EncoderLayer(
                 kernel_size=self.kernel_size,
@@ -168,7 +169,8 @@ class Encoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        super().build(input_shape)
+        self.norm.build(input_shape)
+        self.built = True
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Process input through the encoder.
@@ -217,6 +219,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dropout_rate = dropout_rate
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
+        super().build(input_shape)
         self.series_decomp1 = SeriesDecomp(self.kernel_size)
         self.series_decomp2 = SeriesDecomp(self.kernel_size)
         self.autocorrelation = AutoCorrelation(self.d_model, self.num_attention_heads)
@@ -224,7 +227,9 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
         self.norm1 = LayerNormalization()
         self.norm2 = LayerNormalization()
-        super().build(input_shape)
+        self.norm1.build(input_shape)
+        self.norm2.build(input_shape)
+        self.built = True
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """Process input through the encoder layer.
@@ -276,6 +281,7 @@ class Decoder(tf.keras.layers.Layer):
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
+        super().build(input_shape)
         self.layers = [
             DecoderLayer(
                 kernel_size=self.kernel_size,
@@ -286,7 +292,7 @@ class Decoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        super().build(input_shape)
+        self.norm.build(input_shape)
 
     def call(
         self,

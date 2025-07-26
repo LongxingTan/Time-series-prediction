@@ -123,9 +123,14 @@ class GenericBlock(tf.keras.layers.Layer):
     """
 
     def __init__(
-        self, train_sequence_length: int, predict_sequence_length: int, hidden_size: int, n_block_layers: int = 4
+        self,
+        train_sequence_length: int,
+        predict_sequence_length: int,
+        hidden_size: int,
+        n_block_layers: int = 4,
+        **kwargs
     ):
-        super(GenericBlock, self).__init__()
+        super(GenericBlock, self).__init__(**kwargs)
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
@@ -192,8 +197,9 @@ class TrendBlock(tf.keras.layers.Layer):
         hidden_size: int,
         n_block_layers: int = 4,
         polynomial_term: int = 2,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
@@ -260,8 +266,10 @@ class TrendBlock(tf.keras.layers.Layer):
 class SeasonalityBlock(tf.keras.layers.Layer):
     """Seasonality block"""
 
-    def __init__(self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1):
-        super().__init__()
+    def __init__(
+        self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1, **kwargs
+    ):
+        super().__init__(**kwargs)
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
