@@ -209,7 +209,7 @@ class DecoderV1(tf.keras.layers.Layer):
         self.dense5 = Dense(self.dense_hidden_size, activation="relu")
         self.dense6 = Dense(1)
 
-    def __call__(
+    def call(
         self,
         decoder_features,
         decoder_init_input,
