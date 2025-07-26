@@ -223,7 +223,6 @@ class DecoderV1(tf.keras.layers.Layer):
             self.rnn_cell.build([None, rnn_input_size])
         else:
             raise ValueError(f"No supported rnn type of {self.rnn_type}")
-        self.rnn_cell.build()
 
         self.dense = Dense(units=1, activation=None)
         self.dense.build([None, self.rnn_size])
