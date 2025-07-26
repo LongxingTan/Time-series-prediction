@@ -276,6 +276,8 @@ class Decoder(tf.keras.layers.Layer):
             layer_norm_eps=self.layer_norm_eps,
         )
         self.projection = Dense(units=1, name="final_projection")
+        self.projection.build([input_shape[0], self.hidden_size])
+        self.built = True
 
     def call(
         self,
