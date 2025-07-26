@@ -211,7 +211,7 @@ class DecoderV1(tf.keras.layers.Layer):
         self.dense3 = Dense(2 * self.filters, use_bias=False)
         self.dense3.build([batch_size, self.filters])
         self.dense4 = Dense(2 * self.filters)
-        self.dense4.build([batch_size, 2 * self.filters])
+        self.dense4.build([batch_size, self.filters])
         self.dense5 = Dense(self.dense_hidden_size, activation="relu")
         total_skips = self.filters * len(self.dilation_rates)
         self.dense5.build([batch_size, total_skips])
