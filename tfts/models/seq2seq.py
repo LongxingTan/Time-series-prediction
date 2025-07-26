@@ -135,6 +135,8 @@ class Encoder(tf.keras.layers.Layer):
 
         self.dense = Dense(units=self.dense_size, activation="tanh")
         self.rnn.build(input_shape)
+        self.dense.build([input_shape[0], self.rnn_size])
+        self.built = True
 
     def call(self, inputs):
         """Process input through the encoder RNN and dense layers.
