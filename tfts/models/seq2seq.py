@@ -112,6 +112,7 @@ class Encoder(tf.keras.layers.Layer):
         self.return_state = return_state
 
     def build(self, input_shape):
+        super(Encoder, self).build(input_shape)
         if self.rnn_type == "gru":
             self.rnn = GRU(
                 units=self.rnn_size,
@@ -133,7 +134,7 @@ class Encoder(tf.keras.layers.Layer):
             raise ValueError(f"No supported RNN type: {self.rnn_type}")
 
         self.dense = Dense(units=self.dense_size, activation="tanh")
-        super(Encoder, self).build(input_shape)
+        self.rnn.build(input_shape)
 
     def call(self, inputs):
         """Process input through the encoder RNN and dense layers.
@@ -212,6 +213,7 @@ class DecoderV1(tf.keras.layers.Layer):
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
     def build(self, input_shape):
+        super().build(input_shape)
         if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
         elif self.rnn_type == "lstm":
@@ -220,13 +222,14 @@ class DecoderV1(tf.keras.layers.Layer):
             raise ValueError(f"No supported rnn type of {self.rnn_type}")
 
         self.dense = Dense(units=1, activation=None)
+
         if self.use_attention:
             self.attention = Attention(
                 hidden_size=self.attention_size,
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
-        super().build(input_shape)
+        self.built = True
 
     def call(
         self,

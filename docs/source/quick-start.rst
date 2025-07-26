@@ -124,8 +124,11 @@ Run with pretrained weights
     model = AutoModel.from_pretrained("tfts-model")
 
 
+3.3 Save and load the model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-3.3 Serve the model
+
+3.4 Serve the model
 ~~~~~~~~~~~~~~~~~~~~~~~
 Once the model is trained and evaluated, deploy it for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel, ONNX, etc.). Set up an API or service to handle incoming requests, preprocess input data, and return predictions in real-time.
 

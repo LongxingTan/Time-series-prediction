@@ -344,6 +344,7 @@ class Decoder(tf.keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
+                "predict_sequence_length": self.predict_sequence_length,
                 "num_decoder_layers": self.num_decoder_layers,
                 "hidden_size": self.hidden_size,
                 "num_attention_heads": self.num_attention_heads,

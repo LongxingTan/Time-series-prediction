@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, Embedding
+from tensorflow.keras.utils import register_keras_serializable
 
 from .position_layer import PositionalEmbedding, PositionalEncoding, RelativePositionEmbedding
 
