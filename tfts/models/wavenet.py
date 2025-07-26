@@ -308,7 +308,7 @@ class DecoderV1(tf.keras.layers.Layer):
         return config
 
     def compute_output_shape(self, input_shape):
-        batch_size = input_shape[1][0]
+        batch_size = input_shape[0]
         return (batch_size, self.predict_sequence_length, 1)
 
 
@@ -327,14 +327,18 @@ class DecoderV2(tf.keras.layers.Layer):
         self.filters = filters
         self.dilation_rates = dilation_rates
         self.predict_sequence_length = predict_sequence_length
-        self.dense_1 = Dense(filters, activation="tanh", name="decoder_dense_1")
-        self.dense_2 = Dense(2 * filters, name="decoder_dense_2")
-        self.dense_3 = Dense(2 * filters, use_bias=False, name="decoder_dense_3")
-        self.dense_4 = Dense(2 * filters, name="decoder_dense_4")
-        self.dense_5 = Dense(dense_hidden_size, activation="relu", name="decoder_dense_5")
+        self.dense_hidden_size = dense_hidden_size
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.dense_1 = Dense(self.filters, activation="tanh", name="decoder_dense_1")
+        self.dense_2 = Dense(2 * self.filters, name="decoder_dense_2")
+        self.dense_3 = Dense(2 * self.filters, use_bias=False, name="decoder_dense_3")
+        self.dense_4 = Dense(2 * self.filters, name="decoder_dense_4")
+        self.dense_5 = Dense(self.dense_hidden_size, activation="relu", name="decoder_dense_5")
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
-    def __call__(
+    def call(
         self,
         decoder_features: tf.Tensor,
         decoder_init_input: tf.Tensor,
