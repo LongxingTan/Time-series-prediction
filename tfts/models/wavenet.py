@@ -272,6 +272,7 @@ class DecoderV1(tf.keras.layers.Layer):
                     dilation = safe_dilation
 
                 state = encoder_outputs[i][:, -dilation, :]
+
                 # use 2 dense layer to calculate a kernel=2 convolution
                 dilated_conv = self.dense2(state) + self.dense3(x)
                 # conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
@@ -291,10 +292,9 @@ class DecoderV1(tf.keras.layers.Layer):
                 skip_outputs.append(skips)
 
             # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
-            concat_layer = Concatenate(axis=1)
-            concatenated = concat_layer(skip_outputs)
-            relu_layer = ReLU()
-            skip_outputs = relu_layer(concatenated)
+            concatenated = Concatenate(axis=1)(skip_outputs)
+            skip_outputs = ReLU()(concatenated)
+
             skip_outputs = self.dense5(skip_outputs)
             this_output = self.dense6(skip_outputs)
             decoder_outputs.append(this_output)

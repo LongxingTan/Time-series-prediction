@@ -26,7 +26,7 @@ class WaveNetTest(unittest.TestCase):
     def test_decoder1(self):
         filters = 32
         dilation_rates = [2]
-        dense_hidden_size = 32
+        dense_hidden_size = 64
         predict_sequence_length = 3
         layer = DecoderV1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
