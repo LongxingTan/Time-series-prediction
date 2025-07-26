@@ -198,11 +198,15 @@ class DecoderV1(tf.keras.layers.Layer):
         self.filters: int = filters
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
-        self.dense1 = Dense(filters, activation="tanh")
-        self.dense2 = Dense(2 * filters, use_bias=True)
-        self.dense3 = Dense(2 * filters, use_bias=False)
-        self.dense4 = Dense(2 * filters)
-        self.dense5 = Dense(dense_hidden_size, activation="relu")
+        self.dense_hidden_size = dense_hidden_size
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.dense1 = Dense(self.filters, activation="tanh")
+        self.dense2 = Dense(2 * self.filters, use_bias=True)
+        self.dense3 = Dense(2 * self.filters, use_bias=False)
+        self.dense4 = Dense(2 * self.filters)
+        self.dense5 = Dense(self.dense_hidden_size, activation="relu")
         self.dense6 = Dense(1)
 
     def __call__(
@@ -290,6 +294,22 @@ class DecoderV1(tf.keras.layers.Layer):
         decoder_outputs = Concatenate(1)(decoder_outputs)
         expand = Lambda(lambda t: tf.expand_dims(t, axis=-1))
         return expand(decoder_outputs)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "filters": self.filters,
+                "dilation_rates": self.dilation_rates,
+                "dense_hidden_size": self.dense_hidden_size,
+                "predict_sequence_length": self.predict_sequence_length,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[1][0]
+        return (batch_size, self.predict_sequence_length, 1)
 
 
 class DecoderV2(tf.keras.layers.Layer):

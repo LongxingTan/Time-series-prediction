@@ -214,7 +214,7 @@ class DecoderV1(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         super().build(input_shape)
-        rnn_input_size = input_shape[-1]
+        rnn_input_size = input_shape[-1] + 1  # due to in call, concat an initial value
         if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
             self.rnn_cell.build([None, rnn_input_size])
