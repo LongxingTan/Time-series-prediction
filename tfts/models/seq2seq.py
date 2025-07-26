@@ -214,14 +214,26 @@ class DecoderV1(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         super().build(input_shape)
+        rnn_input_size = input_shape[1]
         if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
+
+            dummy_input = tf.TensorShape([None, rnn_input_size])
+            dummy_state = tf.TensorShape([None, self.rnn_size])
+            self.rnn_cell.build([dummy_input, dummy_state])
         elif self.rnn_type == "lstm":
             self.rnn_cell = LSTMCell(units=self.rnn_size)
+
+            dummy_input = tf.TensorShape([None, rnn_input_size])
+            dummy_state = [tf.TensorShape([None, self.rnn_size]), tf.TensorShape([None, self.rnn_size])]
+            self.rnn_cell.build([dummy_input, dummy_state])
+
         else:
             raise ValueError(f"No supported rnn type of {self.rnn_type}")
+        self.rnn_cell.build()
 
         self.dense = Dense(units=1, activation=None)
+        self.dense.build([None, self.rnn_size])
 
         if self.use_attention:
             self.attention = Attention(
@@ -229,6 +241,7 @@ class DecoderV1(tf.keras.layers.Layer):
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
+            self.attention.build(input_shape)
         self.built = True
 
     def call(
