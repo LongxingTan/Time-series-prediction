@@ -8,8 +8,8 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Add, Lambda, Layer, Subtract
 
-from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock, ZerosLayer
-from ..layers.util_layer import ShapeLayer
+from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
+from ..layers.util_layer import ShapeLayer, ZerosLayer
 from .base import BaseConfig, BaseModel
 
 

@@ -11,6 +11,31 @@ class ShapeLayer(tf.keras.layers.Layer):
         return tf.shape(x)
 
 
+class ZerosLayer(tf.keras.layers.Layer):
+    """Layer for creating zeros tensor with proper shape"""
+
+    def __init__(self, predict_length, **kwargs):
+        super(ZerosLayer, self).__init__(**kwargs)
+        self.predict_length = predict_length
+
+    def call(self, x):
+        batch_size = tf.shape(x)[0]
+        return tf.zeros([batch_size, self.predict_length], dtype=tf.float32)
+
+    def get_config(self):
+        """Return the config of the layer for serialization."""
+        config = super().get_config()
+        config.update(
+            {
+                "predict_length": self.predict_length,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.predict_length)
+
+
 class CreateDecoderFeature(tf.keras.layers.Layer):
     def __init__(self, predict_sequence_length, **kwargs):
         super().__init__(**kwargs)
