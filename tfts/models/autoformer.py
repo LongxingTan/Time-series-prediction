@@ -227,8 +227,6 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
         self.norm1 = LayerNormalization()
         self.norm2 = LayerNormalization()
-        self.norm1.build(input_shape)
-        self.norm2.build(input_shape)
         self.built = True
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
