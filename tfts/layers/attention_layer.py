@@ -52,6 +52,7 @@ class Attention(tf.keras.layers.Layer):
         training: Optional[bool] = None,
         return_attention_scores: bool = False,
         use_causal_mask: bool = False,
+        **kwargs,
     ):
         """use query and key generating an attention multiplier for value, multi_heads to repeat it
 
@@ -110,12 +111,31 @@ class Attention(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
     def compute_output_shape(self, input_shape):
-        if isinstance(input_shape, (list, tuple)) and len(input_shape) == 3:
-            q_shape = input_shape[0]
-        else:
-            raise ValueError("Expected input_shape to be a list or tuple of three elements (q, k, v)")
+        if isinstance(input_shape, tuple) and len(input_shape) == 3:
+            batch_size, seq_len, _ = input_shape
+            return (batch_size, seq_len, self.hidden_size)
 
-        return (q_shape[0], q_shape[1], self.hidden_size)
+        elif isinstance(input_shape, (list, tuple)) and len(input_shape) == 3:
+            q_shape, k_shape, v_shape = input_shape
+
+            # Validate that all shapes are tuples with 3 dimensions
+            if not all(isinstance(shape, tuple) and len(shape) == 3 for shape in [q_shape, k_shape, v_shape]):
+                raise ValueError(
+                    "Each input shape must be a tuple of length 3 (batch_size, seq_len, features). "
+                    f"Got shapes: q={q_shape}, k={k_shape}, v={v_shape}"
+                )
+
+            # Output shape is based on query sequence length
+            batch_size, seq_q_len, _ = q_shape
+            return (batch_size, seq_q_len, self.hidden_size)
+
+        else:
+            raise ValueError(
+                "Expected input_shape to be either:\n"
+                "1. A single tuple (batch_size, seq_len, features) for self-attention, or\n"
+                "2. A list/tuple of 3 shapes [(q_shape), (k_shape), (v_shape)] for cross-attention.\n"
+                f"Got: {input_shape}"
+            )
 
 
 class SelfAttention(tf.keras.layers.Layer):

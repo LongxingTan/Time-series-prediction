@@ -200,23 +200,30 @@ class DecoderV1(tf.keras.layers.Layer):
         self.dilation_rates = dilation_rates
         self.dense_hidden_size = dense_hidden_size
 
-    def build(self, input_shape):
-        super().build(input_shape)
-        batch_size, _, decoder_feature_dim = input_shape
-        decoder_input_size = input_shape[-1] + 1  # due to in call, concat an initial value
+    def build(self, decoder_features_shape, decoder_init_input_shape, encoder_outputs_shape=None, **kwargs):
+        batch_size = decoder_features_shape[0]
+        decoder_input_size = decoder_features_shape[-1] + decoder_init_input_shape[-1]
+
         self.dense1 = Dense(self.filters, activation="tanh")
         self.dense1.build([batch_size, decoder_input_size])
+
         self.dense2 = Dense(2 * self.filters, use_bias=True)
         self.dense2.build([batch_size, self.filters])
+
         self.dense3 = Dense(2 * self.filters, use_bias=False)
         self.dense3.build([batch_size, self.filters])
+
         self.dense4 = Dense(2 * self.filters)
         self.dense4.build([batch_size, self.filters])
-        self.dense5 = Dense(self.dense_hidden_size, activation="relu")
+
         total_skips = self.filters * len(self.dilation_rates)
+        self.dense5 = Dense(self.dense_hidden_size, activation="relu")
         self.dense5.build([batch_size, total_skips])
+
         self.dense6 = Dense(1)
         self.dense6.build([batch_size, self.dense_hidden_size])
+
+        super().build(decoder_features_shape)
 
     def call(
         self,
