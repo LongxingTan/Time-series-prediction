@@ -111,11 +111,11 @@ class WaveNet(BaseModel):
         encoder_state, encoder_outputs = self.encoder(encoder_feature)
         decoder_outputs = self.decoder(
             decoder_features=decoder_feature,
-            decoder_init_input=x[:, -1],
+            # imagine the first dim is the predict
+            decoder_init_input=x[:, -1, 0:1],
             teacher=teacher,
             encoder_outputs=encoder_outputs,
         )
-
         return decoder_outputs
 
 
@@ -200,9 +200,9 @@ class DecoderV1(tf.keras.layers.Layer):
         self.dilation_rates = dilation_rates
         self.dense_hidden_size = dense_hidden_size
 
-    def build(self, decoder_features_shape, decoder_init_input_shape, encoder_outputs_shape=None, **kwargs):
-        batch_size = decoder_features_shape[0]
-        decoder_input_size = decoder_features_shape[-1] + decoder_init_input_shape[-1]
+    def build(self, input_shape, **kwargs):
+        batch_size = input_shape[0]
+        decoder_input_size = input_shape[-1] + 1
 
         self.dense1 = Dense(self.filters, activation="tanh")
         self.dense1.build([batch_size, decoder_input_size])
@@ -223,7 +223,7 @@ class DecoderV1(tf.keras.layers.Layer):
         self.dense6 = Dense(1)
         self.dense6.build([batch_size, self.dense_hidden_size])
 
-        super().build(decoder_features_shape)
+        super().build(input_shape)
 
     def call(
         self,

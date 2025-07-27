@@ -214,8 +214,9 @@ class DecoderV1(tf.keras.layers.Layer):
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
-    def build(self, decoder_features_shape, decoder_init_input_shape, init_state_shape, **kwargs):
-        rnn_input_size = decoder_features_shape[-1] + decoder_init_input_shape[-1]
+    def build(self, input_shape, **kwargs):
+        batch_size = input_shape[0]
+        rnn_input_size = input_shape[-1] + 1
 
         if self.use_attention:
             encoder_output_shape = kwargs.get("encoder_output_shape")
@@ -228,9 +229,6 @@ class DecoderV1(tf.keras.layers.Layer):
             )
             self.attention.build(encoder_output_shape)
 
-            # Add attention output size to RNN input size
-            rnn_input_size += encoder_output_shape[-1]
-
         if self.rnn_type == "gru":
             self.rnn_cell = GRUCell(self.rnn_size)
         elif self.rnn_type == "lstm":
@@ -238,11 +236,11 @@ class DecoderV1(tf.keras.layers.Layer):
         else:
             raise ValueError(f"Unsupported rnn type: {self.rnn_type}")
 
-        self.rnn_cell.build([None, rnn_input_size])
+        self.rnn_cell.build([batch_size, rnn_input_size])
 
         self.dense = Dense(units=1, activation=None)
-        self.dense.build([None, self.rnn_size])
-        super().build(decoder_features_shape)
+        self.dense.build([batch_size, self.rnn_size])
+        super().build(input_shape)
 
     def call(
         self,

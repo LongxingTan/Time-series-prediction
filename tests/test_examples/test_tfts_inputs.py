@@ -23,7 +23,7 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_sequence_length, 1)
 
         for m in self.test_models:
-            logger.info(f"Test model {m}")
+            print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
             trainer = KerasTrainer(model)
@@ -65,6 +65,7 @@ class InputsTest(unittest.TestCase):
         n_decoder_feature = 3
 
         x_train = (
+            # x, encoder, decoder
             np.random.rand(1, train_length, 1),
             np.random.rand(1, train_length, n_encoder_feature),
             np.random.rand(1, predict_sequence_length, n_decoder_feature),
@@ -78,6 +79,7 @@ class InputsTest(unittest.TestCase):
         y_valid = np.random.rand(1, predict_sequence_length, 1)
 
         for m in self.test_models:
+            print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
             trainer = KerasTrainer(model)
@@ -116,6 +118,7 @@ class InputsTest(unittest.TestCase):
         valid_loader = valid_loader.batch(batch_size=1)
 
         for m in self.test_models:
+            print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
             trainer = KerasTrainer(model)
