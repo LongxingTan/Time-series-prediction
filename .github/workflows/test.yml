@@ -58,7 +58,7 @@ jobs:
           poetry run python -m pip install pip -U
           poetry install --no-interaction --no-root
           poetry run python -m pip install tensorflow==${{ matrix.tf-version }}
-          poetry run python -m pip install matplotlib
+          poetry run python -m pip install matplotlib numpy==1.26.0
 
       - name: Run unittest
         shell: bash

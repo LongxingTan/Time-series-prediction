@@ -129,6 +129,8 @@ class Encoder(tf.keras.layers.Layer):
             if self.bi_direction:
                 rnn = Bidirectional(rnn)
 
+            rnn.build(input_shape)
+            self.built = True
             self.rnn_layers.append(rnn)
 
         super().build(input_shape)
@@ -167,12 +169,12 @@ class Encoder(tf.keras.layers.Layer):
                     if self.rnn_type == "gru":
                         # GRU: forward_state, backward_state
                         fw_state, bw_state = outputs[1:]
-                        state = tf.concat([fw_state, bw_state], axis=-1)
+                        state = Concatenate(axis=-1)([fw_state, bw_state])
                         return output, state
                     else:  # LSTM
                         fw_h, fw_c, bw_h, bw_c = outputs[1:]
-                        state_h = tf.concat([fw_h, bw_h], axis=-1)
-                        state_c = tf.concat([fw_c, bw_c], axis=-1)
+                        state_h = Concatenate(axis=-1)([fw_h, bw_h])
+                        state_c = Concatenate(axis=-1)([fw_c, bw_c])
                         state = Concatenate(axis=-1)([state_h, state_c])
                         return output, state
                 else:

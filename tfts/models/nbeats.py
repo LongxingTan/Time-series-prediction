@@ -6,10 +6,10 @@
 from typing import List, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import Add, Lambda, Layer, Subtract, subtract
+from tensorflow.keras.layers import Add, Lambda, Layer, Subtract
 
-from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock, ZerosLayer
-from ..layers.util_layer import ShapeLayer
+from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
+from ..layers.util_layer import ShapeLayer, ZerosLayer
 from .base import BaseConfig, BaseModel
 
 
@@ -54,9 +54,9 @@ class NBeats(BaseModel):
 
         # Create custom layers
         self.shape_layer = ShapeLayer()
-        self.squeeze_layer = Lambda(lambda t: tf.squeeze(t, 2))
+        self.squeeze_layer = Lambda(lambda t: tf.squeeze(t, 2), output_shape=lambda s: (s[0], s[1]))
         self.zeros_layer = ZerosLayer(predict_sequence_length)
-        self.expand_dims_layer = Lambda(lambda x: tf.expand_dims(x, -1))
+        self.expand_dims_layer = Lambda(lambda x: tf.expand_dims(x, -1), output_shape=lambda s: s + (1,))
 
         self.block_type = {"trend_block": TrendBlock, "seasonality_block": SeasonalityBlock, "general": GenericBlock}
         self.stacks = []

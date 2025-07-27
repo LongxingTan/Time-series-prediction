@@ -100,7 +100,6 @@ def seasonality_model(
         "bp,pt->bt", theta[:, config_per_harmonic : 2 * config_per_harmonic], forecast_sin_template
     )
     forecast = forecast_harmonics_sin + forecast_harmonics_cos
-
     return backcast, forecast
 
 
@@ -123,9 +122,14 @@ class GenericBlock(tf.keras.layers.Layer):
     """
 
     def __init__(
-        self, train_sequence_length: int, predict_sequence_length: int, hidden_size: int, n_block_layers: int = 4
+        self,
+        train_sequence_length: int,
+        predict_sequence_length: int,
+        hidden_size: int,
+        n_block_layers: int = 4,
+        **kwargs
     ):
-        super(GenericBlock, self).__init__()
+        super(GenericBlock, self).__init__(**kwargs)
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
@@ -139,9 +143,9 @@ class GenericBlock(tf.keras.layers.Layer):
         input_shape : Tuple[Optional[int], ...]
             Shape of the input tensor
         """
+        super(GenericBlock, self).build(input_shape)
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(self.train_sequence_length + self.predict_sequence_length, use_bias=False, activation=None)
-        super(GenericBlock, self).build(input_shape)
 
     def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
         """Compute the output of the Generic Block.
@@ -163,6 +167,24 @@ class GenericBlock(tf.keras.layers.Layer):
             x = layer(x)
         x = self.theta(x)
         return generic_model(x, tf.range(self.train_sequence_length), tf.range(self.predict_sequence_length))
+
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        backcast_shape = (batch_size, self.train_sequence_length)
+        forecast_shape = (batch_size, self.predict_sequence_length)
+        return (backcast_shape, forecast_shape)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "train_sequence_length": self.train_sequence_length,
+                "predict_sequence_length": self.predict_sequence_length,
+                "hidden_size": self.hidden_size,
+                "n_block_layers": self.n_block_layers,
+            }
+        )
+        return config
 
 
 class TrendBlock(tf.keras.layers.Layer):
@@ -192,8 +214,9 @@ class TrendBlock(tf.keras.layers.Layer):
         hidden_size: int,
         n_block_layers: int = 4,
         polynomial_term: int = 2,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
@@ -226,11 +249,9 @@ class TrendBlock(tf.keras.layers.Layer):
         input_shape : Tuple[Optional[int], ...]
             Shape of the input tensor
         """
-
+        super().build(input_shape)
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(2 * self.polynomial_size, use_bias=False, activation=None)
-
-        super().build(input_shape)
 
     def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
         """Compute the output of the Trend Block.
@@ -254,14 +275,16 @@ class TrendBlock(tf.keras.layers.Layer):
         return trend_model(x, self.backcast_time, self.forecast_time, self.polynomial_size)
 
     def compute_output_shape(self, input_shape):
-        return [(input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length)]
+        return ((input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length))
 
 
 class SeasonalityBlock(tf.keras.layers.Layer):
     """Seasonality block"""
 
-    def __init__(self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1):
-        super().__init__()
+    def __init__(
+        self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1, **kwargs
+    ):
+        super().__init__(**kwargs)
         self.train_sequence_length = train_sequence_length
         self.predict_sequence_length = predict_sequence_length
         self.hidden_size = hidden_size
@@ -300,6 +323,7 @@ class SeasonalityBlock(tf.keras.layers.Layer):
         self.forecast_sin_template = tf.transpose(tf.sin(self.forecast_grid))
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
+        super().build(input_shape)
         self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
         self.theta = Dense(self.theta_size, use_bias=False, activation=None)
 
@@ -336,17 +360,21 @@ class SeasonalityBlock(tf.keras.layers.Layer):
             self.forecast_sin_template,
         )
 
-
-class ZerosLayer(tf.keras.layers.Layer):
-    """Layer for creating zeros tensor with proper shape"""
-
-    def __init__(self, predict_length, **kwargs):
-        super(ZerosLayer, self).__init__(**kwargs)
-        self.predict_length = predict_length
-
-    def call(self, x):
-        batch_size = tf.shape(x)[0]
-        return tf.zeros([batch_size, self.predict_length], dtype=tf.float32)
-
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.predict_length)
+        batch_size = input_shape[0]
+        backcast_shape = (batch_size, self.train_sequence_length)
+        forecast_shape = (batch_size, self.predict_sequence_length)
+        return (backcast_shape, forecast_shape)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "train_sequence_length": self.train_sequence_length,
+                "predict_sequence_length": self.predict_sequence_length,
+                "hidden_size": self.hidden_size,
+                "n_block_layers": self.n_block_layers,
+                "num_harmonics": self.num_harmonics,
+            }
+        )
+        return config

@@ -69,6 +69,7 @@ class ConvTemp(tf.keras.layers.Layer):
         input_shape : Tuple[int]
             Shape of the input tensor
         """
+        super(ConvTemp, self).build(input_shape)
         self.conv = tf.keras.layers.Conv1D(
             kernel_size=self.kernel_size,
             kernel_initializer=initializers.get(self.kernel_initializer),
@@ -77,7 +78,8 @@ class ConvTemp(tf.keras.layers.Layer):
             dilation_rate=self.dilation_rate,
             activation=activations.get(self.activation),
         )
-        super(ConvTemp, self).build(input_shape)
+        self.conv.build(input_shape)
+        self.built = True
 
     def call(self, inputs):
         """Forward pass of the layer.

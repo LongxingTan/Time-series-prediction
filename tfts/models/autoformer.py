@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, Lambda, LayerNormalization, ReLU
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
@@ -146,8 +146,9 @@ class Encoder(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float,
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -157,6 +158,7 @@ class Encoder(tf.keras.layers.Layer):
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
+        super().build(input_shape)
         self.layers = [
             EncoderLayer(
                 kernel_size=self.kernel_size,
@@ -167,7 +169,8 @@ class Encoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        super().build(input_shape)
+        self.norm.build(list(input_shape[:-1]) + [self.hidden_size])
+        self.built = True
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Process input through the encoder.
@@ -206,14 +209,17 @@ class Encoder(tf.keras.layers.Layer):
 class EncoderLayer(tf.keras.layers.Layer):
     """Encoder Layer for Autoformer architecture."""
 
-    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1) -> None:
-        super().__init__()
+    def __init__(
+        self, kernel_size: int, d_model: int, num_attention_heads: int, dropout_rate: float = 0.1, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads
         self.dropout_rate = dropout_rate
 
     def build(self, input_shape: Tuple[Optional[int], ...]) -> None:
+        super().build(input_shape)
         self.series_decomp1 = SeriesDecomp(self.kernel_size)
         self.series_decomp2 = SeriesDecomp(self.kernel_size)
         self.autocorrelation = AutoCorrelation(self.d_model, self.num_attention_heads)
@@ -221,7 +227,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dense = Dense(input_shape[-1])
         self.norm1 = LayerNormalization()
         self.norm2 = LayerNormalization()
-        super().build(input_shape)
+        self.built = True
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """Process input through the encoder layer.
@@ -261,8 +267,9 @@ class Decoder(tf.keras.layers.Layer):
         attention_probs_dropout_prob: float,
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -272,6 +279,7 @@ class Decoder(tf.keras.layers.Layer):
         self.hidden_dropout_prob = hidden_dropout_prob
 
     def build(self, input_shape):
+        super().build(input_shape)
         self.layers = [
             DecoderLayer(
                 kernel_size=self.kernel_size,
@@ -282,7 +290,8 @@ class Decoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        super().build(input_shape)
+        self.norm.build(list(input_shape[:-1]) + [self.hidden_size])
+        self.built = True
 
     def call(
         self,
@@ -329,8 +338,10 @@ class Decoder(tf.keras.layers.Layer):
 class DecoderLayer(tf.keras.layers.Layer):
     """Decoder Layer for Autoformer architecture."""
 
-    def __init__(self, kernel_size: int, d_model: int, num_attention_heads: int, drop_rate: float = 0.1) -> None:
-        super().__init__()
+    def __init__(
+        self, kernel_size: int, d_model: int, num_attention_heads: int, drop_rate: float = 0.1, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.d_model = d_model
         self.num_attention_heads = num_attention_heads

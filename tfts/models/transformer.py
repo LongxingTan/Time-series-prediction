@@ -169,8 +169,9 @@ class Encoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ):
-        super(Encoder, self).__init__()
+        super(Encoder, self).__init__(**kwargs)
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -249,8 +250,9 @@ class Decoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ) -> None:
-        super(Decoder, self).__init__()
+        super(Decoder, self).__init__(**kwargs)
         self.predict_sequence_length = predict_sequence_length
         self.num_decoder_layers = num_decoder_layers
         self.hidden_size = hidden_size
@@ -274,6 +276,8 @@ class Decoder(tf.keras.layers.Layer):
             layer_norm_eps=self.layer_norm_eps,
         )
         self.projection = Dense(units=1, name="final_projection")
+        self.projection.build([input_shape[0], self.hidden_size])
+        self.built = True
 
     def call(
         self,
@@ -342,6 +346,7 @@ class Decoder(tf.keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
+                "predict_sequence_length": self.predict_sequence_length,
                 "num_decoder_layers": self.num_decoder_layers,
                 "hidden_size": self.hidden_size,
                 "num_attention_heads": self.num_attention_heads,
@@ -367,8 +372,9 @@ class DecoderLayer(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ) -> None:
-        super(DecoderLayer, self).__init__()
+        super(DecoderLayer, self).__init__(**kwargs)
         self.num_decoder_layers = num_decoder_layers
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads

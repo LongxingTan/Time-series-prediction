@@ -111,19 +111,19 @@ class WaveNet(BaseModel):
         encoder_state, encoder_outputs = self.encoder(encoder_feature)
         decoder_outputs = self.decoder(
             decoder_features=decoder_feature,
-            decoder_init_input=x[:, -1],
+            # imagine the first dim is the predict
+            decoder_init_input=x[:, -1, 0:1],
             teacher=teacher,
             encoder_outputs=encoder_outputs,
         )
-
         return decoder_outputs
 
 
-class Encoder(object):
+class Encoder(tf.keras.layers.Layer):
     """Encoder block for the WaveNet model."""
 
     def __init__(
-        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int
+        self, kernel_sizes: List[int], filters: int, dilation_rates: List[int], dense_hidden_size: int, **kwargs
     ) -> None:
         """
         Initializes the encoder block.
@@ -134,6 +134,7 @@ class Encoder(object):
             dilation_rates: Dilation rates for the convolutions.
             dense_hidden_size: Hidden size for the dense layers.
         """
+        super(Encoder, self).__init__(**kwargs)
         self.filters = filters
         self.conv_times = []
         for i, (kernel_size, dilation) in enumerate(zip(kernel_sizes, dilation_rates)):
@@ -145,7 +146,7 @@ class Encoder(object):
         self.dense_time3 = DenseTemp(hidden_size=dense_hidden_size, activation="relu", name="encoder_dense_time3")
         self.dense_time4 = DenseTemp(hidden_size=1, name="encoder_dense_time_4")
 
-    def __call__(self, x: tf.Tensor):
+    def call(self, x: tf.Tensor):
         inputs = self.dense_time1(inputs=x)
 
         skip_outputs = []
@@ -173,11 +174,16 @@ class Encoder(object):
         return y_hat, conv_inputs[:-1]
 
 
-class DecoderV1(object):
+class DecoderV1(tf.keras.layers.Layer):
     """Decoder block for WaveNet V1."""
 
     def __init__(
-        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+        self,
+        filters: int,
+        dilation_rates: List[int],
+        dense_hidden_size: int,
+        predict_sequence_length: int = 24,
+        **kwargs,
     ) -> None:
         """
         Initializes the decoder block.
@@ -188,17 +194,38 @@ class DecoderV1(object):
             dense_hidden_size: Size of the dense hidden layer.
             predict_sequence_length: Length of the predicted sequence.
         """
+        super().__init__(**kwargs)
         self.filters: int = filters
         self.predict_sequence_length = predict_sequence_length
         self.dilation_rates = dilation_rates
-        self.dense1 = Dense(filters, activation="tanh")
-        self.dense2 = Dense(2 * filters, use_bias=True)
-        self.dense3 = Dense(2 * filters, use_bias=False)
-        self.dense4 = Dense(2 * filters)
-        self.dense5 = Dense(dense_hidden_size, activation="relu")
-        self.dense6 = Dense(1)
+        self.dense_hidden_size = dense_hidden_size
 
-    def __call__(
+    def build(self, input_shape, **kwargs):
+        batch_size = input_shape[0]
+        decoder_input_size = input_shape[-1] + 1
+
+        self.dense1 = Dense(self.filters, activation="tanh")
+        self.dense1.build([batch_size, decoder_input_size])
+
+        self.dense2 = Dense(2 * self.filters, use_bias=True)
+        self.dense2.build([batch_size, self.filters])
+
+        self.dense3 = Dense(2 * self.filters, use_bias=False)
+        self.dense3.build([batch_size, self.filters])
+
+        self.dense4 = Dense(2 * self.filters)
+        self.dense4.build([batch_size, self.filters])
+
+        total_skips = self.filters * len(self.dilation_rates)
+        self.dense5 = Dense(self.dense_hidden_size, activation="relu")
+        self.dense5.build([batch_size, total_skips])
+
+        self.dense6 = Dense(1)
+        self.dense6.build([batch_size, self.dense_hidden_size])
+
+        super().build(input_shape)
+
+    def call(
         self,
         decoder_features,
         decoder_init_input,
@@ -252,6 +279,7 @@ class DecoderV1(object):
                     dilation = safe_dilation
 
                 state = encoder_outputs[i][:, -dilation, :]
+
                 # use 2 dense layer to calculate a kernel=2 convolution
                 dilated_conv = self.dense2(state) + self.dense3(x)
                 # conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
@@ -271,10 +299,9 @@ class DecoderV1(object):
                 skip_outputs.append(skips)
 
             # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
-            concat_layer = Concatenate(axis=1)
-            concatenated = concat_layer(skip_outputs)
-            relu_layer = ReLU()
-            skip_outputs = relu_layer(concatenated)
+            concatenated = Concatenate(axis=1)(skip_outputs)
+            skip_outputs = ReLU()(concatenated)
+
             skip_outputs = self.dense5(skip_outputs)
             this_output = self.dense6(skip_outputs)
             decoder_outputs.append(this_output)
@@ -284,24 +311,50 @@ class DecoderV1(object):
         expand = Lambda(lambda t: tf.expand_dims(t, axis=-1))
         return expand(decoder_outputs)
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "filters": self.filters,
+                "dilation_rates": self.dilation_rates,
+                "dense_hidden_size": self.dense_hidden_size,
+                "predict_sequence_length": self.predict_sequence_length,
+            }
+        )
+        return config
 
-class DecoderV2(object):
+    def compute_output_shape(self, input_shape):
+        batch_size = input_shape[0]
+        return (batch_size, self.predict_sequence_length, 1)
+
+
+class DecoderV2(tf.keras.layers.Layer):
     """Decoder need avoid future data leaks"""
 
     def __init__(
-        self, filters: int, dilation_rates: List[int], dense_hidden_size: int, predict_sequence_length: int = 24
+        self,
+        filters: int,
+        dilation_rates: List[int],
+        dense_hidden_size: int,
+        predict_sequence_length: int = 24,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         self.filters = filters
         self.dilation_rates = dilation_rates
         self.predict_sequence_length = predict_sequence_length
-        self.dense_1 = Dense(filters, activation="tanh", name="decoder_dense_1")
-        self.dense_2 = Dense(2 * filters, name="decoder_dense_2")
-        self.dense_3 = Dense(2 * filters, use_bias=False, name="decoder_dense_3")
-        self.dense_4 = Dense(2 * filters, name="decoder_dense_4")
-        self.dense_5 = Dense(dense_hidden_size, activation="relu", name="decoder_dense_5")
+        self.dense_hidden_size = dense_hidden_size
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.dense_1 = Dense(self.filters, activation="tanh", name="decoder_dense_1")
+        self.dense_2 = Dense(2 * self.filters, name="decoder_dense_2")
+        self.dense_3 = Dense(2 * self.filters, use_bias=False, name="decoder_dense_3")
+        self.dense_4 = Dense(2 * self.filters, name="decoder_dense_4")
+        self.dense_5 = Dense(self.dense_hidden_size, activation="relu", name="decoder_dense_5")
         self.dense_6 = Dense(1, name="decoder_dense_6")
 
-    def __call__(
+    def call(
         self,
         decoder_features: tf.Tensor,
         decoder_init_input: tf.Tensor,

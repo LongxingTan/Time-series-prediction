@@ -119,8 +119,9 @@ class DenseEncoderBlock(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         dropout_rate: float = 0.1,
         layer_norm_eps: float = 1e-9,
+        **kwargs
     ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.ffn = FeedForwardNetwork(hidden_size, ffn_intermediate_size, dropout_rate)
         self.layernorm = LayerNormalization(epsilon=layer_norm_eps)
         self.dropout = Dropout(dropout_rate)

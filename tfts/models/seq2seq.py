@@ -112,6 +112,7 @@ class Encoder(tf.keras.layers.Layer):
         self.return_state = return_state
 
     def build(self, input_shape):
+        super(Encoder, self).build(input_shape)
         if self.rnn_type == "gru":
             self.rnn = GRU(
                 units=self.rnn_size,
@@ -133,7 +134,9 @@ class Encoder(tf.keras.layers.Layer):
             raise ValueError(f"No supported RNN type: {self.rnn_type}")
 
         self.dense = Dense(units=self.dense_size, activation="tanh")
-        super(Encoder, self).build(input_shape)
+        self.rnn.build(input_shape)
+        self.dense.build([input_shape[0], self.rnn_size])
+        self.built = True
 
     def call(self, inputs):
         """Process input through the encoder RNN and dense layers.
@@ -211,21 +214,32 @@ class DecoderV1(tf.keras.layers.Layer):
         self.num_attention_heads = num_attention_heads
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
 
-    def build(self, input_shape):
-        if self.rnn_type == "gru":
-            self.rnn_cell = GRUCell(self.rnn_size)
-        elif self.rnn_type == "lstm":
-            self.rnn_cell = LSTMCell(units=self.rnn_size)
-        else:
-            raise ValueError(f"No supported rnn type of {self.rnn_type}")
+    def build(self, input_shape, **kwargs):
+        batch_size = input_shape[0]
+        rnn_input_size = input_shape[-1] + 1
 
-        self.dense = Dense(units=1, activation=None)
         if self.use_attention:
+            encoder_output_shape = kwargs.get("encoder_output_shape")
+            if encoder_output_shape is None:
+                raise ValueError("encoder_output_shape must be provided for attention mechanism.")
             self.attention = Attention(
                 hidden_size=self.attention_size,
                 num_attention_heads=self.num_attention_heads,
                 attention_probs_dropout_prob=self.attention_probs_dropout_prob,
             )
+            self.attention.build(encoder_output_shape)
+
+        if self.rnn_type == "gru":
+            self.rnn_cell = GRUCell(self.rnn_size)
+        elif self.rnn_type == "lstm":
+            self.rnn_cell = LSTMCell(units=self.rnn_size)
+        else:
+            raise ValueError(f"Unsupported rnn type: {self.rnn_type}")
+
+        self.rnn_cell.build([batch_size, rnn_input_size])
+
+        self.dense = Dense(units=1, activation=None)
+        self.dense.build([batch_size, self.rnn_size])
         super().build(input_shape)
 
     def call(
@@ -328,8 +342,9 @@ class DecoderV2(tf.keras.layers.Layer):
         attention_sizes=32,
         num_attention_heads=1,
         attention_probs_dropout_prob=0.0,
+        **kwargs,
     ):
-        super(DecoderV2, self).__init__()
+        super(DecoderV2, self).__init__(**kwargs)
         self.rnn_type = rnn_type
         self.rnn_size = rnn_size
         self.predict_sequence_length = predict_sequence_length
