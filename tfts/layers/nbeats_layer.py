@@ -171,9 +171,8 @@ class GenericBlock(tf.keras.layers.Layer):
 
     def compute_output_shape(self, input_shape):
         batch_size = input_shape[0]
-        output_size = input_shape[-1]
-        backcast_shape = (batch_size, self.train_sequence_length, output_size)
-        forecast_shape = (batch_size, self.predict_sequence_length, output_size)
+        backcast_shape = (batch_size, self.train_sequence_length)
+        forecast_shape = (batch_size, self.predict_sequence_length)
         return (backcast_shape, forecast_shape)
 
     def get_config(self):
@@ -364,9 +363,8 @@ class SeasonalityBlock(tf.keras.layers.Layer):
 
     def compute_output_shape(self, input_shape):
         batch_size = input_shape[0]
-        output_size = input_shape[-1]
-        backcast_shape = (batch_size, self.train_sequence_length, output_size)
-        forecast_shape = (batch_size, self.predict_sequence_length, output_size)
+        backcast_shape = (batch_size, self.train_sequence_length)
+        forecast_shape = (batch_size, self.predict_sequence_length)
         return (backcast_shape, forecast_shape)
 
     def get_config(self):
