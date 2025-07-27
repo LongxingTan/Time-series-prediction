@@ -6,7 +6,7 @@
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Dropout, Lambda, LayerNormalization, ReLU
+from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization, ReLU
 
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
@@ -169,7 +169,7 @@ class Encoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        self.norm.build(input_shape[:-1] + (self.hidden_size,))
+        self.norm.build(list(input_shape[:-1]) + [self.hidden_size])
         self.built = True
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
@@ -290,7 +290,8 @@ class Decoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        self.norm.build(input_shape[:-1] + (self.hidden_size,))
+        self.norm.build(list(input_shape[:-1]) + [self.hidden_size])
+        self.built = True
 
     def call(
         self,
