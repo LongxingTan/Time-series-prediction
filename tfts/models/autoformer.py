@@ -169,7 +169,7 @@ class Encoder(tf.keras.layers.Layer):
             for _ in range(self.num_layers)
         ]
         self.norm = LayerNormalization()
-        self.norm.build(input_shape)
+        self.norm.build(input_shape[:-1] + [self.hidden_size])
         self.built = True
 
     def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
