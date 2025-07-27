@@ -4,6 +4,7 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 
 class GenerationMixin:
@@ -11,10 +12,17 @@ class GenerationMixin:
     A class containing auto-regressive generation, to be used as a mixin.
     """
 
+    def _prepare_generation_inputs(self, *args, **kwargs):
+        return
+
     def generate(
-        self, inputs: Union[pd.DataFrame, np.ndarray], generation_config: Dict[str, Any] = None
+        self,
+        inputs: Union[pd.DataFrame, np.ndarray],
+        generation_config: Dict[str, Any] = None,
+        logits_processor=None,
+        seed=None,
     ) -> pd.DataFrame:
-        """Generate time series predictions in an autoregressive manner.
+        """Generate time series predictions in an auto-regressive manner.
 
         Args:
             inputs: Initial input sequence as DataFrame or numpy array
