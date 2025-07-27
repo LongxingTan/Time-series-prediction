@@ -77,9 +77,6 @@ class DenseTemp(tf.keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
     def compute_output_shape(self, input_shape):
-        """
-        Computes the output shape of the layer.
-        """
         return tf.TensorShape(input_shape[:-1] + (self.hidden_size,))
 
 

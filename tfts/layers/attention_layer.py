@@ -161,9 +161,6 @@ class SelfAttention(tf.keras.layers.Layer):
         return base_config
 
     def compute_output_shape(self, input_shape):
-        """
-        Compute the output shape of the self-attention layer.
-        """
         return (input_shape[0], input_shape[1], self.hidden_size)
 
 

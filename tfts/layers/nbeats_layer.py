@@ -100,7 +100,6 @@ def seasonality_model(
         "bp,pt->bt", theta[:, config_per_harmonic : 2 * config_per_harmonic], forecast_sin_template
     )
     forecast = forecast_harmonics_sin + forecast_harmonics_cos
-
     return backcast, forecast
 
 
@@ -276,7 +275,7 @@ class TrendBlock(tf.keras.layers.Layer):
         return trend_model(x, self.backcast_time, self.forecast_time, self.polynomial_size)
 
     def compute_output_shape(self, input_shape):
-        return [(input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length)]
+        return ((input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length))
 
 
 class SeasonalityBlock(tf.keras.layers.Layer):
