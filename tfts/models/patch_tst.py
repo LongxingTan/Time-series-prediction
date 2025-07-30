@@ -17,7 +17,7 @@ from .base import BaseConfig, BaseModel
 
 
 class PatchTSTConfig(BaseConfig):
-    model_type: str = "patches_tst"
+    model_type: str = "patch_tst"
 
     def __init__(
         self,
