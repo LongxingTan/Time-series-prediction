@@ -86,6 +86,7 @@ class SparseMoe(tf.keras.layers.Layer):
         )
         super().build(input_shape)
 
+    @tf.function  # This is important for AutoGraph to convert correctly
     def call(self, hidden_states: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
         """Forward pass of the MoE layer.
 
@@ -114,51 +115,58 @@ class SparseMoe(tf.keras.layers.Layer):
 
         routing_weights = tf.cast(routing_weights, hidden_states.dtype)
 
-        final_hidden_states = tf.zeros_like(hidden_states_flat)
+        final_hidden_states = tf.zeros_like(hidden_states_flat, dtype=hidden_states.dtype)
 
-        for expert_idx in tf.range(self.num_experts):
+        # --- FIX APPLIED HERE ---
+        # Use a pure Python for loop to iterate over self.experts
+        # This ensures expert_idx is a concrete Python integer for list indexing.
+        for i in range(self.num_experts):
+            expert_idx_tensor = tf.constant(i, dtype=tf.int32)  # Create a tensor for comparison in graph ops
+
             # Create a boolean mask for tokens that selected the current expert
-            expert_chosen_mask = tf.equal(selected_experts, expert_idx)  # (num_tokens, top_k)
-
-            # --- DEBUGGING PRINT STATEMENTS ---
-            # tf.print("Iteration for expert_idx:", expert_idx)
-            # tf.print("Shape of selected_experts:", tf.shape(selected_experts))
-            # tf.print("Shape of expert_chosen_mask:", tf.shape(expert_chosen_mask))
-            # tf.print("Rank of expert_chosen_mask:", tf.rank(expert_chosen_mask))
-            # --- END DEBUGGING PRINT STATEMENTS ---
+            expert_chosen_mask = tf.equal(selected_experts, expert_idx_tensor)  # (num_tokens, top_k)
 
             coordinates = tf.where(expert_chosen_mask)
 
             # Check if there are any true values for this expert
-            if tf.shape(coordinates)[0] == 0:
-                continue
+            # Use tf.cond for graph-compatible conditional execution
+            def process_expert_branch():
+                token_indices_for_expert = coordinates[:, 0]
+                topk_position_for_expert = coordinates[:, 1]
 
-            # Unpack the coordinates
-            # coordinates[:, 0] gives the row indices (token indices)
-            # coordinates[:, 1] gives the column indices (top-k positions)
-            token_indices_for_expert = coordinates[:, 0]
-            topk_position_for_expert = coordinates[:, 1]
+                # Gather the hidden states for the tokens that chose this expert
+                current_state = tf.gather(hidden_states_flat, token_indices_for_expert)
 
-            # Gather the hidden states for the tokens that chose this expert
-            current_state = tf.gather(hidden_states_flat, token_indices_for_expert)
-            current_hidden_states_expert_output = self.experts[expert_idx](current_state)
+                # Here, self.experts[i] uses the Python integer 'i'
+                current_hidden_states_expert_output = self.experts[i](current_state)
 
-            # Gather the corresponding routing weights for these tokens and their chosen expert
-            current_routing_weights = tf.gather_nd(
-                routing_weights, tf.stack([token_indices_for_expert, topk_position_for_expert], axis=-1)
-            )
-            current_routing_weights = tf.expand_dims(
-                current_routing_weights, axis=-1
-            )  # Shape (num_tokens_for_expert, 1)
+                # Gather the corresponding routing weights for these tokens and their chosen expert
+                current_routing_weights = tf.gather_nd(
+                    routing_weights, tf.stack([token_indices_for_expert, topk_position_for_expert], axis=-1)
+                )
+                current_routing_weights = tf.expand_dims(
+                    current_routing_weights, axis=-1
+                )  # Shape (num_tokens_for_expert, 1)
 
-            weighted_expert_output = current_hidden_states_expert_output * tf.cast(
-                current_routing_weights, current_hidden_states_expert_output.dtype
-            )
+                weighted_expert_output = current_hidden_states_expert_output * tf.cast(
+                    current_routing_weights, current_hidden_states_expert_output.dtype
+                )
 
-            # Accumulate results using tf.tensor_scatter_nd_add
-            indices_to_scatter = tf.expand_dims(token_indices_for_expert, axis=-1)  # Shape (num_tokens_for_expert, 1)
-            final_hidden_states = tf.tensor_scatter_nd_add(
-                final_hidden_states, indices_to_scatter, weighted_expert_output
+                # Accumulate results using tf.tensor_scatter_nd_add
+                indices_to_scatter = tf.expand_dims(
+                    token_indices_for_expert, axis=-1
+                )  # Shape (num_tokens_for_expert, 1)
+
+                # This needs to update `final_hidden_states` which is a loop-carried tensor
+                return tf.tensor_scatter_nd_add(final_hidden_states, indices_to_scatter, weighted_expert_output)
+
+            # If no tokens selected this expert, return the current final_hidden_states unchanged
+            def no_op_branch():
+                return final_hidden_states
+
+            # tf.cond takes callables for true_fn and false_fn
+            final_hidden_states = tf.cond(
+                tf.shape(coordinates)[0] > 0, true_fn=process_expert_branch, false_fn=no_op_branch
             )
 
         # Shared Expert Computation
