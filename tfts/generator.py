@@ -7,12 +7,17 @@ import pandas as pd
 import tensorflow as tf
 
 
+class GenerationConfig:
+    def __init__(self, **kwargs) -> None:
+        self.max_length = kwargs.pop("max_length", 20)
+
+
 class GenerationMixin:
     """
     A class containing auto-regressive generation, to be used as a mixin.
     """
 
-    def _prepare_generation_inputs(self, *args, **kwargs):
+    def prepare_inputs_for_generation(self, *args, **kwargs):
         return
 
     def generate(
@@ -21,6 +26,7 @@ class GenerationMixin:
         generation_config: Dict[str, Any] = None,
         logits_processor=None,
         seed=None,
+        **kwargs,
     ) -> pd.DataFrame:
         """Generate time series predictions in an auto-regressive manner.
 
@@ -45,7 +51,6 @@ class GenerationMixin:
 
         # Convert inputs to DataFrame if needed
         if isinstance(inputs, np.ndarray):
-            # We need to convert numpy array to DataFrame
             features = self.get_feature_names()
             if len(features) != inputs.shape[1]:
                 raise ValueError(f"Input array shape {inputs.shape} doesn't match feature count {len(features)}")
