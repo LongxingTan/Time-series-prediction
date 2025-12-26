@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1505.04597>`_
 """
 
+import logging
 from typing import List, Optional, Tuple
 
 import tensorflow as tf
@@ -23,6 +24,8 @@ from tfts.layers.unet_layer import ConvbrLayer, ReBlock, SeBlock
 
 from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class UnetConfig(BaseConfig):

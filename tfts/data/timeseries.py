@@ -54,10 +54,10 @@ class TimeSeriesSequence(Sequence):
     def __init__(
         self,
         data: pd.DataFrame,
-        time_idx: str,
         target_column: str,
         train_sequence_length: int,
         predict_sequence_length: int = 1,
+        time_idx: Optional[str] = None,
         batch_size: int = 32,
         group_column: Optional[List[str]] = None,
         feature_columns: Optional[List[str]] = None,
