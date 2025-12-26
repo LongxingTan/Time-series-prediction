@@ -3,20 +3,64 @@
 """
 
 import logging
+import os
 import random
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from tensorflow.keras.utils import Sequence, get_file
 
 from tfts.constants import TFTS_ASSETS_CACHE
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-AIR_PASSENGER_URL = (
-    "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv"
-)
+
+TS_DATASETS_URL = {
+    "air_passengers": {
+        "url": "https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv",  # noqa: E501
+        "format": "csv",
+        "freq": "MS",
+    },
+    "volatility": {
+        "url": "https://realized.oxford-man.ox.ac.uk/images/oxfordmanrealizedvolatilityindices.zip",
+        "format": "zip",
+    },
+    "electricity": {
+        "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip",
+        "format": "zip",
+        "freq": "15T",
+    },
+    "traffic": {
+        "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/00204/PEMS-SF.zip",
+        "format": "zip",
+        "freq": "H",
+    },
+    "favorita": {
+        "url": "https://www.kaggle.com/c/favorita-grocery-sales-forecasting/data",
+        "format": "kaggle",
+    },
+    "m5": {
+        "url": "https://www.kaggle.com/c/m5-forecasting-accuracy/data",
+        "format": "kaggle",
+    },
+}
+
+
+def download_and_extract(name: str) -> str:
+    """Robust download utility using Keras get_file logic."""
+    if name not in TS_DATASETS_URL:
+        raise ValueError(f"Dataset {name} configuration not found.")
+
+    config = TS_DATASETS_URL[name]
+    cache_dir = os.path.join(TFTS_ASSETS_CACHE, name)
+    os.makedirs(cache_dir, exist_ok=True)
+
+    path = get_file(
+        fname=config["filename"], origin=config["url"], cache_subdir=cache_dir, extract=(config["format"] == "zip")
+    )
+    return os.path.dirname(path)
 
 
 def get_data(
@@ -31,6 +75,10 @@ def get_data(
 
     elif name == "ar":
         return get_ar_data(**kwargs)
+    elif name == "volatility":
+        return get_volatility_data()
+    elif name == "electricity":
+        return get_electricity_data()
     else:
         raise ValueError(f"unsupported data of {name} yet, try 'sine', 'airpassengers'")
 
@@ -95,7 +143,7 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
         Tuple of training and validation data, each containing inputs and outputs.
 
     """
-    df = pd.read_csv(AIR_PASSENGER_URL, parse_dates=None, date_parser=None, nrows=144)
+    df = pd.read_csv(TS_DATASETS_URL["air_passengers"]["url"], parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values
     v = (v - np.max(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
 
@@ -234,3 +282,36 @@ def get_ar_data(
         return data, components
     else:
         return data
+
+
+def get_volatility_data() -> pd.DataFrame:
+    data_dir = download_and_extract("volatility")
+    csv_path = os.path.join(data_dir, TS_DATASETS_URL["volatility"]["csv_inside"])
+
+    df = pd.read_csv(csv_path, index_col=0)
+    df.index = pd.to_datetime([str(s).split("+")[0] for s in df.index])
+    df = df.reset_index().rename(columns={"index": "date"})
+
+    # Feature engineering from reference
+    df["log_vol"] = np.log(df["rv5_ss"].replace(0, np.nan))
+    df["log_vol"] = df.groupby("Symbol")["log_vol"].ffill().bfill()
+
+    # Mapping regions
+    symbol_region_mapping = {".AEX": "EMEA", ".DJI": "AMER", ".HSI": "APAC", ".SPX": "AMER"}  # truncated for brevity
+    df["region"] = df["Symbol"].map(symbol_region_mapping).fillna("Unknown")
+
+    return df
+
+
+def get_electricity_data() -> pd.DataFrame:
+    data_dir = download_and_extract("electricity")
+    csv_path = os.path.join(data_dir, TS_DATASETS_URL["electricity"]["csv_inside"])
+
+    # Industrial datasets are often large; use specific separators
+    df = pd.read_csv(csv_path, sep=";", decimal=",", index_col=0, parse_dates=True)
+    df = df.resample("1H").mean().replace(0.0, np.nan)
+
+    # Melt to long format (productive for TimeSeriesSequence)
+    df = df.reset_index().melt(id_vars="index", var_name="id", value_name="power_usage")
+    df = df.rename(columns={"index": "date"}).dropna()
+    return df

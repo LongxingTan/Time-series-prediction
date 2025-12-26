@@ -7,7 +7,7 @@ from tensorflow.keras import activations, constraints, initializers, regularizer
 from tensorflow.keras.layers import Dropout, Layer
 
 
-class GraphConvolution(Layer):
+class GraphConv(Layer):
     """Basic Graph Convolution Layer.
 
     This layer implements the graph convolution operation:
@@ -44,7 +44,7 @@ class GraphConvolution(Layer):
         bias_constraint: Optional[str] = None,
         **kwargs: Dict[str, Any],
     ) -> None:
-        super(GraphConvolution, self).__init__(**kwargs)
+        super(GraphConv, self).__init__(**kwargs)
         self.units = units
         self.activation = activations.get(activation)
         self.use_bias = use_bias
@@ -78,7 +78,7 @@ class GraphConvolution(Layer):
             )
         else:
             self.bias = None
-        super(GraphConvolution, self).build(input_shape)
+        super(GraphConv, self).build(input_shape)
 
     def call(self, inputs: Tuple[tf.Tensor, tf.Tensor], **kwargs) -> tf.Tensor:
         """Forward pass.
@@ -134,7 +134,7 @@ class GraphConvolution(Layer):
             "kernel_constraint": constraints.serialize(self.kernel_constraint),
             "bias_constraint": constraints.serialize(self.bias_constraint),
         }
-        base_config = super(GraphConvolution, self).get_config()
+        base_config = super(GraphConv, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 

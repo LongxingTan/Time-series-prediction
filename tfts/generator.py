@@ -1,6 +1,6 @@
 """tfts Generator"""
 
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -23,6 +23,8 @@ class GenerationMixin:
     def generate(
         self,
         inputs: Union[pd.DataFrame, np.ndarray],
+        future_covariates: Optional[tf.Tensor] = None,
+        max_steps: int = 10,
         generation_config: Dict[str, Any] = None,
         logits_processor=None,
         seed=None,

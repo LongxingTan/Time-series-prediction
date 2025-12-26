@@ -1,6 +1,6 @@
 """tfts package for time series prediction with TensorFlow"""
 
-from tfts.data.get_data import get_data
+from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import (
     AutoModel,
@@ -25,6 +25,7 @@ __all__ = [
     "KerasTrainer",
     "TrainingArguments",
     "get_data",
+    "TimeSeriesSequence",
 ]
 
 __version__ = "0.0.0"

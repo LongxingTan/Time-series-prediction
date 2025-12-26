@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.layers.graph_layer import GraphAttention, GraphConvolution
+from tfts.layers.graph_layer import GraphAttention, GraphConv
 
 
 class GraphLayerTest(unittest.TestCase):
@@ -14,7 +14,7 @@ class GraphLayerTest(unittest.TestCase):
         input_dim = 5
 
         # Test Dense Adjacency
-        layer = GraphConvolution(units, activation="relu")
+        layer = GraphConv(units, activation="relu")
 
         # Inputs: Features (B, N, F), Adjacency (B, N, N)
         x = tf.random.normal((batch_size, num_nodes, input_dim))
@@ -36,7 +36,7 @@ class GraphLayerTest(unittest.TestCase):
         num_nodes = 50
         input_dim = 8
 
-        layer = GraphConvolution(units)
+        layer = GraphConv(units)
 
         # Features (1, N, F) - usually sparse matmul requires specific dimensions
         # Here we test the mechanics of passing a SparseTensor
