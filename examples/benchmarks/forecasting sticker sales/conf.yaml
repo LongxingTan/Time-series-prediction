@@ -1,0 +1,19 @@
+seed: 315
+
+data:
+  data_path:
+  target_column:
+  freq: 'h'
+
+model:
+  name: BERT
+  n_layers: 2
+  hidden_size: 128
+  n_features: 
+  n_output: 1
+
+training:
+  batch_size: 128
+  epochs: 30
+  learning_rate: 0.001
+  loss: "mae"

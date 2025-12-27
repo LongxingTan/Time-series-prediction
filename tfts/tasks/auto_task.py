@@ -1,12 +1,13 @@
 """Time series task head"""
 
+from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D
 
-from .base import BaseTask
+from .base import BaseTask, ModelOutput
 
 
 class PredictionHead(tf.keras.layers.Layer, BaseTask):
@@ -16,11 +17,13 @@ class PredictionHead(tf.keras.layers.Layer, BaseTask):
         super(PredictionHead, self).__init__()
 
 
-class SegmentationHead(tf.keras.layers.Layer, BaseTask):
-    """Segmentation task head layer"""
-
-    def __init__(self):
-        super(SegmentationHead, self).__init__()
+@dataclass
+class PredictionOutput(ModelOutput):
+    prediction_logits: tf.Tensor = None
+    last_hidden_state: Optional[tf.Tensor] = None
+    hidden_states: Optional[Tuple[tf.Tensor, ...]] = None
+    attentions: Optional[Tuple[tf.Tensor, ...]] = None
+    loss: Optional[tf.Tensor] = None
 
 
 class ClassificationHead(tf.keras.layers.Layer):
@@ -56,6 +59,13 @@ class ClassificationHead(tf.keras.layers.Layer):
         # => (batch_size, num_labels)
         logits = self.classifier(pooled_output)
         return logits
+
+
+@dataclass
+class ClassificationOutput(ModelOutput):
+    logits: tf.Tensor = None
+    hidden_states: Optional[Tuple[tf.Tensor, ...]] = None
+    loss: Optional[tf.Tensor] = None
 
 
 class AnomalyHead:
@@ -95,6 +105,13 @@ class AnomalyHead:
         return d
 
 
+@dataclass
+class AnomalyOutput(ModelOutput):
+    anomaly_scores: tf.Tensor = None
+    reconstruction_logits: Optional[tf.Tensor] = None
+    loss: Optional[tf.Tensor] = None
+
+
 class GaussianHead(tf.keras.layers.Layer):
     def __init__(self, units: int):
         self.units = units
@@ -131,3 +148,10 @@ class GaussianHead(tf.keras.layers.Layer):
         config = {"units": self.units}
         base_config = super().get_config()
         return {**base_config, **config}
+
+
+class SegmentationHead(tf.keras.layers.Layer, BaseTask):
+    """Segmentation task head layer"""
+
+    def __init__(self):
+        super(SegmentationHead, self).__init__()

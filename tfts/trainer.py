@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from contextlib import nullcontext
 import logging
 import os
+import random
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 import numpy as np
@@ -15,10 +16,17 @@ from .constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF
 from .models.base import BaseModel
 from .training_args import TrainingArguments
 
-__all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer"]
+__all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer", "set_seed"]
 
 
 logger = logging.getLogger(__name__)
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    tf.random.set_seed(seed)
 
 
 class BaseTrainer(object):
