@@ -42,7 +42,7 @@ class BaseTrainer(object):
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
-        self.strategy = strategy
+        self.strategy = strategy or tf.distribute.get_strategy()
 
         # with self.get_strategy_scope(strategy):
         #     self.model = self._setup_model(model)
@@ -74,6 +74,15 @@ class BaseTrainer(object):
     def create_accelerator_and_postprocess(self):
         return
 
+    def get_distribution_strategy():
+        gpus = tf.config.list_physical_devices("GPU")
+        if len(gpus) > 1:
+            return tf.distribute.MirroredStrategy()
+        elif len(gpus) == 1:
+            return tf.distribute.OneDeviceStrategy(device="/gpu:0")
+        else:
+            return tf.distribute.OneDeviceStrategy(device="/cpu:0")
+
     def get_strategy_scope(self):
         return self.strategy.scope() if self.strategy else nullcontext()
 
@@ -102,6 +111,7 @@ class BaseTrainer(object):
         """Configure mixed precision training."""
         policy = tf.keras.mixed_precision.Policy("mixed_float16")
         tf.keras.mixed_precision.set_global_policy(policy)
+        logger.info("Mixed precision enabled.")
 
     # def _setup_ema(self) -> None:
     #     """Configure Exponential Moving Average if enabled."""
@@ -173,6 +183,10 @@ class BaseTrainer(object):
         except Exception as e:
             logging.error(f"Failed to save model weights to {weights_file}: {e}")
             return
+
+    @property
+    def global_batch_size(self):
+        return self.args.per_device_train_batch_size * self.strategy.num_replicas_in_sync
 
 
 class KerasTrainer(BaseTrainer):
@@ -293,6 +307,9 @@ class KerasTrainer(BaseTrainer):
 
     def save_model(self, output_dir: Optional[str] = None):
         # save the model, checkpoint_dir if you use Checkpoint callback to save your best weights
+        if self.strategy.cluster_resolver and not self.strategy.cluster_resolver.task_type == "chief":
+            return
+
         output_dir = TFTS_HOME if output_dir is None else output_dir
         self._save(output_dir)
 
@@ -327,7 +344,7 @@ class Trainer(object):
         **kwargs: Dict[str, Any],
     ) -> None:
         self.model = model
-        self.strategy = strategy
+        self.strategy = strategy or tf.distribute.get_strategy()
 
         for key, value in kwargs.items():
             setattr(self, key, value)
