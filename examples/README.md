@@ -14,6 +14,7 @@ Dive deeper with these notebooks:
 - [multi steps prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/multi_steps_sales_prediction.ipynb): Learn how to forecast multiple future time points in a sales dataset.
 
 ## 📊 Benchmark
+- [Kaggle - Forecasting Sticker Sales](https://www.kaggle.com/competitions/playground-series-s5e1)
 
 
 ## 🏆 More examples

@@ -1,7 +1,8 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
+import numpy as np
 import tensorflow as tf
 
 from ..models import AutoConfig, AutoModel
@@ -12,13 +13,13 @@ logger = logging.getLogger(__name__)
 class Pipeline(object):
     _load_processor = False
 
-    def __init__(self, cfg, processor: Optional[Callable] = None):
+    def __init__(self, cfg, processor: Optional[Callable] = None, strategy: Optional[tf.distribute.Strategy] = None):
         self.cfg = cfg
         self.backbone = None
         self.model = None
         self.label_scaler = None
         self.processor = processor
-        self.strategy = self._setup_strategy()
+        self.strategy = strategy or self._setup_strategy()
 
     def _setup_strategy(self):
         """Detects GPUs and returns the appropriate distribution strategy."""
@@ -60,7 +61,6 @@ class Pipeline(object):
         return model
 
     def train(self, train_dataset, eval_dataset=None, callbacks=None):
-
         try:
             sample_x, sample_y = next(iter(train_dataset))
         except (TypeError, StopIteration, AttributeError):
@@ -92,6 +92,53 @@ class Pipeline(object):
                 self.model.load_weights(weights_path)
 
         return self.model.predict(test_dataset)
+
+    def generate(
+        self, initial_sequence: Union[np.ndarray, tf.Tensor], horizon: int, extra_features_fn: Optional[Callable] = None
+    ):
+        """
+        Auto-regressive generation for multi-step time series.
+        """
+        if self.model is None:
+            raise ValueError("Model must be trained or loaded before generation.")
+
+        current_window = tf.convert_to_tensor(initial_sequence, dtype=tf.float32)
+        batch_size = tf.shape(current_window)[0]
+        train_len = self.cfg.model.train_sequence_length
+        output_len = self.cfg.model.predict_sequence_length
+        n_features = tf.shape(current_window)[-1]
+
+        all_predictions = []
+        steps_needed = int(np.ceil(horizon / output_len))
+
+        print(f"Generating {horizon} steps in {steps_needed} blocks...")
+
+        for step in range(steps_needed):
+            model_input = current_window[:, -train_len:, :]
+
+            # 2. Predict next chunk (Batch, Output_Len)
+            preds = self.model(model_input, training=False)
+
+            if len(preds.shape) == 2:
+                preds = tf.expand_dims(preds, axis=-1)
+
+            # 3. Prepare features for the predicted chunk (Recursive Step)
+            # If your model uses (Value, Mask), predicted values get Mask=0
+            if n_features > 1:
+                # Create a zero-mask for the new predictions
+                # Adjust this logic if you have other features like 'Day of Year'
+                padding_features = tf.zeros((batch_size, output_len, n_features - 1))
+                new_chunk = tf.concat([preds, padding_features], axis=-1)
+            else:
+                new_chunk = preds
+
+            # 4. Concatenate back to context
+            current_window = tf.concat([current_window, new_chunk], axis=1)
+            all_predictions.append(preds)
+
+        # 5. Post-process the full sequence, Concatenate chunks and trim to exact horizon
+        full_forecast = tf.concat(all_predictions, axis=1)
+        return full_forecast[:, :horizon, :]
 
     def postprocess(self):
         pass
