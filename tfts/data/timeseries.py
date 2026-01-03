@@ -168,8 +168,14 @@ class TimeSeriesSequence(Sequence):
 
     def get_tf_dataset(self) -> tf.data.Dataset:
         """Convert to high-performance tf.data pipeline."""
+        # Get feature dimension from actual sequence data
+        if len(self.sequences) > 0:
+            num_features = self.sequences[0][0].shape[-1]
+        else:
+            num_features = len(self.target)
+
         output_signature = (
-            tf.TensorSpec(shape=(None, self.train_sequence_length, len(self.features)), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, self.train_sequence_length, num_features), dtype=tf.float32),
             tf.TensorSpec(shape=(None, self.predict_sequence_length, len(self.target)), dtype=tf.float32),
         )
         return tf.data.Dataset.from_generator(

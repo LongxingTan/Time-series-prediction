@@ -6,7 +6,7 @@
 from typing import Dict, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import GRU, Dense
+from tensorflow.keras.layers import GRU, Dense, LayerNormalization
 
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
@@ -19,7 +19,7 @@ class RWKVConfig(BaseConfig):
 
     def __init__(
         self,
-        num_layers: int = 25,
+        num_layers: int = 3,
         hidden_size: int = 64,
         dense_hidden_size: int = 32,
         dropout: float = 0.0,
@@ -66,18 +66,19 @@ class RWKV(BaseModel):
         # Embedding layer
         self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
 
-        self.ln0 = tf.keras.layers.LayerNormalization(epsilon=self.config.layer_norm_eps)
+        self.ln0 = LayerNormalization(epsilon=self.config.layer_norm_eps)
 
         self.blocks = [RWKVBlock(self.config) for _ in range(self.config.num_layers)]
 
-        self.ln_out = tf.keras.layers.LayerNormalization(epsilon=self.config.layer_norm_eps)
+        self.ln_out = LayerNormalization(epsilon=self.config.layer_norm_eps)
         self.output_projection = Dense(1)
 
-    def init_state(self, batch_size=1):
+    def init_state(self, batch_size: int):
         states = []
         for _ in range(self.config.num_layers):
             # States for attention
             att_states = [
+                tf.zeros((batch_size, self.config.hidden_size)),  # last_x
                 tf.zeros((batch_size, self.config.hidden_size)),  # aa
                 tf.zeros((batch_size, self.config.hidden_size)),  # bb
                 tf.zeros((batch_size, self.config.hidden_size)) - 1e30,  # pp
@@ -97,11 +98,12 @@ class RWKV(BaseModel):
     ):
         """RWKV model call for time series forecasting"""
 
-        if states is None:
-            states = self.init_state()
-
         # Prepare inputs
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
+
+        if states is None:
+            batch_size = tf.shape(x)[0]
+            states = self.init_state(batch_size=batch_size)
 
         # Embed inputs
         x = self.embedding(encoder_feature)
@@ -118,7 +120,7 @@ class RWKV(BaseModel):
         # Slice the output to only include the last predict_sequence_length steps
         x = x[:, -self.predict_sequence_length :, :]
 
-        return x, new_states
+        return x
 
     def _prepare_inputs(self, inputs):
         """Prepare the inputs for the encoder."""
@@ -160,16 +162,10 @@ class RWKVBlock(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.config = config
-        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.ln1 = LayerNormalization()
         self.attention = TimeMixing(config)
-        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.ln2 = LayerNormalization()
         self.feed_forward = ChannelMixing(config)
-
-    def build(self, input_shape):
-        super().build(input_shape)
-        # Ensure the attention and feed_forward layers are built
-        self.attention.build(input_shape)
-        self.feed_forward.build(input_shape)
 
     def call(self, x, states):
         """block

@@ -6,7 +6,7 @@
 from typing import Dict, Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, LayerNormalization
+from tensorflow.keras.layers import Dense, Flatten, LayerNormalization
 
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
@@ -27,6 +27,7 @@ class PatchTSTConfig(BaseConfig):
         attention_probs_dropout_prob: float = 0.1,
         hidden_dropout_prob: float = 0.1,
         ffn_intermediate_size: int = 256,
+        output_size: int = 1,
         max_position_embeddings: int = 512,
         initializer_range: float = 0.02,
         layer_norm_eps: float = 1e-12,
@@ -58,6 +59,7 @@ class PatchTSTConfig(BaseConfig):
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
         self.hidden_dropout_prob: float = hidden_dropout_prob
         self.ffn_intermediate_size: int = ffn_intermediate_size
+        self.output_size: int = output_size
         self.max_position_embeddings: int = max_position_embeddings
         self.initializer_range: float = initializer_range
         self.layer_norm_eps: float = layer_norm_eps
@@ -84,7 +86,8 @@ class PatchTST(BaseModel):
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
         # Output projection
-        self.output_projection = Dense(1)
+        self.flatten = Flatten()
+        self.output_projection = Dense(self.predict_sequence_length * self.config.output_size)
 
     def __call__(
         self,
@@ -121,9 +124,11 @@ class PatchTST(BaseModel):
             x = block(x)
 
         # Project to output
-        x = self.output_projection(x)
+        x = self.flatten(x)  # [batch, num_patches * hidden]
+        x = self.output_projection(x)  # [batch, predict_len * n_vars]
 
         # Reshape back to original sequence length
+
         x = tf.reshape(x, [batch_size, -1, 1])
 
         # Slice the output to only include the last predict_sequence_length steps

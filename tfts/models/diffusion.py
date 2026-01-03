@@ -117,58 +117,45 @@ class Diffusion(BaseModel):
         self.predict_sequence_length = predict_sequence_length
         self.noise_scheduler = NoiseScheduler(self.config)
 
-        # Time embedding
+        # Layers that don't depend on input feature count
         self.time_embedding = Dense(self.config.hidden_size)
-
-        # Embedding layer
         self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
-
-        # Transformer blocks
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
-        # Output projection
+        # Initialize the projection layer here once
         self.output_projection = Dense(1)
 
-    def __call__(
-        self,
-        x,
-        states=None,
-        teacher=None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ):
-        """Diffusion model call for time series forecasting"""
-        # Prepare inputs
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
+    def __call__(self, x, training=None, **kwargs):
+        """Diffusion model forward pass logic."""
+        # 1. Prepare inputs (using BaseModel helper)
+        # Note: ignore_decoder_inputs=True because diffusion usually denoises the encoder path
+        x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
-        # Generate random timesteps
+        # 2. Generate random timesteps
         batch_size = tf.shape(encoder_feature)[0]
         t = tf.random.uniform(shape=[batch_size], minval=0, maxval=self.config.num_diffusion_steps, dtype=tf.int32)
 
-        # Add noise to input
+        # 3. Add noise to input
         noisy_x, noise = self.noise_scheduler.add_noise(encoder_feature, t)
 
-        # Time embedding
-        t_emb = self.time_embedding(tf.cast(t, tf.float32))
+        # 4. Time embedding (batch, 1) -> (batch, 1, hidden)
+        t_float = tf.cast(t, tf.float32)
+        t_emb = self.time_embedding(tf.expand_dims(t_float, axis=-1))
         t_emb = tf.expand_dims(t_emb, axis=1)
 
-        # Process through transformer blocks
+        # 5. Transformer process
         x = self.embedding(noisy_x)
-        x = tf.concat([x, t_emb], axis=-1)
+        x = x + t_emb  # Inject time information
 
         for block in self.blocks:
             x = block(x)
 
-        # Project to output
+        # 6. Predict noise and reconstruct
         predicted_noise = self.output_projection(x)
-
-        # Remove noise
         denoised_x = self.noise_scheduler.remove_noise(noisy_x, predicted_noise, t)
 
-        # Slice the output to only include the last predict_sequence_length steps
-        denoised_x = denoised_x[:, -self.predict_sequence_length :, :]
-
-        return denoised_x
+        # 7. Return prediction window
+        return denoised_x[:, -self.predict_sequence_length :, :]
 
 
 class TransformerBlock(tf.keras.layers.Layer):

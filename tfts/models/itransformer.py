@@ -64,70 +64,51 @@ class ITransformerConfig(BaseConfig):
 
 
 class ITransformer(BaseModel):
-    """TensorFlow PatchTST model for time series forecasting"""
+    """TensorFlow iTransformer model for time series forecasting"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[ITransformerConfig] = None):
         super().__init__()
         self.config = config or ITransformerConfig()
         self.predict_sequence_length = predict_sequence_length
 
-        # Embedding layer
-        self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
+        # In iTransformer, we embed the entire time dimension of each variate
+        self.enc_embedding = Dense(self.config.hidden_size)
 
         # Transformer blocks
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
-        # Output projection
+        # Project from hidden_size to predict_sequence_length
         self.projector = Dense(self.predict_sequence_length)
 
-    def __call__(
-        self,
-        x,
-        states=None,
-        teacher=None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ):
-        """PatchTST model call for time series forecasting"""
+    def __call__(self, x, training=None, **kwargs):
+        """iTransformer forward pass: Inverting Variates and Time"""
+        # x shape: (batch, seq_len, n_vars)
+        x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
-        # Prepare inputs
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
+        # 1. Inversion: (batch, seq_len, n_vars) -> (batch, n_vars, seq_len)
+        # Each variate becomes a "token"
+        x = tf.transpose(encoder_feature, perm=[0, 2, 1])
 
-        # Create patches
-        batch_size, seq_length, _ = ShapeLayer()(encoder_feature)
-        num_patches = seq_length // self.config.patch_size
+        # 2. Embedding: Map the whole history of each variate to hidden_size
+        # (batch, n_vars, hidden_size)
+        x = self.enc_embedding(x)
 
-        # Reshape to patches
-        patches = tf.reshape(
-            encoder_feature[:, : num_patches * self.config.patch_size, :],
-            [batch_size, num_patches, self.config.patch_size, -1],
-        )
-
-        # Flatten patches and project to hidden size
-        patches = tf.reshape(patches, [batch_size, num_patches, -1])
-        x = self.patch_embedding(patches)
-
-        # Add positional embeddings
-        x = self.embedding(x)
-
-        # Process through transformer blocks
+        # 3. Attention: Process across variables
         for block in self.blocks:
-            x = block(x)
+            x = block(x, training=training)
 
-        # Project to output
-        x = self.output_projection(x)
+        # 4. Projection: Map hidden_size to predict_len
+        # (batch, n_vars, predict_len)
+        x = self.projector(x)
 
-        # Reshape back to original sequence length
-        x = tf.reshape(x, [batch_size, -1, 1])
-
-        # Slice the output to only include the last predict_sequence_length steps
-        x = x[:, -self.predict_sequence_length :, :]
+        # 5. Reverse Inversion: (batch, predict_len, n_vars)
+        x = tf.transpose(x, perm=[0, 2, 1])
 
         return x
 
 
 class TransformerBlock(tf.keras.layers.Layer):
-    """Transformer block for PatchTST"""
+    """Standard Transformer block used in iTransformer"""
 
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
@@ -148,17 +129,15 @@ class TransformerBlock(tf.keras.layers.Layer):
         self.feed_forward_norm = LayerNormalization(epsilon=config.layer_norm_eps)
         self.feed_forward_dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
-    def call(self, x):
-        """Transformer block forward pass"""
-        # Self-attention
-        attention_output = self.attention(x, x, x)
+    def call(self, x, training=None):
+        # Self-attention across variates
+        attention_output = self.attention(x, x, x, training=training)
         attention_output = self.attention_output(attention_output)
-        attention_output = self.attention_dropout(attention_output)
+        attention_output = self.attention_dropout(attention_output, training=training)
         x = self.attention_norm(x + attention_output)
 
         # Feed-forward
-        feed_forward_output = self.feed_forward(x)
-        feed_forward_output = self.feed_forward_dropout(feed_forward_output)
-        x = self.feed_forward_norm(x + feed_forward_output)
-
+        ffn_output = self.feed_forward(x, training=training)
+        ffn_output = self.feed_forward_dropout(ffn_output, training=training)
+        x = self.feed_forward_norm(x + ffn_output)
         return x
