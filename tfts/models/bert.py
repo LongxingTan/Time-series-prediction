@@ -12,6 +12,7 @@ from tensorflow.keras.layers import Dense, Lambda, Reshape
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
+from ..tasks.auto_task import PredictionOutput
 from .base import BaseConfig, BaseModel
 
 logger = logging.getLogger(__name__)

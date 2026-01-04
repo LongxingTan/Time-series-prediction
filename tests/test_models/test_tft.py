@@ -14,6 +14,7 @@ class TFTransformerTest(unittest.TestCase):
     def test_model(self):
         predict_sequence_length = 8
         custom_model_config = TFTransformerConfig(
+            encoder_input_dim=5,
             hidden_size=256,
             num_layers=2,
             num_attention_heads=4,
@@ -27,7 +28,7 @@ class TFTransformerTest(unittest.TestCase):
         )
         model = TFTransformer(predict_sequence_length, config=custom_model_config)
 
-        x = tf.random.normal([2, 16, 3])
+        x = tf.random.normal([2, 16, 5])
         y = model(x)
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
@@ -50,6 +51,7 @@ class TFTransformerTest(unittest.TestCase):
         )
 
         config = AutoConfig.for_model("tft")
+        config.encoder_input_dim = ts_sequence[0][0].shape[-1]
 
         model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
         trainer = KerasTrainer(model)

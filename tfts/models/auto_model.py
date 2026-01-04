@@ -14,7 +14,14 @@ from tensorflow.keras.layers import Dense
 
 from tfts.losses.loss import MultiQuantileLoss
 from tfts.models.base import BaseConfig, BaseModel
-from tfts.tasks.auto_task import AnomalyHead, ClassificationHead
+from tfts.tasks.auto_task import (
+    AnomalyHead,
+    ClassificationHead,
+    ClassificationOutput,
+    GaussianHead,
+    PredictionHead,
+    PredictionOutput,
+)
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
 from .auto_config import AutoConfig

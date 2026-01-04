@@ -6,7 +6,7 @@
 from typing import Optional
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
+from tensorflow.keras.layers import LSTM, Concatenate, Dense, Dropout, LayerNormalization
 
 from ..layers.attention_layer import Attention, SelfAttention
 from ..layers.dense_layer import FeedForwardNetwork
@@ -19,9 +19,12 @@ class TFTransformerConfig(BaseConfig):
 
     def __init__(
         self,
+        encoder_input_dim: int = 1,
+        decoder_input_dim: int = 1,
         hidden_size: int = 256,
         num_layers: int = 2,
         num_attention_heads: int = 4,
+        output_size: int = 1,
         attention_probs_dropout_prob: float = 0.0,
         hidden_dropout_prob: float = 0.0,
         ffn_intermediate_size: int = 256,
@@ -29,12 +32,15 @@ class TFTransformerConfig(BaseConfig):
         initializer_range: float = 0.02,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        **kwargs
+        **kwargs,
     ):
         super(TFTransformerConfig, self).__init__()
+        self.encoder_input_dim = encoder_input_dim
+        self.decoder_input_dim = decoder_input_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_attention_heads = num_attention_heads
+        self.output_size = output_size
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.hidden_dropout_prob = hidden_dropout_prob
         self.ffn_intermediate_size = ffn_intermediate_size
@@ -57,34 +63,64 @@ class TFTransformer(BaseModel):
         self.temporal_embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
         self.static_embedding = DataEmbedding(self.config.hidden_size)
 
-        # Variable selection networks (simplified as dense layers with gating)
-        self.temporal_variable_selection = Dense(self.config.hidden_size, activation="sigmoid")
-        self.static_variable_selection = Dense(self.config.hidden_size, activation="sigmoid")
-
-        # Gated Residual Networks (GRN) for feature processing
-        self.temporal_grn = FeedForwardNetwork(
-            self.config.hidden_size, self.config.ffn_intermediate_size, self.config.hidden_dropout_prob
+        # Variable selection networks
+        self.encoder_var_selection = tf.keras.Sequential(
+            [
+                Dense(self.config.hidden_size, activation="relu"),
+                Dense(self.config.encoder_input_dim, activation="sigmoid"),
+            ],
+            name="encoder_var_selection",
         )
-        self.static_grn = FeedForwardNetwork(
-            self.config.hidden_size, self.config.ffn_intermediate_size, self.config.hidden_dropout_prob
+        self.decoder_var_selection = tf.keras.Sequential(
+            [
+                Dense(self.config.hidden_size, activation="relu"),
+                Dense(self.config.decoder_input_dim, activation="sigmoid"),
+            ],
+            name="decoder_var_selection",
         )
 
-        # Static covariate encoder (using LSTM)
-        self.static_encoder = tf.keras.layers.LSTM(self.config.hidden_size, return_sequences=True)
+        self.lstm_encoder_layers = [
+            LSTM(
+                self.config.hidden_size,
+                return_sequences=True,
+                dropout=0.0 if i < self.config.num_layers - 1 else 0.0,
+                name=f"lstm_enc_{i}",
+            )
+            for i in range(self.config.num_layers)
+        ]
+        self.lstm_decoder_layers = [
+            LSTM(
+                self.config.hidden_size,
+                return_sequences=True,
+                dropout=0.0 if i < self.config.num_layers - 1 else 0.0,
+                name=f"lstm_dec_{i}",
+            )
+            for i in range(self.config.num_layers)
+        ]
 
-        # Temporal fusion decoder (combining LSTM, attention, and gating)
-        self.temporal_decoder = tf.keras.layers.LSTM(self.config.hidden_size, return_sequences=True)
         self.attention = Attention(
             hidden_size=self.config.hidden_size,
             num_attention_heads=self.config.num_attention_heads,
             attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
         )
-        self.gate = Dense(self.config.hidden_size, activation="sigmoid")
+        self.concat = Concatenate(axis=1)
 
         # Output projection
-        self.output_projection = Dense(1)
+        self.output_projection = Dense(self.config.output_size)
 
-    def __call__(self, x: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
+    def __call__(
+        self,
+        x: Optional[tf.Tensor] = None,
+        encoder_cat=None,
+        encoder_num=None,
+        decoder_cat=None,
+        decoder_num=None,
+        static_cat=None,
+        static_num=None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs,
+    ):
         """Process inputs through the TFT model.
 
         Parameters
@@ -101,36 +137,33 @@ class TFTransformer(BaseModel):
         tf.Tensor
             Output tensor of shape (batch_size, predict_sequence_length, 1).
         """
+
+        # encoder_input = tf.concat([encoder_num, encoder_cat], axis=2)
+        # decoder_input = tf.concat([decoder_num, decoder_cat], axis=2)
+
         # Prepare inputs
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
 
-        # Embed temporal and static features
-        temporal_embedded = self.temporal_embedding(encoder_feature)
-        static_embedded = self.static_embedding(decoder_feature)
+        encoder_weights = self.encoder_var_selection(encoder_feature)
+        encoder_feature = encoder_feature * encoder_weights
 
-        # Apply variable selection
-        temporal_selected = self.temporal_variable_selection(temporal_embedded)
-        static_selected = self.static_variable_selection(static_embedded)
-
-        # Process through Gated Residual Networks
-        temporal_processed = self.temporal_grn(temporal_selected)
-        static_processed = self.static_grn(static_selected)
+        decoder_weights = self.decoder_var_selection(decoder_feature)
+        decoder_feature = decoder_feature * decoder_weights
 
         # Encode static covariates
-        static_encoded = self.static_encoder(static_processed)
+        temporal_encoded = encoder_feature
+        for layer in self.lstm_encoder_layers:
+            temporal_encoded = layer(temporal_encoded)
 
         # Decode temporal features
-        temporal_decoded = self.temporal_decoder(temporal_processed)
+        temporal_decoded = temporal_encoded
+        for layer in self.lstm_decoder_layers:
+            temporal_decoded = layer(temporal_decoded)
 
-        # Apply attention and gating
-        attention_output = self.attention(temporal_decoded, static_encoded, static_encoded)
-        gate_output = self.gate(attention_output)
-        fused_output = gate_output * attention_output
+        sequence = self.concat([temporal_encoded, temporal_decoded])
+        attention_output = self.attention(sequence, sequence, sequence)
 
-        # Project to output
-        output = self.output_projection(fused_output)
-
-        # Slice the output to only include the last predict_sequence_length steps
-        output = output[:, -self.predict_sequence_length :, :]
+        attention_output = attention_output[:, -self.predict_sequence_length :, :]
+        output = self.output_projection(attention_output)
 
         return output

@@ -10,7 +10,8 @@ from tfts.models.auto_model import (
     AutoModelForSegmentation,
     AutoModelForUncertainty,
 )
-from tfts.trainer import KerasTrainer, Trainer
+from tfts.tasks.pipeline import Pipeline
+from tfts.trainer import KerasTrainer, Trainer, set_seed
 from tfts.training_args import TrainingArguments
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "Trainer",
     "KerasTrainer",
     "TrainingArguments",
+    "set_seed" "Pipeline",
     "get_data",
     "TimeSeriesSequence",
 ]
