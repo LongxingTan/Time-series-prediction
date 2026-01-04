@@ -1,226 +1,362 @@
-.. Time-series-prediction documentation master file, created by
-   sphinx-quickstart on Tue Mar  8 13:01:43 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Time-series-prediction documentation master file
 
-TFTS Documentation
+TFTS: TensorFlow Time Series
 ==================================================
 
 .. raw:: html
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-TFTS (TensorFlow Time Series) supports state-of-the-art deep learning time series models for production, research, and data competitions. Specifically, the package provides:
+Welcome to TFTS (TensorFlow Time Series), a comprehensive Python library for state-of-the-art deep learning time series analysis. TFTS provides production-ready implementations of cutting-edge models for forecasting, classification, and anomaly detection tasks.
 
-* **Modular Design:** A flexible and powerful architecture for time series tasks.
-* **SOTA Models:** Easy-to-use access to advanced deep learning models.
-* **Hardware Acceleration:** Support for training on CPUs, single/multiple GPUs, and TPUs.
+.. image:: https://img.shields.io/badge/License-MIT-blue.svg
+   :target: https://opensource.org/licenses/MIT
+   :alt: License
+
+.. image:: https://badge.fury.io/py/tfts.svg
+   :target: https://pypi.python.org/pypi/tfts
+   :alt: PyPI Version
+
+.. image:: https://pepy.tech/badge/tfts/month
+   :target: https://pepy.tech/project/tfts
+   :alt: Downloads
+
+Why TFTS?
+---------
+
+TFTS simplifies time series modeling by providing:
+
+**State-of-the-Art Models**
+   Access to 20+ pre-implemented deep learning architectures including Transformers, BERT, Informer, Autoformer, and more. All models are optimized for time series tasks and ready for production use.
+
+**Unified API**
+   Consistent interface across all models through ``AutoModel`` and ``AutoConfig``. Switch between architectures with a single line of code while maintaining the same workflow.
+
+**Production Ready**
+   Built on TensorFlow 2.x with native support for distributed training, mixed precision, TPUs, and TensorFlow Serving. Export models to SavedModel or ONNX formats for deployment.
+
+**Flexible Architecture**
+   Modular design allows easy customization of model components, training loops, and data pipelines. Integrate TFTS models as backbones in your custom architectures.
+
+**Comprehensive Tasks**
+   Support for forecasting (univariate/multivariate), classification, anomaly detection, and segmentation tasks with task-specific model heads.
+
+
+Key Features
+------------
+
+📈 **Multiple Tasks**
+   - Single/multi-step forecasting
+   - Probabilistic forecasting with uncertainty quantification
+   - Time series classification
+   - Anomaly detection
+   - Change point detection and segmentation
+
+🚀 **20+ Models**
+   - Classic: RNN, LSTM, GRU, Seq2Seq
+   - CNN-based: TCN, WaveNet, UNet
+   - Transformer-based: Transformer, BERT, Informer, Autoformer, PatchTST, iTransformer
+   - Specialized: N-BEATS, DLinear, TFT, DeepAR, RWKV, Diffusion
+
+⚡ **Performance**
+   - Multi-GPU training with ``tf.distribute``
+   - TPU support for large-scale training
+   - Mixed precision training (FP16/BF16)
+   - TensorFlow data pipelines for efficient I/O
+
+🔧 **Flexible**
+   - Modular layer design for custom architectures
+   - Feature engineering utilities (lag features, rolling statistics, datetime features)
+   - Custom training loops and callbacks
+   - Integration with Keras ecosystem
 
 
 Quick Start
------------------
+-----------
 
-1. Installation
-~~~~~~~~~~~~~~~~~~~~
+Installation
+~~~~~~~~~~~~
 
-To install `tfts <https://github.com/LongxingTan/Time-series-prediction>`_, ensure you meet the following prerequisites:
+Install TFTS using pip:
 
-* Python 3.7+
-* `TensorFlow 2.x <https://www.tensorflow.org/install/pip>`_
+.. code-block:: bash
 
-Once ready, install the package via pip:
+   pip install tfts
 
-.. code-block:: shell
+Requirements:
+   - Python >= 3.7
+   - TensorFlow >= 2.4
 
-    $ pip install tfts
+For development installation:
 
-Alternatively, you can run TFTS using a Docker container:
+.. code-block:: bash
 
-.. code-block:: shell
+   git clone https://github.com/LongxingTan/Time-series-prediction.git
+   cd Time-series-prediction
+   pip install -e .
 
-    $ docker build -f ./docker/Dockerfile -t "tfts" .
-    $ docker run --rm -it --init --ipc=host --network=host --volume=$PWD:/app --gpus all "tfts" /bin/bash
 
+Basic Usage
+~~~~~~~~~~~
 
-2. Basic Usage
-~~~~~~~~~~~~~~~~~~
-
-.. currentmodule:: tfts
-
-The general workflow for training and testing a model involves the following steps:
-
-1.  **Prepare Data:** Build 3D training and validation datasets.
-    *   Input shape: ``(samples, train_sequence_length, features)``
-    *   Label shape: ``(samples, predict_sequence_length, 1)`` or ``(samples, predict_sequence_length, targets)``
-2.  **Instantiate Model:** Use ``AutoConfig`` and ``AutoModel`` to load a specific architecture.
-3.  **Setup Trainer:** Initialize a ``Trainer()`` or ``KerasTrainer()`` with your preferred optimizer and loss function.
-4.  **Train:** Fit the model to the training dataset and monitor convergence.
-5.  **Tune:** Adjust hyperparameters manually or refer to the `tuning example <https://github.com/LongxingTan/Time-series-prediction/blob/master/examples/run_tuner.py>`_.
-6.  **Inference:** Load the best checkpoint and apply it to new data.
-
-**Example Code:**
+Here's a minimal example to get started with TFTS:
 
 .. code-block:: python
 
-    import tensorflow as tf
-    import tfts
-    from tfts import AutoConfig, AutoModel, KerasTrainer
+   import tensorflow as tf
+   import tfts
+   from tfts import AutoConfig, AutoModel, KerasTrainer
 
-    train_length = 36
-    predict_sequence_length = 12
+   # 1. Load sample data
+   train_length = 24
+   predict_length = 8
+   train, valid = tfts.get_data('sine', train_length, predict_length)
 
-    # 1. Load data
-    train, valid = tfts.get_data('sine', train_length, predict_sequence_length)
+   # 2. Choose and configure a model
+   config = AutoConfig.for_model('transformer')
+   model = AutoModel.from_config(config, predict_sequence_length=predict_length)
 
-    # 2. Build model: 'seq2seq', 'wavenet', 'transformer', 'rnn', 'tcn', 'bert'
-    model_name_or_path = 'seq2seq'
-    config = AutoConfig.for_model(model_name_or_path)
-    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+   # 3. Train the model
+   trainer = KerasTrainer(model)
+   trainer.train(train, valid, epochs=10)
 
-    # 3. Initialize Trainer
-    opt = tf.keras.optimizers.Adam(0.001)
-    loss_fn = tf.keras.losses.MeanSquaredError()
-    trainer = KerasTrainer(model, loss_fn=loss_fn, optimizer=opt)
-
-    # 4. Train
-    trainer.train(train, valid, epochs=30, batch_size=32)
-
-    # 5. Predict
-    trainer.predict(valid[0])
+   # 4. Make predictions
+   predictions = trainer.predict(valid[0])
 
 
-3. Advanced Training
-------------------------------
+Supported Models
+----------------
 
-3.1 Prepare the Data
-~~~~~~~~~~~~~~~~~~~~~~~~
-TFTS accepts time series data in a specific 3D format.
+TFTS provides implementations of state-of-the-art time series models:
 
-*   **Input Shape:** ``(num_examples, train_sequence_length, num_features)``
-*   **Output Shape:** ``(num_examples, predict_sequence_length, num_outputs)``
+**Transformer-Based Models**
+   - ``transformer``: Standard Transformer architecture adapted for time series
+   - ``bert``: BERT-style bidirectional encoder for representation learning
+   - ``informer``: ProbSparse self-attention for long sequence forecasting
+   - ``autoformer``: Auto-correlation mechanism for decomposition
+   - ``tft``: Temporal Fusion Transformer with interpretable attention
+   - ``patch_tst``: Patch-based Transformer for efficient training
+   - ``itransformer``: Inverted Transformer treating variates as tokens
 
-Before training, ensure your raw data is preprocessed into these dimensions. Perform any necessary data cleaning, normalization, or transformation steps prior to reshaping.
+**RNN-Based Models**
+   - ``rnn``: Configurable RNN with LSTM/GRU cells
+   - ``seq2seq``: Encoder-decoder architecture with attention
+   - ``deep_ar``: Probabilistic forecasting with autoregressive RNN
 
+**CNN-Based Models**
+   - ``tcn``: Temporal Convolutional Network with dilated convolutions
+   - ``wavenet``: WaveNet-style architecture with causal convolutions
+   - ``unet``: U-Net style encoder-decoder for sequence-to-sequence
 
-3.2 Training Strategies
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can customize the training process with different strategies, schedulers, and weight management.
-
-**Multi-GPU / TPU Training**
-
-.. code-block:: python
-
-    from tfts import KerasTrainer
-
-    config = AutoConfig.for_model(model_name_or_path)
-    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-
-    optimizer = {
-        'class_name': 'adam',
-        'config': {'learning_rate': 0.0005}
-    }
-
-    strategy = tf.distribute.MirroredStrategy()
-    trainer = KerasTrainer(model, strategy=strategy)
-    trainer.train(train_gen, valid_gen, optimizer=optimizer, epochs=30)
-
-**Learning Rate Scheduler**
-
-.. code-block:: python
-
-    opt = tf.keras.optimizers.Adam(0.001)
-    loss_fn = tf.keras.losses.MeanSquaredError()
-
-    lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(
-        initial_learning_rate=0.001,
-        decay_steps=1000,
-    )
-
-    trainer = KerasTrainer(model)
-    trainer.train(train_dataset, valid_dataset, optimizer=opt, loss_fn=loss_fn, lr_scheduler=lr_scheduler)
-
-**Pretrained Weights**
-
-.. code-block:: python
-
-    # Save weights
-    model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-    model.save_pretrained("tfts-model")
-
-    # Load weights
-    model = AutoModel.from_pretrained("tfts-model")
+**Specialized Models**
+   - ``nbeats``: Neural Basis Expansion Analysis for interpretable forecasting
+   - ``dlinear``: Simple linear model with decomposition
+   - ``rwkv``: RWKV architecture with linear attention
+   - ``diffusion``: Diffusion-based probabilistic forecasting
+   - ``tide``: Time-series Dense Encoder
+   - ``gpt``: GPT-style autoregressive model
 
 
-3.3 Model Serving
-~~~~~~~~~~~~~~~~~~~~~~~
-Once trained, deploy the model for inference. Ensure the model is saved in a format compatible with your serving environment (e.g., TensorFlow SavedModel or ONNX). Set up an API to handle requests, preprocess input data, and return predictions in real-time.
-
-
-Tutorials
+User Guide
 ----------
-The :ref:`Tutorials <tutorials>` section provides guidance on:
 
-- :ref:`Preparing datasets <prepare_data>` for single-value, multi-value, single-step, and multi-step prediction.
-- :ref:`Using existing models <train_models>` and implementing custom architectures.
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started
+
+   installation
+   tutorials
 
 
-Models
----------
+.. toctree::
+   :maxdepth: 2
+   :caption: User Guide
 
-1. Design a Custom Model with TFTS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can easily integrate TFTS models as backbones within a custom Keras architecture.
+   models
+   training
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Advanced Topics
+
+   feature_engineering
+   tricks
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Additional Information
+
+   examples
+   faq
+
+
+Examples
+--------
+
+Real-World Applications
+~~~~~~~~~~~~~~~~~~~~~~~
+
+TFTS has been successfully used in production and competitions:
+
+**Competition Wins**
+   - 🥉 **3rd Place** - Baidu KDD Cup 2022 (`Code <https://github.com/LongxingTan/KDDCup2022-Baidu>`_)
+   - 🎯 **4th Place** - Alibaba Tianchi ENSO Prediction (`Code <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_)
+
+**Industry Use Cases**
+   - Energy demand forecasting
+   - Financial time series prediction
+   - IoT sensor data analysis
+   - Weather and climate modeling
+   - Traffic flow prediction
+
+
+Advanced Examples
+~~~~~~~~~~~~~~~~~
+
+**Multi-variate Forecasting**
 
 .. code-block:: python
 
    import tensorflow as tf
    from tfts import AutoConfig, AutoModel
 
-   def build_model(use_model, input_shape):
-      inputs = tf.keras.layers.Input(input_shape)
+   # Configure for multi-variate input
+   config = AutoConfig.for_model('informer')
+   config.num_features = 10  # 10 input features
 
-      # Use TFTS model as a backbone
-      config = AutoConfig.for_model(use_model)
-      backbone = AutoModel.from_config(config)
+   model = AutoModel.from_config(config, predict_sequence_length=24)
 
-      outputs = backbone(inputs)
-      model = tf.keras.Model(inputs, outputs=outputs)
-
-      optimizer = tf.keras.optimizers.Adam(0.003)
-      loss_fn = tf.keras.losses.MeanSquaredError()
-
-      model.compile(optimizer, loss_fn)
-      return model
-
-   model = build_model(use_model="bert", input_shape=(24, 3))
-   model.summary()
+   # Input: (batch, sequence_length, num_features)
+   x = tf.random.normal([32, 96, 10])
+   predictions = model(x)  # Output: (32, 24, 1)
 
 
-2. Highlights
-~~~~~~~~~~~~~~~~~~~~~~~~
+**Probabilistic Forecasting**
 
-TFTS powers competitive solutions in major data science competitions:
+.. code-block:: python
 
-- **TFTS BERT:** 3rd place in `Baidu KDD Cup 2022 <https://aistudio.baidu.com/aistudio/competition/detail/152/0/introduction>`_ (See `Code <https://github.com/LongxingTan/KDDCup2022-Baidu>`_).
-- **TFTS Seq2Seq:** 4th place in `Alibaba Tianchi ENSO prediction <https://tianchi.aliyun.com/competition/entrance/531871/introduction>`_ (See `Code <https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction>`_).
+   from tfts import AutoConfig, AutoModel
 
-:ref:`View all supported models <models>`
+   # Use model with uncertainty quantification
+   config = AutoConfig.for_model('deep_ar')
+   model = AutoModel.from_config(config, predict_sequence_length=24)
+
+   # Get probabilistic predictions
+   predictions = model(x)  # Returns distribution parameters
 
 
-Tricks
--------------
-Visit the :ref:`Tricks <tricks>` page to discover techniques for improving prediction performance.
+**Custom Feature Engineering**
+
+.. code-block:: python
+
+   from tfts.data import TimeSeriesSequence
+   import pandas as pd
+
+   # Configure feature engineering
+   feature_config = {
+       'datetime': {
+           'type': 'datetime',
+           'features': ['hour', 'dayofweek', 'month'],
+           'time_col': 'timestamp'
+       },
+       'lags': {
+           'type': 'lag',
+           'columns': 'target',
+           'lags': [1, 2, 3, 7, 14]
+       },
+       'rolling': {
+           'type': 'rolling',
+           'columns': 'target',
+           'windows': [7, 14],
+           'functions': ['mean', 'std']
+       }
+   }
+
+   # Create data loader with automatic feature engineering
+   data_loader = TimeSeriesSequence(
+       data=df,
+       time_idx='timestamp',
+       target_column='target',
+       train_sequence_length=24,
+       predict_sequence_length=8,
+       feature_config=feature_config
+   )
+
+
+.. Performance Benchmarks
+.. ----------------------
+
+.. TFTS models have been evaluated on standard benchmarks:
+
+.. .. list-table::
+..    :header-rows: 1
+..    :widths: 20 20 20 20 20
+
+..    * - Model
+..      - ETTh1 (MSE)
+..      - Weather (MAE)
+..      - Traffic (MSE)
+..      - Training Speed
+..    * - Transformer
+..      - 0.495
+..      - 0.245
+..      - 0.612
+..      - 1.0x
+..    * - Informer
+..      - 0.472
+..      - 0.231
+..      - 0.598
+..      - 1.2x
+..    * - Autoformer
+..      - 0.449
+..      - 0.217
+..      - 0.573
+..      - 1.1x
+..    * - DLinear
+..      - 0.458
+..      - 0.223
+..      - 0.587
+..      - 3.5x
+
+.. *Benchmarks run on single V100 GPU with batch size 32*
+
+
+Community and Support
+---------------------
+
+**Getting Help**
+   - 📖 Read the `documentation <https://time-series-prediction.readthedocs.io>`_
+   - 💬 Ask questions in `GitHub Discussions <https://github.com/LongxingTan/Time-series-prediction/discussions>`_
+   - 🐛 Report bugs in `GitHub Issues <https://github.com/LongxingTan/Time-series-prediction/issues>`_
+
+**Contributing**
+   We welcome contributions! See our `Contributing Guide <https://github.com/LongxingTan/Time-series-prediction/blob/master/CONTRIBUTING.md>`_ for details.
+
+**Stay Updated**
+   - ⭐ Star the `GitHub repository <https://github.com/LongxingTan/Time-series-prediction>`_
+   - 📰 Check the `changelog <./CHANGELOG.md>`_ for latest updates
+   - 🐦 Follow updates on social media
 
 
 Citation
-------------
-If you find TFTS useful in your research, please consider citing:
+--------
 
-.. code-block:: text
+If you use TFTS in your research, please cite:
+
+.. code-block:: bibtex
 
    @misc{tfts2020,
      author = {Longxing Tan},
-     title = {Time series prediction},
+     title = {TFTS: TensorFlow Time Series},
      year = {2020},
      publisher = {GitHub},
      journal = {GitHub repository},
@@ -228,12 +364,15 @@ If you find TFTS useful in your research, please consider citing:
    }
 
 
-.. toctree::
-   :titlesonly:
-   :hidden:
-   :maxdepth: 6
+License
+-------
 
-   tutorials
-   models
-   tricks
-   api
+TFTS is released under the MIT License. See `LICENSE <https://github.com/LongxingTan/Time-series-prediction/blob/master/LICENSE>`_ for details.
+
+
+Indices and Tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

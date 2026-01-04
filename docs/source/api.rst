@@ -8,7 +8,10 @@ API
    :template: custom-module-template.rst
    :recursive:
 
-   datasets
+   data
+   features
    layers
    models
+   losses
    trainer
+   tasks
