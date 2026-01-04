@@ -87,7 +87,7 @@ def get_data(
 
     elif name == "traffic":
         return get_traffic_data()
-    
+
     else:
         raise ValueError(
             f"unsupported data of {name} yet, try 'sine', 'airpassengers', 'ar', 'volatility', 'electricity', 'traffic'"
