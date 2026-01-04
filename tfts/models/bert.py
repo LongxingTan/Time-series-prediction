@@ -7,11 +7,12 @@ import logging
 from typing import Dict, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Reshape
+from tensorflow.keras.layers import Dense, Lambda, Reshape
 
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
+from ..tasks.auto_task import PredictionOutput
 from .base import BaseConfig, BaseModel
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class BertConfig(BaseConfig):
         hidden_act: str = "gelu",
         hidden_dropout_prob: float = 0.0,
         attention_probs_dropout_prob: float = 0.0,
-        type_vocab_size: int = 2,
+        output_size: int = 1,
         initializer_range: float = 0.02,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
@@ -51,7 +52,7 @@ class BertConfig(BaseConfig):
             hidden_act: The activation function for hidden layers. Default is "gelu".
             hidden_dropout_prob: The dropout probability for hidden layers. Default is 0.1.
             attention_probs_dropout_prob: The dropout probability for attention probabilities. Default is 0.1.
-            type_vocab_size: The vocabulary size for token types (usually 2). Default is 2.
+            output_size: The vocabulary size for output. Default is 1.
             initializer_range: The standard deviation for weight initialization. Default is 0.02.
             layer_norm_eps: The epsilon value for layer normalization. Default is 1e-12.
             pad_token_id: The ID for the padding token. Default is 0.
@@ -71,7 +72,7 @@ class BertConfig(BaseConfig):
         self.hidden_act: str = hidden_act
         self.hidden_dropout_prob: float = hidden_dropout_prob
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
-        self.type_vocab_size: int = type_vocab_size
+        self.output_size: int = output_size
         self.initializer_range: float = initializer_range
         self.layer_norm_eps: float = layer_norm_eps
         self.positional_type: str = positional_type
@@ -132,8 +133,10 @@ class Bert(BaseModel):
         ]
         logger.debug(f"Created {len(self.dense_layers)} dense layers with units: {self.config.dense_units}")
 
-        self.projection = Dense(self.predict_sequence_length, activation="linear", name="projection")
-        self.reshape = Reshape((self.predict_sequence_length, 1))
+        self.projection = Dense(
+            self.predict_sequence_length * self.config.output_size, activation="linear", name="projection"
+        )
+        self.reshape = Reshape((self.predict_sequence_length, self.config.output_size))
         logger.debug("Model building completed")
 
     def __call__(

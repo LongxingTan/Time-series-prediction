@@ -1,6 +1,6 @@
 """tfts package for time series prediction with TensorFlow"""
 
-from tfts.data.get_data import get_data
+from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import (
     AutoModel,
@@ -10,7 +10,8 @@ from tfts.models.auto_model import (
     AutoModelForSegmentation,
     AutoModelForUncertainty,
 )
-from tfts.trainer import KerasTrainer, Trainer
+from tfts.tasks.pipeline import Pipeline
+from tfts.trainer import KerasTrainer, Trainer, set_seed
 from tfts.training_args import TrainingArguments
 
 __all__ = [
@@ -24,7 +25,9 @@ __all__ = [
     "Trainer",
     "KerasTrainer",
     "TrainingArguments",
+    "set_seed" "Pipeline",
     "get_data",
+    "TimeSeriesSequence",
 ]
 
 __version__ = "0.0.0"

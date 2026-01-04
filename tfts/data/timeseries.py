@@ -1,7 +1,6 @@
 """TFTS Dataset
 
 This module provides a TimeSeriesSequence class for handling time series data in TensorFlow.
-It supports various feature transformations, data augmentation, and efficient data loading.
 """
 
 import logging
@@ -55,12 +54,13 @@ class TimeSeriesSequence(Sequence):
     def __init__(
         self,
         data: pd.DataFrame,
-        time_idx: str,
         target_column: str,
         train_sequence_length: int,
         predict_sequence_length: int = 1,
+        time_idx: Optional[str] = None,
         batch_size: int = 32,
         group_column: Optional[List[str]] = None,
+        feature_columns: Optional[List[str]] = None,
         drop_last: bool = False,
         feature_config: Optional[Dict] = None,
         mode: str = "train",
@@ -68,7 +68,7 @@ class TimeSeriesSequence(Sequence):
         processor: Optional[List[Callable]] = None,
     ):
         """Initialize the TimeSeriesSequence."""
-        self.data = data
+        self.data = data.copy()
         self.time_idx = time_idx
         self.target = [target_column] if isinstance(target_column, str) else target_column
         self.train_sequence_length = train_sequence_length
@@ -100,6 +100,39 @@ class TimeSeriesSequence(Sequence):
             f"Initialized TimeSeriesSequence with {len(self.sequences)} sequences, "
             f"batch_size={batch_size}, mode={mode}"
         )
+
+    def _build_sequences(self):
+        """Builds a lookup table for sequences to avoid heavy DataFrame slicing during training."""
+        sequence_indices = []
+
+        if self.group_column:
+            grouped = self.data.groupby(self.group_column)
+        else:
+            grouped = [("all", self.data)]
+
+        for _, group in grouped:
+            group = group.sort_values(self.time_idx)
+            n_rows = len(group)
+            max_idx = n_rows - self.train_sequence_length - self.predict_sequence_length + 1
+
+            # Pre-extract numpy arrays for speed
+            feature_data = group[self.features].values.astype(np.float32)
+            target_data = group[self.target].values.astype(np.float32)
+
+            for i in range(0, max_idx, self.stride):
+                sequence_indices.append(
+                    {
+                        "x": feature_data[i : i + self.train_sequence_length],
+                        "y": target_data[
+                            i
+                            + self.train_sequence_length : i
+                            + self.train_sequence_length
+                            + self.predict_sequence_length
+                        ],
+                    }
+                )
+
+        return sequence_indices
 
     def __len__(self) -> int:
         """Get the number of batches in the sequence.
@@ -134,26 +167,20 @@ class TimeSeriesSequence(Sequence):
         return encoder_inputs, decoder_targets
 
     def get_tf_dataset(self) -> tf.data.Dataset:
-        """Convert to TensorFlow Dataset.
+        """Convert to high-performance tf.data pipeline."""
+        # Get feature dimension from actual sequence data
+        if len(self.sequences) > 0:
+            num_features = self.sequences[0][0].shape[-1]
+        else:
+            num_features = len(self.target)
 
-        Returns:
-            tf.data.Dataset: TensorFlow dataset with 3D tensors
-        """
-
-        def generator():
-            for i in range(len(self)):
-                yield self[i]
-
-        # Get number of target variables
-        num_targets = len(self.target)
-
-        return tf.data.Dataset.from_generator(
-            generator,
-            output_signature=(
-                tf.TensorSpec(shape=(None, self.train_sequence_length, num_targets), dtype=tf.float32),
-                tf.TensorSpec(shape=(None, self.predict_sequence_length, num_targets), dtype=tf.float32),
-            ),
+        output_signature = (
+            tf.TensorSpec(shape=(None, self.train_sequence_length, num_features), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, self.predict_sequence_length, len(self.target)), dtype=tf.float32),
         )
+        return tf.data.Dataset.from_generator(
+            lambda: (self[i] for i in range(len(self))), output_signature=output_signature
+        ).prefetch(tf.data.AUTOTUNE)
 
     def _generate_sequences(
         self, group: pd.DataFrame, time_idx: str, target_column: str

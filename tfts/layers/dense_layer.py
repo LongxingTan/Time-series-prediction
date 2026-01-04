@@ -1,6 +1,6 @@
 """Layer for :py:class:`~tfts.models.wavenet` :py:class:`~tfts.models.transformer`"""
 
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.keras import activations, constraints, initializers, regularizers
@@ -116,4 +116,66 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
             "hidden_dropout_prob": self.hidden_dropout_prob,
         }
         base_config = super(FeedForwardNetwork, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
+class MoeMLP(tf.keras.layers.Layer):
+    def __init__(
+        self,
+        hidden_size: int,
+        intermediate_size: int,
+        hidden_act="silu",
+        kernel_initializer: str = "glorot_uniform",
+        bias_initializer: str = "zeros",
+        use_bias: bool = False,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.hidden_size = hidden_size
+        self.intermediate_size = intermediate_size
+        self.hidden_act = hidden_act
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.bias_initializer = initializers.get(bias_initializer)
+        self.use_bias = use_bias
+
+    def build(self, input_shape: Tuple[Optional[int], ...]):
+        self.gate_proj = Dense(
+            self.intermediate_size,
+            use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            bias_initializer=self.bias_initializer,
+            name="gate_proj",
+        )
+        self.up_proj = Dense(
+            self.intermediate_size,
+            use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            bias_initializer=self.bias_initializer,
+            name="up_proj",
+        )
+        self.down_proj = Dense(
+            self.hidden_size,
+            use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            bias_initializer=self.bias_initializer,
+            name="down_proj",
+        )
+        self.act_fn = activations.get(self.hidden_act)
+        super().build(input_shape)
+
+    def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
+        gate = self.gate_proj(hidden_states)
+        up = self.up_proj(hidden_states)
+        return self.down_proj(self.act_fn(gate) * up)
+
+    def get_config(self) -> Dict[str, Any]:
+        config = {
+            "hidden_size": self.hidden_size,
+            "intermediate_size": self.intermediate_size,
+            "hidden_act": self.hidden_act,
+            "kernel_initializer": initializers.serialize(self.kernel_initializer),
+            "bias_initializer": initializers.serialize(self.bias_initializer),
+            "use_bias": self.use_bias,
+        }
+        base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))

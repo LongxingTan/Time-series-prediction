@@ -1,0 +1,21 @@
+seed: 315
+
+data:
+  data_path: "data.csv"
+  target_column: "target"
+  freq: 'h'
+
+model:
+  name: bert
+  predict_sequence_length: 32
+  n_layers: 2
+  hidden_size: 128
+  n_features: 10
+  n_output: 1
+
+
+training:
+  batch_size: 128
+  epochs: 30
+  learning_rate: 0.001
+  loss: "MSE"

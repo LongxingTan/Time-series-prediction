@@ -82,6 +82,7 @@ plt.show()
 为方便使用，将数据转化为三维作为tfts的输入
 - 选项1 `np.ndarray`
 - 选项2 `tf.data.Dataset`
+- 选项3 `tf.keras.utils.Sequence`
 
 编码类模型输入
 

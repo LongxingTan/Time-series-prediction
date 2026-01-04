@@ -1,9 +1,15 @@
 """tfts Generator"""
 
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
+
+
+class GenerationConfig:
+    def __init__(self, **kwargs) -> None:
+        self.max_length = kwargs.pop("max_length", 20)
 
 
 class GenerationMixin:
@@ -11,10 +17,20 @@ class GenerationMixin:
     A class containing auto-regressive generation, to be used as a mixin.
     """
 
+    def prepare_inputs_for_generation(self, *args, **kwargs):
+        return
+
     def generate(
-        self, inputs: Union[pd.DataFrame, np.ndarray], generation_config: Dict[str, Any] = None
+        self,
+        inputs: Union[pd.DataFrame, np.ndarray],
+        future_covariates: Optional[tf.Tensor] = None,
+        max_steps: int = 10,
+        generation_config: Dict[str, Any] = None,
+        logits_processor=None,
+        seed=None,
+        **kwargs,
     ) -> pd.DataFrame:
-        """Generate time series predictions in an autoregressive manner.
+        """Generate time series predictions in an auto-regressive manner.
 
         Args:
             inputs: Initial input sequence as DataFrame or numpy array
@@ -37,7 +53,6 @@ class GenerationMixin:
 
         # Convert inputs to DataFrame if needed
         if isinstance(inputs, np.ndarray):
-            # We need to convert numpy array to DataFrame
             features = self.get_feature_names()
             if len(features) != inputs.shape[1]:
                 raise ValueError(f"Input array shape {inputs.shape} doesn't match feature count {len(features)}")

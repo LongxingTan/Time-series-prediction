@@ -10,9 +10,18 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.layers import Dense
 
+from tfts.losses.loss import MultiQuantileLoss
 from tfts.models.base import BaseConfig, BaseModel
-from tfts.tasks.auto_task import AnomalyHead, ClassificationHead
+from tfts.tasks.auto_task import (
+    AnomalyHead,
+    ClassificationHead,
+    ClassificationOutput,
+    GaussianHead,
+    PredictionHead,
+    PredictionOutput,
+)
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
 from .auto_config import AutoConfig
@@ -35,7 +44,7 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("nbeats", "NBeats"),
         ("dlinear", "DLinear"),
         ("rwkv", "RWKV"),
-        ("patches_tst", "PatchTST"),
+        ("patch_tst", "PatchTST"),
         ("deep_ar", "DeepAR"),
     ]
 )
@@ -285,3 +294,48 @@ class AutoModelForUncertainty(BaseModel):
         module = importlib.import_module(f".{model_name}", "tfts.models")
         model = getattr(module, class_name)(config=config)
         return cls(model, config)
+
+
+class AutoModelForQuantile(BaseModel):
+    """tfts model for quantile forecasting"""
+
+    def __init__(self, model, config):
+        super(AutoModelForQuantile, self).__init__()
+        self.model = model
+        self.config = config
+        self.quantiles = getattr(config, "quantiles", [0.1, 0.5, 0.9])
+        self.num_labels = getattr(config, "num_labels", 1)
+        self.head = Dense(self.num_labels * len(self.quantiles))
+        self.keras_model: Optional[tf.keras.Model] = None
+
+    def __call__(
+        self,
+        x: Union[tf.data.Dataset, Tuple[np.ndarray], List[np.ndarray]],
+        output_hidden_states: Optional[bool] = True,
+        **kwargs,
+    ):
+        if self.keras_model is not None:
+            return self.keras_model(x)
+
+        model_output = self.model(x, output_hidden_states=output_hidden_states)
+        return self.head(model_output)
+
+    @classmethod
+    def from_config(cls, config, quantiles: List[float] = [0.1, 0.5, 0.9]):
+        config.quantiles = quantiles
+        model_name = config.model_type
+        class_name = MODEL_MAPPING_NAMES[model_name]
+        module = importlib.import_module(f".{model_name}", "tfts.models")
+        model = getattr(module, class_name)(config=config)
+        return cls(model, config)
+
+    def build_model(self, inputs):
+        model_output = self.model(inputs)
+        outputs = self.head(model_output)
+        self.keras_model = tf.keras.Model(inputs, outputs)
+        return self.keras_model
+
+    def compile_model(self, optimizer="adam"):
+        """Helper to compile with the correct loss"""
+        loss_fn = MultiQuantileLoss(quantiles=self.quantiles)
+        self.keras_model.compile(optimizer=optimizer, loss=loss_fn)

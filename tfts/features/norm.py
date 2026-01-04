@@ -24,13 +24,11 @@ def normalize(
 
     Args:
         data (np.ndarray): The input time series data. Must be 1D or 2D.
-                           If 2D, normalization occurs along the specified axis.
         method (NormalizationMethod): The normalization method to use.
             - "standard": Standard scaling (Z-score normalization). (X - mean) / std.
             - "minmax": Min-max scaling. (X - min) / (max - min). Scales to [0, 1].
             - "robust": Robust scaling using median and IQR. (X - median) / IQR.
-            - "log1p": Log transformation (log(1 + X)). Useful for positive data
-                       with skewed distributions. Does not use `axis` as it's element-wise.
+            - "log1p": Log transformation (log(1 + X)). Useful for positive data with skewed distributions.
         axis (int): The axis along which to compute statistics for normalization.
                     Typically 0 for column-wise (features) or 1 for row-wise.
                     Ignored for "log1p".
@@ -46,8 +44,7 @@ def normalize(
     Returns:
         Tuple[np.ndarray, Dict[str, Any]]:
             - The normalized data.
-            - A dictionary containing the parameters used for normalization,
-              which are needed for denormalization. Includes 'method' and 'axis'.
+            - A dictionary containing the parameters used for normalization.
 
     Raises:
         ValueError: If the input data is not a NumPy array, has unsupported dimensions,
@@ -157,9 +154,7 @@ def denormalize(normalized_data: np.ndarray, params: Dict[str, Any]) -> np.ndarr
 
     Args:
         normalized_data (np.ndarray): The normalized input data.
-        params (Dict[str, Any]): The parameters dictionary returned by the
-                                 `normalize` function. Must contain 'method'
-                                 and other method-specific parameters.
+        params (Dict[str, Any]): The parameters dictionary returned by the `normalize` function.
 
     Returns:
         np.ndarray: The denormalized (original scale) data.

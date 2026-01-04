@@ -161,11 +161,12 @@ html_theme_options = {"navbar_end": ["navbar-icon-links.html", "search-field.htm
 
 html_sidebars = {
     "index": [],
-    "quick-start": [],
+    "installation": [],
     "tutorials": [],
     "models": [],
     "tricks": [],
-    "CHANGELOG": [],
+    "feature_engineering": [],
+    "faq": [],
 }
 
 

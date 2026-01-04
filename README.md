@@ -79,6 +79,7 @@ plt.show()
 You could train your own data by preparing 3D data as inputs, for both inputs and targets
 - option1 `np.ndarray`
 - option2 `tf.data.Dataset`
+- option3 `tf.keras.utils.Sequence`
 
 Encoder only model inputs
 
