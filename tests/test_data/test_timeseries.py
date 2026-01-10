@@ -283,3 +283,270 @@ class TimeSeriesSequenceTest(unittest.TestCase):
                 mode=mode,
             )
             self.assertEqual(seq.mode, mode)
+
+    def test_from_df_basic(self):
+        """Test from_df with basic parameters."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+        )
+
+        self.assertEqual(seq.train_sequence_length, 10)
+        self.assertEqual(seq.predict_sequence_length, 5)
+        self.assertGreater(len(seq.sequences), 0)
+
+    def test_from_df_with_index(self):
+        """Test from_df using DataFrame index as time column."""
+        df = pd.DataFrame(
+            {
+                "value": np.random.randn(100).cumsum(),
+            },
+            index=pd.date_range("2023-01-01", periods=100, freq="D"),
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+        )
+
+        self.assertEqual(seq.train_sequence_length, 10)
+        self.assertEqual(seq.predict_sequence_length, 5)
+        self.assertGreater(len(seq.sequences), 0)
+
+    def test_from_df_with_groups(self):
+        """Test from_df with grouped time series."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=200, freq="D").tolist() * 2,
+                "group": ["A"] * 200 + ["B"] * 200,
+                "value": np.random.randn(400).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            group_col="group",
+            train_length=10,
+            predict_length=5,
+        )
+
+        self.assertEqual(seq.group_ids, ["group"])
+        self.assertGreater(len(seq.sequences), 0)
+
+    def test_from_df_multiple_targets(self):
+        """Test from_df with multiple target columns."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value1": np.random.randn(100).cumsum(),
+                "value2": np.random.randn(100).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col=["value1", "value2"],
+            train_length=10,
+            predict_length=5,
+        )
+
+        self.assertEqual(len(seq.target), 2)
+        self.assertIn("value1", seq.target)
+        self.assertIn("value2", seq.target)
+
+    def test_from_df_fill_missing_dates(self):
+        """Test from_df with missing date filling."""
+        # Create data with missing dates
+        dates = pd.date_range("2023-01-01", periods=100, freq="D")
+        # Remove some dates
+        dates_with_gaps = dates.delete([10, 20, 30, 40])
+
+        df = pd.DataFrame(
+            {
+                "date": dates_with_gaps,
+                "value": np.random.randn(len(dates_with_gaps)).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+            fill_missing_dates=True,
+            freq="D",
+        )
+
+        # Should have filled the missing dates
+        self.assertEqual(len(seq.data), 100)
+
+    def test_from_df_fillna(self):
+        """Test from_df with NaN filling."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+        # Add some NaN values
+        df.loc[10:15, "value"] = np.nan
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+            fillna_value=0.0,
+        )
+
+        # Check that NaN values were filled
+        self.assertFalse(seq.data["value"].isna().any())
+
+    def test_from_df_with_feature_config(self):
+        """Test from_df with feature configuration."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+
+        feature_config = {
+            "date_features": {
+                "type": "datetime",
+                "features": ["dayofweek", "month"],
+                "time_col": "date",
+            }
+        }
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+            feature_config=feature_config,
+        )
+
+        # Check if datetime features were added
+        self.assertTrue(any(col.startswith("date_") for col in seq.data.columns))
+
+    def test_from_df_validation_errors(self):
+        """Test from_df validation errors."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+
+        # Test missing target_col
+        with self.assertRaises(ValueError):
+            TimeSeriesSequence.from_df(
+                df,
+                time_col="date",
+                train_length=10,
+            )
+
+        # Test missing train_length
+        with self.assertRaises(ValueError):
+            TimeSeriesSequence.from_df(
+                df,
+                time_col="date",
+                target_col="value",
+            )
+
+        # Test invalid time_col
+        with self.assertRaises(KeyError):
+            TimeSeriesSequence.from_df(
+                df,
+                time_col="invalid_col",
+                target_col="value",
+                train_length=10,
+            )
+
+        # Test invalid target_col
+        with self.assertRaises(KeyError):
+            TimeSeriesSequence.from_df(
+                df,
+                time_col="date",
+                target_col="invalid_col",
+                train_length=10,
+            )
+
+        # Test insufficient data length
+        with self.assertRaises(ValueError):
+            TimeSeriesSequence.from_df(
+                df,
+                time_col="date",
+                target_col="value",
+                train_length=90,
+                predict_length=20,
+            )
+
+    def test_from_df_numeric_time_index(self):
+        """Test from_df with numeric time index."""
+        df = pd.DataFrame(
+            {
+                "time": range(100),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="time",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+        )
+
+        self.assertEqual(seq.train_sequence_length, 10)
+        self.assertGreater(len(seq.sequences), 0)
+
+    def test_from_df_with_stride(self):
+        """Test from_df with custom stride."""
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "value": np.random.randn(100).cumsum(),
+            }
+        )
+
+        seq = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+            stride=2,
+        )
+
+        self.assertEqual(seq.stride, 2)
+        # With stride=2, we should have fewer sequences
+        seq_stride1 = TimeSeriesSequence.from_df(
+            df,
+            time_col="date",
+            target_col="value",
+            train_length=10,
+            predict_length=5,
+            stride=1,
+        )
+        self.assertLess(len(seq.sequences), len(seq_stride1.sequences))

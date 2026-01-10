@@ -49,6 +49,22 @@ class TimeSeriesSequence(Sequence):
         feature_config (Dict, optional): Configuration for feature generation. Defaults to None.
         mode (str, optional): Mode of operation ('train', 'validation', 'test', 'inference'). Defaults to 'train'.
         stride (int, optional): Step size for sequence generation. Defaults to 1.
+
+    Example:
+        >>> # Using from_df for easy dataset creation
+        >>> df = pd.DataFrame({
+        ...     'date': pd.date_range('2023-01-01', periods=100),
+        ...     'value': np.random.randn(100),
+        ...     'group': ['A'] * 50 + ['B'] * 50
+        ... })
+        >>> dataset = TimeSeriesSequence.from_df(
+        ...     df,
+        ...     time_col='date',
+        ...     target_col='value',
+        ...     train_length=24,
+        ...     predict_length=12,
+        ...     group_col='group'
+        ... )
     """
 
     def __init__(
@@ -337,3 +353,265 @@ class TimeSeriesSequence(Sequence):
                 except Exception as e:
                     logger.error(f"Error applying feature transform {transform_type} for {feature_name}: {str(e)}")
                     raise
+
+    @classmethod
+    def from_df(
+        cls,
+        df: pd.DataFrame,
+        time_col: Optional[str] = None,
+        target_col: Union[str, List[str]] = None,
+        train_length: int = None,
+        predict_length: int = 1,
+        group_col: Optional[Union[str, List[str]]] = None,
+        feature_cols: Optional[List[str]] = None,
+        batch_size: int = 32,
+        stride: int = 1,
+        mode: str = "train",
+        drop_last: bool = False,
+        feature_config: Optional[Dict] = None,
+        fill_missing_dates: bool = False,
+        freq: Optional[str] = None,
+        fillna_value: Optional[float] = None,
+        **kwargs,
+    ) -> "TimeSeriesSequence":
+        """Create a TimeSeriesSequence from a pandas DataFrame.
+
+        This is a convenient factory method for creating datasets from DataFrames,
+        similar to darts' from_dataframe API. It provides a more intuitive interface
+        with automatic validation and preprocessing.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame containing time series data.
+            time_col (str, optional): Name of the time column. If None, uses DataFrame index.
+                The column should contain datetime or numeric values representing time.
+            target_col (str or List[str]): Name(s) of the target column(s) to predict.
+                Can be a single column name (str) or list of column names for multivariate prediction.
+            train_length (int): Length of input sequences for training (lookback window).
+            predict_length (int, optional): Length of sequences to predict (forecast horizon). Defaults to 1.
+            group_col (str or List[str], optional): Column name(s) for grouping multiple time series.
+                Use this for hierarchical or grouped time series data. Defaults to None.
+            feature_cols (List[str], optional): Additional feature columns to include. Defaults to None.
+            batch_size (int, optional): Batch size for training. Defaults to 32.
+            stride (int, optional): Step size for sequence generation. Use stride > 1 for downsampling. Defaults to 1.
+            mode (str, optional): Mode of operation ('train', 'validation', 'test', 'inference'). Defaults to 'train'.
+            drop_last (bool, optional): Whether to drop the last incomplete batch. Defaults to False.
+            feature_config (Dict, optional): Configuration for automatic feature engineering.
+                Supports: datetime, lag, rolling, transform, moving_average, 2order features. Defaults to None.
+            fill_missing_dates (bool, optional): Whether to fill missing dates in the time series. Defaults to False.
+            freq (str, optional): Frequency of the time series (e.g., 'D' for daily, 'H' for hourly).
+                Required if fill_missing_dates is True. Defaults to None.
+            fillna_value (float, optional): Value to use for filling missing values. Defaults to None (no filling).
+            **kwargs: Additional keyword arguments passed to TimeSeriesSequence.__init__.
+
+        Returns:
+            TimeSeriesSequence: A configured TimeSeriesSequence instance ready for training.
+
+        Raises:
+            ValueError: If required parameters are missing or invalid.
+            KeyError: If specified columns are not found in the DataFrame.
+
+        Example:
+            >>> # Basic usage with single time series
+            >>> df = pd.DataFrame({
+            ...     'date': pd.date_range('2023-01-01', periods=100, freq='D'),
+            ...     'value': np.random.randn(100).cumsum()
+            ... })
+            >>> dataset = TimeSeriesSequence.from_df(
+            ...     df,
+            ...     time_col='date',
+            ...     target_col='value',
+            ...     train_length=30,
+            ...     predict_length=7
+            ... )
+            >>>
+            >>> # Multi-series with grouping
+            >>> df = pd.DataFrame({
+            ...     'date': pd.date_range('2023-01-01', periods=200, freq='D').repeat(2),
+            ...     'store_id': ['A', 'B'] * 100,
+            ...     'sales': np.random.randn(200).cumsum()
+            ... })
+            >>> dataset = TimeSeriesSequence.from_df(
+            ...     df,
+            ...     time_col='date',
+            ...     target_col='sales',
+            ...     group_col='store_id',
+            ...     train_length=30,
+            ...     predict_length=7
+            ... )
+            >>>
+            >>> # With feature engineering
+            >>> feature_config = {
+            ...     'date_features': {
+            ...         'type': 'datetime',
+            ...         'features': ['dayofweek', 'month']
+            ...     },
+            ...     'lag_features': {
+            ...         'type': 'lag',
+            ...         'lags': [1, 7, 14]
+            ...     }
+            ... }
+            >>> dataset = TimeSeriesSequence.from_df(
+            ...     df,
+            ...     time_col='date',
+            ...     target_col='sales',
+            ...     train_length=30,
+            ...     predict_length=7,
+            ...     feature_config=feature_config
+            ... )
+        """
+        # Validate required parameters
+        if target_col is None:
+            raise ValueError("target_col is required")
+        if train_length is None:
+            raise ValueError("train_length is required")
+
+        # Make a copy to avoid modifying the original DataFrame
+        data = df.copy()
+
+        # Handle time column
+        if time_col is None:
+            # Use DataFrame index as time column
+            if not isinstance(data.index, (pd.DatetimeIndex, pd.RangeIndex)):
+                # Try to convert index to datetime or numeric
+                try:
+                    data.index = pd.to_datetime(data.index)
+                except (ValueError, TypeError):
+                    try:
+                        data.index = pd.to_numeric(data.index)
+                    except (ValueError, TypeError):
+                        raise ValueError(
+                            "DataFrame index must be datetime-like or numeric, " "or specify time_col parameter"
+                        )
+            # Reset index to make it a column
+            data = data.reset_index()
+            time_col = data.columns[0]
+        else:
+            # Validate time column exists
+            if time_col not in data.columns:
+                raise KeyError(f"time_col '{time_col}' not in DataFrame columns: {list(data.columns)}")
+
+            # Try to convert time column to datetime if it's not already
+            if not pd.api.types.is_datetime64_any_dtype(data[time_col]):
+                try:
+                    data[time_col] = pd.to_datetime(data[time_col])
+                except (ValueError, TypeError):
+                    # If conversion fails, assume it's a numeric time index
+                    if not pd.api.types.is_numeric_dtype(data[time_col]):
+                        logger.warning(
+                            f"time_col '{time_col}' is not datetime or numeric. "
+                            "This may cause issues with sequence generation."
+                        )
+
+        # Handle target columns
+        if isinstance(target_col, str):
+            target_cols = [target_col]
+        else:
+            target_cols = target_col
+
+        # Validate target columns exist
+        missing_targets = [col for col in target_cols if col not in data.columns]
+        if missing_targets:
+            raise KeyError(f"target_col(s) {missing_targets} not in DataFrame columns: {list(data.columns)}")
+
+        # Handle group columns
+        if group_col is not None:
+            if isinstance(group_col, str):
+                group_cols = [group_col]
+            else:
+                group_cols = group_col
+
+            # Validate group columns exist
+            missing_groups = [col for col in group_cols if col not in data.columns]
+            if missing_groups:
+                raise KeyError(f"group_col(s) {missing_groups} not in DataFrame columns: {list(data.columns)}")
+        else:
+            group_cols = None
+
+        # Handle missing dates
+        if fill_missing_dates:
+            if not pd.api.types.is_datetime64_any_dtype(data[time_col]):
+                raise ValueError("fill_missing_dates requires time_col to be datetime type")
+
+            if freq is None:
+                # Try to infer frequency
+                freq = pd.infer_freq(data[time_col].sort_values())
+                if freq is None:
+                    raise ValueError(
+                        "Could not infer frequency from time_col. Please specify freq parameter "
+                        "(e.g., 'D' for daily, 'H' for hourly)"
+                    )
+                logger.info(f"Inferred frequency: {freq}")
+
+            if group_cols is not None:
+                # Fill missing dates for each group separately
+                filled_groups = []
+                for group_name, group_data in data.groupby(group_cols, observed=True):
+                    # Create full date range for this group
+                    min_date = group_data[time_col].min()
+                    max_date = group_data[time_col].max()
+                    full_dates = pd.date_range(start=min_date, end=max_date, freq=freq)
+
+                    # Reindex and forward fill
+                    group_data = group_data.set_index(time_col).reindex(full_dates).reset_index()
+                    group_data = group_data.rename(columns={"index": time_col})
+
+                    # Restore group column values
+                    if isinstance(group_name, tuple):
+                        for i, col in enumerate(group_cols):
+                            group_data[col] = group_name[i]
+                    else:
+                        group_data[group_cols[0]] = group_name
+
+                    filled_groups.append(group_data)
+
+                data = pd.concat(filled_groups, ignore_index=True)
+            else:
+                # Fill missing dates for single time series
+                min_date = data[time_col].min()
+                max_date = data[time_col].max()
+                full_dates = pd.date_range(start=min_date, end=max_date, freq=freq)
+                data = data.set_index(time_col).reindex(full_dates).reset_index()
+                data = data.rename(columns={"index": time_col})
+
+        # Handle missing values
+        if fillna_value is not None:
+            # Fill NaN values in target columns
+            for col in target_cols:
+                data[col] = data[col].fillna(fillna_value)
+
+        # Validate data length
+        min_required_length = train_length + predict_length
+        if group_cols is not None:
+            # Check each group has sufficient data
+            for group_name, group_data in data.groupby(group_cols, observed=True):
+                if len(group_data) < min_required_length:
+                    warnings.warn(
+                        f"Group {group_name} has only {len(group_data)} rows, "
+                        f"but requires at least {min_required_length} rows "
+                        f"(train_length={train_length} + predict_length={predict_length}). "
+                        "This group will produce no sequences."
+                    )
+        else:
+            if len(data) < min_required_length:
+                raise ValueError(
+                    f"DataFrame has only {len(data)} rows, "
+                    f"but requires at least {min_required_length} rows "
+                    f"(train_length={train_length} + predict_length={predict_length})"
+                )
+
+        # Create the TimeSeriesSequence instance
+        return cls(
+            data=data,
+            time_idx=time_col,
+            target_column=target_col,
+            train_sequence_length=train_length,
+            predict_sequence_length=predict_length,
+            batch_size=batch_size,
+            group_column=group_cols,
+            feature_columns=feature_cols,
+            drop_last=drop_last,
+            feature_config=feature_config,
+            mode=mode,
+            stride=stride,
+            **kwargs,
+        )
