@@ -7,7 +7,7 @@ TFTS: TensorFlow Time Series
 
    <a class="github-button" href="https://github.com/LongxingTan/Time-series-prediction" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star LongxingTan/Time-series-prediction on GitHub">GitHub</a>
 
-Welcome to TFTS (TensorFlow Time Series), a comprehensive Python library for state-of-the-art deep learning time series analysis. TFTS provides production-ready implementations of cutting-edge models for forecasting, classification, and anomaly detection tasks.
+Welcome to TFTS (TensorFlow Time Series), a Python library for state-of-the-art deep learning time series analysis. TFTS provides production-ready implementations of cutting-edge models for forecasting, classification, and anomaly detection tasks.
 
 .. image:: https://img.shields.io/badge/License-MIT-blue.svg
    :target: https://opensource.org/licenses/MIT
@@ -341,11 +341,6 @@ Community and Support
 **Contributing**
    We welcome contributions! See our `Contributing Guide <https://github.com/LongxingTan/Time-series-prediction/blob/master/CONTRIBUTING.md>`_ for details.
 
-**Stay Updated**
-   - ⭐ Star the `GitHub repository <https://github.com/LongxingTan/Time-series-prediction>`_
-   - 📰 Check the `changelog <./CHANGELOG.md>`_ for latest updates
-   - 🐦 Follow updates on social media
-
 
 Citation
 --------
@@ -368,11 +363,3 @@ License
 -------
 
 TFTS is released under the MIT License. See `LICENSE <https://github.com/LongxingTan/Time-series-prediction/blob/master/LICENSE>`_ for details.
-
-
-Indices and Tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

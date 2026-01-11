@@ -427,6 +427,5 @@ Getting Help
 
 If you encounter installation issues:
 
-- 📖 Check the `FAQ <./faq.html>`_
 - 💬 Ask in `GitHub Discussions <https://github.com/LongxingTan/Time-series-prediction/discussions>`_
 - 🐛 Report bugs in `GitHub Issues <https://github.com/LongxingTan/Time-series-prediction/issues>`_

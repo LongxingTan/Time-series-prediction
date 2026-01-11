@@ -1,5 +1,3 @@
-"""tfts Trainer"""
-
 from collections.abc import Iterable
 from contextlib import nullcontext
 import logging
@@ -354,7 +352,7 @@ class Trainer(object):
         train_loader: Union[tf.data.Dataset, Generator],
         valid_loader: Union[tf.data.Dataset, Generator, None] = None,
         loss_fn: Union[Callable] = tf.keras.losses.MeanSquaredError(),
-        optimizer: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(0.003),
+        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
         lr_scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         epochs: int = 10,
         learning_rate: float = 3e-4,
@@ -396,17 +394,19 @@ class Trainer(object):
             A function to transform the data before feeding it to the model, by default None.
         """
         self.loss_fn = loss_fn
+        if optimizer is None:
+            optimizer = tf.keras.optimizers.Adam(0.003)
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.learning_rate = learning_rate
-        self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
+        if eval_metric is None:
+            self.eval_metric = []
+        else:
+            self.eval_metric = eval_metric if isinstance(eval_metric, Iterable) else [eval_metric]
         self.use_ema = use_ema
         self.transform = transform
         self.max_grad_norm = max_grad_norm
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
-
-        if use_ema:
-            self.ema = tf.train.ExponentialMovingAverage(0.9).apply(self.model.trainable_variables)
 
         if model_dir is None:
             model_dir = TFTS_HUB_CACHE
@@ -424,6 +424,13 @@ class Trainer(object):
             else:
                 inputs = Input(x.shape[1:])
             self.model = self.model.build_model(inputs=inputs)
+
+        if use_ema:
+            try:
+                self.ema = tf.train.ExponentialMovingAverage(0.9).apply(self.model.trainable_variables)
+            except Exception as e:
+                logger.warning(f"Failed to apply EMA: {e}")
+                self.ema = None
 
         for epoch in range(epochs):
             train_loss, train_scores = self.train_loop(train_loader)
@@ -462,7 +469,7 @@ class Trainer(object):
             y_trues.append(y_train)
 
         scores = []
-        if self.eval_metric is not None:
+        if self.eval_metric:
             y_preds = tf.concat(y_preds, axis=0)
             y_trues = tf.concat(y_trues, axis=0)
 
@@ -529,6 +536,8 @@ class Trainer(object):
         # save the model
         if not model_dir.endswith(".keras"):
             model_dir = f"{model_dir}.keras"
+
+        os.makedirs(os.path.dirname(model_dir), exist_ok=True)
         self.model.save(model_dir)
         logger.info(f"Model successfully saved in {model_dir}")
 

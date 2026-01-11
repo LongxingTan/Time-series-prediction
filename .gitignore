@@ -94,3 +94,5 @@ coverage.xml
 *.log
 /weights/
 !/weights/.gitkeep
+CLAUDE.md
+temp/

@@ -280,7 +280,7 @@ If you find tfts project useful in your research, please consider cite:
 ```
 @misc{tfts2020,
   author = {Longxing Tan},
-  title = {Time series prediction},
+  title = {TFTS: Time series prediction},
   year = {2020},
   publisher = {GitHub},
   journal = {GitHub repository},
