@@ -84,6 +84,11 @@ class AnomalyHead:
             y_pred = np.squeeze(y_pred, 1)
         errors = y_pred - y_test
 
+        if errors.ndim == 3:
+            # Flatten batch and sequence dimensions while keeping features
+            # (Batch, Time, Features) -> (Batch * Time, Features)
+            errors = errors.reshape(-1, errors.shape[-1])
+
         # mean / cov
         mean = sum(errors) / len(errors)
         cov = 0

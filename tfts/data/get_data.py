@@ -226,7 +226,6 @@ def get_ar_data(
     if noise < 0:
         raise ValueError("noise parameter must be non-negative")
 
-    # Set random seed for reproducibility if provided
     if seed is not None:
         np.random.seed(seed)
 

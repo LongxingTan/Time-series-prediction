@@ -7,6 +7,10 @@ from typing import Any
 class BaseTask(ABC):
     """Base task for tfts task."""
 
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        pass
+
 
 class ModelOutput(OrderedDict):
     def __post_init__(self):
