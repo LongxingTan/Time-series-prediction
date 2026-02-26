@@ -25,7 +25,8 @@ __all__ = [
     "Trainer",
     "KerasTrainer",
     "TrainingArguments",
-    "set_seed" "Pipeline",
+    "set_seed",
+    "Pipeline",
     "get_data",
     "TimeSeriesSequence",
 ]

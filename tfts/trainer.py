@@ -20,7 +20,7 @@ __all__ = ["Trainer", "KerasTrainer", "Seq2seqKerasTrainer", "set_seed"]
 logger = logging.getLogger(__name__)
 
 
-def set_seed(seed):
+def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
@@ -42,37 +42,26 @@ class BaseTrainer(object):
         self.args = args or TrainingArguments(output_dir=TFTS_HUB_CACHE)
         self.strategy = strategy or tf.distribute.get_strategy()
 
-        # with self.get_strategy_scope(strategy):
-        #     self.model = self._setup_model(model)
-        #     self.loss_fn = loss_fn
-        #     self.metrics = metrics or []
-        #     self.optimizer = optimizer or self._create_optimizer()
-        #     self.lr_scheduler = lr_scheduler or self._create_lr_scheduler()
-        #
-        #     # Training state
-        #     self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
-        #     if self.args.fp16:
-        #         self._setup_mixed_precision()
-
-    def evaluate(self):
+    def evaluate(self) -> None:
         pass
 
-    def get_train_dataloader(self):
+    def get_train_dataloader(self) -> Any:
         return
 
-    def get_eval_dataloader(self):
+    def get_eval_dataloader(self) -> Any:
         return
 
-    def get_test_dataloader(self):
+    def get_test_dataloader(self) -> Any:
         return
 
-    def get_learning_rates(self):
+    def get_learning_rates(self) -> Any:
         return
 
-    def create_accelerator_and_postprocess(self):
+    def create_accelerator_and_postprocess(self) -> Any:
         return
 
-    def get_distribution_strategy():
+    @staticmethod
+    def get_distribution_strategy() -> tf.distribute.Strategy:
         gpus = tf.config.list_physical_devices("GPU")
         if len(gpus) > 1:
             return tf.distribute.MirroredStrategy()
@@ -81,7 +70,7 @@ class BaseTrainer(object):
         else:
             return tf.distribute.OneDeviceStrategy(device="/cpu:0")
 
-    def get_strategy_scope(self):
+    def get_strategy_scope(self) -> Union[tf.distribute.Strategy.scope, nullcontext]:
         return self.strategy.scope() if self.strategy else nullcontext()
 
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
@@ -110,12 +99,6 @@ class BaseTrainer(object):
         policy = tf.keras.mixed_precision.Policy("mixed_float16")
         tf.keras.mixed_precision.set_global_policy(policy)
         logger.info("Mixed precision enabled.")
-
-    # def _setup_ema(self) -> None:
-    #     """Configure Exponential Moving Average if enabled."""
-    #     self.ema = None
-    #     if self.config.use_ema:
-    #         self.ema = tf.train.ExponentialMovingAverage(self.config.ema_decay)
 
     def get_inputs(self, train_dataset):
         if isinstance(train_dataset, tf.data.Dataset):
@@ -458,7 +441,7 @@ class Trainer(object):
     def fit(self, **params):
         return self.train(**params)
 
-    def train_loop(self, train_loader):
+    def train_loop(self, train_loader: Any) -> tuple[float, list[Any]]:
         train_loss: float = 0.0
         y_trues, y_preds = [], []
 
@@ -477,7 +460,7 @@ class Trainer(object):
                 scores.append(metric(y_trues, y_preds))
         return train_loss / (step + 1), scores
 
-    def train_step(self, x_train, y_train):
+    def train_step(self, x_train: tf.Tensor, y_train: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
         with tf.GradientTape() as tape:
             y_pred = self.model(x_train, training=True)
             loss = self.loss_fn(y_train, y_pred)
@@ -496,9 +479,9 @@ class Trainer(object):
         # logger.info(f'Step: {self.global_step.numpy()}, Loss: {loss}'
         return y_pred, loss
 
-    def valid_loop(self, valid_loader):
+    def valid_loop(self, valid_loader: Any) -> tuple[float, list[Any]]:
         valid_loss: float = 0.0
-        y_valid_trues, y_valid_preds = [], []
+        y_valid_trues, y_valid_preds = ([],)
 
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
             y_valid_pred, valid_step_loss = self.valid_step(x_valid, y_valid)
@@ -515,13 +498,13 @@ class Trainer(object):
                 valid_scores.append(metric(y_valid_trues, y_valid_preds))
         return valid_loss / (valid_step + 1), valid_scores
 
-    def valid_step(self, x_valid, y_valid):
+    def valid_step(self, x_valid: tf.Tensor, y_valid: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
 
         y_valid_pred = self.model(x_valid, training=False)
         valid_loss = self.loss_fn(y_valid, y_valid_pred)
         return y_valid_pred, valid_loss
 
-    def predict(self, test_loader):
+    def predict(self, test_loader: Any) -> tuple[tf.Tensor, tf.Tensor]:
         y_test_trues, y_test_preds = [], []
         for x_test, y_test in test_loader:
             y_test_pred = self.model(x_test, training=False)

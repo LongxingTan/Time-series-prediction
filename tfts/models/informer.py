@@ -93,11 +93,19 @@ class Informer(BaseModel):
         teacher: Optional[tf.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> tf.Tensor:
         """Informer call function"""
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
+
+        decoder_feature = self.decoder_embedding(decoder_feature)
+        casual_mask = self.causal_mask(decoder_feature)
+
+        outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
+        outputs = self.projection(outputs)
+
+        return outputs
 
         decoder_feature = self.decoder_embedding(decoder_feature)
         casual_mask = self.causal_mask(decoder_feature)
@@ -131,7 +139,7 @@ class Encoder(tf.keras.layers.Layer):
         self.prob_attention = prob_attention
         self.distil_conv = distil_conv
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         if not self.prob_attention:
             attn_layer = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
         else:
@@ -155,7 +163,7 @@ class Encoder(tf.keras.layers.Layer):
         self.norm_layer = LayerNormalization()
         super(Encoder, self).build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Informer encoder call function"""
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
@@ -170,7 +178,7 @@ class Encoder(tf.keras.layers.Layer):
             x = self.norm_layer(x)
         return x
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = {
             "hidden_size": self.hidden_size,
             "num_layers": self.num_layers,
