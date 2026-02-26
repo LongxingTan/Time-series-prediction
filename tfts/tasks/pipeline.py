@@ -5,8 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 
-from ..models import AutoConfig, AutoModel
-
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +37,8 @@ class Pipeline(object):
         with self.strategy.scope():
             self.cfg.model.n_features = n_features
             self.cfg.model.n_outputs = n_outputs
+
+            from ..models import AutoConfig, AutoModel
 
             config = AutoConfig()(self.cfg.model.name)
             config.output_size = n_outputs

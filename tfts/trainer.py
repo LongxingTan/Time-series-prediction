@@ -481,7 +481,7 @@ class Trainer(object):
 
     def valid_loop(self, valid_loader: Any) -> tuple[float, list[Any]]:
         valid_loss: float = 0.0
-        y_valid_trues, y_valid_preds = ([],)
+        y_valid_trues, y_valid_preds = [], []
 
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
             y_valid_pred, valid_step_loss = self.valid_step(x_valid, y_valid)
