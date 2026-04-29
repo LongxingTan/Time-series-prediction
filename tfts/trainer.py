@@ -75,13 +75,23 @@ class BaseTrainer(object):
 
     def _create_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Create optimizer with specified parameters."""
-        return tf.keras.optimizers.Adam(
-            learning_rate=self.args.learning_rate,
-            beta_1=self.args.adam_beta1,
-            beta_2=self.args.adam_beta2,
-            epsilon=self.args.adam_epsilon,
-            weight_decay=self.args.weight_decay,
-        )
+        # tf.keras.optimizers.Adam does not support weight_decay directly.
+        # Use AdamW if available, otherwise fall back to standard Adam.
+        try:
+            return tf.keras.optimizers.AdamW(
+                learning_rate=self.args.learning_rate,
+                beta_1=self.args.adam_beta1,
+                beta_2=self.args.adam_beta2,
+                epsilon=self.args.adam_epsilon,
+                weight_decay=self.args.weight_decay,
+            )
+        except AttributeError:
+            return tf.keras.optimizers.Adam(
+                learning_rate=self.args.learning_rate,
+                beta_1=self.args.adam_beta1,
+                beta_2=self.args.adam_beta2,
+                epsilon=self.args.adam_epsilon,
+            )
 
     def _create_lr_scheduler(self) -> Optional[tf.keras.optimizers.schedules.LearningRateSchedule]:
         """Create learning rate scheduler based on arguments."""
@@ -153,7 +163,10 @@ class BaseTrainer(object):
             return
 
         os.makedirs(save_directory, exist_ok=True)
-        self.config.architectures = [self.model.__class__.__name__[2:]]
+        # Use model_type from config if available, otherwise derive from class name
+        name = self.model.__class__.__name__
+        architecture = getattr(self.config, "model_type", name)
+        self.config.architectures = [architecture]
         self.config.save_pretrained(save_directory)
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension

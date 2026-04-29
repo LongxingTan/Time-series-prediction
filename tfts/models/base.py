@@ -17,17 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
-    """Bert model for time series forecasting.
+    """Base model for time series forecasting.
 
-    This model implements a transformer-based architecture (BERT) adapted for time series data.
-    It processes time series inputs through a transformer encoder and produces predictions
-    for future time steps.
+    Abstract base class that all tfts models inherit from.
+    Subclasses must implement __call__ and can optionally override build_model.
 
     Parameters
     ----------
     predict_sequence_length : int, optional
         Number of future time steps to predict, by default 1
-    config : BertConfig, optional
+    config : BaseConfig, optional
         Configuration parameters for the model, by default None
     """
 
@@ -110,7 +109,10 @@ class BaseModel(ABC):
             return
 
         os.makedirs(save_directory, exist_ok=True)
-        self.config.architectures = [self.__class__.__name__[2:]]
+        # Use model_type from config if available, otherwise derive from class name
+        name = self.__class__.__name__
+        architecture = getattr(self.config, "model_type", name)
+        self.config.architectures = [architecture]
         self.config.save_pretrained(save_directory)
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension

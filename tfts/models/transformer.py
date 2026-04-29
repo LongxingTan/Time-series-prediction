@@ -13,7 +13,6 @@ from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHea
 from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
-from tfts.layers.mask_layer import CausalMask
 
 from .base import BaseConfig, BaseModel
 
@@ -150,11 +149,6 @@ class Transformer(BaseModel):
         decoder_outputs = self.decoder(
             decoder_feature, init_input=x[:, -1:, 0:1], encoder_memory=memory, teacher=teacher
         )
-
-        # Example for new CausalMask usage:
-        # dummy = tf.zeros((B, L, 1))
-        # mask_layer = CausalMask(num_attention_heads=1)
-        # casual_mask = mask_layer(dummy)
 
         return decoder_outputs
 
