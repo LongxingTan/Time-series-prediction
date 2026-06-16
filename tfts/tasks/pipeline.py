@@ -5,6 +5,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 
+from ..training.runtime import create_distribution_strategy
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,16 +23,7 @@ class Pipeline(object):
 
     def _setup_strategy(self):
         """Detects GPUs and returns the appropriate distribution strategy."""
-        gpus = tf.config.list_physical_devices("GPU")
-        if len(gpus) > 1:
-            logger.info(f"Using MirroredStrategy with {len(gpus)} GPUs")
-            return tf.distribute.MirroredStrategy()
-        elif len(gpus) == 1:
-            logger.info("Using OneDeviceStrategy (1 GPU)")
-            return tf.distribute.OneDeviceStrategy(device="/gpu:0")
-        else:
-            logger.info("Using default strategy (CPU)")
-            return tf.distribute.get_strategy()
+        return create_distribution_strategy()
 
     def build_model(self, n_features, n_outputs):
         # Update model config with actual data dimensions

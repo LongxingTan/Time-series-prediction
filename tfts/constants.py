@@ -1,3 +1,10 @@
+"""TFTS constants — cache paths and weight file names.
+
+All paths respect the ``TFTS_HOME`` environment variable (defaults to
+``~/.cache/tfts``).  Model weights, datasets, and assets are stored in
+subdirectories under this root.
+"""
+
 import os
 
 # default cache
@@ -15,7 +22,7 @@ default_datasets_path = os.path.join(TFTS_HOME, "datasets")
 default_assets_cache_path = os.path.join(TFTS_HOME, "assets")
 
 TFTS_HUB_CACHE = os.getenv("TFTS_HUB_CACHE", default_cache_path)
-TFTS_DATASETS_CACHE = os.getenv("TFTS_DATASETS_CACHE", default_assets_cache_path)
+TFTS_DATASETS_CACHE = os.getenv("TFTS_DATASETS_CACHE", default_datasets_path)
 TFTS_ASSETS_CACHE = os.getenv("TFTS_ASSETS_CACHE", default_assets_cache_path)
 
 TF2_WEIGHTS_NAME = "tf_model.weights.h5"

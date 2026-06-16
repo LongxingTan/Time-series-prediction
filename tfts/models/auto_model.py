@@ -46,6 +46,11 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("rwkv", "RWKV"),
         ("patch_tst", "PatchTST"),
         ("deep_ar", "DeepAR"),
+        ("itransformer", "ITransformer"),
+        ("timesfm", "TimesFm"),
+        ("gpt", "GPT"),
+        ("diffusion", "Diffusion"),
+        ("tide", "Tide"),
     ]
 )
 
@@ -95,6 +100,10 @@ class AutoModel(BaseModel):
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
+        if model_name not in MODEL_MAPPING_NAMES:
+            raise ValueError(
+                f"Unrecognized model: {model_name}. Should contain one of {', '.join(MODEL_MAPPING_NAMES.keys())}"
+            )
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
         model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
@@ -156,10 +165,10 @@ class AutoModelForPrediction(AutoModel):
 
         model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
-        if self.config.skip_connect_circle:
+        if getattr(self.config, "skip_connect_circle", False):
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             model_output = model_output + x_mean
-        elif self.config.skip_connect_mean:
+        elif getattr(self.config, "skip_connect_mean", False):
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             model_output = model_output + x_mean
         return model_output
@@ -236,11 +245,11 @@ class AutoModelForAnomaly(BaseModel):
         return cls(model, config)
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 
@@ -262,11 +271,11 @@ class AutoModelForSegmentation(BaseModel):
         return model_output
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 
@@ -288,11 +297,11 @@ class AutoModelForUncertainty(BaseModel):
         return model_output
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 

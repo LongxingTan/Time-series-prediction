@@ -23,6 +23,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RWKVConfig"),
         ("patch_tst", "PatchTSTConfig"),
         ("deep_ar", "DeepARConfig"),
+        ("itransformer", "ITransformerConfig"),
+        ("timesfm", "TimesFmConfig"),
+        ("gpt", "GPTConfig"),
+        ("diffusion", "DiffusionConfig"),
+        ("tide", "TideConfig"),
     ]
 )
 

@@ -129,14 +129,14 @@ def get_sine(
 
     x_array = np.array(x)[:, :, 0:1]
     y_array = np.array(y)[:, :, 0:1]
-    logging.info("Load sine data", x_array.shape, y_array.shape)
+    logging.info(f"Load sine data {x_array.shape} {y_array.shape}")
 
     if test_size > 0:
-        slice = int(n_examples * (1 - test_size))
-        x_train = x_array[:slice]
-        y_train = y_array[:slice]
-        x_valid = x_array[slice:]
-        y_valid = y_array[slice:]
+        split_idx = int(n_examples * (1 - test_size))
+        x_train = x_array[:split_idx]
+        y_train = y_array[:split_idx]
+        x_valid = x_array[split_idx:]
+        y_valid = y_array[split_idx:]
         return (x_train, y_train), (x_valid, y_valid)
     return x_array, y_array
 
@@ -156,7 +156,7 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
     """
     df = pd.read_csv(TS_DATASETS_URL["air_passengers"]["url"], parse_dates=None, date_parser=None, nrows=144)
     v = df.iloc[:, 1:2].values
-    v = (v - np.max(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
+    v = (v - np.min(v)) / (np.max(v) - np.min(v))  # MinMaxScaler
 
     x: List[np.ndarray] = []
     y: List[np.ndarray] = []
@@ -171,14 +171,14 @@ def get_air_passengers(train_sequence_length: int = 24, predict_sequence_length:
         y.append(y_roll)
     y_array = np.stack(y, axis=1)
     y_array = y_array[train_sequence_length:-predict_sequence_length]
-    logging.info("Load air passenger data", x_array.shape, y_array.shape)
+    logging.info(f"Load air passenger data {x_array.shape} {y_array.shape}")
 
     if test_size > 0:
-        slice = int(len(x_array) * (1 - test_size))
-        x_train = x_array[:slice]
-        y_train = y_array[:slice]
-        x_valid = x_array[slice:]
-        y_valid = y_array[slice:]
+        split_idx = int(len(x_array) * (1 - test_size))
+        x_train = x_array[:split_idx]
+        y_train = y_array[:split_idx]
+        x_valid = x_array[split_idx:]
+        y_valid = y_array[split_idx:]
         return (x_train, y_train), (x_valid, y_valid)
     return x_array, y_array
 

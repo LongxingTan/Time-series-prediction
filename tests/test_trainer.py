@@ -8,7 +8,9 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel
-from tfts.trainer import BaseTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
+from tfts.trainer import BaseTrainer, EagerTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
+from tfts.training.runtime import configure_precision, create_distribution_strategy
+from tfts.training_args import TrainingArguments
 
 
 class SetSeedTest(unittest.TestCase):
@@ -54,8 +56,6 @@ class BaseTrainerTest(unittest.TestCase):
 
     def test_initialization_with_custom_args(self):
         """Test BaseTrainer initialization with custom training arguments."""
-        from tfts.training_args import TrainingArguments
-
         custom_args = TrainingArguments(
             output_dir="./custom_output", learning_rate=0.001, per_device_train_batch_size=16
         )
@@ -78,8 +78,6 @@ class BaseTrainerTest(unittest.TestCase):
 
     def test_create_lr_scheduler_linear(self):
         """Test linear learning rate scheduler creation."""
-        from tfts.training_args import TrainingArguments
-
         args = TrainingArguments(output_dir="./test", lr_scheduler_type="linear", max_steps=100)
         trainer = BaseTrainer(self.model, args=args)
         scheduler = trainer._create_lr_scheduler()
@@ -87,8 +85,6 @@ class BaseTrainerTest(unittest.TestCase):
 
     def test_create_lr_scheduler_none(self):
         """Test that no scheduler is created when type is not specified."""
-        from tfts.training_args import TrainingArguments
-
         args = TrainingArguments(output_dir="./test", lr_scheduler_type="none", max_steps=100)
         trainer = BaseTrainer(self.model, args=args)
         scheduler = trainer._create_lr_scheduler()
@@ -165,24 +161,89 @@ class BaseTrainerTest(unittest.TestCase):
 
     def test_global_batch_size(self):
         """Test global batch size calculation."""
-        from tfts.training_args import TrainingArguments
-
         args = TrainingArguments(output_dir="./test", per_device_train_batch_size=8)
         trainer = BaseTrainer(self.model, args=args)
         batch_size = trainer.global_batch_size
         self.assertGreater(batch_size, 0)
 
+    def test_create_optimizer_uses_training_arguments(self):
+        """Test optimizer creation respects TrainingArguments."""
+        args = TrainingArguments(output_dir="./test", learning_rate=0.002, weight_decay=0.01, lr_scheduler_type="none")
+        trainer = BaseTrainer(self.model, args=args)
+        optimizer = trainer._create_optimizer()
+        self.assertAlmostEqual(float(tf.keras.backend.get_value(optimizer.learning_rate)), 0.002)
+
     def test_save_model(self):
         """Test model saving functionality."""
         with tempfile.TemporaryDirectory() as tmpdir:
             trainer = BaseTrainer(self.model)
+            inputs = tf.keras.Input(shape=(10, 1))
+            trainer.model = trainer.model.build_model(inputs)
             trainer._save(tmpdir)
             # Check that config file exists
             config_path = os.path.join(tmpdir, "config.json")
             self.assertTrue(os.path.exists(config_path))
+            weights_path = os.path.join(tmpdir, "tf_model.weights.h5")
+            self.assertTrue(os.path.exists(weights_path))
+
+    def test_save_unbuilt_model_raises_clear_error(self):
+        """Test saving an unbuilt model fails before writing partial files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            trainer = BaseTrainer(self.model)
+            with self.assertRaisesRegex(ValueError, "cannot be saved before the model is built"):
+                trainer._save(tmpdir)
+            self.assertFalse(os.path.exists(os.path.join(tmpdir, "config.json")))
+            self.assertFalse(os.path.exists(os.path.join(tmpdir, "tf_model.weights.h5")))
 
 
-class TrainerTest(unittest.TestCase):
+class TrainingRuntimeTest(unittest.TestCase):
+    """Test training runtime configuration helpers."""
+
+    def tearDown(self):
+        tf.keras.mixed_precision.set_global_policy("float32")
+
+    def test_training_arguments_fp16_sets_precision(self):
+        """Test fp16 compatibility flag maps to mixed_float16 policy."""
+        args = TrainingArguments(output_dir="./test", fp16=True)
+        self.assertEqual(args.precision, "mixed_float16")
+
+    def test_training_arguments_bf16_sets_precision(self):
+        """Test bf16 compatibility flag maps to mixed_bfloat16 policy."""
+        args = TrainingArguments(output_dir="./test", bf16=True)
+        self.assertEqual(args.precision, "mixed_bfloat16")
+
+    def test_training_arguments_rejects_conflicting_precision_flags(self):
+        """Test fp16 and bf16 cannot both be enabled."""
+        with self.assertRaises(ValueError):
+            TrainingArguments(output_dir="./test", fp16=True, bf16=True)
+
+    def test_configure_precision(self):
+        """Test precision policy is applied globally."""
+        args = TrainingArguments(output_dir="./test", precision="mixed_float16")
+        policy = configure_precision(args)
+        self.assertEqual(policy.name, "mixed_float16")
+        self.assertEqual(tf.keras.mixed_precision.global_policy().name, "mixed_float16")
+
+    @patch("tfts.training.runtime.tf.distribute.MirroredStrategy", create=True)
+    @patch("tensorflow.config.list_physical_devices")
+    def test_create_distribution_strategy_auto_multi_gpu(self, mock_list_devices, mock_mirrored_strategy):
+        """Test automatic strategy selection for multiple GPUs."""
+        mock_list_devices.return_value = ["GPU:0", "GPU:1"]
+        strategy = create_distribution_strategy(TrainingArguments(output_dir="./test"))
+        mock_mirrored_strategy.assert_called_once_with()
+        self.assertEqual(strategy, mock_mirrored_strategy.return_value)
+
+    @patch("tensorflow.config.list_physical_devices")
+    def test_create_distribution_strategy_auto_cpu(self, mock_list_devices):
+        """Test automatic strategy selection on CPU."""
+        mock_list_devices.return_value = []
+        strategy = create_distribution_strategy(TrainingArguments(output_dir="./test"))
+        self.assertIsInstance(strategy, tf.distribute.Strategy)
+
+
+class EagerTrainerTest(unittest.TestCase):
+    """Tests for EagerTrainer (legacy custom training loop)."""
+
     def setUp(self):
         self.fit_config = {
             "epochs": 2,
@@ -210,7 +271,7 @@ class TrainerTest(unittest.TestCase):
         # 1gpu, no dist
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(
+        trainer = EagerTrainer(
             model,
         )
         trainer.train(
@@ -226,7 +287,7 @@ class TrainerTest(unittest.TestCase):
         """Test that fit() is an alias for train()."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         # fit should work the same as train
         trainer.fit(
@@ -240,7 +301,7 @@ class TrainerTest(unittest.TestCase):
         """Test training without validation data."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         trainer.train(
             train_loader=self.train_loader, valid_loader=None, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1
@@ -250,7 +311,7 @@ class TrainerTest(unittest.TestCase):
         """Test trainer with learning rate scheduler."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=0.003, decay_steps=10, decay_rate=0.9
@@ -264,7 +325,7 @@ class TrainerTest(unittest.TestCase):
         """Test trainer with exponential moving average."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, use_ema=True, epochs=1)
 
@@ -272,7 +333,7 @@ class TrainerTest(unittest.TestCase):
         """Test trainer with multiple evaluation metrics."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         metrics = [
             lambda x, y: np.mean(np.abs(x.numpy() - y.numpy())),
@@ -285,7 +346,7 @@ class TrainerTest(unittest.TestCase):
         """Test early stopping functionality."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         trainer.train(
             train_loader=self.train_loader,
@@ -299,7 +360,7 @@ class TrainerTest(unittest.TestCase):
         """Test gradient clipping with custom max_grad_norm."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, max_grad_norm=1.0, epochs=1)
 
@@ -307,7 +368,7 @@ class TrainerTest(unittest.TestCase):
         """Test trainer with custom loss function."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model)
+        trainer = EagerTrainer(model)
 
         custom_loss = tf.keras.losses.MeanAbsoluteError()
 
@@ -317,14 +378,14 @@ class TrainerTest(unittest.TestCase):
         strategy = tf.distribute.MirroredStrategy()
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model, strategy=strategy)
+        trainer = EagerTrainer(model, strategy=strategy)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
 
     def test_trainer_kwargs(self):
         """Test that custom kwargs are set as attributes."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Trainer(model, custom_param="test_value", another_param=42)
+        trainer = EagerTrainer(model, custom_param="test_value", another_param=42)
 
         self.assertEqual(trainer.custom_param, "test_value")
         self.assertEqual(trainer.another_param, 42)

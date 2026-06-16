@@ -181,7 +181,7 @@ class Bert(BaseModel):
             elif self.config.pooling_method == "last":
                 encoder_output = memory[:, -1]
             else:
-                raise ValueError(f"Pooling method should be mean or last, while received {self.config.poolint_method}")
+                raise ValueError(f"Pooling method should be mean or last, while received {self.config.pooling_method}")
 
             for layer in self.dense_layers:
                 encoder_output = layer(encoder_output)

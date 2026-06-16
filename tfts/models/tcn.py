@@ -1,12 +1,12 @@
 """
-`WaveNet: A Generative Model for Raw Audio
-<https://arxiv.org/abs/1609.03499>`_
+`Temporal Convolutional Networks
+<https://arxiv.org/abs/1803.01271>`_
 """
 
 from typing import List, Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU, Reshape
+from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU
 
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
@@ -19,20 +19,15 @@ class TCNConfig(BaseConfig):
 
     def __init__(
         self,
-        dilation_rates: List[int] = [2**i for i in range(4)],
-        kernel_sizes: List[int] = [2 for _ in range(4)],
+        dilation_rates: Optional[List[int]] = None,
+        kernel_sizes: Optional[List[int]] = None,
         filters: int = 128,
         dense_hidden_size: int = 64,
     ):
-        """
-        Initializes the configuration for the Temporal Convolutional Network (TCN) model with the specified parameters.
-
-        Args:
-            dilation_rates: List of dilation rates for each layer.
-            kernel_sizes: List of kernel sizes for each convolutional layer.
-            filters: The number of filters (channels) in each convolutional layer.
-            dense_hidden_size: The size of the dense hidden layer.
-        """
+        if dilation_rates is None:
+            dilation_rates = [2**i for i in range(4)]
+        if kernel_sizes is None:
+            kernel_sizes = [2 for _ in range(4)]
         super().__init__()
         self.dilation_rates: List[int] = dilation_rates
         self.kernel_sizes: List[int] = kernel_sizes
@@ -56,9 +51,9 @@ class TCN(BaseModel):
 
         self.project1 = Dense(predict_sequence_length, activation=None)
         self.drop1 = Dropout(0.0)
-        self.dense1 = Dense(512, activation="relu")
+        self.dense1 = Dense(self.config.dense_hidden_size * 8, activation="relu")
         self.drop2 = Dropout(0.0)
-        self.dense2 = Dense(1024, activation="relu")
+        self.dense2 = Dense(self.config.dense_hidden_size * 16, activation="relu")
 
     def __call__(
         self,
@@ -96,10 +91,10 @@ class TCN(BaseModel):
         encoder_output = self.dense1(encoder_output)
         encoder_output = self.drop2(encoder_output)
         encoder_output = self.dense2(encoder_output)
-        encoder_output = self.drop2(encoder_output)
+        encoder_output = self.drop1(encoder_output)
 
         outputs = self.project1(encoder_output)
-        outputs = Reshape((outputs.shape[1], 1))(outputs)
+        outputs = tf.keras.layers.Reshape((self.predict_sequence_length, 1))(outputs)
 
         # outputs = tf.tile(outputs, (1, self.predict_sequence_length, 1))
         # outputs = self.dense3(encoder_outputs)

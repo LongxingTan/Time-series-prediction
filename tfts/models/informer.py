@@ -28,15 +28,15 @@ class InformerConfig(BaseConfig):
 
     def __init__(
         self,
-        hidden_size=64,
-        num_layers=1,
-        num_decoder_layers=None,
-        num_attention_heads=1,
-        attention_probs_dropout_prob=0.0,
-        ffn_intermediate_size=128,
-        hidden_dropout_prob=0.0,
-        prob_attention=False,
-        distil_conv=False,
+        hidden_size: int = 64,
+        num_layers: int = 1,
+        num_decoder_layers: Optional[int] = None,
+        num_attention_heads: int = 1,
+        attention_probs_dropout_prob: float = 0.0,
+        ffn_intermediate_size: int = 128,
+        hidden_dropout_prob: float = 0.0,
+        prob_attention: bool = False,
+        distil_conv: bool = False,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -98,14 +98,6 @@ class Informer(BaseModel):
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
         memory = self.encoder(encoder_feature, mask=None)
-
-        decoder_feature = self.decoder_embedding(decoder_feature)
-        casual_mask = self.causal_mask(decoder_feature)
-
-        outputs = self.decoder(decoder_feature, memory=memory, x_mask=casual_mask)
-        outputs = self.projection(outputs)
-
-        return outputs
 
         decoder_feature = self.decoder_embedding(decoder_feature)
         casual_mask = self.causal_mask(decoder_feature)

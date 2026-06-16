@@ -53,7 +53,18 @@ class BaseModel(ABC):
             return self.model
         else:
             outputs = self(inputs)
-            return tf.keras.Model(inputs, outputs)
+            self.model = tf.keras.Model(inputs, outputs)
+            return self.model
+
+    def _keras_model_for_saving(self) -> tf.keras.Model:
+        if isinstance(self.model, tf.keras.Model):
+            return self.model
+        if isinstance(self.model, BaseModel) and isinstance(self.model.model, tf.keras.Model):
+            return self.model.model
+        raise ValueError(
+            "Model weights cannot be saved before the model is built. "
+            "Call `build_model(...)` or train the model before saving weights."
+        )
 
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
@@ -108,6 +119,8 @@ class BaseModel(ABC):
             logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
 
+        keras_model = self._keras_model_for_saving()
+
         os.makedirs(save_directory, exist_ok=True)
         # Use model_type from config if available, otherwise derive from class name
         name = self.__class__.__name__
@@ -117,31 +130,29 @@ class BaseModel(ABC):
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
 
-        try:
-            self.model.save_weights(weights_file)
-            logging.info(f"Model weights successfully saved in {weights_file}")
-        except Exception as e:
-            logging.error(f"Failed to save model weights to {weights_file}: {e}")
-            return
+        keras_model.save_weights(weights_file)
+        logging.info(f"Model weights successfully saved in {weights_file}")
 
     def save_weights(self, weights_path: str):
         if weights_path.endswith(".h5"):
             # User passed a full filepath
             weights_file = weights_path
             config_file = weights_path.replace(".h5", ".config.json")
-            os.makedirs(os.path.dirname(weights_file), exist_ok=True)
+            weights_dir = os.path.dirname(weights_file)
+            if weights_dir:
+                os.makedirs(weights_dir, exist_ok=True)
         else:
             # User passed a directory
             os.makedirs(weights_path, exist_ok=True)
             weights_file = os.path.join(weights_path, TF2_WEIGHTS_NAME)
             config_file = os.path.join(weights_path, CONFIG_NAME)
 
-        self.model.save_weights(weights_file)
+        self._keras_model_for_saving().save_weights(weights_file)
         self.config.to_json(config_file)
         logger.info(f"Model weights successfully saved in {weights_file}")
 
     def save_model(self, weights_dir: str):
-        self.model.save(weights_dir)
+        self._keras_model_for_saving().save(weights_dir)
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):

@@ -117,39 +117,6 @@ class TimeSeriesSequence(Sequence):
             f"batch_size={batch_size}, mode={mode}"
         )
 
-    def _build_sequences(self):
-        """Builds a lookup table for sequences to avoid heavy DataFrame slicing during training."""
-        sequence_indices = []
-
-        if self.group_column:
-            grouped = self.data.groupby(self.group_column)
-        else:
-            grouped = [("all", self.data)]
-
-        for _, group in grouped:
-            group = group.sort_values(self.time_idx)
-            n_rows = len(group)
-            max_idx = n_rows - self.train_sequence_length - self.predict_sequence_length + 1
-
-            # Pre-extract numpy arrays for speed
-            feature_data = group[self.features].values.astype(np.float32)
-            target_data = group[self.target].values.astype(np.float32)
-
-            for i in range(0, max_idx, self.stride):
-                sequence_indices.append(
-                    {
-                        "x": feature_data[i : i + self.train_sequence_length],
-                        "y": target_data[
-                            i
-                            + self.train_sequence_length : i
-                            + self.train_sequence_length
-                            + self.predict_sequence_length
-                        ],
-                    }
-                )
-
-        return sequence_indices
-
     def __len__(self) -> int:
         """Get the number of batches in the sequence.
 
@@ -200,7 +167,7 @@ class TimeSeriesSequence(Sequence):
 
     def _generate_sequences(
         self, group: pd.DataFrame, time_idx: str, target_column: str
-    ) -> List[Tuple[np.ndarray, np.ndarray, int]]:
+    ) -> List[Tuple[np.ndarray, np.ndarray]]:
         """Generate sequences from a group of data.
 
         Args:

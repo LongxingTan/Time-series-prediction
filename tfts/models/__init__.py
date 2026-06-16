@@ -10,3 +10,4 @@ from .auto_model import (
     AutoModelForUncertainty,
 )
 from .base import BaseConfig, BaseModel
+from .registry import list_models

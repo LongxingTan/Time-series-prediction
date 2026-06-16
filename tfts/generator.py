@@ -41,11 +41,16 @@ class GenerationMixin:
         """Validate that required attributes exist on the host class."""
         missing = []
         for attr in self._REQUIRED_ATTRS:
-            if not hasattr(self, attr) or getattr(self, attr) is None:
+            if not hasattr(self, attr):
                 missing.append(attr)
+            # Allow time_idx and group_column to be None, but enforce others
+            elif getattr(self, attr) is None and attr not in ["time_idx", "group_column"]:
+                missing.append(attr)
+
         for method in self._REQUIRED_METHODS:
             if not hasattr(self, method):
                 missing.append(method + "()")
+
         if missing:
             raise AttributeError(
                 f"GenerationMixin requires the following attributes/methods on the host class: "

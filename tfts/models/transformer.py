@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -41,7 +41,7 @@ class TransformerConfig(BaseConfig):
         classifier_dropout: Optional[float] = None,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        **kwargs: Dict[str, object]
+        **kwargs: Any
     ) -> None:
         """
         Initializes the configuration for the Transformer model with the specified parameters.
@@ -386,7 +386,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             cross_attention_layer = Attention(
                 self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob
             )
-            ffn_layer = FeedForwardNetwork(self.ffn_intermediate_size, self.hidden_size, self.hidden_dropout_prob)
+            ffn_layer = FeedForwardNetwork(self.hidden_size, self.ffn_intermediate_size, self.hidden_dropout_prob)
             ln_layer1 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
