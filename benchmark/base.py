@@ -100,9 +100,7 @@ class Dataset(ABC):
     group_column: Optional[str] = None
 
     @abstractmethod
-    def prepare_data(
-        self, **kwargs
-    ) -> Union[
+    def prepare_data(self, **kwargs) -> Union[
         Tuple[np.ndarray, np.ndarray],
         Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]],
         tf.data.Dataset,

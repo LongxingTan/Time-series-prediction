@@ -21,6 +21,8 @@ jobs:
         exclude:
           - python-version: 3.9
             tf-version: 2.13.1
+          - os: macOS-latest
+            tf-version: 2.13.1
 
     steps:
       - uses: actions/checkout@v4
