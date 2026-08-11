@@ -124,7 +124,7 @@ class AutoFormer(BaseModel):
         # batch_size, _, n_feature = self.shape_layer(encoder_feature)
 
         # Encoder
-        encoder_output = self.encoder(x)
+        encoder_output = self.encoder(encoder_feature)
         encoder_output = self.dense1(encoder_output)
         encoder_output = self.dense2(encoder_output)
 

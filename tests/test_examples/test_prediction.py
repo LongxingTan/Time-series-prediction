@@ -3,7 +3,8 @@ from unittest.mock import patch
 
 import tensorflow as tf
 
-from examples.run_prediction_simple import parse_args, run_train, set_seed
+from examples.run_prediction_simple import parse_args, run_manual, run_pipeline
+from tfts import set_seed
 
 
 class PredictionTest(unittest.TestCase):
@@ -24,4 +25,4 @@ class PredictionTest(unittest.TestCase):
             learning_rate = 0.003
 
         set_seed(args.seed)
-        run_train(args)
+        run_manual(args)

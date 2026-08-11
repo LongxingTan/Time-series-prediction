@@ -46,6 +46,11 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("rwkv", "RWKV"),
         ("patch_tst", "PatchTST"),
         ("deep_ar", "DeepAR"),
+        ("itransformer", "ITransformer"),
+        ("timesfm", "TimesFm"),
+        ("gpt", "GPT"),
+        ("diffusion", "Diffusion"),
+        ("tide", "Tide"),
     ]
 )
 
@@ -56,8 +61,9 @@ class AutoModel(BaseModel):
     output tensor: [batch_size, predict_sequence_length, num_labels]
     """
 
-    def __init__(self, model, config):
-        super().__init__(config=config)
+    def __init__(self, model, config, predict_sequence_length: Optional[int] = None):
+        predict_sequence_length = predict_sequence_length or getattr(model, "predict_sequence_length", 1)
+        super().__init__(predict_sequence_length=predict_sequence_length, config=config)
         self.model = model
         self.config = config
 
@@ -95,13 +101,17 @@ class AutoModel(BaseModel):
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
+        if model_name not in MODEL_MAPPING_NAMES:
+            raise ValueError(
+                f"Unrecognized model: {model_name}. Should contain one of {', '.join(MODEL_MAPPING_NAMES.keys())}"
+            )
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
         model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
-        return cls(model, config)
+        return cls(model, config, predict_sequence_length=predict_sequence_length)
 
     @classmethod
-    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: int = 1):
+    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: Optional[int] = None):
         config_path = os.path.join(weights_dir, "config.json")
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at {config_path}")
@@ -119,6 +129,7 @@ class AutoModel(BaseModel):
             # Dynamically get the correct Config subclass
             config = AutoConfig.for_model(model_type)
             config.update(config_dict)  # update with the saved values
+            predict_sequence_length = predict_sequence_length or getattr(config, "predict_sequence_length", 1)
 
             # Build model and load weights
             model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
@@ -133,7 +144,7 @@ class AutoModel(BaseModel):
 
             model.build_model(inputs)
             model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
-            return cls(model, config)
+            return model
         except Exception as e:
             raise OSError(
                 f"Error loading model weights from {weights_dir}. "
@@ -156,10 +167,10 @@ class AutoModelForPrediction(AutoModel):
 
         model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
-        if self.config.skip_connect_circle:
+        if getattr(self.config, "skip_connect_circle", False):
             x_mean = x[:, -self.predict_sequence_length :, 0:1]
             model_output = model_output + x_mean
-        elif self.config.skip_connect_mean:
+        elif getattr(self.config, "skip_connect_mean", False):
             x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
             model_output = model_output + x_mean
         return model_output
@@ -225,22 +236,16 @@ class AutoModelForAnomaly(BaseModel):
 
     @classmethod
     def from_pretrained(cls, weights_dir: Union[str, os.PathLike]):
-        model_path = os.path.join(weights_dir, "model.h5")
-        model = tf.keras.models.load_model(model_path)
-        logger.info(f"Load model from {weights_dir}")
-        config_path = os.path.join(weights_dir, "config.json")
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found at {config_path}")
-
-        config = BaseConfig.from_json(config_path)  # Load config from JSON
-        return cls(model, config)
+        model = AutoModel.from_pretrained(weights_dir)
+        logger.info(f"Loaded anomaly model from {weights_dir}")
+        return cls(model, model.config)
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 
@@ -262,11 +267,11 @@ class AutoModelForSegmentation(BaseModel):
         return model_output
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 
@@ -288,11 +293,11 @@ class AutoModelForUncertainty(BaseModel):
         return model_output
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, predict_sequence_length: int = 1):
         model_name = config.model_type
         class_name = MODEL_MAPPING_NAMES[model_name]
         module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
+        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
         return cls(model, config)
 
 

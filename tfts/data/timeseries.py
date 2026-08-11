@@ -91,11 +91,12 @@ class TimeSeriesSequence(Sequence):
         self.predict_sequence_length = predict_sequence_length
         self.stride = stride
         self.batch_size = batch_size
-        self.group_column = group_column
+        self.group_column = [group_column] if isinstance(group_column, str) else group_column
+        self.feature_columns = [feature_columns] if isinstance(feature_columns, str) else list(feature_columns or [])
         self.drop_last = drop_last
         self.feature_config = feature_config or {}
         self.mode = mode
-        self.group_ids = group_column or []
+        self.group_ids = self.group_column or []
 
         # Initialize feature registry
         self.feature_registry = FeatureRegistry()
@@ -103,52 +104,20 @@ class TimeSeriesSequence(Sequence):
         # Validate inputs and apply feature transformations
         self._validate_inputs()
         self._apply_feature_transforms()
+        self._validate_feature_columns()
 
         # Generate sequences
         self.sequences = []
-        if group_column is not None:
-            for _, group in data.groupby(group_column, observed=True):
+        if self.group_column:
+            for _, group in self.data.groupby(self.group_column, observed=True):
                 self.sequences.extend(self._generate_sequences(group, time_idx=time_idx, target_column=target_column))
         else:
-            self.sequences.extend(self._generate_sequences(data, time_idx=time_idx, target_column=target_column))
+            self.sequences.extend(self._generate_sequences(self.data, time_idx=time_idx, target_column=target_column))
 
         logger.info(
             f"Initialized TimeSeriesSequence with {len(self.sequences)} sequences, "
             f"batch_size={batch_size}, mode={mode}"
         )
-
-    def _build_sequences(self):
-        """Builds a lookup table for sequences to avoid heavy DataFrame slicing during training."""
-        sequence_indices = []
-
-        if self.group_column:
-            grouped = self.data.groupby(self.group_column)
-        else:
-            grouped = [("all", self.data)]
-
-        for _, group in grouped:
-            group = group.sort_values(self.time_idx)
-            n_rows = len(group)
-            max_idx = n_rows - self.train_sequence_length - self.predict_sequence_length + 1
-
-            # Pre-extract numpy arrays for speed
-            feature_data = group[self.features].values.astype(np.float32)
-            target_data = group[self.target].values.astype(np.float32)
-
-            for i in range(0, max_idx, self.stride):
-                sequence_indices.append(
-                    {
-                        "x": feature_data[i : i + self.train_sequence_length],
-                        "y": target_data[
-                            i
-                            + self.train_sequence_length : i
-                            + self.train_sequence_length
-                            + self.predict_sequence_length
-                        ],
-                    }
-                )
-
-        return sequence_indices
 
     def __len__(self) -> int:
         """Get the number of batches in the sequence.
@@ -175,10 +144,12 @@ class TimeSeriesSequence(Sequence):
         end_idx = min(start_idx + self.batch_size, len(self.sequences))
 
         batch_sequences = self.sequences[start_idx:end_idx]
+        if not batch_sequences:
+            raise IndexError(f"Batch index {idx} is out of range")
 
         # Stack encoder inputs and decoder targets using np.stack
-        encoder_inputs = np.stack([seq[0] for seq in batch_sequences])
-        decoder_targets = np.stack([seq[1] for seq in batch_sequences])
+        encoder_inputs = np.stack([seq[0] for seq in batch_sequences]).astype(np.float32)
+        decoder_targets = np.stack([seq[1] for seq in batch_sequences]).astype(np.float32)
 
         return encoder_inputs, decoder_targets
 
@@ -200,7 +171,7 @@ class TimeSeriesSequence(Sequence):
 
     def _generate_sequences(
         self, group: pd.DataFrame, time_idx: str, target_column: str
-    ) -> List[Tuple[np.ndarray, np.ndarray, int]]:
+    ) -> List[Tuple[np.ndarray, np.ndarray]]:
         """Generate sequences from a group of data.
 
         Args:
@@ -213,7 +184,9 @@ class TimeSeriesSequence(Sequence):
                 Each sequence is a 2D array with shape (length, num_features)
         """
         group = group.sort_values(by=time_idx)
-        target_values = group[target_column].values
+        input_columns = list(dict.fromkeys(self.target + self.feature_columns))
+        input_values = group[input_columns].to_numpy()
+        target_values = group[self.target].to_numpy()
         time_values = group[time_idx].values
 
         # Convert time values to numeric if they are datetime
@@ -221,42 +194,41 @@ class TimeSeriesSequence(Sequence):
             time_values = time_values.astype(np.int64) // 10**9  # Convert to seconds
 
         sequences = []
-        max_start_idx = len(group) - self.train_sequence_length - self.predict_sequence_length + 1
+        if self.mode == "inference":
+            max_start_idx = len(group) - self.train_sequence_length + 1
+        else:
+            max_start_idx = len(group) - self.train_sequence_length - self.predict_sequence_length + 1
 
-        for i in range(0, max_start_idx, self.stride):
+        for i in range(0, max(0, max_start_idx), self.stride):
             # Get indices for encoder sequence
             encoder_start = i
             encoder_end = i + self.train_sequence_length
             encoder_indices = np.arange(encoder_start, encoder_end)
 
             # Get indices for decoder sequence
-            decoder_start = encoder_end
-            decoder_end = decoder_start + self.predict_sequence_length
-            decoder_indices = np.arange(decoder_start, decoder_end)
-
-            # Check if sequences are continuous
-            encoder_time_diffs = np.diff(time_values[encoder_indices])
-            decoder_time_diffs = np.diff(time_values[decoder_indices])
-
-            # For datetime values, check if differences are consistent
-            if pd.api.types.is_datetime64_any_dtype(group[time_idx]):
-                expected_diff = (group[time_idx].iloc[1] - group[time_idx].iloc[0]).total_seconds()
-                is_continuous = np.all(np.abs(encoder_time_diffs - expected_diff) < 1e-6) and np.all(
-                    np.abs(decoder_time_diffs - expected_diff) < 1e-6
-                )
+            if self.mode == "inference":
+                decoder_indices = np.array([], dtype=int)
+                window_indices = encoder_indices
             else:
-                is_continuous = np.all(encoder_time_diffs == encoder_time_diffs[0]) and np.all(
-                    decoder_time_diffs == decoder_time_diffs[0]
-                )
+                decoder_start = encoder_end
+                decoder_end = decoder_start + self.predict_sequence_length
+                decoder_indices = np.arange(decoder_start, decoder_end)
+                window_indices = np.concatenate([encoder_indices, decoder_indices])
+
+            # Check the entire encoder/decoder window, including their boundary.
+            time_diffs = np.diff(time_values[window_indices])
+            is_continuous = len(time_diffs) == 0 or np.all(time_diffs == time_diffs[0])
 
             if (
                 len(encoder_indices) == self.train_sequence_length
-                and len(decoder_indices) == self.predict_sequence_length
+                and (self.mode == "inference" or len(decoder_indices) == self.predict_sequence_length)
                 and is_continuous
             ):
-                # Ensure 2D arrays with shape (length, 1) for single feature
-                encoder_sequence = target_values[encoder_indices].reshape(-1, 1)
-                decoder_sequence = target_values[decoder_indices].reshape(-1, 1)
+                encoder_sequence = input_values[encoder_indices]
+                if self.mode == "inference":
+                    decoder_sequence = np.zeros((self.predict_sequence_length, len(self.target)), dtype=np.float32)
+                else:
+                    decoder_sequence = target_values[decoder_indices]
                 sequences.append((encoder_sequence, decoder_sequence))
 
         return sequences
@@ -276,6 +248,8 @@ class TimeSeriesSequence(Sequence):
             raise ValueError("predict_sequence_length must be at least 1")
         if self.stride < 1:
             raise ValueError("stride must be at least 1")
+        if self.batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
 
         # Validate mode
         valid_modes = ["train", "validation", "test", "inference"]
@@ -353,6 +327,12 @@ class TimeSeriesSequence(Sequence):
                 except Exception as e:
                     logger.error(f"Error applying feature transform {transform_type} for {feature_name}: {str(e)}")
                     raise
+
+    def _validate_feature_columns(self) -> None:
+        """Validate encoder feature columns after configured transforms run."""
+        missing_features = [col for col in self.feature_columns if col not in self.data.columns]
+        if missing_features:
+            raise ValueError(f"Data is missing feature columns: {missing_features}")
 
     @classmethod
     def from_df(

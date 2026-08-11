@@ -9,7 +9,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
-from ..layers.attention_layer import Attention, SelfAttention
+from ..layers.attention_layer import SelfAttention
 from ..layers.dense_layer import FeedForwardNetwork
 from ..layers.embed_layer import DataEmbedding
 from .base import BaseConfig, BaseModel

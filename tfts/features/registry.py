@@ -57,6 +57,9 @@ class FeatureRegistry:
                 raise ValueError(f"Column name contains invalid characters: {col}")
 
         self.columns.extend(cols)
+        # Deduplicate while preserving order
+        seen = set()
+        self.columns = [c for c in self.columns if not (c in seen or seen.add(c))]
         logger.debug(f"Registered {len(cols)} features: {cols}")
 
     def get_features(self) -> List[str]:
@@ -147,7 +150,7 @@ class FeatureRegistry:
 feature_registry = FeatureRegistry()
 
 
-def registry(func: Callable) -> Callable:
+def registry(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to register features returned by a function.
 
     This decorator automatically registers any features returned by the decorated

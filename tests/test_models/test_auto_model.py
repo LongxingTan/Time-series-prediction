@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 import numpy as np
@@ -70,3 +71,16 @@ class TestAutoModel(unittest.TestCase):
         x = tf.random.normal([2, 14, 4])
         output = model(x)
         print(output.shape)
+
+    def test_save_and_load_preserves_prediction_length(self):
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_sequence_length=3)
+        model.build_model(tf.keras.Input(shape=(8, 2)))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model.save_pretrained(tmpdir)
+            loaded = AutoModel.from_pretrained(tmpdir)
+            output = loaded(tf.random.normal([2, 8, 2]))
+
+        self.assertEqual(loaded.predict_sequence_length, 3)
+        self.assertEqual(output.shape, (2, 3, 1))

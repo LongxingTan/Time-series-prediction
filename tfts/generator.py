@@ -1,6 +1,16 @@
-"""tfts Generator"""
+"""tfts Generator
 
-from typing import Any, Dict, Optional, Union
+This module provides auto-regressive generation utilities for time series models.
+
+When using GenerationMixin as a mixin, the host class should provide these attributes:
+- time_idx: Name of the time index column (str or None, defaults to "time_idx")
+- group_column: List of group identifier column names (list or None)
+- target: List of target column names
+- train_sequence_length: Length of input sequences
+- get_feature_names(): Method returning list of all feature column names
+"""
+
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -15,7 +25,37 @@ class GenerationConfig:
 class GenerationMixin:
     """
     A class containing auto-regressive generation, to be used as a mixin.
+
+    Required host class attributes:
+        - time_idx (str): Name of the time index column
+        - group_column (list[str]): List of group identifier columns
+        - target (list[str]): List of target column names
+        - train_sequence_length (int): Length of input sequences for the model
+        - get_feature_names() -> list[str]: Returns list of all feature column names
     """
+
+    _REQUIRED_ATTRS = ["time_idx", "group_column", "target", "train_sequence_length"]
+    _REQUIRED_METHODS = ["get_feature_names"]
+
+    def _validate_generation_attrs(self) -> None:
+        """Validate that required attributes exist on the host class."""
+        missing = []
+        for attr in self._REQUIRED_ATTRS:
+            if not hasattr(self, attr):
+                missing.append(attr)
+            # Allow time_idx and group_column to be None, but enforce others
+            elif getattr(self, attr) is None and attr not in ["time_idx", "group_column"]:
+                missing.append(attr)
+
+        for method in self._REQUIRED_METHODS:
+            if not hasattr(self, method):
+                missing.append(method + "()")
+
+        if missing:
+            raise AttributeError(
+                f"GenerationMixin requires the following attributes/methods on the host class: "
+                f"{', '.join(missing)}. See class docstring for details."
+            )
 
     def prepare_inputs_for_generation(self, *args, **kwargs):
         return
@@ -44,11 +84,13 @@ class GenerationMixin:
         Returns:
             DataFrame with original inputs and generated predictions
         """
+        self._validate_generation_attrs()
+
         generation_config = generation_config or {}
         steps = generation_config.get("steps", 1)
-        time_idx = generation_config.get("time_idx", self.time_idx)
+        time_idx = generation_config.get("time_idx", getattr(self, "time_idx", "time_idx"))
         time_step = generation_config.get("time_step", 1)
-        group_columns = generation_config.get("group_columns", self.group_column)
+        group_columns = generation_config.get("group_columns", getattr(self, "group_column", None))
         add_features_func = generation_config.get("add_features_func", None)
 
         # Convert inputs to DataFrame if needed
@@ -57,24 +99,19 @@ class GenerationMixin:
             if len(features) != inputs.shape[1]:
                 raise ValueError(f"Input array shape {inputs.shape} doesn't match feature count {len(features)}")
             inputs_df = pd.DataFrame(inputs, columns=features)
-
-            # Add time index if not present
-            if time_idx not in inputs_df.columns:
-                # Create a time index
-                max_time = inputs_df[time_idx].max() if time_idx in inputs_df.columns else 0
-                inputs_df[time_idx] = np.arange(max_time + 1, max_time + len(inputs_df) + 1)
         else:
             inputs_df = inputs.copy()
 
         # Ensure inputs are sorted by time index
-        inputs_df = inputs_df.sort_values(by=time_idx)
+        if time_idx in inputs_df.columns:
+            inputs_df = inputs_df.sort_values(by=time_idx)
 
         # Create a copy to store results
         results_df = inputs_df.copy()
-        last_time_idx = results_df[time_idx].max()
+        last_time_idx = results_df[time_idx].max() if time_idx in results_df.columns else 0
 
         # Get the sequence length for the model
-        seq_length = self.train_sequence_length
+        seq_length = getattr(self, "train_sequence_length", max_steps)
 
         # Predict one step at a time and add to results
         for step in range(steps):
@@ -108,8 +145,9 @@ class GenerationMixin:
                     new_row[col] = results_df[col].iloc[-1]
 
             # Add prediction for target columns
-            for i, target in enumerate(self.target):
-                new_row[target] = prediction[0, 0, i]  # Assuming [batch, time, feature] format
+            target = getattr(self, "target", [])
+            for i, tgt in enumerate(target):
+                new_row[tgt] = prediction[0, 0, i]  # Assuming [batch, time, feature] format
 
             # Add new row to results
             new_df = pd.DataFrame([new_row])

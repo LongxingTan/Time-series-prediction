@@ -28,15 +28,15 @@ class InformerConfig(BaseConfig):
 
     def __init__(
         self,
-        hidden_size=64,
-        num_layers=1,
-        num_decoder_layers=None,
-        num_attention_heads=1,
-        attention_probs_dropout_prob=0.0,
-        ffn_intermediate_size=128,
-        hidden_dropout_prob=0.0,
-        prob_attention=False,
-        distil_conv=False,
+        hidden_size: int = 64,
+        num_layers: int = 1,
+        num_decoder_layers: Optional[int] = None,
+        num_attention_heads: int = 1,
+        attention_probs_dropout_prob: float = 0.0,
+        ffn_intermediate_size: int = 128,
+        hidden_dropout_prob: float = 0.0,
+        prob_attention: bool = False,
+        distil_conv: bool = False,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -93,7 +93,7 @@ class Informer(BaseModel):
         teacher: Optional[tf.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> tf.Tensor:
         """Informer call function"""
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
         encoder_feature = self.encoder_embedding(encoder_feature)  # batch * seq * embedding_size
@@ -131,7 +131,7 @@ class Encoder(tf.keras.layers.Layer):
         self.prob_attention = prob_attention
         self.distil_conv = distil_conv
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         if not self.prob_attention:
             attn_layer = Attention(self.hidden_size, self.num_attention_heads, self.attention_probs_dropout_prob)
         else:
@@ -155,7 +155,7 @@ class Encoder(tf.keras.layers.Layer):
         self.norm_layer = LayerNormalization()
         super(Encoder, self).build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, x: tf.Tensor, mask: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Informer encoder call function"""
         if self.conv_layers is not None:
             for attn_layer, conv_layer in zip(self.layers, self.conv_layers):
@@ -170,7 +170,7 @@ class Encoder(tf.keras.layers.Layer):
             x = self.norm_layer(x)
         return x
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = {
             "hidden_size": self.hidden_size,
             "num_layers": self.num_layers,

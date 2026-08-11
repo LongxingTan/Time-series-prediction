@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import tensorflow as tf
 
-from tfts import AutoConfig, AutoModel, AutoModelForAnomaly, KerasTrainer
+from tfts import AutoConfig, AutoModelForAnomaly, KerasTrainer, set_seed
 
 
 def parse_args():
@@ -28,7 +29,7 @@ def parse_args():
 def create_subsequences(time_series, train_length, pred_length):
     """Create subsequences for training and prediction."""
     subsequences, next_values = [], []
-    for i in range(len(time_series) - train_length - pred_length):
+    for i in range(len(time_series) - train_length - pred_length + 1):
         subsequences.append(time_series[i : i + train_length])
         next_values.append(time_series[i + train_length : i + train_length + pred_length].T[0])
     return subsequences, next_values
@@ -53,6 +54,7 @@ def load_and_preprocess_data(args):
 
 def train_model(args):
     """Train the model using the specified arguments."""
+    set_seed(args.seed)
     x_train, y_train, _ = load_and_preprocess_data(args)
 
     config = AutoConfig.for_model(args.use_model)
@@ -60,7 +62,13 @@ def train_model(args):
     model = AutoModelForAnomaly.from_config(config)
 
     trainer = KerasTrainer(model)
-    trainer.train((x_train, y_train), (x_train, y_train), epochs=args.epochs)
+    trainer.train(
+        (x_train, y_train),
+        (x_train, y_train),
+        optimizer=tf.keras.optimizers.Adam(args.learning_rate),
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+    )
     trainer.save_model(args.output_dir)
     print(f"Model trained and saved to {args.output_dir}")
 

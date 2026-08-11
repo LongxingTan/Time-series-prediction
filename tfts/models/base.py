@@ -1,7 +1,7 @@
 """Base class for config and model"""
 
 from abc import ABC, abstractmethod
-import collections
+from collections.abc import Mapping
 import json
 import logging
 import os
@@ -17,23 +17,26 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
-    """Bert model for time series forecasting.
+    """Base model for time series forecasting.
 
-    This model implements a transformer-based architecture (BERT) adapted for time series data.
-    It processes time series inputs through a transformer encoder and produces predictions
-    for future time steps.
+    Abstract base class that all tfts models inherit from.
+    Subclasses must implement __call__ and can optionally override build_model.
 
     Parameters
     ----------
     predict_sequence_length : int, optional
         Number of future time steps to predict, by default 1
-    config : BertConfig, optional
+    config : BaseConfig, optional
         Configuration parameters for the model, by default None
     """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
+        if isinstance(self.config, dict):
+            self.config["predict_sequence_length"] = predict_sequence_length
+        elif self.config is not None:
+            self.config.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
@@ -54,7 +57,18 @@ class BaseModel(ABC):
             return self.model
         else:
             outputs = self(inputs)
-            return tf.keras.Model(inputs, outputs)
+            self.model = tf.keras.Model(inputs, outputs)
+            return self.model
+
+    def _keras_model_for_saving(self) -> tf.keras.Model:
+        if isinstance(self.model, tf.keras.Model):
+            return self.model
+        if isinstance(self.model, BaseModel) and isinstance(self.model.model, tf.keras.Model):
+            return self.model.model
+        raise ValueError(
+            "Model weights cannot be saved before the model is built. "
+            "Call `build_model(...)` or train the model before saving weights."
+        )
 
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
@@ -109,37 +123,40 @@ class BaseModel(ABC):
             logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
 
+        keras_model = self._keras_model_for_saving()
+
         os.makedirs(save_directory, exist_ok=True)
-        self.config.architectures = [self.__class__.__name__[2:]]
+        # Use model_type from config if available, otherwise derive from class name
+        name = self.__class__.__name__
+        architecture = getattr(self.config, "model_type", name)
+        self.config.architectures = [architecture]
         self.config.save_pretrained(save_directory)
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
 
-        try:
-            self.model.save_weights(weights_file)
-            logging.info(f"Model weights successfully saved in {weights_file}")
-        except Exception as e:
-            logging.error(f"Failed to save model weights to {weights_file}: {e}")
-            return
+        keras_model.save_weights(weights_file)
+        logging.info(f"Model weights successfully saved in {weights_file}")
 
     def save_weights(self, weights_path: str):
         if weights_path.endswith(".h5"):
             # User passed a full filepath
             weights_file = weights_path
             config_file = weights_path.replace(".h5", ".config.json")
-            os.makedirs(os.path.dirname(weights_file), exist_ok=True)
+            weights_dir = os.path.dirname(weights_file)
+            if weights_dir:
+                os.makedirs(weights_dir, exist_ok=True)
         else:
             # User passed a directory
             os.makedirs(weights_path, exist_ok=True)
             weights_file = os.path.join(weights_path, TF2_WEIGHTS_NAME)
             config_file = os.path.join(weights_path, CONFIG_NAME)
 
-        self.model.save_weights(weights_file)
+        self._keras_model_for_saving().save_weights(weights_file)
         self.config.to_json(config_file)
         logger.info(f"Model weights successfully saved in {weights_file}")
 
     def save_model(self, weights_dir: str):
-        self.model.save(weights_dir)
+        self._keras_model_for_saving().save(weights_dir)
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
     def summary(self):
@@ -240,7 +257,7 @@ def flatten_dict(nested, sep="/"):
         for k, v in nest.items():
             if sep in k:
                 raise ValueError(f"separator '{sep}' not allowed to be in key '{k}'")
-            if isinstance(v, collections.Mapping):
+            if isinstance(v, Mapping):
                 rec(v, prefix + k + sep, into)
             else:
                 into[prefix + k] = v

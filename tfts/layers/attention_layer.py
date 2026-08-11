@@ -234,7 +234,7 @@ class ProbAttention(tf.keras.layers.Layer):
         B = tf.shape(v)[0]
         if not self.mask_flag:
             v_sum = tf.math.reduce_sum(v, axis=-2)
-            context = tf.identity(tf.boradcast_to(tf.expand_dims(v_sum, -2), [B, H, L_Q, v_sum.shape[-1]]))
+            context = tf.identity(tf.broadcast_to(tf.expand_dims(v_sum, -2), [B, H, L_Q, v_sum.shape[-1]]))
         else:
             assert L_Q == L_V
             context = tf.math.cumsum(v, axis=-2)

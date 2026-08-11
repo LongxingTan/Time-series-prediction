@@ -21,6 +21,8 @@ jobs:
         exclude:
           - python-version: 3.9
             tf-version: 2.13.1
+          - os: macOS-latest
+            tf-version: 2.13.1
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +39,9 @@ jobs:
       - name: Install poetry
         shell: bash
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
       - name: Set poetry path variable
-        run: echo "/Users/runner/.local/bin" >> $GITHUB_PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Configure poetry
         shell: bash

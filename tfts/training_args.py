@@ -34,7 +34,7 @@ class TrainingArguments:
         default=-1,
         metadata={"help": "If > 0: set total number of training steps to perform. Override num_train_epochs."},
     )
-    lr_scheduler_type: Union[str] = field(
+    lr_scheduler_type: str = field(
         default="linear",
         metadata={"help": "The scheduler type to use."},
     )
@@ -50,6 +50,17 @@ class TrainingArguments:
         default=0.0, metadata={"help": "Linear warmup over warmup_ratio fraction of total steps."}
     )
     warmup_steps: int = field(default=0, metadata={"help": "Linear warmup over warmup_steps."})
+    strategy: str = field(
+        default="auto",
+        metadata={
+            "help": "Distribution strategy to use: 'auto', 'default', 'one_device', 'mirrored', or 'multi_worker'."
+        },
+    )
+    precision: str = field(
+        default="float32",
+        metadata={"help": "Numerical precision policy: 'float32', 'mixed_float16', or 'mixed_bfloat16'."},
+    )
+    jit_compile: bool = field(default=False, metadata={"help": "Whether to enable XLA compilation in Keras compile."})
 
     bf16: bool = field(
         default=False,
@@ -66,4 +77,18 @@ class TrainingArguments:
     )
 
     def __post_init__(self):
-        pass
+        valid_strategies = {"auto", "default", "one_device", "mirrored", "multi_worker"}
+        if self.strategy not in valid_strategies:
+            raise ValueError(f"strategy must be one of {sorted(valid_strategies)}, got {self.strategy}")
+
+        if self.fp16 and self.bf16:
+            raise ValueError("fp16 and bf16 cannot both be enabled")
+
+        if self.fp16:
+            self.precision = "mixed_float16"
+        elif self.bf16:
+            self.precision = "mixed_bfloat16"
+
+        valid_precision = {"float32", "mixed_float16", "mixed_bfloat16"}
+        if self.precision not in valid_precision:
+            raise ValueError(f"precision must be one of {sorted(valid_precision)}, got {self.precision}")

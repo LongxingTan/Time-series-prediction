@@ -21,11 +21,13 @@ class DLinearConfig(BaseConfig):
         kernel_size: int = 25,
         channels: int = 3,
         individual: bool = False,
+        dropout_rate: float = 0.0,
     ):
         super().__init__()
         self.kernel_size = kernel_size
         self.channels = channels  # number of input features
         self.individual = individual
+        self.dropout_rate = dropout_rate
         self.activation: Optional[str] = None
         self.initializer: str = "glorot_uniform"
 
