@@ -552,6 +552,40 @@ class KerasTrainerTest(unittest.TestCase):
         retrieved_model = trainer.get_model()
         self.assertIsInstance(retrieved_model, tf.keras.Model)
 
+    def test_evaluate_predict_and_default_task_helpers(self):
+        model = tf.keras.Sequential([tf.keras.Input(shape=(4, 1)), tf.keras.layers.Dense(1)])
+        trainer = KerasTrainer(model)
+        x = np.random.random((2, 4, 1)).astype(np.float32)
+        y = np.random.random((2, 4, 1)).astype(np.float32)
+
+        list_metrics = trainer.evaluate((x, y), metrics=["mae"])
+        dataset = tf.data.Dataset.from_tensor_slices((x, y)).batch(1)
+        dataset_metrics = trainer.evaluate(dataset, metrics=["mse"])
+        np.testing.assert_equal(set(list_metrics), {"mae"})
+        np.testing.assert_equal(set(dataset_metrics), {"mse"})
+        self.assertEqual(trainer.predict(dataset).shape, x.shape)
+        with self.assertRaises(TypeError):
+            trainer.evaluate("invalid")
+
+        trainer._task = "classification"
+        self.assertIsInstance(trainer._default_loss(), tf.keras.losses.SparseCategoricalCrossentropy)
+        self.assertEqual(trainer._default_metrics(), ["accuracy"])
+        trainer._task = "forecasting"
+        self.assertIsInstance(trainer._default_loss(), tf.keras.losses.MeanSquaredError)
+        self.assertEqual(trainer._default_metrics(), ["mae"])
+
+    def test_build_callbacks_covers_optional_callbacks(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            callbacks = KerasTrainer._build_callbacks(
+                early_stopping_patience=1,
+                checkpoint_dir=tmpdir,
+                reduce_lr_patience=2,
+            )
+        self.assertEqual(len(callbacks), 3)
+        self.assertIsInstance(callbacks[0], tf.keras.callbacks.EarlyStopping)
+        self.assertIsInstance(callbacks[1], tf.keras.callbacks.ModelCheckpoint)
+        self.assertIsInstance(callbacks[2], tf.keras.callbacks.ReduceLROnPlateau)
+
     def test_plot(self):
         """Test plot functionality."""
         config = AutoConfig.for_model("rnn")
