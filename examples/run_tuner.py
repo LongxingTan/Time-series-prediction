@@ -1,6 +1,7 @@
 """Demo to tune the model parameters by Autotune"""
 
 import numpy as np
+import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer, get_data
 
@@ -30,9 +31,15 @@ class AutoTuner(object):
         config.num_stacked_layers = num_layers
 
         model = AutoModel.from_config(config, predict_sequence_length=self.predict_sequence_length)
-        trainer = KerasTrainer(model, optimizer_config={"learning_rate": learning_rate})
+        trainer = KerasTrainer(model)
 
-        trainer.train(self.train_data, self.valid_data, epochs=epochs, verbose=0)
+        trainer.train(
+            self.train_data,
+            self.valid_data,
+            optimizer=tf.keras.optimizers.Adam(learning_rate),
+            epochs=epochs,
+            verbose=0,
+        )
 
         x_valid, y_valid = self.valid_data
         predictions = trainer.predict(x_valid)

@@ -189,7 +189,10 @@ class AutoPreprocessor:
             return df
 
         if self.handle_missing == "ffill":
-            return df[self._fitted_columns].ffill().bfill() if self._fitted_columns else df.ffill().bfill()
+            result = df.copy()
+            columns = self._fitted_columns or list(result.columns)
+            result[columns] = result[columns].ffill().bfill()
+            return result
         elif self.handle_missing == "interpolate":
             result = df.copy()
             result[self._fitted_columns] = (

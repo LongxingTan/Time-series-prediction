@@ -66,14 +66,13 @@ class DatasetRegistry(_Registry):
             class _LazyDataset(Dataset):
                 """Lazy-loaded dataset wrapper."""
 
-                name = name
-
                 def prepare_data(self, **kwargs):
                     return factory().prepare_data(**kwargs)
 
                 def get_train_valid_split(self, **kwargs):
                     return factory().get_train_valid_split(**kwargs)
 
+            _LazyDataset.name = name
             return _LazyDataset
         return super().get(name)
 

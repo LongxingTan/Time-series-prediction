@@ -67,6 +67,12 @@ class DataProcessor:
             raise ValueError(f"lookback must be >= 1, got {lookback}")
         if horizon < 1:
             raise ValueError(f"horizon must be >= 1, got {horizon}")
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+        if stride < 1:
+            raise ValueError(f"stride must be >= 1, got {stride}")
+        if not 0 <= validation_split < 1:
+            raise ValueError(f"validation_split must be in [0, 1), got {validation_split}")
         if normalize not in (None, "minmax", "standard"):
             raise ValueError(f"normalize must be 'minmax', 'standard', or None, got {normalize}")
 
@@ -123,7 +129,9 @@ class DataProcessor:
 
         # Normalize
         if self.normalize is not None:
-            df = self._apply_normalization(df)
+            fit_df = self._normalization_fit_frame(df)
+            self._apply_normalization(fit_df, fit=True)
+            df = self._apply_normalization(df, fit=False)
 
         # Build sequence
         seq = self._build_sequence(df)
@@ -140,17 +148,14 @@ class DataProcessor:
         time_col: Optional[str] = None,
     ) -> tf.data.Dataset:
         """Prepare data for inference (no shuffle, batch_size=1 by default)."""
-        original_bs = self.batch_size
-        original_shuffle = self.shuffle
-        self.batch_size = 1
-        self.shuffle = False
-        try:
-            result = self.prepare(df, target_col=target_col, time_col=time_col)
-        finally:
-            self.batch_size = original_bs
-            self.shuffle = original_shuffle
-        # If validation split was used, return train (which contains everything when shuffle=False)
-        return result if isinstance(result, tf.data.Dataset) else result[0]
+        df = df.copy()
+        target = target_col or self._target_col or self._infer_target(df)
+        time = time_col or self._time_col or self._infer_time(df)
+        if self.normalize is not None:
+            if self._scaler_params is None:
+                raise RuntimeError("DataProcessor must be fitted with prepare() before normalized inference")
+            df = self._apply_normalization(df, fit=False)
+        return self._build_sequence(df, target_col=target, time_col=time, mode="inference").get_tf_dataset()
 
     def inverse_transform(self, values: Union[np.ndarray, tf.Tensor]) -> Union[np.ndarray, tf.Tensor]:
         """Reverse the normalization applied during prepare().
@@ -163,6 +168,8 @@ class DataProcessor:
         """
         if self._scaler_params is None:
             return values
+        if self.normalize == "standard":
+            return values * self._scaler_params["std"] + self._scaler_params["mean"]
         min_val = self._scaler_params["min"]
         max_val = self._scaler_params["max"]
         return values * (max_val - min_val) + min_val
@@ -202,65 +209,76 @@ class DataProcessor:
         # Fallback to first column
         return df.columns[0]
 
-    def _apply_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _apply_normalization(self, df: pd.DataFrame, fit: bool) -> pd.DataFrame:
         """Apply min-max or standard normalization to target column."""
         target = self._target_col
         if self.normalize == "minmax":
-            min_val = df[target].min()
-            max_val = df[target].max()
+            if fit:
+                self._scaler_params = {"min": df[target].min(), "max": df[target].max()}
+            min_val = self._scaler_params["min"]
+            max_val = self._scaler_params["max"]
             df[target] = (df[target] - min_val) / (max_val - min_val + 1e-8)
-            self._scaler_params = {"min": min_val, "max": max_val}
         elif self.normalize == "standard":
-            mean = df[target].mean()
-            std = df[target].std()
+            if fit:
+                self._scaler_params = {"mean": df[target].mean(), "std": df[target].std()}
+            mean = self._scaler_params["mean"]
+            std = self._scaler_params["std"]
             df[target] = (df[target] - mean) / (std + 1e-8)
-            self._scaler_params = {"mean": mean, "std": std}
         return df
 
-    def _build_sequence(self, df: pd.DataFrame) -> TimeSeriesSequence:
+    def _normalization_fit_frame(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Return only the chronological training portion used to fit scaling."""
+        if self.validation_split <= 0:
+            return df.copy()
+        if self.group_col:
+            group_cols = [self.group_col] if isinstance(self.group_col, str) else self.group_col
+            parts = []
+            for _, group in df.groupby(group_cols, observed=True, sort=False):
+                split_idx = max(1, int(len(group) * (1 - self.validation_split)))
+                parts.append(group.iloc[:split_idx])
+            return pd.concat(parts, axis=0).copy()
+        split_idx = max(1, int(len(df) * (1 - self.validation_split)))
+        return df.iloc[:split_idx].copy()
+
+    def _build_sequence(
+        self,
+        df: pd.DataFrame,
+        target_col: Optional[str] = None,
+        time_col: Optional[str] = None,
+        mode: str = "train",
+    ) -> TimeSeriesSequence:
         """Build a TimeSeriesSequence from the DataFrame."""
         return TimeSeriesSequence(
             data=df,
-            time_idx=self._time_col,
-            target_column=self._target_col,
+            time_idx=time_col or self._time_col,
+            target_column=target_col or self._target_col,
             train_sequence_length=self.lookback,
             predict_sequence_length=self.horizon,
             batch_size=self.batch_size,
             group_column=self.group_col,
             feature_columns=self.feature_cols if self.feature_cols else None,
             stride=self.stride,
+            mode=mode,
         )
 
     def _split_dataset(self, ds: tf.data.Dataset) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
         """Split a tf.data.Dataset into train / validation."""
-        # Count total batches
-        total = sum(1 for _ in ds)
-        train_batches = max(1, int(total * (1 - self.validation_split)))
+        samples = list(ds.unbatch().as_numpy_iterator())
+        if len(samples) < 2:
+            raise ValueError("At least two windows are required when validation_split is greater than zero")
 
-        # Rebuild the source so we can split from a fresh iterator
-        ds = ds.unbatch()
-        ds = ds.shuffle(buffer_size=10000, seed=self.seed) if self.shuffle else ds
-        ds = ds.batch(self.batch_size)
+        split_idx = min(len(samples) - 1, max(1, int(len(samples) * (1 - self.validation_split))))
+        train_x = np.stack([sample[0] for sample in samples[:split_idx]])
+        train_y = np.stack([sample[1] for sample in samples[:split_idx]])
+        valid_x = np.stack([sample[0] for sample in samples[split_idx:]])
+        valid_y = np.stack([sample[1] for sample in samples[split_idx:]])
 
-        # Collect into lists for splitting
-        all_batches = list(ds.as_numpy_iterator())
-        train_ds = tf.data.Dataset.from_tensor_slices(
-            (
-                np.concatenate([b[0] for b in all_batches[:train_batches]], axis=0),
-                np.concatenate([b[1] for b in all_batches[:train_batches]], axis=0),
-            )
-        )
-        train_ds = train_ds.batch(self.batch_size)
+        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
         if self.shuffle:
-            train_ds = train_ds.shuffle(buffer_size=10000, seed=self.seed)
-
-        if train_batches < len(all_batches):
-            valid_x = np.concatenate([b[0] for b in all_batches[train_batches:]], axis=0)
-            valid_y = np.concatenate([b[1] for b in all_batches[train_batches:]], axis=0)
-            valid_ds = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(self.batch_size)
-            return train_ds, valid_ds
-
-        return train_ds, train_ds  # fallback: use all data
+            train_ds = train_ds.shuffle(buffer_size=len(train_x), seed=self.seed)
+        train_ds = train_ds.batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
+        valid_ds = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(self.batch_size)
+        return train_ds, valid_ds
 
 
 def _looks_like_time(series: pd.Series) -> bool:

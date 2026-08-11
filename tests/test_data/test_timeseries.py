@@ -551,6 +551,66 @@ class TimeSeriesSequenceTest(unittest.TestCase):
         self.assertEqual(len(seq.target), 2)
         self.assertIn("value", seq.target)
         self.assertIn("value2", seq.target)
+        x, y = seq[0]
+        self.assertEqual(x.shape[-1], 2)
+        self.assertEqual(y.shape[-1], 2)
+
+    def test_feature_columns_are_included_in_encoder_inputs(self):
+        seq = TimeSeriesSequence(
+            data=self.data,
+            time_idx="date",
+            target_column="value",
+            feature_columns=["feature1", "feature2"],
+            train_sequence_length=10,
+            predict_sequence_length=1,
+        )
+        x, y = seq[0]
+        self.assertEqual(x.shape[-1], 3)
+        self.assertEqual(y.shape[-1], 1)
+        np.testing.assert_allclose(x[0, :, 1], self.data["feature1"].iloc[:10])
+
+    def test_generated_feature_columns_are_included_in_encoder_inputs(self):
+        config = {"date_features": {"type": "datetime", "features": ["dayofweek"], "time_col": "date"}}
+        seq = TimeSeriesSequence(
+            data=self.data,
+            time_idx="date",
+            target_column="value",
+            feature_columns=["date_dayofweek"],
+            train_sequence_length=10,
+            predict_sequence_length=1,
+            feature_config=config,
+        )
+        x, y = seq[0]
+        self.assertEqual(x.shape[-1], 2)
+        self.assertEqual(y.shape[-1], 1)
+        np.testing.assert_allclose(x[0, :, 1], self.data["date"].dt.dayofweek.iloc[:10])
+
+    def test_one_step_horizon_and_boundary_continuity(self):
+        data = pd.DataFrame({"time": [0, 1, 2, 4, 5], "value": np.arange(5)})
+        seq = TimeSeriesSequence(
+            data=data,
+            time_idx="time",
+            target_column="value",
+            train_sequence_length=2,
+            predict_sequence_length=1,
+        )
+        self.assertEqual(len(seq.sequences), 1)
+        np.testing.assert_array_equal(seq.sequences[0][0][:, 0], [0, 1])
+        np.testing.assert_array_equal(seq.sequences[0][1][:, 0], [2])
+
+    def test_inference_mode_uses_latest_complete_window(self):
+        data = pd.DataFrame({"time": range(5), "value": np.arange(5)})
+        seq = TimeSeriesSequence(
+            data=data,
+            time_idx="time",
+            target_column="value",
+            train_sequence_length=3,
+            predict_sequence_length=2,
+            mode="inference",
+        )
+        self.assertEqual(len(seq.sequences), 3)
+        np.testing.assert_array_equal(seq.sequences[-1][0][:, 0], [2, 3, 4])
+        self.assertEqual(seq.sequences[-1][1].shape, (2, 1))
 
     def test_multiple_targets_as_list(self):
         """Test target column provided as list."""

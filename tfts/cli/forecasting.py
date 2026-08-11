@@ -171,7 +171,7 @@ class ForecastingPipeline:
         Returns:
             Numpy array of shape ``(n_series, steps, n_targets)``.
         """
-        if not self._fitted and self.trainer is None:
+        if not self._fitted:
             raise RuntimeError("Pipeline must be fitted before prediction. Call .fit() first.")
 
         steps = steps or self.horizon

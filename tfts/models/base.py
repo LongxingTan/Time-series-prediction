@@ -1,7 +1,7 @@
 """Base class for config and model"""
 
 from abc import ABC, abstractmethod
-import collections
+from collections.abc import Mapping
 import json
 import logging
 import os
@@ -33,6 +33,10 @@ class BaseModel(ABC):
     def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
         self.config = config
         self.predict_sequence_length = predict_sequence_length
+        if isinstance(self.config, dict):
+            self.config["predict_sequence_length"] = predict_sequence_length
+        elif self.config is not None:
+            self.config.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
@@ -253,7 +257,7 @@ def flatten_dict(nested, sep="/"):
         for k, v in nest.items():
             if sep in k:
                 raise ValueError(f"separator '{sep}' not allowed to be in key '{k}'")
-            if isinstance(v, collections.Mapping):
+            if isinstance(v, Mapping):
                 rec(v, prefix + k + sep, into)
             else:
                 into[prefix + k] = v

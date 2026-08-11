@@ -3,7 +3,6 @@
 Supports console tables, CSV, JSON, and LaTeX output for papers."""
 
 import csv
-from dataclasses import asdict
 import json
 import logging
 import os
@@ -99,7 +98,7 @@ class BenchmarkResults:
             logger.info("Results saved to %s", path)
         except ImportError:
             # Fallback with csv module
-            _dicts = [asdict(r) for r in self.results]
+            _dicts = [dict(r) for r in self.results]
             if not _dicts:
                 return
             keys = _dicts[0].keys()
