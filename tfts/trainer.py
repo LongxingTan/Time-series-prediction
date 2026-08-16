@@ -267,7 +267,14 @@ class Trainer(BaseTrainer):
         callbacks = list(callbacks) if callbacks else []
         configure_precision(self.args)
         epochs = int(epochs if epochs is not None else self.args.num_train_epochs)
-        batch_size = int(batch_size if batch_size is not None else self.global_batch_size)
+        # `batch_size` is a per-device value, consistent with `per_device_train_batch_size`
+        # and `global_batch_size`. `model.fit` expects a *global* batch that is then split
+        # across the strategy replicas, so scale it here on multi-device setups.
+        if batch_size is None:
+            batch_size = int(self.args.per_device_train_batch_size)
+        else:
+            batch_size = int(batch_size)
+        batch_size *= self.strategy.num_replicas_in_sync if self.strategy is not None else 1
 
         # Auto-build callbacks
         callbacks += self._build_callbacks(
@@ -294,6 +301,14 @@ class Trainer(BaseTrainer):
                 if "build_model" not in dir(self.model):
                     raise TypeError("Trainer model must be `tf.keras.Model` or have `build_model()`")
                 self.model = self.model.build_model(inputs=inputs)
+            elif self.strategy is not None and self.strategy.num_replicas_in_sync > 1:
+                # A pre-built Keras model has variables that were created outside this
+                # strategy scope. TensorFlow refuses to mix scopes (colocate_vars_with),
+                # so re-create the same architecture inside the scope and copy weights.
+                rebuilt = tf.keras.models.clone_model(self.model)
+                rebuilt.build(self.model.input_shape)
+                rebuilt.set_weights(self.model.get_weights())
+                self.model = rebuilt
 
             compile_kwargs = {
                 "loss": loss_fn,
@@ -308,28 +323,28 @@ class Trainer(BaseTrainer):
             trainable_params = int(np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights]))
             logger.info(f"Trainable parameters: {trainable_params:,}")
 
+            # Normalize raw numpy/list inputs to a globally-batched tf.data.Dataset.
+            # Feeding numpy arrays to `model.fit` under a real distribution strategy
+            # triggers "Mixing different tf.distribute.Strategy objects" in Keras 3,
+            # and a too-small batch splits unevenly across replicas. Batching here to
+            # the global (replica-scaled) batch keeps behavior identical on a single
+            # device (num_replicas == 1) and correct on multi-GPU.
             if isinstance(train_dataset, (list, tuple)):
                 x_train, y_train = train_dataset
-                history = self.model.fit(
-                    x_train,
-                    y_train,
-                    validation_data=valid_dataset,
-                    steps_per_epoch=steps_per_epoch,
-                    epochs=epochs,
-                    batch_size=batch_size,
-                    verbose=verbose,
-                    callbacks=callbacks,
-                )
-            else:
-                history = self.model.fit(
-                    train_dataset,
-                    validation_data=valid_dataset,
-                    steps_per_epoch=steps_per_epoch,
-                    epochs=epochs,
-                    batch_size=batch_size,
-                    verbose=verbose,
-                    callbacks=callbacks,
-                )
+                train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+            if isinstance(valid_dataset, (list, tuple)):
+                x_valid, y_valid = valid_dataset
+                valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(batch_size)
+
+            history = self.model.fit(
+                train_dataset,
+                validation_data=valid_dataset,
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+                batch_size=None,
+                verbose=verbose,
+                callbacks=callbacks,
+            )
         return history
 
     def fit(self, **params):
@@ -521,6 +536,7 @@ class EagerTrainer(object):
         stop_no_improve_epochs: Optional[int] = None,
         max_grad_norm: float = 5.0,
         transform: Optional[Callable] = None,
+        gradient_accumulation_steps: int = 1,
     ) -> None:
         """Train with manual gradient tape loop."""
         self.loss_fn = loss_fn
@@ -536,6 +552,7 @@ class EagerTrainer(object):
         self.use_ema = use_ema
         self.transform = transform
         self.max_grad_norm = max_grad_norm
+        self.gradient_accumulation_steps = max(1, int(gradient_accumulation_steps))
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32)
 
         if model_dir is None:
@@ -588,11 +605,34 @@ class EagerTrainer(object):
     def _train_loop(self, train_loader: Any) -> tuple[float, list[Any]]:
         train_loss: float = 0.0
         y_trues, y_preds = [], []
+        accum_grads: Optional[List[Optional[tf.Tensor]]] = None
+        accum_steps = self.gradient_accumulation_steps
+        step = 0
+
         for step, (x_train, y_train) in enumerate(train_loader):
-            y_pred, step_loss = self._train_step(x_train, y_train)
-            train_loss += step_loss
+            with tf.GradientTape() as tape:
+                y_pred = self.model(x_train, training=True)
+                loss = self.loss_fn(y_train, y_pred)
+            grads = tape.gradient(loss, self.model.trainable_variables)
+
+            # Accumulate gradients over micro-batches before applying an update.
+            if accum_grads is None:
+                accum_grads = [tf.identity(g) if g is not None else None for g in grads]
+            else:
+                accum_grads = [(a if g is None else g if a is None else a + g) for a, g in zip(accum_grads, grads)]
+
+            train_loss += float(loss)
             y_preds.append(y_pred)
             y_trues.append(y_train)
+
+            if (step + 1) % accum_steps == 0:
+                self._apply_gradients(accum_grads, accum_steps)
+                accum_grads = None
+
+        # Flush any remaining accumulated micro-batches.
+        if accum_grads is not None:
+            self._apply_gradients(accum_grads, accum_steps)
+
         scores = []
         if self.eval_metric:
             y_preds = tf.concat(y_preds, axis=0)
@@ -601,13 +641,14 @@ class EagerTrainer(object):
                 scores.append(metric(y_trues, y_preds))
         return train_loss / (step + 1), scores
 
-    def _train_step(self, x_train: tf.Tensor, y_train: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
-        with tf.GradientTape() as tape:
-            y_pred = self.model(x_train, training=True)
-            loss = self.loss_fn(y_train, y_pred)
-        gradients = tape.gradient(loss, self.model.trainable_variables)
-        gradients = [(tf.clip_by_value(grad, -self.max_grad_norm, self.max_grad_norm)) for grad in gradients]
-        _ = self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+    def _apply_gradients(self, accum_grads: List[Optional[tf.Tensor]], accum_steps: int) -> None:
+        """Normalize and apply accumulated gradients."""
+        scaled = [
+            tf.clip_by_value(g / accum_steps, -self.max_grad_norm, self.max_grad_norm) if g is not None else None
+            for g in accum_grads
+        ]
+        grads_and_vars = [(g, v) for g, v in zip(scaled, self.model.trainable_variables) if g is not None]
+        self.optimizer.apply_gradients(grads_and_vars)
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.global_step)
             self.optimizer.learning_rate.assign(lr)
@@ -615,7 +656,6 @@ class EagerTrainer(object):
             lr = self.learning_rate
         self.optimizer.learning_rate.assign(lr)
         self.global_step.assign_add(1)
-        return y_pred, loss
 
     def _valid_loop(self, valid_loader: Any) -> tuple[float, list[Any]]:
         valid_loss: float = 0.0

@@ -1,5 +1,6 @@
 # Release notes
 
+
 ## v.0.0.15
 - fix classification/anomaly detection
 - fix from_pretrained

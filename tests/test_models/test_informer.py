@@ -11,6 +11,11 @@ import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer
+from tfts.training_args import TrainingArguments
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 tf.config.run_functions_eagerly(True)
 
@@ -144,5 +149,5 @@ class InformerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("informer")
         model = AutoModel.from_config(config, predict_sequence_length)
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)

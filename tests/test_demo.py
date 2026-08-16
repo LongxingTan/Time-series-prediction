@@ -8,6 +8,12 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer
+from tfts.training_args import TrainingArguments
+
+# Smoke tests validate end-to-end training, not device distribution, so they pin a
+# single-device strategy. This keeps them deterministic on CI (no GPU) and on local
+# multi-GPU hosts alike.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class DemoTest(unittest.TestCase):
@@ -22,7 +28,7 @@ class DemoTest(unittest.TestCase):
         config = AutoConfig.for_model("seq2seq")
         model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
 
-        trainer = Trainer(model)
+        trainer = Trainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
         pred = trainer.predict(x_valid)
@@ -40,7 +46,7 @@ class DemoTest(unittest.TestCase):
         model = AutoModel.from_config(config=config, predict_sequence_length=predict_sequence_length)
         print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
-        trainer = Trainer(model)
+        trainer = Trainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train((x_train, y_train), optimizer=tf.keras.optimizers.Adam(0.001), epochs=2)
 
         pred = trainer.predict(x_valid)

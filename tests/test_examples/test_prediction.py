@@ -23,6 +23,7 @@ class PredictionTest(unittest.TestCase):
             epochs = 1
             batch_size = 32
             learning_rate = 0.003
+            strategy = "default"
 
         set_seed(args.seed)
         run_manual(args)

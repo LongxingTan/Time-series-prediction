@@ -29,6 +29,12 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="learning rate")
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        default="auto",
+        help="Distribution strategy: auto/default/one_device/mirrored/multi_worker",
+    )
     parser.add_argument("--manual", action="store_true", help="Use the manual API instead of pipeline")
     return parser.parse_args()
 
@@ -90,7 +96,13 @@ def run_manual(args):
     config = tfts.AutoConfig.for_model(args.use_model)
     model = tfts.AutoModel.from_config(config, predict_sequence_length=args.predict_sequence_length)
 
-    trainer = tfts.Trainer(model)
+    trainer = tfts.Trainer(
+        model,
+        args=tfts.TrainingArguments(
+            output_dir=os.path.join(os.getcwd(), "output"),
+            strategy=getattr(args, "strategy", "auto"),
+        ),
+    )
     trainer.train(
         train,
         valid,

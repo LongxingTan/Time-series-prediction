@@ -8,6 +8,11 @@ import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer
 from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.tft import TFTransformer, TFTransformerConfig
+from tfts.training_args import TrainingArguments
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class TFTransformerTest(unittest.TestCase):
@@ -54,7 +59,7 @@ class TFTransformerTest(unittest.TestCase):
         config.encoder_input_dim = ts_sequence[0][0].shape[-1]
 
         model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(ts_sequence, epochs=1)
 
 
