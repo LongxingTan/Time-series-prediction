@@ -61,7 +61,7 @@ class SeBlock(tf.keras.layers.Layer):
 
     def build(self, input_shape: Tuple[Optional[int], ...]):
         self.pool = GlobalAveragePooling1D()
-        self.fc1 = Dense(self.units // 8, activation="relu")
+        self.fc1 = Dense(max(self.units // 8, 1), activation="relu")  # never 0 units for small channel counts
         self.fc2 = Dense(self.units, activation="sigmoid")
         super().build(input_shape)
 

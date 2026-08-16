@@ -4,7 +4,6 @@
 
 import logging
 import os
-import random
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -219,9 +218,10 @@ def download_and_extract(name: str) -> str:
 def get_data(
     name: str = "sine", train_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.1, **kwargs
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]], pd.DataFrame]:
-    assert (test_size >= 0) & (test_size <= 1), "test_size is the ratio of test dataset"
+    if not 0 <= test_size <= 1:
+        raise ValueError("test_size must be between 0 and 1")
     if name == "sine":
-        return get_sine(train_length, predict_sequence_length, test_size=test_size)
+        return get_sine(train_length, predict_sequence_length, test_size=test_size, **kwargs)
 
     elif name == "airpassengers":
         return get_air_passengers(train_length, predict_sequence_length, test_size=test_size)
@@ -245,7 +245,11 @@ def get_data(
 
 
 def get_sine(
-    train_sequence_length: int = 24, predict_sequence_length: int = 8, test_size: float = 0.2, n_examples: int = 100
+    train_sequence_length: int = 24,
+    predict_sequence_length: int = 8,
+    test_size: float = 0.2,
+    n_examples: int = 100,
+    seed: Optional[int] = None,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[Tuple[np.ndarray, np.ndarray]]]:
     """
     Generate synthetic sine wave data.
@@ -259,10 +263,18 @@ def get_sine(
     Returns:
     (tuple): Two tuples of numpy arrays containing training and validation data.
     """
+    if train_sequence_length < 1 or predict_sequence_length < 1:
+        raise ValueError("sequence lengths must be positive")
+    if n_examples < 1:
+        raise ValueError("n_examples must be positive")
+    if not 0 <= test_size <= 1:
+        raise ValueError("test_size must be between 0 and 1")
+
+    rng = np.random.default_rng(seed)
     x: List[np.ndarray] = []
     y: List[np.ndarray] = []
     for _ in range(n_examples):
-        rand = random.random() * 2 * np.pi
+        rand = rng.uniform(0.0, 2.0 * np.pi)
         sig1 = np.sin(np.linspace(rand, 3.0 * np.pi + rand, train_sequence_length + predict_sequence_length))
         sig2 = np.cos(np.linspace(rand, 3.0 * np.pi + rand, train_sequence_length + predict_sequence_length))
 
@@ -376,14 +388,13 @@ def get_ar_data(
     if noise < 0:
         raise ValueError("noise parameter must be non-negative")
 
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     # Sample parameters for each series
-    linear_trends = np.random.normal(size=n_series)[:, None] / timesteps
-    quadratic_trends = np.random.normal(size=n_series)[:, None] / timesteps**2
-    seasonalities = np.random.normal(size=n_series)[:, None]
-    levels = level * np.random.normal(size=n_series)[:, None]
+    linear_trends = rng.normal(size=n_series)[:, None] / timesteps
+    quadratic_trends = rng.normal(size=n_series)[:, None] / timesteps**2
+    seasonalities = rng.normal(size=n_series)[:, None]
+    levels = level * rng.normal(size=n_series)[:, None]
 
     # Generate time index
     x = np.arange(timesteps)[None, :]
@@ -401,7 +412,7 @@ def get_ar_data(
     series = levels + series
 
     # Add noise
-    series = series * (1 + noise * np.random.normal(size=series.shape))
+    series = series * (1 + noise * rng.normal(size=series.shape))
 
     # Apply exponential transform if requested
     if exp:

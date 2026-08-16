@@ -230,20 +230,26 @@ class BaseConfig(ABC):
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
     ):
-        with open(pretrained_model_name_or_path, "r") as f:
+        path = os.fspath(pretrained_model_name_or_path)
+        if os.path.isdir(path):
+            path = os.path.join(path, CONFIG_NAME)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Config file not found at {path}")
+
+        # These arguments are retained for API compatibility. Remote artifact
+        # downloads are not supported by BaseConfig yet.
+        del cache_dir, force_download
+        with open(path, "r", encoding="utf-8") as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
     def save_pretrained(self, save_directory: Union[str, os.PathLike]):
+        if os.path.isfile(save_directory):
+            raise ValueError(f"Provided path ({save_directory}) must be a directory")
         os.makedirs(save_directory, exist_ok=True)
         output_config_file = os.path.join(save_directory, CONFIG_NAME)
-
-        try:
-            with open(output_config_file, "w") as f:
-                json.dump(self.to_dict(), f, indent=4)
-            logger.info(f"Model config successfully saved in {output_config_file}")
-        except Exception as e:
-            logger.warning(f"Error saving model config to {output_config_file}: {e}")
+        self.to_json(output_config_file)
+        logger.info(f"Model config successfully saved in {output_config_file}")
 
     def __str__(self):
         """Convert config to string representation in dictionary format"""

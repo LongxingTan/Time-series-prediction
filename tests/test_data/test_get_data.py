@@ -67,11 +67,20 @@ class GetDataTest(unittest.TestCase):
 
     def test_get_data_test_size_validation(self):
         """Test get_data validates test_size parameter"""
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             get_data("sine", 10, 4, test_size=-0.1)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             get_data("sine", 10, 4, test_size=1.5)
+
+    def test_get_sine_seeded_reproducibility(self):
+        first = get_sine(10, 4, test_size=0, n_examples=5, seed=42)
+        second = get_sine(10, 4, test_size=0, n_examples=5, seed=42)
+        different = get_sine(10, 4, test_size=0, n_examples=5, seed=43)
+
+        np.testing.assert_array_equal(first[0], second[0])
+        np.testing.assert_array_equal(first[1], second[1])
+        self.assertFalse(np.array_equal(first[0], different[0]))
 
     def test_get_data_airpassengers(self):
         """Test get_data dispatcher for airpassengers dataset"""

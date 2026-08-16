@@ -26,6 +26,23 @@ class TestBaseConfig(unittest.TestCase):
             loaded_config = BaseConfig.from_json(config_path)
             self.assertEqual(loaded_config.to_dict(), self.config.to_dict())
 
+    def test_pretrained_config_accepts_directory_or_file(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            self.config.save_pretrained(tmpdirname)
+            config_path = os.path.join(tmpdirname, "config.json")
+
+            from_directory = BaseConfig.from_pretrained(tmpdirname)
+            from_file = BaseConfig.from_pretrained(config_path)
+
+        self.assertEqual(from_directory.to_dict(), self.config_data)
+        self.assertEqual(from_file.to_dict(), self.config_data)
+
+    def test_save_pretrained_reports_serialization_errors(self):
+        self.config.invalid_value = object()
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            with self.assertRaises(TypeError):
+                self.config.save_pretrained(tmpdirname)
+
 
 class TestBaseModel(unittest.TestCase):
     def setUp(self):

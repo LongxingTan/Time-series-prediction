@@ -189,9 +189,12 @@ class TimeSeriesSequence(Sequence):
         target_values = group[self.target].to_numpy()
         time_values = group[time_idx].values
 
-        # Convert time values to numeric if they are datetime
+        # Convert time values to numeric whole seconds if they are datetime.
+        # astype(int64) on a datetime64 array yields the raw integer in the array's own unit
+        # (nanoseconds, microseconds, etc.). Converting to datetime64[s] first normalizes any
+        # resolution to whole seconds so np.diff / equality comparisons are uniform and correct.
         if pd.api.types.is_datetime64_any_dtype(time_values):
-            time_values = time_values.astype(np.int64) // 10**9  # Convert to seconds
+            time_values = time_values.astype("datetime64[s]").astype(np.int64)  # Convert to whole seconds
 
         sequences = []
         if self.mode == "inference":

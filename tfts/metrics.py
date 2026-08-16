@@ -19,12 +19,16 @@ def mse(y_true: Union[np.ndarray, tf.Tensor], y_pred: Union[np.ndarray, tf.Tenso
     Returns:
         Scalar or array of MSE values.
     """
-    return _reduce(np.square(_sub(y_true, y_pred)))
+    y_true, y_pred = _as_float_pair(y_true, y_pred)
+    backend = _backend(y_true)
+    return _reduce(backend.square(_sub(y_true, y_pred)))
 
 
 def mae(y_true: Union[np.ndarray, tf.Tensor], y_pred: Union[np.ndarray, tf.Tensor]) -> Union[np.ndarray, tf.Tensor]:
     """Mean Absolute Error."""
-    return _reduce(np.abs(_sub(y_true, y_pred)))
+    y_true, y_pred = _as_float_pair(y_true, y_pred)
+    backend = _backend(y_true)
+    return _reduce(backend.abs(_sub(y_true, y_pred)))
 
 
 def rmse(y_true: Union[np.ndarray, tf.Tensor], y_pred: Union[np.ndarray, tf.Tensor]) -> Union[np.ndarray, tf.Tensor]:
@@ -45,6 +49,7 @@ def mape(
     Returns:
         MAPE as a percentage (0-100 scale).
     """
+    y_true, y_pred = _as_float_pair(y_true, y_pred)
     backend = _backend(y_true)
     denominator = backend.maximum(backend.abs(y_true), backend.array(eps, dtype=y_true.dtype))
     return 100.0 * _reduce(backend.abs(_sub(y_true, y_pred)) / denominator)
@@ -63,6 +68,7 @@ def smape(
     Returns:
         SMAPE as a percentage (0-200 scale).
     """
+    y_true, y_pred = _as_float_pair(y_true, y_pred)
     backend = _backend(y_true)
     numerator = backend.abs(_sub(y_true, y_pred))
     denominator = (backend.abs(y_true) + backend.abs(y_pred)) / 2.0 + backend.array(eps, dtype=y_true.dtype)
@@ -73,6 +79,7 @@ def r2_score(
     y_true: Union[np.ndarray, tf.Tensor], y_pred: Union[np.ndarray, tf.Tensor]
 ) -> Union[np.ndarray, tf.Tensor]:
     """R² coefficient of determination."""
+    y_true, y_pred = _as_float_pair(y_true, y_pred)
     backend = _backend(y_true)
     ss_res = backend.sum(backend.square(_sub(y_true, y_pred)))
     ss_tot = backend.sum(backend.square(_sub(y_true, backend.mean(y_true))))
@@ -150,6 +157,24 @@ class _TfBackend:
 
 def _backend(x):
     return _TfBackend if isinstance(x, tf.Tensor) else _NumpyBackend
+
+
+def _as_float_pair(y_true, y_pred):
+    """Return inputs in a shared floating dtype without changing the backend."""
+    if tf.is_tensor(y_true) or tf.is_tensor(y_pred):
+        y_true = tf.convert_to_tensor(y_true)
+        y_pred = tf.convert_to_tensor(y_pred)
+        dtype = tf.as_dtype(np.result_type(y_true.dtype.as_numpy_dtype, y_pred.dtype.as_numpy_dtype))
+        if not dtype.is_floating:
+            dtype = tf.float32
+        return tf.cast(y_true, dtype), tf.cast(y_pred, dtype)
+
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    dtype = np.result_type(y_true.dtype, y_pred.dtype)
+    if not np.issubdtype(dtype, np.floating):
+        dtype = np.dtype(np.float64)
+    return y_true.astype(dtype, copy=False), y_pred.astype(dtype, copy=False)
 
 
 def _sub(a, b):

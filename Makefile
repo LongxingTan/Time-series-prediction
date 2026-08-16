@@ -12,7 +12,7 @@ style:  ## Run formatters and linters (black, isort, flake8, pre-commit)
 
 ## Run all unit tests
 test:  ## Run unit tests using unittest
-	python -m unittest discover
+	CUDA_VISIBLE_DEVICES=0 python -m unittest discover
 
 ## Build the documentation
 docs:  ## Build HTML documentation using Sphinx
