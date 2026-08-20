@@ -97,3 +97,13 @@ coverage.xml
 CLAUDE.md
 temp/
 *.keras
+
+# TFT scratch experiment artifacts
+/lightning_logs/
+/phase1_pytorch/
+/phase2_tfts/
+/phase3_tfts_model/
+/phase4_tfts/
+/verify.py
+*.npz
+*.h5

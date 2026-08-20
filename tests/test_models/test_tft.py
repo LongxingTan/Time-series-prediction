@@ -37,6 +37,32 @@ class TFTransformerTest(unittest.TestCase):
         y = model(x)
         self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
 
+    def test_model_with_static_and_quantile_inputs(self):
+        config = TFTransformerConfig(
+            static_real_dim=2,
+            encoder_real_dim=4,
+            decoder_real_dim=2,
+            static_categorical_cardinalities=[5, 7],
+            temporal_categorical_cardinalities=[13, 2],
+            hidden_size=16,
+            num_attention_heads=4,
+            output_size=3,
+            quantiles=[0.1, 0.5, 0.9],
+        )
+        model = TFTransformer(predict_sequence_length=6, config=config)
+        inputs = {
+            "static_categorical": tf.zeros([3, 2], dtype=tf.int32),
+            "static_real": tf.zeros([3, 2]),
+            "encoder_categorical": tf.zeros([3, 24, 2], dtype=tf.int32),
+            "encoder_real": tf.zeros([3, 24, 4]),
+            "decoder_categorical": tf.zeros([3, 6, 2], dtype=tf.int32),
+            "decoder_real": tf.zeros([3, 6, 2]),
+        }
+        output = model(inputs)
+        self.assertEqual(output.shape, (3, 6, 3))
+        self.assertEqual(model.last_attention_weights.shape, (3, 6, 30))
+        self.assertEqual(model.last_selection_weights["static"].shape, (3, 4))
+
     def test_train(self):
         data = get_data(name="ar", seasonality=10.0, timesteps=40, n_series=10, seed=42)
         data["static"] = 2
