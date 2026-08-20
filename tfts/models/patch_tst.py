@@ -5,6 +5,7 @@
 
 from typing import Dict, Optional
 
+from keras import ops
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, LayerNormalization
 
@@ -12,7 +13,6 @@ from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
-from ..layers.util_layer import ShapeLayer
 from .base import BaseConfig, BaseModel
 
 
@@ -102,18 +102,17 @@ class PatchTST(BaseModel):
         # Prepare inputs
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
 
-        # Create patches
-        batch_size, seq_length, _ = ShapeLayer()(encoder_feature)
-        num_patches = seq_length // self.config.patch_size
+        # Create patches (static dims explicit so the functional graph stays fully defined)
+        seq_length = int(encoder_feature.shape[1])  # static
+        in_ch = int(encoder_feature.shape[-1])  # static
+        num_patches = seq_length // self.config.patch_size  # python int
+        patch_in = self.config.patch_size * in_ch  # static
 
-        # Reshape to patches
-        patches = tf.reshape(
+        # [batch, num_patches, patch_size*in_ch]  (batch dim via -1)
+        patches = ops.reshape(
             encoder_feature[:, : num_patches * self.config.patch_size, :],
-            [batch_size, num_patches, self.config.patch_size, -1],
+            (-1, num_patches, patch_in),
         )
-
-        # Flatten patches and project to hidden size
-        patches = tf.reshape(patches, [batch_size, num_patches, -1])
         x = self.patch_embedding(patches)
 
         # Add positional embeddings
@@ -123,17 +122,12 @@ class PatchTST(BaseModel):
         for block in self.blocks:
             x = block(x)
 
-        # Project to output
-        x = self.flatten(x)  # [batch, num_patches * hidden]
-        x = self.output_projection(x)  # [batch, predict_len * n_vars]
+        # Project to output -> [batch, predict_len * output_size]
+        x = self.flatten(x)
+        x = self.output_projection(x)
 
-        # Reshape back to original sequence length
-
-        x = tf.reshape(x, [batch_size, -1, 1])
-
-        # Slice the output to only include the last predict_sequence_length steps
-        x = x[:, -self.predict_sequence_length :, :]
-
+        # Reshape to [batch, predict_len, output_size]
+        x = ops.reshape(x, (-1, self.predict_sequence_length, self.config.output_size))
         return x
 
 
