@@ -1,8 +1,7 @@
 """Reusable Stallion preprocessing for Temporal Fusion Transformers.
 
 The module deliberately depends only on pandas/numpy.  Callers supply the raw
-dataframe (for example, from pytorch_forecasting's bundled example loader), so
-the preprocessing remains usable without making PyTorch a TFTS dependency.
+dataframe, so the preprocessing remains usable without making PyTorch a TFTS dependency.
 """
 
 from __future__ import annotations

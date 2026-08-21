@@ -54,12 +54,20 @@ class TestAutoModel(unittest.TestCase):
                 feature_count = feature_counts.get(model_name, 3)
                 config = AutoConfig.for_model(model_name)
                 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-                output = model(tf.random.normal([1, 16, feature_count]))
+                if model_name == "deep_ar":
+                    inputs = {
+                        "x": tf.random.normal([1, 16, 1]),
+                        "decoder_feature": tf.random.normal([1, predict_sequence_length, 1]),
+                        "static": tf.zeros([1, 1], dtype=tf.int32),
+                    }
+                else:
+                    inputs = tf.random.normal([1, 16, feature_count])
+                output = model(inputs)
 
                 if model_name == "deep_ar":
                     self.assertEqual(len(output), 2)
-                    self.assertEqual(output[0].shape, (1, 16, 1))
-                    self.assertEqual(output[1].shape, (1, 16, 1))
+                    self.assertEqual(output["loc"].shape, (1, predict_sequence_length, 1))
+                    self.assertEqual(output["scale"].shape, (1, predict_sequence_length, 1))
                 elif model_name in multivariate_outputs:
                     self.assertEqual(output.shape, (1, predict_sequence_length, feature_count))
                 else:

@@ -2,37 +2,19 @@
 `DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
 <https://arxiv.org/abs/1704.04110>`_ (Salinas, Flunkert, Gasthaus & Januschowski, IJF 2020)
 
-TensorFlow implementation matched to the ``pytorch_forecasting`` DeepAR reference used by the
-AR parity task (Phase 1):
-
-- per-``series`` static embedding broadcast across every time step,
-- multi-layer LSTM (``hidden_size=30``, ``rnn_layers=2``) that at each step consumes the
-  lagged (previous) target value concatenated with the static series embedding,
-- a distribution head projecting each decoder step to the parameters of a univariate Normal
-  (``loc`` plus a softplus-constrained positive ``scale``) -- this makes the model
-  probabilistic rather than a plain point-forecast RNN,
-- training loss: negative log-likelihood of the true next value under the predicted Normal,
-  aggregated over the decoder horizon,
-- inference: ancestral sampling (each decoder step samples from the predicted Normal and feeds
-  that value back as the next lagged target), with ``n_samples`` paths aggregated to a point
-  forecast.
-
-The model is built in **normalized space**: the Phase 2 pipeline feeds (and the model predicts)
-``loc``/``scale`` for the standardized target. Un-normalisation happens in the Phase 4 eval /
-sampling loop, mirroring ``pytorch_forecasting``'s ``transform_output``.
-
-Input convention (``(x, decoder_feature, static)`` measured in the ``tfts`` 3-tuple style):
-- ``x``: ``(batch, encoder_length, 1)`` normalized encoder values
-- ``decoder_feature``: ``(batch, prediction_length, 1)`` teacher-forced lagged target, i.e.
-  ``[last_encoder_value, y[0], y[1], ..., y[-2]]`` (previous step's value)
-- ``static``: ``(batch, 1)`` int series id (fed through an embedding)
+This module implements DeepAR as a set of *persistent* modules (created once in
+``__init__``) so the model can be serialized and supports step-wise autoregressive
+generation via ``decode_step`` while keeping a fast, vectorized teacher-forced
+training path in ``__call__``.
 """
 
-from typing import List, Optional
+from typing import Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.keras.layers import Concatenate, Dense, Embedding, LSTM, Lambda
+from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
+from ..distributions import NormalOutput
+from ..generation import AutoregressiveGenerationMixin
 from .base import BaseConfig, BaseModel
 
 
@@ -56,8 +38,59 @@ class DeepARConfig(BaseConfig):
         self.n_series = n_series
 
 
-class DeepAR(BaseModel):
-    """DeepAR (autoregressive LSTM + univariate Normal head)."""
+class DeepAREncoder(tf.keras.layers.Layer):
+    """Runs the (possibly multi-layer) LSTM stack over the encoder window.
+
+    Encapsulates the weight-shared LSTM cells used by both the vectorized training
+    path and the step-wise ``decode_step`` generator.
+    """
+
+    def __init__(self, config: DeepARConfig, name: Optional[str] = None, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.config = config
+        # persistent cells: variable names ``lstm_<i>/kernel`` etc. keep the Phase-4
+        # checkpoint weight-prefixes compatible.
+        dropout = config.dropout if config.rnn_layers > 1 else 0.0
+        self.lstm_cells = [
+            LSTMCell(config.hidden_size, dropout=dropout, name=f"lstm_{i}") for i in range(config.rnn_layers)
+        ]
+        # RNN wrappers share the same cells (no re-build); they give the fast full-
+        # sequence step and the last-step state, and are what ``__call__`` traces.
+        self.lstm_layers = [
+            RNN(cell, return_sequences=True, return_state=True, name=f"lstm_rnn_{i}")
+            for i, cell in enumerate(self.lstm_cells)
+        ]
+
+    def encode(self, seq: tf.Tensor, training: bool = False) -> Tuple[tf.Tensor, list]:
+        """
+
+        Parameters
+        ----------
+        seq : (batch, seq_len, feature)  merged encoder+decoder inputs
+        training : apply dropout (train path only)
+
+        Returns
+        -------
+        (last_output, final_states)
+        """
+        h = seq
+        states = []
+        for layer in self.lstm_layers:
+            out, hh, cc = layer(h, training=training)
+            states.append((hh, cc))
+            h = out
+        return h, states
+
+
+class DeepAR(BaseModel, AutoregressiveGenerationMixin):
+    """DeepAR -- autoregressive LSTM + univariate Normal head.
+
+    Public API
+    ----------
+    - ``output = model(training_inputs)``  -> ``{"loc", "scale"}`` (teacher-forced, unchanged)
+    - ``forecast = model.generate({"x": x, "static": static}, generation_config=...)``
+      -> ``ForecastGenerationOutput`` (optional, sampled)
+    """
 
     def __init__(
         self,
@@ -71,13 +104,17 @@ class DeepAR(BaseModel):
         self.config: DeepARConfig = self.config
         self.train_sequence_length = None
 
+        # ---- persistent modules (built once) ----
+        self.series_embedding = Embedding(self.config.n_series, self.config.embedding_size, name="series_embedding")
+        self.encoder = DeepAREncoder(self.config, name="deepar_encoder")
+        # probabilistic head: univariate Normal (loc + softplus scale), NLL loss.
+        self.output_distribution = NormalOutput(target_dim=1)
+
+    # ------------------------------------------------------------------ input
     def _extract(self, inputs):
         """Unpack ``(x, decoder_feature, static)`` from dict/list/tensor."""
         if isinstance(inputs, dict):
-            x = inputs.get("x")
-            decoder_feature = inputs.get("decoder_feature")
-            static = inputs.get("static")
-            return x, decoder_feature, static
+            return inputs.get("x"), inputs.get("decoder_feature"), inputs.get("static")
         if isinstance(inputs, (list, tuple)):
             x = inputs[0]
             decoder_feature = inputs[1] if len(inputs) > 1 else None
@@ -100,14 +137,18 @@ class DeepAR(BaseModel):
             output_shape=lambda s: (s[0], length, s[-1]),
         )(x)
 
+    # -------------------------------------------------- teacher-forced forward
     def __call__(
         self,
         inputs: tf.Tensor,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        training: Optional[bool] = None,
     ):
-        cfg = self.config
         x, decoder_feature, static = self._extract(inputs)
+
+        if x is None or decoder_feature is None or static is None:
+            raise ValueError("DeepAR requires 'x', 'decoder_feature', and 'static' inputs.")
 
         encoder_length = int(x.shape[1])
         prediction_length = int(decoder_feature.shape[1])
@@ -116,36 +157,56 @@ class DeepAR(BaseModel):
         self.config.predict_sequence_length = prediction_length
         self.predict_sequence_length = prediction_length
 
-        # ---- static series embedding, broadcast across every time step ----
-        emb = Embedding(cfg.n_series, cfg.embedding_size, name="series_embedding")(static)  # (B,1,emb)
-
-        # encoder consumes the first encoder_length-1 values (matches PF: RNN over rolled target
-        # with the first step dropped; the last encoder value becomes the decoder's seed target).
-        enc_seq = self._slice_steps(x, 0, encoder_length - 1)  # (B, enc_len-1, 1)
-        dec_seq = decoder_feature  # (B, prediction_length, 1)
-
+        emb = self.series_embedding(static)  # (B, 1, emb)
+        # encoder consumes the first encoder_length-1 values (matches PF); the last
+        # encoder value becomes the decoder's seed target.
+        enc_seq = self._slice_steps(x, 0, encoder_length - 1)
         enc_in = Concatenate(axis=-1)([enc_seq, self._tile(emb, encoder_length - 1)])
-        dec_in = Concatenate(axis=-1)([dec_seq, self._tile(emb, prediction_length)])
-        # (B, (enc_len-1)+prediction_length, 1+emb)
-        seq = Concatenate(axis=1)([enc_in, dec_in])
+        dec_in = Concatenate(axis=-1)([decoder_feature, self._tile(emb, prediction_length)])
+        seq = Concatenate(axis=1)([enc_in, dec_in])  # (B, enc-1+pred, 1+emb)
 
-        # ---- multi-layer LSTM (hidden state flows continuously across encoder+decoder) ----
-        h = seq
-        for i in range(cfg.rnn_layers):
-            h = LSTM(
-                cfg.hidden_size,
-                return_sequences=True,
-                dropout=cfg.dropout if cfg.rnn_layers > 1 else 0.0,
-                recurrent_dropout=0.0,
-                name=f"lstm_{i}",
-            )(h)
-        # decoder positions (last prediction_length steps)
-        dec_start = encoder_length - 1  # total encoder+decoder length minus prediction_length
+        # multi-layer LSTM; hidden state flows continuously across encoder+decoder.
+        h, _states = self.encoder.encode(seq, training=training or False)
+
+        dec_start = encoder_length - 1
         h = self._slice_steps(h, dec_start, prediction_length)  # (B, pred, hidden)
 
-        # ---- univariate Normal head: loc + positive scale (softplus) ----
-        loc = Dense(1, name="loc")(h)  # (B, pred, 1)
-        scale_param = Dense(1, name="scale_param")(h)
-        scale = Lambda(lambda t: tf.math.softplus(t) + 1e-6, name="scale")(scale_param)
+        params = self.output_distribution.parameters(h)
+        return params if return_dict else params
 
-        return {"loc": loc, "scale": scale} if return_dict else {"loc": loc, "scale": scale}
+    # ------------------------------------------- generation hooks (eager path)
+    def initialize_generation_state(self, x: tf.Tensor, static: tf.Tensor) -> list:
+        """Encode the window and return the per-layer LSTM final state."""
+        if x.shape[1] is None:
+            raise ValueError("DeepAR generation requires a statically known encoder length.")
+        enc_len = int(x.shape[1])
+        emb = self.series_embedding(static)  # (B, 1, emb)
+        enc_seq = x[:, : enc_len - 1, :]
+        enc_in = tf.concat([enc_seq, tf.tile(emb, [1, enc_len - 1, 1])], axis=-1)
+        h = enc_in
+        states = []
+        for layer in self.encoder.lstm_layers:
+            out, hh, cc = layer(h, training=False)
+            states.append((hh, cc))
+            h = out
+        return states
+
+    def decode_step(
+        self,
+        previous_target: tf.Tensor,
+        static: tf.Tensor,
+        state: list,
+        training: bool = False,
+    ):
+        """One autoregressive decoder step: ``(params, next_state) = decode_step(...)``."""
+        emb = self.series_embedding(static)  # (B, 1, emb)
+        x = tf.concat([previous_target, emb], axis=-1)  # (B, 1, 1+emb)
+        new_states = []
+        h = x
+        for i, cell in enumerate(self.encoder.lstm_cells):
+            inp = tf.squeeze(h, axis=1)  # (B, feat)
+            out, [nh, nc] = cell(inp, state[i], training=training)
+            new_states.append((nh, nc))
+            h = tf.expand_dims(out, axis=1)  # (B, 1, hidden)
+        params = self.output_distribution.parameters(h)
+        return params, new_states

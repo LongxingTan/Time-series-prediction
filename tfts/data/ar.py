@@ -1,12 +1,13 @@
 """AR (autoregressive univariate) data preprocessing for N-BEATS parity.
 
-synthetic AR dataset generation and its train/validation windowing (fixed encoder + fixed prediction window, univariate, NO normalization) 
+synthetic AR dataset generation and its train/validation windowing
 
 N-BEATS is target-only. In line with ``tfts``'s ``(x, encoder_feature,
 decoder_feature)`` convention the pipeline emits ``x`` as the lookback window
 of ``value`` and leaves both feature tensors empty (no covariates / static
 slots exist for this model).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -33,8 +34,7 @@ def generate_ar_data(
     exp: bool = False,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Generate the identical synthetic AR dataset
-    """
+    """Generate the identical synthetic AR dataset"""
     np.random.seed(seed)
     linear_trends = np.random.normal(size=n_series)[:, None] / timesteps
     quadratic_trends = np.random.normal(size=n_series)[:, None] / timesteps**2
@@ -68,10 +68,10 @@ def feature_engineer_ar(data: pd.DataFrame) -> pd.DataFrame:
 
 @dataclass
 class ARBatch:
-    x: np.ndarray                    # (n, encoder_length, 1)
+    x: np.ndarray  # (n, encoder_length, 1)
     encoder_feature: Optional[np.ndarray] = None
     decoder_feature: Optional[np.ndarray] = None
-    y: Optional[np.ndarray] = None   # (n, prediction_length, 1)
+    y: Optional[np.ndarray] = None  # (n, prediction_length, 1)
     target_original: Optional[np.ndarray] = None
     series: Optional[np.ndarray] = None
     decoder_time_idx: Optional[np.ndarray] = None
@@ -107,18 +107,14 @@ class ARNBeatsPreprocessor:
         self.series_ids = sorted(data["series"].unique().tolist())
         self.n_series = len(self.series_ids)
         self._series_values = {
-            sid: data.loc[data["series"] == sid, "value"].to_numpy(dtype=np.float32)
-            for sid in self.series_ids
+            sid: data.loc[data["series"] == sid, "value"].to_numpy(dtype=np.float32) for sid in self.series_ids
         }
 
     # ------------------------------------------------------------------ helpers
     def _windows_for(self, series_vals: np.ndarray, starts: List[int]):
         x = np.stack([series_vals[s : s + self.encoder_length] for s in starts])
         y = np.stack(
-            [
-                series_vals[s + self.encoder_length : s + self.encoder_length + self.prediction_length]
-                for s in starts
-            ]
+            [series_vals[s + self.encoder_length : s + self.encoder_length + self.prediction_length] for s in starts]
         )
         return x[:, :, None], y[:, :, None]
 
@@ -156,15 +152,11 @@ class ARNBeatsPreprocessor:
         for sid in self.series_ids:
             v = self._series_values[sid]
             x = v[start : start + self.encoder_length][None, :, None]
-            y = v[
-                start + self.encoder_length : start + self.encoder_length + self.prediction_length
-            ][None, :, None]
+            y = v[start + self.encoder_length : start + self.encoder_length + self.prediction_length][None, :, None]
             xs.append(x)
             ys.append(y)
             sids.append(sid)
-            dec_idx.append(
-                np.arange(self.training_cutoff + 1, self.training_cutoff + 1 + self.prediction_length)
-            )
+            dec_idx.append(np.arange(self.training_cutoff + 1, self.training_cutoff + 1 + self.prediction_length))
         return ARBatch(
             x=np.concatenate(xs, axis=0),
             y=np.concatenate(ys, axis=0),
@@ -199,10 +191,10 @@ class ARNBeatsPreprocessor:
 
 @dataclass
 class ARDeepARBatch:
-    x: np.ndarray                    # (n, encoder_length, 1) NORMALIZED encoder values
-    decoder_feature: np.ndarray      # (n, prediction_length, 1) NORMALIZED teacher-forced lagged target
-    static: np.ndarray               # (n, 1) series id (int, for the embedding lookup)
-    y: np.ndarray                    # (n, prediction_length, 1) NORMALIZED target (for NLL loss)
+    x: np.ndarray  # (n, encoder_length, 1) NORMALIZED encoder values
+    decoder_feature: np.ndarray  # (n, prediction_length, 1) NORMALIZED teacher-forced lagged target
+    static: np.ndarray  # (n, 1) series id (int, for the embedding lookup)
+    y: np.ndarray  # (n, prediction_length, 1) NORMALIZED target (for NLL loss)
     target_original: Optional[np.ndarray] = None  # (n, prediction_length, 1) raw target (for eval)
     decoder_time_idx: Optional[np.ndarray] = None
     metadata: Dict = field(default_factory=dict)
@@ -244,8 +236,7 @@ class ARDeepARPreprocessor:
         self.series_ids = sorted(data["series"].unique().tolist())
         self.n_series = len(self.series_ids)
         self._series_values = {
-            sid: data.loc[data["series"] == sid, "value"].to_numpy(dtype=np.float32)
-            for sid in self.series_ids
+            sid: data.loc[data["series"] == sid, "value"].to_numpy(dtype=np.float32) for sid in self.series_ids
         }
         self.mean = float(mean)
         self.std = float(std)
@@ -295,12 +286,34 @@ class ARDeepARPreprocessor:
             raise NotImplementedError("callable transformation inverse not supported")
         raise ValueError(f"unsupported transformation: {t!r}")
 
+    # ------------------------------------------------- public normalization API
+    def transform(self, v: np.ndarray) -> np.ndarray:
+        """Normalize raw values to model space (standardize after optional transform).
+
+        Kept public so a forecasting pipeline can map raw inputs into generated-model
+        space; ``inverse_transform`` reverses it.
+        """
+        return self._normalize(v)
+
+    def inverse_transform(self, v: np.ndarray) -> np.ndarray:
+        """Convert model-space (standardized) values back to original units."""
+        return self._inverse(v)
+
+    def normalizer_state(self) -> Dict:
+        """Serializable normalizer state (independent of any trained weights)."""
+        return {
+            "class": "EncoderNormalizer (global fit, replicated from Phase 1)",
+            "mean": float(self.mean),
+            "std": float(self.std),
+            "transformation": self.transformation,
+        }
+
     # ------------------------------------------------------------------ helpers
     def _windows_for(self, series_vals: np.ndarray, starts: List[int]):
         """Return (normalized encoder, normalized teacher-forced decoder feat, norm y, raw y)."""
         xs, decs, ys, ys_orig = [], [], [], []
         for s in starts:
-            enc = series_vals[s : s + self.encoder_length]                # v0..v59
+            enc = series_vals[s : s + self.encoder_length]  # v0..v59
             y = series_vals[s + self.encoder_length : s + self.encoder_length + self.prediction_length]  # w0..w19
             # teacher-forced lagged decoder input: [last encoder value, y[0..-2]]
             dec = np.concatenate([enc[-1:], y[:-1]])
@@ -380,8 +393,7 @@ class ARDeepARPreprocessor:
                 "std": float(self.std),
             },
             "decoder_input_convention": (
-                "teacher-forced lagged target: [last_encoder_value, y[0], y[1], ..., y[-2]], "
-                "normalized"
+                "teacher-forced lagged target: [last_encoder_value, y[0], y[1], ..., y[-2]], " "normalized"
             ),
             "generation": {"seasonality": 10.0, "timesteps": 400, "n_series": 100, "seed": 42},
         }

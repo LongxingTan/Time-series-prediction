@@ -1,16 +1,4 @@
-"""N-BEATS building blocks (TensorFlow), aligned to the reference implementation.
-
-Matches ``pytorch_forecasting``'s N-BEATS (Oreshkin et al., ICLR 2020) interpretable
-construction used by the AR tutorial:
-
-* two interpretable stacks -- **trend** (low-order polynomial basis) and
-  **seasonality** (Fourier basis) -- with per-stack ``units`` and ``num_block_layers``
-* ``thetas_dim`` basis coefficients per block, a single shared ``theta`` applied to the
-  backcast and the forecast basis (analytic continuation), then summed; the block's own
-  output is used in doubly-residual stacking at the model level
-* dense stack: ``Dense(in->units)+ReLU`` then ``(num_block_layers-1) x
-  [Dropout, Dense(units->units)+ReLU]``, then ``theta = Dense(units -> thetas_dim, no bias)``
-"""
+"""N-BEATS building blocks (TensorFlow), aligned to the reference implementation."""
 
 from __future__ import annotations
 
@@ -22,10 +10,7 @@ from tensorflow.keras.layers import Dense, Dropout, Layer
 
 
 def _linspace(backcast_length: int, forecast_length: int, centered: bool) -> Tuple[np.ndarray, np.ndarray]:
-    """Return (backcast, forecast) time grids matching pytorch_forecasting.
-
-    Mirrors ``pytorch_forecasting.layers._nbeats._utils.linspace``.
-    """
+    """Return (backcast, forecast) time grids"""
     if centered:
         norm = max(backcast_length, forecast_length)
         start = -backcast_length
@@ -229,7 +214,7 @@ class GenericBlock(Layer):
             x = tf.nn.relu(dense(drop(x, training=training)))
         theta = self.theta(x)
         backcast = theta[:, : self.backcast_length]
-        forecast = theta[:, -self.forecast_length:]
+        forecast = theta[:, -self.forecast_length :]
         return backcast, forecast
 
     def compute_output_shape(self, input_shape):

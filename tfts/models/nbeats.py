@@ -2,11 +2,6 @@
 `N-BEATS: Neural basis expansion analysis for interpretable time series forecasting
 <https://arxiv.org/abs/1905.10437>`_
 
-Adjusted to mirror ``pytorch_forecasting``'s interpretable N-BEATS used by the AR
-tutorial: trend (polynomial) and seasonality (Fourier) stacks, per-stack widths,
-``num_blocks``/``num_block_layers``/``expansion_coefficient_lengths``, doubly-residual
-stacking across all blocks (defaults ``widths=[32,512]``, ``num_blocks=[3,3]``,
-``num_block_layers=[3,3]``, ``expansion_coefficient_lengths=[3,7]``, ``dropout=0.1``).
 """
 
 from typing import List, Optional
@@ -43,8 +38,12 @@ class NBeatsConfig(BaseConfig):
         if expansion_coefficient_lengths is None:
             expansion_coefficient_lengths = [3, 7]
 
-        assert len(stack_types) == len(widths) == len(num_blocks) == len(num_block_layers) == len(
-            expansion_coefficient_lengths
+        assert (
+            len(stack_types)
+            == len(widths)
+            == len(num_blocks)
+            == len(num_block_layers)
+            == len(expansion_coefficient_lengths)
         ), "all per-stack hyperparameters must have the same length as stack_types"
 
         self.stack_types = stack_types
@@ -69,9 +68,7 @@ class NBeatsConfig(BaseConfig):
             nb = config_dict.pop("nb_blocks_per_stack")
             legacy["num_blocks"] = [nb, nb]
         if "stack_types" in config_dict:
-            config_dict["stack_types"] = [
-                s if s != "trend_block" else "trend" for s in config_dict["stack_types"]
-            ]
+            config_dict["stack_types"] = [s if s != "trend_block" else "trend" for s in config_dict["stack_types"]]
             config_dict["stack_types"] = [
                 s if s != "seasonality_block" else "seasonality" for s in config_dict["stack_types"]
             ]

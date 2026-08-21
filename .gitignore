@@ -107,3 +107,4 @@ temp/
 /verify.py
 *.npz
 *.h5
+exps
