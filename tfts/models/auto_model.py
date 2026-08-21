@@ -65,6 +65,9 @@ class AutoModel(BaseModel):
         predict_sequence_length = predict_sequence_length or getattr(model, "predict_sequence_length", 1)
         super().__init__(predict_sequence_length=predict_sequence_length, config=config)
         self.model = model
+        # retain the wrapped model that owns generation hooks (DeepAR's ``generate``),
+        # since ``build_model`` later overwrites ``self.model`` with a ``tf.keras.Model``.
+        self.core_model = model
         self.config = config
 
     def __call__(
@@ -153,6 +156,31 @@ class AutoModel(BaseModel):
 
     def get_config(self):
         return self.config.to_dict() if self.config else {}
+
+    def generate(self, inputs, generation_config=None, **kwargs):
+        """Delegate generation to the wrapped core model (opt-in feature).
+
+        Only models that implement ``generate`` (e.g. DeepAR via ``AutoregressiveGenerationMixin``)
+        support this directly. Subclasses can also add the legacy ``GenerationMixin``
+        after ``AutoModel`` in their MRO.
+        """
+        core = getattr(self, "core_model", None) or self.model
+        generate_fn = getattr(core, "generate", None)
+        if generate_fn is not None:
+            return generate_fn(inputs, generation_config, **kwargs)
+
+        # Preserve the dataframe-oriented GenerationMixin API used by subclasses
+        # such as ``class Model(AutoModel, GenerationMixin)``.
+        inherited_generate = getattr(super(), "generate", None)
+        if inherited_generate is not None:
+            return inherited_generate(inputs, generation_config=generation_config, **kwargs)
+
+        model_type = (
+            self.config.get("model_type", type(core).__name__)
+            if isinstance(self.config, dict)
+            else getattr(self.config, "model_type", type(core).__name__)
+        )
+        raise TypeError(f"{model_type} does not support generation.")
 
 
 class AutoModelForPrediction(AutoModel):

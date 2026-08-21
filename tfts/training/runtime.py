@@ -56,8 +56,13 @@ def create_distribution_strategy(args: Optional[TrainingArguments] = None) -> tf
         logger.info("Using MirroredStrategy with %s GPUs", len(gpus))
         return _create_mirrored_strategy()
     if len(gpus) == 1:
-        logger.info("Using OneDeviceStrategy on /gpu:0")
-        return tf.distribute.OneDeviceStrategy(device="/gpu:0")
+        # Use the default strategy on a single GPU. The default TF strategy already runs ops
+        # on the available GPU, and TensorFlow's Model.fit raises "Mixing different
+        # tf.distribute.Strategy objects" when fed numpy inputs / odd-sized validation batches
+        # inside a OneDeviceStrategy scope. So on one device we do not need (and must not use)
+        # a promoting device strategy.
+        logger.info("Using default TensorFlow strategy (single GPU)")
+        return tf.distribute.get_strategy()
 
     logger.info("Using default TensorFlow strategy")
     return tf.distribute.get_strategy()

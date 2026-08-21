@@ -5,6 +5,11 @@ import tensorflow as tf
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.models.rnn import RNN, RNN2
+from tfts.training_args import TrainingArguments
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class RNNTest(unittest.TestCase):
@@ -20,7 +25,7 @@ class RNNTest(unittest.TestCase):
         train, valid = tfts.get_data("sine", test_size=0.1)
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=8)
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
         y_test = trainer.predict(valid[0])
         self.assertEqual(y_test.shape, valid[1].shape)

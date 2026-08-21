@@ -13,6 +13,36 @@ from tfts.training.runtime import configure_precision, create_distribution_strat
 from tfts.training_args import TrainingArguments
 
 
+def _gpu_count() -> int:
+    """Return the number of physical GPUs visible to TensorFlow."""
+    return len(tf.config.list_physical_devices("GPU"))
+
+
+N_GPUS = _gpu_count()
+
+# Full-distribution training only makes sense when a real multi-GPU setup exists.
+# GitHub Actions runners have no GPU, so these tests exercise the single-device path
+# there and run the true multi-GPU path on local machines with >= 2 GPUs.
+needs_multigpu = unittest.skipUnless(N_GPUS >= 2, "requires >= 2 GPUs")
+
+# Real fp16 mixed-precision training needs an accelerator; TF will often error out
+# for fp16 ops on a CPU runner.
+needs_gpu = unittest.skipUnless(N_GPUS >= 1, "requires a GPU")
+
+
+def _tfts_trainer(model, cls=KerasTrainer, **kwargs):
+    """Build a trainer pinned to a single-device ("default") strategy.
+
+    The functional tests below validate trainer *logic* (optimizers, metrics,
+    callbacks, saving, ...), not distribution. They must therefore be deterministic
+    regardless of how many GPUs happen to be visible on the host (GitHub runners have
+    none; multi-GPU machines may have several). Real multi-GPU behavior is exercised
+    separately by the ``needs_multigpu``-guarded tests.
+    """
+    kwargs.setdefault("args", TrainingArguments(output_dir="./weights", strategy="default"))
+    return cls(model, **kwargs)
+
+
 class SetSeedTest(unittest.TestCase):
     """Test the set_seed utility function."""
 
@@ -374,12 +404,77 @@ class EagerTrainerTest(unittest.TestCase):
 
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, loss_fn=custom_loss, epochs=1)
 
+    @needs_multigpu
     def test_trainer_2gpu(self):
         strategy = tf.distribute.MirroredStrategy()
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
         trainer = EagerTrainer(model, strategy=strategy)
+        self.assertGreater(strategy.num_replicas_in_sync, 1)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
+
+    def test_trainer_multi_gpu_strategy_replica_count(self):
+        """Verify MirroredStrategy replicates across devices when GPUs are present.
+
+        Runs on both CI (single CPU device) and local multi-GPU boxes. On a real
+        multi-GPU machine we assert replication is actually active.
+        """
+        strategy = tf.distribute.MirroredStrategy()
+        self.assertGreaterEqual(strategy.num_replicas_in_sync, 1)
+        if N_GPUS >= 2:
+            self.assertGreater(strategy.num_replicas_in_sync, 1)
+
+    def test_trainer_gradient_accumulation(self):
+        """Test gradient accumulation matches a normal update in terms of step count."""
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_sequence_length=2)
+        trainer = EagerTrainer(model)
+
+        # 2 micro-batches, accumulate over 2 steps -> a single optimizer step.
+        trainer.train(
+            train_loader=self.train_loader,
+            valid_loader=None,
+            optimizer=tf.keras.optimizers.Adam(0.003),
+            gradient_accumulation_steps=2,
+            epochs=1,
+        )
+        # 2 micro-batches / 2 accumulation steps = 1 actual update.
+        self.assertEqual(int(trainer.global_step.numpy()), 1)
+
+    @needs_gpu
+    def test_trainer_mixed_precision_fp16(self):
+        """Real fp16 mixed-precision training (requires a GPU)."""
+        tf.keras.mixed_precision.set_global_policy("mixed_float16")
+        try:
+            config = AutoConfig.for_model("rnn")
+            model = AutoModel.from_config(config, predict_sequence_length=2)
+            trainer = EagerTrainer(model)
+            trainer.train(
+                train_loader=self.train_loader,
+                valid_loader=self.valid_loader,
+                optimizer=tf.keras.optimizers.Adam(0.003),
+                epochs=1,
+            )
+            self.assertEqual(tf.keras.mixed_precision.global_policy().name, "mixed_float16")
+        finally:
+            tf.keras.mixed_precision.set_global_policy("float32")
+
+    def test_trainer_mixed_precision_bf16_cpu_and_gpu(self):
+        """bf16 mixed-precision training runs on both CPU and GPU (safe for CI)."""
+        tf.keras.mixed_precision.set_global_policy("mixed_bfloat16")
+        try:
+            config = AutoConfig.for_model("rnn")
+            model = AutoModel.from_config(config, predict_sequence_length=2)
+            trainer = EagerTrainer(model)
+            trainer.train(
+                train_loader=self.train_loader,
+                valid_loader=self.valid_loader,
+                optimizer=tf.keras.optimizers.Adam(0.003),
+                epochs=1,
+            )
+            self.assertEqual(tf.keras.mixed_precision.global_policy().name, "mixed_bfloat16")
+        finally:
+            tf.keras.mixed_precision.set_global_policy("float32")
 
     def test_trainer_kwargs(self):
         """Test that custom kwargs are set as attributes."""
@@ -410,9 +505,7 @@ class KerasTrainerTest(unittest.TestCase):
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
 
-        trainer = KerasTrainer(
-            model,
-        )
+        trainer = _tfts_trainer(model)
         trainer.train(
             train_dataset=(x_train, y_train),
             valid_dataset=(x_valid, y_valid),
@@ -432,9 +525,7 @@ class KerasTrainerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(
-            model,
-        )
+        trainer = _tfts_trainer(model)
         trainer.train(train_loader, valid_loader, optimizer=tf.keras.optimizers.Adam(0.003), **self.fit_config)
         trainer.save_model("./weights")
 
@@ -444,7 +535,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         history = trainer.fit(train_dataset=(x_train, y_train), epochs=1, batch_size=1)
         self.assertIsNotNone(history)
@@ -455,7 +546,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), optimizer="adam", epochs=1, batch_size=1)
 
@@ -465,7 +556,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(
             train_dataset=(x_train, y_train),
@@ -480,7 +571,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), loss_fn="mae", epochs=1, batch_size=1)
 
@@ -490,7 +581,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), metrics=["mae", "mse"], epochs=1, batch_size=1)
 
@@ -500,7 +591,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         early_stopping = tf.keras.callbacks.EarlyStopping(patience=1)
 
@@ -514,7 +605,7 @@ class KerasTrainerTest(unittest.TestCase):
 
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=train_loader, steps_per_epoch=2, epochs=1)
 
@@ -524,7 +615,7 @@ class KerasTrainerTest(unittest.TestCase):
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), run_eagerly=True, epochs=1, batch_size=1)
 
@@ -536,14 +627,14 @@ class KerasTrainerTest(unittest.TestCase):
         model = AutoModel.from_config(config, predict_sequence_length=2)
 
         for verbose in [0, 1, 2]:
-            trainer = KerasTrainer(model)
+            trainer = _tfts_trainer(model)
             trainer.train(train_dataset=(x_train, y_train), verbose=verbose, epochs=1, batch_size=1)
 
     def test_get_model(self):
         """Test get_model() returns the correct model."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
@@ -554,7 +645,7 @@ class KerasTrainerTest(unittest.TestCase):
 
     def test_evaluate_predict_and_default_task_helpers(self):
         model = tf.keras.Sequential([tf.keras.Input(shape=(4, 1)), tf.keras.layers.Dense(1)])
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
         x = np.random.random((2, 4, 1)).astype(np.float32)
         y = np.random.random((2, 4, 1)).astype(np.float32)
 
@@ -590,7 +681,7 @@ class KerasTrainerTest(unittest.TestCase):
         """Test plot functionality."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = KerasTrainer(model)
+        trainer = _tfts_trainer(model)
 
         history = np.random.random((5, 10, 1))
         true = np.random.random((5, 5, 1))
@@ -609,7 +700,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.random((2, 2))
 
-        trainer = KerasTrainer(keras_model)
+        trainer = _tfts_trainer(keras_model)
         trainer.train(train_dataset=(x_train, y_train), epochs=1, batch_size=1)
 
     def test_trainer_kwargs(self):
@@ -632,6 +723,7 @@ class KerasTrainerTest(unittest.TestCase):
 
         mock_strategy = MagicMock()
         mock_strategy.cluster_resolver = mock_resolver
+        mock_strategy.num_replicas_in_sync = 1
 
         trainer = KerasTrainer(model, strategy=mock_strategy)
 
@@ -650,7 +742,7 @@ class Seq2seqKerasTrainerTest(unittest.TestCase):
         """Test that Seq2seqKerasTrainer inherits from KerasTrainer."""
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
-        trainer = Seq2seqKerasTrainer(model)
+        trainer = _tfts_trainer(model, cls=Seq2seqKerasTrainer)
 
         self.assertIsInstance(trainer, KerasTrainer)
 
@@ -661,7 +753,7 @@ class Seq2seqKerasTrainerTest(unittest.TestCase):
         config = AutoConfig.for_model("rnn")
         model = AutoModel.from_config(config, predict_sequence_length=2)
 
-        trainer = Seq2seqKerasTrainer(model)
+        trainer = _tfts_trainer(model, cls=Seq2seqKerasTrainer)
         trainer.train(train_dataset=(x_train, y_train), epochs=1, batch_size=1)
 
 

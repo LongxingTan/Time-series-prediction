@@ -38,8 +38,20 @@ class BaseModel(ABC):
         elif self.config is not None:
             self.config.predict_sequence_length = predict_sequence_length
         self.model = None  # Model should be defined later (may not be directly used in all subclasses)
+        # ``core_model`` keeps the object that carries any generation hooks (e.g. DeepAR's
+        # ``generate``); ``keras_model`` is the compiled teacher-forced graph. Both are
+        # needed because ``build_model`` replaces ``self.model`` with a ``tf.keras.Model``
+        # that no longer exposes subclass methods like ``generate``.
+        self.core_model: Optional["BaseModel"] = None
+        self.keras_model: Optional[tf.keras.Model] = None
 
     def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
+        # Retain the object that carries generation hooks across the ``self.model``
+        # replacement below (first call only; never clobber an already-captured core).
+        if self.core_model is None:
+            candidate = getattr(self, "model", None)
+            self.core_model = candidate if isinstance(candidate, BaseModel) else self
+
         if hasattr(self, "config"):
             if isinstance(inputs, dict):
                 self.config.input_shape = {k: tuple(v.shape[1:]) for k, v in inputs.items()}
@@ -53,11 +65,13 @@ class BaseModel(ABC):
             # only accept the inputs parameters after built
             outputs = self.model(inputs)
             # to handles the Keras symbolic tensors for tf2.3.1, use []
-            self.model = tf.keras.Model(inputs, outputs)
+            self.keras_model = tf.keras.Model(inputs, outputs)
+            self.model = self.keras_model
             return self.model
         else:
             outputs = self(inputs)
-            self.model = tf.keras.Model(inputs, outputs)
+            self.keras_model = tf.keras.Model(inputs, outputs)
+            self.model = self.keras_model
             return self.model
 
     def _keras_model_for_saving(self) -> tf.keras.Model:
@@ -230,20 +244,26 @@ class BaseConfig(ABC):
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
     ):
-        with open(pretrained_model_name_or_path, "r") as f:
+        path = os.fspath(pretrained_model_name_or_path)
+        if os.path.isdir(path):
+            path = os.path.join(path, CONFIG_NAME)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Config file not found at {path}")
+
+        # These arguments are retained for API compatibility. Remote artifact
+        # downloads are not supported by BaseConfig yet.
+        del cache_dir, force_download
+        with open(path, "r", encoding="utf-8") as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
     def save_pretrained(self, save_directory: Union[str, os.PathLike]):
+        if os.path.isfile(save_directory):
+            raise ValueError(f"Provided path ({save_directory}) must be a directory")
         os.makedirs(save_directory, exist_ok=True)
         output_config_file = os.path.join(save_directory, CONFIG_NAME)
-
-        try:
-            with open(output_config_file, "w") as f:
-                json.dump(self.to_dict(), f, indent=4)
-            logger.info(f"Model config successfully saved in {output_config_file}")
-        except Exception as e:
-            logger.warning(f"Error saving model config to {output_config_file}: {e}")
+        self.to_json(output_config_file)
+        logger.info(f"Model config successfully saved in {output_config_file}")
 
     def __str__(self):
         """Convert config to string representation in dictionary format"""

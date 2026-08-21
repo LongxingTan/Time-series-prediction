@@ -8,6 +8,11 @@ import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer
 from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.nbeats import NBeats
+from tfts.training_args import TrainingArguments
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class NBeatsTest(unittest.TestCase):
@@ -40,5 +45,5 @@ class NBeatsTest(unittest.TestCase):
         config = AutoConfig.for_model("tft")
 
         model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-        trainer = KerasTrainer(model)
+        trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(ts_sequence, epochs=1)

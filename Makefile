@@ -1,4 +1,4 @@
-.PHONY: style test docs pre-release help
+.PHONY: style test test-warnings docs pre-release help
 
 # Directories to run style checks on
 CHECK_DIRS := tfts examples tests
@@ -10,9 +10,15 @@ style:  ## Run formatters and linters (black, isort, flake8, pre-commit)
 	flake8 $(CHECK_DIRS)
 	pre-commit run --all-files
 
+## Keep the default test output focused on failures. Set these before Python starts
+TEST_ENV := CUDA_VISIBLE_DEVICES=0 TF_ENABLE_ONEDNN_OPTS=0 TF_CPP_MIN_LOG_LEVEL=3 PYTHONWARNINGS=ignore
+
 ## Run all unit tests
-test:  ## Run unit tests using unittest
-	python -m unittest discover
+test:  ## Run unit tests without routine TensorFlow/Python warnings
+	$(TEST_ENV) python -m unittest discover
+
+test-warnings:  ## Run unit tests with all warnings and TensorFlow info logs
+	CUDA_VISIBLE_DEVICES=0 python -m unittest discover
 
 ## Build the documentation
 docs:  ## Build HTML documentation using Sphinx

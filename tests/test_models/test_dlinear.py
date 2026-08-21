@@ -6,6 +6,11 @@ import tensorflow as tf
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.models.dlinear import DLinear, DLinearConfig
+from tfts.training_args import TrainingArguments
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class DLinearTest(unittest.TestCase):
@@ -26,9 +31,7 @@ class DLinearTest(unittest.TestCase):
         config.channels = 1  # number of features
 
         model = AutoModel.from_config(config, predict_sequence_length=8)
-        trainer = KerasTrainer(
-            model,
-        )
+        trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
 
         trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 

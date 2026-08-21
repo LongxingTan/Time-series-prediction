@@ -166,8 +166,8 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
         (
             "itransformer",
             {
-                "class_name": "iTransformer",
-                "config_class": "iTransformerConfig",
+                "class_name": "ITransformer",
+                "config_class": "ITransformerConfig",
                 "description": "Inverted Transformer — applies attention across variates instead of time.",
                 "paper": "https://arxiv.org/abs/2310.06625",
                 "tags": ["attention", "multivariate", "SOTA"],
@@ -176,8 +176,8 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
         (
             "timesfm",
             {
-                "class_name": "TimesFM",
-                "config_class": "TimesFMConfig",
+                "class_name": "TimesFm",
+                "config_class": "TimesFmConfig",
                 "description": "Google's foundation model for time series — decoder-only with patching.",
                 "paper": "https://arxiv.org/abs/2310.10688",
                 "tags": ["foundation-model", "patching", "decoder-only", "SOTA"],
@@ -186,8 +186,8 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
         (
             "gpt",
             {
-                "class_name": "Gpt",
-                "config_class": "GptConfig",
+                "class_name": "GPT",
+                "config_class": "GPTConfig",
                 "description": "GPT-style decoder-only Transformer adapted for time series.",
                 "paper": "",
                 "tags": ["decoder-only", "attention", "generative"],
@@ -206,8 +206,8 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
         (
             "tide",
             {
-                "class_name": "TiDE",
-                "config_class": "TiDEConfig",
+                "class_name": "Tide",
+                "config_class": "TideConfig",
                 "description": "Time-series Dense Encoder — simple MLP with covariate projection.",
                 "paper": "https://arxiv.org/abs/2304.08424",
                 "tags": ["mlp", "efficient", "covariates"],

@@ -1,5 +1,6 @@
 """Comprehensive tests for TimeSeriesSequence class with improved coverage."""
 
+import logging
 import unittest
 from unittest.mock import MagicMock, patch
 import warnings
@@ -706,8 +707,10 @@ class TimeSeriesSequenceTest(unittest.TestCase):
         # Create data with string time column that can't be converted
         df = pd.DataFrame({"date": ["text_" + str(i) for i in range(100)], "value": np.random.randn(100).cumsum()})
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        # The library logs this via the logging module, so use assertLogs to
+        # capture (and thereby silence) the warning instead of warnings.catch_warnings,
+        # which only intercepts warnings.warn and never sees logger output.
+        with self.assertLogs("tfts.data.timeseries", level="WARNING") as cm:
             try:
                 # This should issue a warning about non-datetime/numeric column
                 _ = TimeSeriesSequence.from_df(df, time_col="date", target_col="value", train_length=10)
@@ -715,13 +718,10 @@ class TimeSeriesSequenceTest(unittest.TestCase):
                 # Expected to fail during sequence generation or validation
                 pass
 
-            # Check that warning was issued (it may be in the warnings list)
-            warning_messages = [str(warning.message) for warning in w]
-            has_warning = any("not datetime or numeric" in msg for msg in warning_messages)
-
-            # If no warning, the test expectation was wrong - skip it
-            if not has_warning:
-                self.skipTest("Warning not issued - code may have changed")
+        self.assertTrue(
+            any("not datetime or numeric" in msg for msg in cm.output),
+            "expected a 'time_col not datetime or numeric' warning",
+        )
 
     def test_from_df_with_single_group(self):
         """Test from_df with single group column."""

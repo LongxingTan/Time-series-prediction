@@ -5,8 +5,13 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer
+from tfts.training_args import TrainingArguments
 
 logger = logging.getLogger(__name__)
+
+# Smoke test pinning a single-device strategy so it runs identically on CI and
+# any multi-GPU host.
+_SINGLE_DEVICE_ARGS = TrainingArguments(output_dir="./weights", strategy="default")
 
 
 class InputsTest(unittest.TestCase):
@@ -26,7 +31,7 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model)
+            trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train(
                 train_dataset=(x_train, y_train),
                 valid_dataset=(x_valid, y_valid),
@@ -55,7 +60,7 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model)
+            trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
     def test_encoder_decoder_array2(self):
@@ -82,7 +87,7 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model)
+            trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
     # def test_encoder_tfdata(self):
@@ -121,7 +126,7 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-            trainer = KerasTrainer(model)
+            trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train(
                 train_dataset=train_loader,
                 valid_dataset=valid_loader,
