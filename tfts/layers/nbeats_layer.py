@@ -1,380 +1,253 @@
-"""Layer for :py:class:`~tfts.models.nbeats`"""
+"""N-BEATS building blocks (TensorFlow), aligned to the reference implementation.
+
+Matches ``pytorch_forecasting``'s N-BEATS (Oreshkin et al., ICLR 2020) interpretable
+construction used by the AR tutorial:
+
+* two interpretable stacks -- **trend** (low-order polynomial basis) and
+  **seasonality** (Fourier basis) -- with per-stack ``units`` and ``num_block_layers``
+* ``thetas_dim`` basis coefficients per block, a single shared ``theta`` applied to the
+  backcast and the forecast basis (analytic continuation), then summed; the block's own
+  output is used in doubly-residual stacking at the model level
+* dense stack: ``Dense(in->units)+ReLU`` then ``(num_block_layers-1) x
+  [Dropout, Dense(units->units)+ReLU]``, then ``theta = Dense(units -> thetas_dim, no bias)``
+"""
+
+from __future__ import annotations
 
 from typing import Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Activation, Dense, Layer
+from tensorflow.keras.layers import Dense, Dropout, Layer
 
 
-def generic_model(theta: tf.Tensor, t_b: tf.Tensor, t_f: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-    """Generate the generic backcast and forecast using linear projections.
+def _linspace(backcast_length: int, forecast_length: int, centered: bool) -> Tuple[np.ndarray, np.ndarray]:
+    """Return (backcast, forecast) time grids matching pytorch_forecasting.
 
-    Parameters
-    ----------
-    theta : tf.Tensor
-        Basis expansion coefficients
-    t_b : tf.Tensor
-        Input time index for backcast
-    t_f : tf.Tensor
-        Output time index for forecast
-
-    Returns
-    -------
-    Tuple[tf.Tensor, tf.Tensor]
-        A tuple of (backcast, forecast) tensors
+    Mirrors ``pytorch_forecasting.layers._nbeats._utils.linspace``.
     """
-    backcast = theta[:, : len(t_b)]
-    forecast = theta[:, -len(t_f) :]
-    return backcast, forecast
+    if centered:
+        norm = max(backcast_length, forecast_length)
+        start = -backcast_length
+        stop = forecast_length - 1
+    else:
+        norm = backcast_length + forecast_length
+        start = 0
+        stop = backcast_length + forecast_length - 1
+    lin_space = np.linspace(start / norm, stop / norm, backcast_length + forecast_length, dtype=np.float64)
+    return lin_space[:backcast_length], lin_space[backcast_length:]
 
 
-def trend_model(theta: tf.Tensor, t_b: tf.Tensor, t_f: tf.Tensor, polynomial_size: int) -> Tuple[tf.Tensor, tf.Tensor]:
-    """Generate the trend backcast and forecast using polynomial basis functions.
-
-    Parameters
-    ----------
-    theta : tf.Tensor
-        Basis expansion coefficients
-    t_b : tf.Tensor
-        Input time index for backcast
-    t_f : tf.Tensor
-        Output time index for forecast
-    polynomial_size : int
-        Number of polynomial terms
-
-    Returns
-    -------
-    Tuple[tf.Tensor, tf.Tensor]
-        A tuple of (backcast, forecast) tensors
-    """
-    backcast = tf.einsum("bp,pt->bt", theta[:, polynomial_size:], t_b)
-    forecast = tf.einsum("bp,pt->bt", theta[:, :polynomial_size], t_f)
-    return backcast, forecast
+def _frequency_grid(num_frequencies: int, backcast_length: int, forecast_length: int, min_period: int):
+    return np.linspace(0, (backcast_length + forecast_length) / min_period, num_frequencies)
 
 
-def seasonality_model(
-    theta: tf.Tensor,
-    t_b: tf.Tensor,
-    t_f: tf.Tensor,
-    config_per_harmonic: int,
-    backcast_cos_template: tf.Tensor,
-    backcast_sin_template: tf.Tensor,
-    forecast_cos_template: tf.Tensor,
-    forecast_sin_template: tf.Tensor,
-) -> Tuple[tf.Tensor, tf.Tensor]:
-    """Generate the seasonality backcast and forecast using Fourier basis functions.
-
-    Parameters
-    ----------
-    theta : tf.Tensor
-        Basis expansion coefficients
-    t_b : tf.Tensor
-        Input time index for backcast
-    t_f : tf.Tensor
-        Output time index for forecast
-    config_per_harmonic : int
-        Number of coefficients per harmonic
-    backcast_cos_template : tf.Tensor
-        Cosine template for backcast
-    backcast_sin_template : tf.Tensor
-        Sine template for backcast
-    forecast_cos_template : tf.Tensor
-        Cosine template for forecast
-    forecast_sin_template : tf.Tensor
-        Sine template for forecast
-
-    Returns
-    -------
-    Tuple[tf.Tensor, tf.Tensor]
-        A tuple of (backcast, forecast) tensors
-    """
-    backcast_harmonics_cos = tf.einsum(
-        "bp,pt->bt", theta[:, 2 * config_per_harmonic : 3 * config_per_harmonic], backcast_cos_template
-    )
-    backcast_harmonics_sin = tf.einsum("bp,pt->bt", theta[:, 3 * config_per_harmonic :], backcast_sin_template)
-    backcast = backcast_harmonics_sin + backcast_harmonics_cos
-
-    forecast_harmonics_cos = tf.einsum("bp,pt->bt", theta[:, :config_per_harmonic], forecast_cos_template)
-    forecast_harmonics_sin = tf.einsum(
-        "bp,pt->bt", theta[:, config_per_harmonic : 2 * config_per_harmonic], forecast_sin_template
-    )
-    forecast = forecast_harmonics_sin + forecast_harmonics_cos
-    return backcast, forecast
-
-
-class GenericBlock(tf.keras.layers.Layer):
-    """Generic block that learns arbitrary patterns in time series data.
-
-    This block uses a stack of fully connected layers to learn any pattern in the input data.
-    It outputs both backcast (reconstruction of input) and forecast (prediction) components.
-
-    Parameters
-    ----------
-    train_sequence_length : int
-        Length of the input sequence
-    predict_sequence_length : int
-        Length of the prediction sequence
-    hidden_size : int
-        Number of units in the hidden layers
-    n_block_layers : int, optional
-        Number of fully connected layers in the block, by default 4
-    """
+class TrendBlock(Layer):
+    """Trend block: polynomial basis extrapolation."""
 
     def __init__(
         self,
-        train_sequence_length: int,
-        predict_sequence_length: int,
-        hidden_size: int,
-        n_block_layers: int = 4,
-        **kwargs
+        backcast_length: int,
+        forecast_length: int,
+        units: int,
+        num_block_layers: int = 4,
+        thetas_dim: int = 3,
+        dropout: float = 0.1,
+        **kwargs,
     ):
-        super(GenericBlock, self).__init__(**kwargs)
-        self.train_sequence_length = train_sequence_length
-        self.predict_sequence_length = predict_sequence_length
-        self.hidden_size = hidden_size
-        self.n_block_layers = n_block_layers
+        super().__init__(**kwargs)
+        self.backcast_length = backcast_length
+        self.forecast_length = forecast_length
+        self.units = units
+        self.num_block_layers = num_block_layers
+        self.thetas_dim = thetas_dim
+        self.dropout = dropout
 
-    def build(self, input_shape: Tuple[Optional[int], ...]):
-        """Build the layer's weights.
+        # polynomial times basis (degree 0 .. thetas_dim-1), scaled like the reference
+        norm = np.sqrt(forecast_length / thetas_dim)
+        b_ls, f_ls = _linspace(backcast_length, forecast_length, centered=True)
+        powers = np.arange(thetas_dim)[:, None]
+        self._backcast_time = tf.constant(b_ls.astype(np.float32), dtype=tf.float32)
+        self._forecast_time = tf.constant(f_ls.astype(np.float32), dtype=tf.float32)
+        backcast_basis = (b_ls[None, :] ** powers) * norm  # (thetas_dim, backcast)
+        forecast_basis = (f_ls[None, :] ** powers) * norm  # (thetas_dim, forecast)
+        self._backcast_basis = tf.constant(backcast_basis.astype(np.float32), dtype=tf.float32)
+        self._forecast_basis = tf.constant(forecast_basis.astype(np.float32), dtype=tf.float32)
 
-        Parameters
-        ----------
-        input_shape : Tuple[Optional[int], ...]
-            Shape of the input tensor
-        """
-        super(GenericBlock, self).build(input_shape)
-        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
-        self.theta = Dense(self.train_sequence_length + self.predict_sequence_length, use_bias=False, activation=None)
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.layers_in = Dense(self.units, activation="relu")
+        self.dropouts = [Dropout(self.dropout) for _ in range(self.num_block_layers - 1)]
+        self.hidden = [Dense(self.units) for _ in range(self.num_block_layers - 1)]
+        self.theta = Dense(self.thetas_dim, use_bias=False)
 
-    def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        """Compute the output of the Generic Block.
-
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            A tensor of shape (batch_size, train_sequence_length, input_size)
-
-        Returns
-        -------
-        Tuple[tf.Tensor, tf.Tensor]
-            A tuple of two tensors:
-            - backcast: Shape (batch_size, train_sequence_length, output_size)
-            - forecast: Shape (batch_size, predict_sequence_length, output_size)
-        """
+    def call(self, inputs, training=None):
         x = inputs
-        for layer in self.layers:
-            x = layer(x)
-        x = self.theta(x)
-        return generic_model(x, tf.range(self.train_sequence_length), tf.range(self.predict_sequence_length))
+        x = self.layers_in(x)
+        for drop, dense in zip(self.dropouts, self.hidden):
+            x = tf.nn.relu(dense(drop(x, training=training)))
+        theta = self.theta(x)  # (batch, thetas_dim)
+        backcast = tf.matmul(theta, self._backcast_basis)  # (batch, backcast)
+        forecast = tf.matmul(theta, self._forecast_basis)  # (batch, forecast)
+        return backcast, forecast
 
     def compute_output_shape(self, input_shape):
-        batch_size = input_shape[0]
-        backcast_shape = (batch_size, self.train_sequence_length)
-        forecast_shape = (batch_size, self.predict_sequence_length)
-        return (backcast_shape, forecast_shape)
+        return (
+            (input_shape[0], self.backcast_length),
+            (input_shape[0], self.forecast_length),
+        )
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
-                "train_sequence_length": self.train_sequence_length,
-                "predict_sequence_length": self.predict_sequence_length,
-                "hidden_size": self.hidden_size,
-                "n_block_layers": self.n_block_layers,
+                "backcast_length": self.backcast_length,
+                "forecast_length": self.forecast_length,
+                "units": self.units,
+                "num_block_layers": self.num_block_layers,
+                "thetas_dim": self.thetas_dim,
+                "dropout": self.dropout,
             }
         )
         return config
 
 
-class TrendBlock(tf.keras.layers.Layer):
-    """Trend block that learns trend patterns using polynomial basis functions.
-
-    This block uses polynomial basis functions to model trends in the time series data.
-    It outputs both backcast (reconstruction of input) and forecast (prediction) components.
-
-    Parameters
-    ----------
-    train_sequence_length : int
-        Length of the input sequence
-    predict_sequence_length : int
-        Length of the prediction sequence
-    hidden_size : int
-        Number of units in the hidden layers
-    n_block_layers : int, optional
-        Number of fully connected layers in the block, by default 4
-    polynomial_term : int, optional
-        Degree of the polynomial basis functions, by default 2
-    """
+class SeasonalityBlock(Layer):
+    """Seasonality block: Fourier basis extrapolation."""
 
     def __init__(
         self,
-        train_sequence_length: int,
-        predict_sequence_length: int,
-        hidden_size: int,
-        n_block_layers: int = 4,
-        polynomial_term: int = 2,
-        **kwargs
+        backcast_length: int,
+        forecast_length: int,
+        units: int,
+        num_block_layers: int = 4,
+        thetas_dim: Optional[int] = None,
+        min_period: int = 7,
+        dropout: float = 0.1,
+        **kwargs,
     ):
         super().__init__(**kwargs)
+        if thetas_dim is None:
+            thetas_dim = forecast_length  # reference behaviour when no explicit harmonics
+        self.backcast_length = backcast_length
+        self.forecast_length = forecast_length
+        self.units = units
+        self.num_block_layers = num_block_layers
+        self.thetas_dim = thetas_dim
+        self.min_period = min_period
+        self.dropout = dropout
 
-        self.train_sequence_length = train_sequence_length
-        self.predict_sequence_length = predict_sequence_length
-        self.hidden_size = hidden_size
-        self.n_block_layers = n_block_layers
-        self.polynomial_size = polynomial_term + 1
+        b_ls, f_ls = _linspace(backcast_length, forecast_length, centered=False)
+        p1 = thetas_dim // 2
+        p2 = thetas_dim - p1
+        freqs1 = _frequency_grid(p1, backcast_length, forecast_length, min_period)
+        freqs2 = _frequency_grid(p2, backcast_length, forecast_length, min_period)
+        s1_b = np.cos(2.0 * np.pi * freqs1[:, None] * b_ls[None, :])
+        s2_b = np.sin(2.0 * np.pi * freqs2[:, None] * b_ls[None, :])
+        s1_f = np.cos(2.0 * np.pi * freqs1[:, None] * f_ls[None, :])
+        s2_f = np.sin(2.0 * np.pi * freqs2[:, None] * f_ls[None, :])
+        self._backcast_basis = tf.constant(np.vstack([s1_b, s2_b]).astype(np.float32), dtype=tf.float32)
+        self._forecast_basis = tf.constant(np.vstack([s1_f, s2_f]).astype(np.float32), dtype=tf.float32)
 
-        self.forecast_time = tf.concat(
-            [
-                tf.math.pow(tf.range(predict_sequence_length, dtype=tf.float32) / predict_sequence_length, i)[None, :]
-                for i in range(self.polynomial_size)
-            ],
-            axis=0,
-        )
-        self.backcast_time = tf.concat(
-            [
-                tf.math.pow(
-                    tf.range(train_sequence_length, dtype=tf.float32) / tf.cast(train_sequence_length, tf.float32), i
-                )[None, :]
-                for i in range(self.polynomial_size)
-            ],
-            axis=0,
-        )
-
-    def build(self, input_shape: Tuple[Optional[int], ...]):
-        """Build the layer's weights.
-
-        Parameters
-        ----------
-        input_shape : Tuple[Optional[int], ...]
-            Shape of the input tensor
-        """
+    def build(self, input_shape):
         super().build(input_shape)
-        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
-        self.theta = Dense(2 * self.polynomial_size, use_bias=False, activation=None)
+        self.layers_in = Dense(self.units, activation="relu")
+        self.dropouts = [Dropout(self.dropout) for _ in range(self.num_block_layers - 1)]
+        self.hidden = [Dense(self.units) for _ in range(self.num_block_layers - 1)]
+        self.theta = Dense(self.thetas_dim, use_bias=False)
 
-    def call(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        """Compute the output of the Trend Block.
-
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            A tensor of shape (batch_size, train_sequence_length, input_size)
-
-        Returns
-        -------
-        Tuple[tf.Tensor, tf.Tensor]
-            A tuple of two tensors:
-            - backcast: Shape (batch_size, train_sequence_length, output_size)
-            - forecast: Shape (batch_size, predict_sequence_length, output_size)
-        """
+    def call(self, inputs, training=None):
         x = inputs
-        for layer in self.layers:
-            x = layer(x)
-        x = self.theta(x)
-        return trend_model(x, self.backcast_time, self.forecast_time, self.polynomial_size)
+        x = self.layers_in(x)
+        for drop, dense in zip(self.dropouts, self.hidden):
+            x = tf.nn.relu(dense(drop(x, training=training)))
+        theta = self.theta(x)  # (batch, thetas_dim)
+        backcast = tf.matmul(theta, self._backcast_basis)  # (batch, backcast)
+        forecast = tf.matmul(theta, self._forecast_basis)  # (batch, forecast)
+        return backcast, forecast
 
     def compute_output_shape(self, input_shape):
-        return ((input_shape[0], self.train_sequence_length), (input_shape[0], self.predict_sequence_length))
-
-
-class SeasonalityBlock(tf.keras.layers.Layer):
-    """Seasonality block"""
-
-    def __init__(
-        self, train_sequence_length, predict_sequence_length, hidden_size, n_block_layers=4, num_harmonics=1, **kwargs
-    ):
-        super().__init__(**kwargs)
-        self.train_sequence_length = train_sequence_length
-        self.predict_sequence_length = predict_sequence_length
-        self.hidden_size = hidden_size
-        self.n_block_layers = n_block_layers
-        self.num_harmonics = num_harmonics
-        self.theta_size = 4 * int(np.ceil(num_harmonics / 2 * predict_sequence_length) - (num_harmonics - 1))
-
-        self.frequency = tf.concat(
-            [
-                tf.zeros(1, dtype=tf.float32),
-                tf.range(num_harmonics, num_harmonics / 2 * predict_sequence_length, dtype=tf.float32),
-            ],
-            axis=0,
+        return (
+            (input_shape[0], self.backcast_length),
+            (input_shape[0], self.forecast_length),
         )
-        self.backcast_grid = (
-            -2
-            * np.pi
-            * (
-                tf.range(self.train_sequence_length, dtype=tf.float32)[:, None]
-                / tf.cast(train_sequence_length, tf.float32)
-            )
-            * self.frequency
-        )
-        self.forecast_grid = (
-            2
-            * np.pi
-            * (
-                tf.range(predict_sequence_length, dtype=tf.float32)[:, None]
-                / tf.cast(predict_sequence_length, tf.float32)
-            )
-            * self.frequency
-        )
-        self.backcast_cos_template = tf.transpose(tf.cos(self.backcast_grid))
-        self.backcast_sin_template = tf.transpose(tf.sin(self.backcast_grid))
-        self.forecast_cos_template = tf.transpose(tf.cos(self.forecast_grid))
-        self.forecast_sin_template = tf.transpose(tf.sin(self.forecast_grid))
-
-    def build(self, input_shape: Tuple[Optional[int], ...]):
-        super().build(input_shape)
-        self.layers = [Dense(self.hidden_size, activation="relu") for _ in range(self.n_block_layers)]
-        self.theta = Dense(self.theta_size, use_bias=False, activation=None)
-
-    def call(self, inputs):
-        """Compute the output of the Seasonality Block.
-
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            A tensor of shape (batch_size, train_sequence_length, input_size)
-
-        Returns
-        -------
-        Tuple[tf.Tensor, tf.Tensor]
-            A tuple of two tensors:
-            - backcast: Shape (batch_size, train_sequence_length, output_size)
-            - forecast: Shape (batch_size, predict_sequence_length, output_size)
-        """
-        x = inputs
-        for layer in self.layers:
-            x = layer(x)
-        x = self.theta(x)
-
-        config_per_harmonic = self.theta_size // 4
-
-        return seasonality_model(
-            x,
-            self.backcast_grid,
-            self.forecast_grid,
-            config_per_harmonic,
-            self.backcast_cos_template,
-            self.backcast_sin_template,
-            self.forecast_cos_template,
-            self.forecast_sin_template,
-        )
-
-    def compute_output_shape(self, input_shape):
-        batch_size = input_shape[0]
-        backcast_shape = (batch_size, self.train_sequence_length)
-        forecast_shape = (batch_size, self.predict_sequence_length)
-        return (backcast_shape, forecast_shape)
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
-                "train_sequence_length": self.train_sequence_length,
-                "predict_sequence_length": self.predict_sequence_length,
-                "hidden_size": self.hidden_size,
-                "n_block_layers": self.n_block_layers,
-                "num_harmonics": self.num_harmonics,
+                "backcast_length": self.backcast_length,
+                "forecast_length": self.forecast_length,
+                "units": self.units,
+                "num_block_layers": self.num_block_layers,
+                "thetas_dim": self.thetas_dim,
+                "min_period": self.min_period,
+                "dropout": self.dropout,
+            }
+        )
+        return config
+
+
+class GenericBlock(Layer):
+    """Generic (fully-connected) N-BEATS block, kept for API compatibility.
+
+    The trend/seasonality interpretable blocks are used for parity; this generic MLP
+    block produces a backcast/forecast pair via a wider ``theta`` output split in two.
+    """
+
+    def __init__(
+        self,
+        backcast_length: int,
+        forecast_length: int,
+        units: int,
+        num_block_layers: int = 4,
+        thetas_dim: Optional[int] = None,
+        dropout: float = 0.1,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if thetas_dim is None:
+            thetas_dim = backcast_length + forecast_length
+        self.backcast_length = backcast_length
+        self.forecast_length = forecast_length
+        self.units = units
+        self.num_block_layers = num_block_layers
+        self.thetas_dim = thetas_dim
+        self.dropout = dropout
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.layers_in = Dense(self.units, activation="relu")
+        self.dropouts = [Dropout(self.dropout) for _ in range(self.num_block_layers - 1)]
+        self.hidden = [Dense(self.units) for _ in range(self.num_block_layers - 1)]
+        self.theta = Dense(self.thetas_dim, use_bias=False)
+
+    def call(self, inputs, training=None):
+        x = inputs
+        x = self.layers_in(x)
+        for drop, dense in zip(self.dropouts, self.hidden):
+            x = tf.nn.relu(dense(drop(x, training=training)))
+        theta = self.theta(x)
+        backcast = theta[:, : self.backcast_length]
+        forecast = theta[:, -self.forecast_length:]
+        return backcast, forecast
+
+    def compute_output_shape(self, input_shape):
+        return (
+            (input_shape[0], self.backcast_length),
+            (input_shape[0], self.forecast_length),
+        )
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "backcast_length": self.backcast_length,
+                "forecast_length": self.forecast_length,
+                "units": self.units,
+                "num_block_layers": self.num_block_layers,
+                "thetas_dim": self.thetas_dim,
+                "dropout": self.dropout,
             }
         )
         return config
