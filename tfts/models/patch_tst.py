@@ -5,7 +5,11 @@
 
 from typing import Dict, Optional
 
-from keras import ops
+try:
+    from keras import ops
+except ImportError:  # Keras 2 bundled with TensorFlow < 2.16
+    ops = None
+
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, LayerNormalization
 
@@ -109,7 +113,8 @@ class PatchTST(BaseModel):
         patch_in = self.config.patch_size * in_ch  # static
 
         # [batch, num_patches, patch_size*in_ch]  (batch dim via -1)
-        patches = ops.reshape(
+        reshape = ops.reshape if ops is not None else tf.reshape
+        patches = reshape(
             encoder_feature[:, : num_patches * self.config.patch_size, :],
             (-1, num_patches, patch_in),
         )
@@ -127,7 +132,7 @@ class PatchTST(BaseModel):
         x = self.output_projection(x)
 
         # Reshape to [batch, predict_len, output_size]
-        x = ops.reshape(x, (-1, self.predict_sequence_length, self.config.output_size))
+        x = reshape(x, (-1, self.predict_sequence_length, self.config.output_size))
         return x
 
 

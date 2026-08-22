@@ -662,7 +662,9 @@ class EagerTrainer(object):
         y_valid_trues, y_valid_preds = [], []
         for valid_step, (x_valid, y_valid) in enumerate(valid_loader):
             y_valid_pred, valid_step_loss = self._valid_step(x_valid, y_valid)
-            valid_loss += valid_step_loss
+            # Keep the accumulator a Python float. Older TensorFlow releases
+            # do not support formatting a bfloat16 tensor with ``:.4f``.
+            valid_loss += float(valid_step_loss)
             y_valid_trues.append(y_valid)
             y_valid_preds.append(y_valid_pred)
         valid_scores = []

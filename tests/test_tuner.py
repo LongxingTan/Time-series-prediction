@@ -1,3 +1,4 @@
+import builtins
 import unittest
 from unittest.mock import Mock, patch
 
@@ -88,8 +89,16 @@ class OptunaTunerTest(unittest.TestCase):
         self.assertEqual(self.tuner.get_best_params(), {"model_type": "rnn"})
         self.assertEqual(self.tuner.get_best_score(), 0.2)
 
-        with self.assertRaisesRegex(ImportError, "optuna is required"):
-            optuna_tuner._require_optuna()
+        original_import = builtins.__import__
+
+        def import_without_optuna(name, *args, **kwargs):
+            if name == "optuna":
+                raise ImportError("simulated missing optional dependency")
+            return original_import(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", side_effect=import_without_optuna):
+            with self.assertRaisesRegex(ImportError, "optuna is required"):
+                optuna_tuner._require_optuna()
 
     def test_default_optimizer_is_a_tensorflow_optimizer(self):
         optimizer = optuna_tuner._default_optimizer(0.001)
