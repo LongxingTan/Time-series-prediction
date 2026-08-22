@@ -14,6 +14,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # The dynamic-versioning plugin reads the Git tag to determine the package version.
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -24,10 +28,21 @@ jobs:
         shell: bash
         run: |
           curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
-          python -m pip install poetry-dynamic-versioning[plugin]
 
       - name: Set poetry path variable
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Poetry dynamic versioning plugin
+        run: poetry self add "poetry-dynamic-versioning[plugin]"
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          expected_version="${RELEASE_TAG#v}"
+          actual_version="$(poetry version -s)"
+          test "$actual_version" = "$expected_version"
+          poetry version
 
       - name: Build
         run: |
