@@ -13,6 +13,20 @@ Dive deeper with these notebooks:
 - [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/single_step_weather_prediction.ipynb): A guided example on predicting the next time point in weather data.
 - [multi steps prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/multi_steps_sales_prediction.ipynb): Learn how to forecast multiple future time points in a sales dataset.
 
+## 💾 Save, load, and fine-tune
+
+Use the TFTS pretrained format when the restored model will be trained further:
+
+```python
+model.save_pretrained("./my_model")
+restored = AutoModel.from_pretrained("./my_model")
+```
+
+Concrete model classes support the same API, for example
+`TCN.from_pretrained("./my_model")`. To load a raw Keras archive for inference,
+use `tfts.load_model("./my_model.keras", compile=False)`; TFTS custom layers are
+discovered automatically.
+
 ## 📊 Benchmark
 - [Kaggle - Forecasting Sticker Sales](https://www.kaggle.com/competitions/playground-series-s5e1)
 

@@ -332,6 +332,29 @@ Can I use pretrained models?
    trainer = KerasTrainer(new_model)
    trainer.train(new_data, epochs=10)
 
+How do I load a ``.keras`` model with TFTS custom layers?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the TFTS loader. It discovers custom TFTS layers such as ``DataEmbedding``
+and the model-specific ``Encoder`` automatically, so ``custom_objects`` is not
+required:
+
+.. code-block:: python
+
+   import tfts
+
+   model = tfts.load_model('./my_model.keras', compile=False)
+
+To keep a model in TFTS form for further fine-tuning, use the pretrained API on
+the concrete model class:
+
+.. code-block:: python
+
+   from tfts.models.tcn import TCN
+
+   model.save_pretrained('./my_tcn')
+   model = TCN.from_pretrained('./my_tcn')
+
 
 Production & Deployment
 -----------------------

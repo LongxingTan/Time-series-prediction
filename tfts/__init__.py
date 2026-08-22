@@ -22,6 +22,7 @@ from tfts.models.auto_model import (
     AutoModelForUncertainty,
 )
 from tfts.models.registry import list_models
+from tfts.saving import load_model
 
 # Legacy compatibility
 from tfts.tasks.pipeline import Pipeline
@@ -79,6 +80,7 @@ __all__ = [
     "AutoModelForUncertainty",
     "AutoConfig",
     "list_models",
+    "load_model",
     # -- Training --
     "Trainer",
     "KerasTrainer",

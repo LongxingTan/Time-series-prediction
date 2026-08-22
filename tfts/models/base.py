@@ -97,6 +97,50 @@ class BaseModel(ABC):
         self.model = tf.keras.models.load_model(weights_dir)
         # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
 
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Union[str, os.PathLike],
+        predict_sequence_length: Optional[int] = None,
+    ):
+        """Rebuild a model from its TFTS config and load its saved weights.
+
+        Models returned by this method remain regular TFTS model instances and
+        can be passed directly to a trainer for further fine-tuning.
+        """
+        from .auto_config import AutoConfig
+
+        model_dir = os.fspath(pretrained_model_name_or_path)
+        if not os.path.isdir(model_dir):
+            raise FileNotFoundError(f"Pretrained model directory not found at {model_dir}")
+
+        base_config = BaseConfig.from_pretrained(model_dir)
+        model_type = getattr(base_config, "model_type", None)
+        if model_type is None:
+            raise ValueError(f"Missing 'model_type' in {os.path.join(model_dir, CONFIG_NAME)}")
+
+        config = AutoConfig.for_model(model_type)
+        config.update(base_config.to_dict())
+        prediction_length = predict_sequence_length or getattr(config, "predict_sequence_length", 1)
+        model = cls(config=config, predict_sequence_length=prediction_length)
+
+        input_shape = getattr(config, "input_shape", None)
+        if input_shape is None:
+            raise ValueError("Missing `input_shape` in the pretrained model config")
+        if isinstance(input_shape, dict):
+            inputs = {key: tf.keras.Input(shape=shape, name=key) for key, shape in input_shape.items()}
+        elif isinstance(input_shape[0], (list, tuple)):
+            inputs = [tf.keras.Input(shape=shape, name=f"input_{i}") for i, shape in enumerate(input_shape)]
+        else:
+            inputs = tf.keras.Input(shape=input_shape, name="input")
+
+        model.build_model(inputs)
+        weights_path = os.path.join(model_dir, TF2_WEIGHTS_NAME)
+        if not os.path.isfile(weights_path):
+            raise FileNotFoundError(f"Model weights not found at {weights_path}")
+        model.model.load_weights(weights_path)
+        return model
+
     def _prepare_3d_inputs(self, inputs, ignore_decoder_inputs=True):
         """
         Prepares 3D inputs for model processing by extracting and formatting features from various input types.
@@ -144,6 +188,7 @@ class BaseModel(ABC):
         name = self.__class__.__name__
         architecture = getattr(self.config, "model_type", name)
         self.config.architectures = [architecture]
+        self.config.predict_sequence_length = self.predict_sequence_length
         self.config.save_pretrained(save_directory)
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension

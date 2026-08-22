@@ -69,6 +69,8 @@ def train_model(args):
         epochs=args.epochs,
         batch_size=args.batch_size,
     )
+    # Trainer.save_model stores the TFTS config + weights, so the model can be
+    # reconstructed for inference or fine-tuning without Keras custom_objects.
     trainer.save_model(args.output_dir)
     print(f"Model trained and saved to {args.output_dir}")
 
@@ -78,9 +80,7 @@ def perform_inference(args):
     x_test, y_test, _ = load_and_preprocess_data(args)
 
     print("Starting inference...")
-    config = AutoConfig.for_model(args.use_model)
-    config.train_sequence_length = args.train_length
-    model = AutoModelForAnomaly.from_pretrained(weights_dir=args.output_dir)
+    model = AutoModelForAnomaly.from_pretrained(args.output_dir)
 
     anomaly_scores = model.detect(x_test, y_test)
     return _, anomaly_scores
