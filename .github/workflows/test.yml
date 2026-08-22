@@ -96,6 +96,11 @@ jobs:
             "tensorflow==${{ matrix.tf-version }}" \
             "pandas>=1.3" \
             matplotlib
+          if [[ "${{ matrix.python-version }}" == "3.8" && "${{ matrix.tf-version }}" == "2.13.1" ]]; then
+            # jsonschema 4.23.0 needs this dependency on Python <3.9, but
+            # Poetry 1.8.5 does not include it from the lock metadata.
+            poetry run python -m pip install "pkgutil-resolve-name>=1.3.10"
+          fi
           poetry run python -m pip check
 
       - name: Print runtime versions
