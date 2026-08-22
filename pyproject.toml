@@ -26,12 +26,14 @@ exclude = '''
 isort = 1
 black = 1
 
-[tool.poetry]
+[project]
 name = "tfts"
-readme = "README.md"  # Markdown files are supported
-version = "0.0.4"  # is being replaced automatically
-
-authors = ["Longxing Tan"]
+dynamic = ["version"]
+description = "Deep learning time series with TensorFlow"
+readme = "README.md"
+requires-python = ">=3.8,<3.15"
+license = { file = "LICENSE" }
+authors = [{ name = "Longxing Tan" }]
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
@@ -49,51 +51,58 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: MIT License"]
-description = "Deep learning time series with TensorFlow"
-repository = "https://github.com/LongxingTan/Time-series-prediction"
-documentation = "https://time-series-prediction.readthedocs.io"
-homepage = "https://time-series-prediction.readthedocs.io"
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "pandas>=1.3.0",
+    "tensorflow>=2.4",
+]
 
-[tool.poetry.scripts]
+[project.urls]
+Homepage = "https://time-series-prediction.readthedocs.io"
+Documentation = "https://time-series-prediction.readthedocs.io"
+Repository = "https://github.com/LongxingTan/Time-series-prediction"
+
+[project.scripts]
 tfts-forecast = "tfts.cli.forecasting:main"
 
-[tool.poetry.dependencies]
-python = ">=3.8,<3.15"
-pandas = ">=1.3.0"
-tensorflow = ">=2.4"
+[dependency-groups]
+dev = [
+    "black[jupyter]==24.8.0",
+    "coverage",
+    "flake8==5.0.4",
+    "invoke",
+    "ipykernel",
+    "ipywidgets>=8.0.1",
+    "isort==5.10.1",
+    "mypy",
+    "nbqa",
+    "pre-commit>=2.20.0",
+    "pyarrow>=10.0.0",
+    "pylint",
+]
+docs = [
+    "cloudpickle",
+    "docutils",
+    "ipython",
+    "matplotlib",
+    "nbconvert>=6.3.0",
+    "nbsphinx",
+    "optuna>=2.0",
+    "pandoc",
+    "pydata-sphinx-theme",
+    "recommonmark",
+    "scikit-learn>0.23",
+    "sphinx>3.2",
+    "sphinx-autobuild",
+    "sphinx-markdown-tables",
+]
+release = ["hatch-vcs", "hatchling"]
+test = ["coverage"]
 
-
-[tool.poetry.group.dev.dependencies]
-
-# checks and make tools
-pre-commit = "^2.20.0"
-invoke = "*"
-flake8 = "*"
-mypy = "*"
-pylint = "*"
-isort = "*"
-coverage = "*"
-
-# jupyter notebook
-ipykernel = "*"
-pyarrow = ">=10.0.0"
-black = { version = "*", allow-prereleases = true, extras = ["jupyter"] }
-
-# documentation
-sphinx = "*"
-pydata-sphinx-theme = "*"
-nbsphinx = "*"
-# pandoc = "*"
-recommonmark = "*"
-ipywidgets = "^8.0.1"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-dirty = false
-style = "semver"  # semantic versioning
+[tool.hatch.version]
+source = "vcs"
 
 [build-system]  # make the package pip installable
-requires = ["poetry-core>=1.0.7", "poetry-dynamic-versioning>=0.13.1"]
-build-backend = "poetry_dynamic_versioning.backend"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"

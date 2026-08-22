@@ -119,7 +119,7 @@ class Encoder(tf.keras.layers.Layer):
         hidden_dropout_prob,
         prob_attention=False,
         distil_conv=False,
-        **kwargs
+        **kwargs,
     ) -> None:
         super(Encoder, self).__init__(**kwargs)
         self.hidden_size = hidden_size
@@ -258,7 +258,7 @@ class Decoder(tf.keras.layers.Layer):
         ffn_intermediate_size,
         hidden_dropout_prob,
         prob_attention=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.hidden_size = hidden_size

@@ -37,7 +37,7 @@ class PatchTSTConfig(BaseConfig):
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
         patch_size: int = 16,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Initializes the configuration for the PatchTST model with the specified parameters.

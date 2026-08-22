@@ -128,7 +128,7 @@ class MoeMLP(tf.keras.layers.Layer):
         kernel_initializer: str = "glorot_uniform",
         bias_initializer: str = "zeros",
         use_bias: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.hidden_size = hidden_size

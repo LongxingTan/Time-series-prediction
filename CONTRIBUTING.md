@@ -10,7 +10,22 @@ Once you finish implementing a feature a bug-fix, please send a Pull Request to 
 
 ## Developing TFTS
 
-To develop tfts on your machine, here are some tips:
+Install [uv](https://docs.astral.sh/uv/) and create the locked development environment:
+
+```sh
+uv sync --group docs
+uv run pre-commit install
+```
+
+Before submitting a change, run the same checks used by CI:
+
+```sh
+make style
+make test
+make docs
+```
+
+To develop tfts on your machine, follow these guidelines:
 
 1. Uninstall existing tfts installations:
 2. Clone a copy of tfts from source

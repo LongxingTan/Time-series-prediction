@@ -19,37 +19,31 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
+          version: "0.6.17"
           python-version: '3.12'
+          enable-cache: true
 
-      - name: Install poetry
-        shell: bash
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
-
-      - name: Set poetry path variable
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install Poetry dynamic versioning plugin
-        run: poetry self add "poetry-dynamic-versioning[plugin]"
+      - name: Install release tooling
+        run: uv sync --frozen --only-group release
 
       - name: Verify release version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           expected_version="${RELEASE_TAG#v}"
-          actual_version="$(poetry version -s)"
+          actual_version="$(uv run --no-sync hatchling version)"
           test "$actual_version" = "$expected_version"
-          poetry version
+          echo "Building tfts $actual_version"
 
       - name: Build
         run: |
-          poetry build
+          uv build --python .venv/bin/python --no-build-isolation
 
       - name: Publish distribution 📦 to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
-          poetry publish
+          uv publish

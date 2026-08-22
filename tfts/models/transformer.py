@@ -41,7 +41,7 @@ class TransformerConfig(BaseConfig):
         classifier_dropout: Optional[float] = None,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """
         Initializes the configuration for the Transformer model with the specified parameters.
@@ -163,7 +163,7 @@ class Encoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
-        **kwargs
+        **kwargs,
     ):
         super(Encoder, self).__init__(**kwargs)
         self.num_hidden_layers = num_hidden_layers
@@ -244,7 +244,7 @@ class Decoder(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
-        **kwargs
+        **kwargs,
     ) -> None:
         super(Decoder, self).__init__(**kwargs)
         self.predict_sequence_length = predict_sequence_length
@@ -281,7 +281,7 @@ class Decoder(tf.keras.layers.Layer):
         teacher: Optional[tf.Tensor] = None,
         scheduled_sampling: float = 0.0,
         training: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """Transformer decoder"""
         input_x = init_input
@@ -366,7 +366,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         ffn_intermediate_size: int,
         hidden_dropout_prob: float,
         layer_norm_eps: float = 1e-9,
-        **kwargs
+        **kwargs,
     ) -> None:
         super(DecoderLayer, self).__init__(**kwargs)
         self.num_decoder_layers = num_decoder_layers

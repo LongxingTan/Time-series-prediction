@@ -13,14 +13,16 @@ jobs:
       steps:
         - name: Checkout
           uses: actions/checkout@v4
-        - name: Set up Python 3.8
-          uses: actions/setup-python@v5
+        - name: Install uv
+          uses: astral-sh/setup-uv@v6
           with:
-            python-version: 3.8
-        - name: Install Black
-          run: pip install "black[jupyter]==24.8.0"
+            version: "0.6.17"
+            python-version: "3.8"
+            enable-cache: true
+        - name: Install dependencies
+          run: uv sync --frozen --only-group dev
         - name: Run Black
-          run: black --check .
+          run: uv run --no-sync black --check tfts examples tests
 
   imports-check-isort:
     name: Check valid import formatting with isort
@@ -28,14 +30,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: 3.8
-      - name: Install isort
-        run: pip install isort==5.6.4
+          version: "0.6.17"
+          python-version: "3.8"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen --only-group dev
       - name: Run isort
-        run: isort --check-only --diff .
+        run: uv run --no-sync isort --check-only --diff .
 
   linter-flake8:
     name: Check valid formatting with flake8
@@ -44,14 +48,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: 3.8
-
+          version: "0.6.17"
+          python-version: "3.8"
+          enable-cache: true
       - name: Install dependencies
-        run: pip install flake8==3.9.2
+        run: uv sync --frozen --only-group dev
       - name: Run checks
-        run: flake8
+        run: uv run --no-sync flake8
 
   pre-commit-hooks:
     name: Check that pre-commit hooks pass
@@ -60,11 +66,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: 3.8
+          version: "0.6.17"
+          python-version: "3.8"
+          enable-cache: true
       - name: Install dependencies
-        run: pip install pre-commit
-
+        run: uv sync --frozen --only-group dev
       - name: Run checks
-        run: pre-commit run --all-files
+        run: uv run --no-sync pre-commit run --all-files

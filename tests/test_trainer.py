@@ -308,7 +308,7 @@ class EagerTrainerTest(unittest.TestCase):
             train_loader=self.train_loader,
             valid_loader=self.valid_loader,
             optimizer=tf.keras.optimizers.Adam(0.003),
-            **self.fit_config
+            **self.fit_config,
         )
         trainer.predict(self.valid_loader)
         trainer.save_model(model_dir="./weights", only_pb=True)
@@ -510,7 +510,7 @@ class KerasTrainerTest(unittest.TestCase):
             train_dataset=(x_train, y_train),
             valid_dataset=(x_valid, y_valid),
             optimizer=tf.keras.optimizers.Adam(0.003),
-            **self.fit_config
+            **self.fit_config,
         )
         y_valid_pred = trainer.predict(x_valid)
         self.assertEqual(y_valid_pred.shape, (1, 2, 1))

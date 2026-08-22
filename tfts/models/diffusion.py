@@ -33,7 +33,7 @@ class DiffusionConfig(BaseConfig):
         num_diffusion_steps: int = 1000,
         beta_start: float = 1e-4,
         beta_end: float = 0.02,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Initializes the configuration for the Diffusion model with the specified parameters.

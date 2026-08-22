@@ -102,11 +102,11 @@ If you plan to contribute or modify TFTS, install development dependencies:
 
    git clone https://github.com/LongxingTan/Time-series-prediction.git
    cd Time-series-prediction
-   pip install poetry
-   poetry install --only dev
-   poetry run python -m pip install "tensorflow>=2.4" "pandas>=1.3"
+   # Install uv: https://docs.astral.sh/uv/getting-started/installation/
+   uv sync --group docs
+   uv run pre-commit install
 
-This installs additional tools for testing, linting, and documentation.
+This installs the locked tools for testing, linting, and documentation.
 
 
 Using Docker

@@ -32,7 +32,7 @@ class TimesFmConfig(BaseConfig):
         initializer_range: float = 0.02,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
         self.hidden_size = hidden_size
