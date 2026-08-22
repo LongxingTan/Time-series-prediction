@@ -1,9 +1,13 @@
 """Univariate Normal distribution output head."""
 
 import math
-from typing import Dict
+from typing import Dict, Optional
 
-from keras import ops
+try:
+    from keras import ops
+except ImportError:  # Keras 2 bundled with TensorFlow < 2.16
+    ops = None
+
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
@@ -42,13 +46,13 @@ class NormalOutput(DistributionOutput):
     def parameters(self, hidden_states: tf.Tensor) -> Dict[str, tf.Tensor]:
         loc = self.loc_layer(hidden_states)
         scale_param = self.scale_layer(hidden_states)
-        scale = ops.softplus(scale_param) + self.epsilon
+        scale = (ops.softplus(scale_param) if ops is not None else tf.nn.softplus(scale_param)) + self.epsilon
         return {"loc": loc, "scale": scale}
 
     def mean(self, parameters: Dict[str, tf.Tensor]) -> tf.Tensor:
         return parameters["loc"]
 
-    def sample(self, parameters: Dict[str, tf.Tensor], seed: int | None = None) -> tf.Tensor:
+    def sample(self, parameters: Dict[str, tf.Tensor], seed: Optional[int] = None) -> tf.Tensor:
         loc = parameters["loc"]
         scale = parameters["scale"]
         if seed is None:

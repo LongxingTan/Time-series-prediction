@@ -14,6 +14,7 @@ import numpy as np
 from ..models.auto_config import AutoConfig
 from ..models.auto_model import AutoModel
 from ..trainer import Trainer
+from ..training.runtime import create_adamw
 
 logger = logging.getLogger(__name__)
 
@@ -236,9 +237,4 @@ class OptunaTuner:
 
 def _default_optimizer(lr: float):
     """Create a default optimizer with the given learning rate."""
-    import tensorflow as tf
-
-    try:
-        return tf.keras.optimizers.AdamW(learning_rate=lr, weight_decay=1e-4)
-    except AttributeError:
-        return tf.keras.optimizers.Adam(learning_rate=lr)
+    return create_adamw(learning_rate=lr, weight_decay=1e-4)

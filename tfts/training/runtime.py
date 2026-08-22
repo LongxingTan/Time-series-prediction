@@ -5,13 +5,43 @@ pipelines, and future custom loops can share the same behavior.
 """
 
 import logging
-from typing import Optional
+import platform
+from typing import Any, Optional
 
 import tensorflow as tf
 
 from ..training_args import TrainingArguments
 
 logger = logging.getLogger(__name__)
+
+
+def create_adamw(learning_rate: Any, **kwargs: Any) -> tf.keras.optimizers.Optimizer:
+    """Create an AdamW optimizer across legacy and current Keras runtimes.
+
+    TensorFlow's legacy AdamW is considerably faster on Apple Silicon for the
+    Keras 2 runtime used by TensorFlow 2.13/2.15. Keras 3 intentionally does
+    not support that legacy namespace, so it falls back to the current AdamW.
+    """
+    optimizer_kwargs = dict(kwargs)
+    optimizer_kwargs["learning_rate"] = learning_rate
+    is_apple_silicon = platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}
+
+    if is_apple_silicon:
+        try:
+            legacy_adamw = tf.keras.optimizers.legacy.AdamW
+        except (AttributeError, ImportError):
+            legacy_adamw = None
+        if legacy_adamw is not None:
+            try:
+                return legacy_adamw(**optimizer_kwargs)
+            except (AttributeError, ImportError):
+                pass
+
+    try:
+        return tf.keras.optimizers.AdamW(**optimizer_kwargs)
+    except AttributeError:
+        optimizer_kwargs.pop("weight_decay", None)
+        return tf.keras.optimizers.Adam(**optimizer_kwargs)
 
 
 def _create_mirrored_strategy() -> tf.distribute.Strategy:

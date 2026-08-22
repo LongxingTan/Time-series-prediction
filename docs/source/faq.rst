@@ -105,7 +105,7 @@ How do I enable GPU support?
 
 .. code-block:: bash
 
-   pip install tensorflow[and-cuda]
+   pip install "tensorflow[and-cuda]"
 
 3. Verify:
 
