@@ -104,8 +104,14 @@ class TestFeatureRegistry(unittest.TestCase):
 
     def test_save_invalid_path(self):
         """Test saving to invalid path."""
-        with self.assertRaises(Exception):
-            self.registry.save("/invalid/path/features.json")
+        # Use a file as a path component; unlike /invalid/path, this is
+        # guaranteed to be invalid on both POSIX and Windows.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent_file = os.path.join(temp_dir, "not_a_directory")
+            with open(parent_file, "w"):
+                pass
+            with self.assertRaises(Exception):
+                self.registry.save(os.path.join(parent_file, "features.json"))
 
     def test_load_nonexistent_file(self):
         """Test loading from nonexistent file."""
@@ -114,19 +120,21 @@ class TestFeatureRegistry(unittest.TestCase):
 
     def test_load_invalid_json(self):
         """Test loading invalid JSON file."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as f:
-            f.write("invalid json")
-            f.flush()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filepath = os.path.join(temp_dir, "invalid.json")
+            with open(filepath, "w") as f:
+                f.write("invalid json")
             with self.assertRaises(json.JSONDecodeError):
-                self.registry.load(f.name)
+                self.registry.load(filepath)
 
     def test_load_invalid_format(self):
         """Test loading file with invalid format."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as f:
-            json.dump({"invalid": "format"}, f)
-            f.flush()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filepath = os.path.join(temp_dir, "invalid.json")
+            with open(filepath, "w") as f:
+                json.dump({"invalid": "format"}, f)
             with self.assertRaises(ValueError):
-                self.registry.load(f.name)
+                self.registry.load(filepath)
 
     def test_repr(self):
         """Test string representation."""

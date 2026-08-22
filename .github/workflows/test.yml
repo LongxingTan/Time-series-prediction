@@ -87,6 +87,11 @@ jobs:
           # Install the tooling from the lock file, but let pip select the
           # TensorFlow wheel for this OS/architecture and matrix version.
           poetry install --only dev --no-interaction --no-root
+          if [[ "${{ matrix.tf-version }}" == "2.13.1" ]]; then
+            # TensorFlow 2.13.1 requires typing-extensions<4.6, while mypy
+            # requires typing-extensions>=4.6. Mypy is not used by this job.
+            poetry run python -m pip uninstall --yes mypy
+          fi
           poetry run python -m pip install --upgrade --force-reinstall \
             "tensorflow==${{ matrix.tf-version }}" \
             "pandas>=1.3" \

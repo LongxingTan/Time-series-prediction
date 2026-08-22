@@ -34,15 +34,19 @@ class BenchmarkResultsTest(unittest.TestCase):
                 raise ImportError("pandas disabled for fallback test")
             return original_import(name, *args, **kwargs)
 
-        with tempfile.NamedTemporaryFile(suffix=".csv") as tmp:
+        # A NamedTemporaryFile remains open on Windows and cannot be reopened
+        # by to_csv.  Use a temporary directory so the exporter can own the
+        # output file handle on every platform.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "results.csv")
             try:
                 builtins.__import__ = import_without_pandas
-                results.to_csv(tmp.name)
+                results.to_csv(output_path)
             finally:
                 builtins.__import__ = original_import
 
-            tmp.seek(0)
-            rows = list(csv.DictReader(line.decode("utf-8") for line in tmp.readlines()))
+            with open(output_path, "rb") as output:
+                rows = list(csv.DictReader(line.decode("utf-8") for line in output.readlines()))
 
         self.assertEqual(rows[0]["dataset"], "synthetic")
         self.assertEqual(rows[0]["model"], "rnn")
@@ -100,19 +104,21 @@ class BenchmarkResultsTest(unittest.TestCase):
         self.assertEqual(pivot["unknown"]["unknown"]["mae"], [1.0])
         self.assertEqual(pivot["unknown"]["unknown"]["invalid"], [])
 
-        with tempfile.NamedTemporaryFile(suffix=".tex") as tmp:
-            results.to_latex(tmp.name, metric="rmse")
-            tmp.seek(0)
-            latex = tmp.read().decode("utf-8")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "results.tex")
+            results.to_latex(output_path, metric="rmse")
+            with open(output_path, "rb") as output:
+                latex = output.read().decode("utf-8")
         self.assertIn("rmse", latex)
         self.assertIn("-", latex)
 
-        with tempfile.NamedTemporaryFile(suffix=".tex") as tmp:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "results.tex")
             BenchmarkResults([{"dataset": "first", "model": "only", "metrics": {"mae": 1.0}}]).to_latex(
-                tmp.name, metric="mae"
+                output_path, metric="mae"
             )
-            tmp.seek(0)
-            self.assertIn("1.0000", tmp.read().decode("utf-8"))
+            with open(output_path, encoding="utf-8") as output:
+                self.assertIn("1.0000", output.read())
 
     def test_empty_exports_and_console_output(self):
         empty = BenchmarkResults([])
