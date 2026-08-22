@@ -1,7 +1,7 @@
 """Univariate Normal distribution output head."""
 
 import math
-from typing import Dict
+from typing import Dict, Optional
 
 try:
     from keras import ops
@@ -52,7 +52,7 @@ class NormalOutput(DistributionOutput):
     def mean(self, parameters: Dict[str, tf.Tensor]) -> tf.Tensor:
         return parameters["loc"]
 
-    def sample(self, parameters: Dict[str, tf.Tensor], seed: int | None = None) -> tf.Tensor:
+    def sample(self, parameters: Dict[str, tf.Tensor], seed: Optional[int] = None) -> tf.Tensor:
         loc = parameters["loc"]
         scale = parameters["scale"]
         if seed is None:

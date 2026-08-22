@@ -27,15 +27,22 @@ System Requirements
 ~~~~~~~~~~~~~~~~~~~
 
 **Minimum Requirements:**
-   - Python 3.7 or higher
+   - Python 3.8 through 3.14 (runtime availability follows TensorFlow wheels)
    - 4GB RAM (8GB+ recommended)
    - 2GB disk space
 
 **Recommended:**
-   - Python 3.8+
+   - Python 3.11 through 3.13 for the currently available TensorFlow wheels
    - 16GB RAM for training large models
    - NVIDIA GPU with CUDA support (for GPU training)
    - 5GB+ disk space (including datasets and model checkpoints)
+
+.. note::
+
+   Python 3.14 is currently covered by the package source and wheel-build
+   checks. A full TensorFlow runtime check on Python 3.14 will be added when
+   TensorFlow publishes a compatible wheel; the current stable release is
+   tested here on Python 3.13.
 
 Dependencies
 ~~~~~~~~~~~~
@@ -43,9 +50,8 @@ Dependencies
 TFTS requires the following core dependencies:
 
 **Required:**
-   - ``tensorflow >= 2.4.0``
-   - ``numpy >= 1.19.0``
-   - ``pandas >= 1.1.0``
+   - ``tensorflow >= 2.4`` (CI tests 2.13, 2.15, 2.16, 2.20, and 2.21)
+   - ``pandas >= 1.3.0``
 
 **Optional but Recommended:**
    - ``scikit-learn >= 0.24.0`` (for preprocessing)
@@ -96,7 +102,9 @@ If you plan to contribute or modify TFTS, install development dependencies:
 
    git clone https://github.com/LongxingTan/Time-series-prediction.git
    cd Time-series-prediction
-   pip install -e ".[dev]"
+   pip install poetry
+   poetry install --only dev
+   poetry run python -m pip install "tensorflow>=2.4" "pandas>=1.3"
 
 This installs additional tools for testing, linting, and documentation.
 
@@ -146,17 +154,16 @@ For GPU acceleration, install TensorFlow with CUDA support:
 
 .. code-block:: bash
 
-   pip install tensorflow[and-cuda]
+   pip install "tensorflow[and-cuda]"
 
 **Manual CUDA Installation:**
 
-1. Install CUDA Toolkit: https://developer.nvidia.com/cuda-downloads
-2. Install cuDNN: https://developer.nvidia.com/cudnn
-3. Install TensorFlow:
+1. Install the NVIDIA driver and CUDA dependencies required by your TensorFlow release.
+2. Install TensorFlow with its CUDA extra:
 
 .. code-block:: bash
 
-   pip install tensorflow-gpu
+   pip install "tensorflow[and-cuda]"
    pip install tfts
 
 **Verify GPU Setup:**
@@ -170,12 +177,13 @@ For GPU acceleration, install TensorFlow with CUDA support:
 Apple Silicon (M1/M2/M3)
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-For macOS with Apple Silicon:
+For macOS with Apple Silicon, install a TensorFlow release with an ARM64 wheel:
 
 .. code-block:: bash
 
-   # Install tensorflow-metal for GPU acceleration
-   pip install tensorflow-macos tensorflow-metal
+   pip install "tensorflow>=2.21,<2.22"
+   # Optional: install tensorflow-metal if supported by your local TensorFlow setup.
+   pip install tensorflow-metal
    pip install tfts
 
 **Verify Metal Support:**
@@ -255,7 +263,7 @@ Solution: Install TensorFlow first:
 
 .. code-block:: bash
 
-   pip install tensorflow>=2.4
+   pip install "tensorflow>=2.4"
 
 
 **CUDA version mismatch**

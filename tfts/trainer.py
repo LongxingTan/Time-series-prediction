@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Iterable
 from contextlib import nullcontext
 import logging
@@ -12,7 +14,7 @@ from tensorflow.keras.layers import Input
 
 from .constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME, TFTS_HOME, TFTS_HUB_CACHE
 from .models.base import BaseModel
-from .training.runtime import configure_precision, create_distribution_strategy
+from .training.runtime import configure_precision, create_adamw, create_distribution_strategy
 from .training_args import TrainingArguments
 
 __all__ = ["Trainer", "KerasTrainer", "EagerTrainer", "Seq2seqKerasTrainer", "set_seed"]
@@ -76,21 +78,13 @@ class BaseTrainer(object):
         learning_rate = learning_rate if learning_rate is not None else self.args.learning_rate
         # tf.keras.optimizers.Adam does not support weight_decay directly.
         # Use AdamW if available, otherwise fall back to standard Adam.
-        try:
-            return tf.keras.optimizers.AdamW(
-                learning_rate=learning_rate,
-                beta_1=self.args.adam_beta1,
-                beta_2=self.args.adam_beta2,
-                epsilon=self.args.adam_epsilon,
-                weight_decay=self.args.weight_decay,
-            )
-        except AttributeError:
-            return tf.keras.optimizers.Adam(
-                learning_rate=learning_rate,
-                beta_1=self.args.adam_beta1,
-                beta_2=self.args.adam_beta2,
-                epsilon=self.args.adam_epsilon,
-            )
+        return create_adamw(
+            learning_rate=learning_rate,
+            beta_1=self.args.adam_beta1,
+            beta_2=self.args.adam_beta2,
+            epsilon=self.args.adam_epsilon,
+            weight_decay=self.args.weight_decay,
+        )
 
     def _create_lr_scheduler(self) -> Optional[tf.keras.optimizers.schedules.LearningRateSchedule]:
         """Create learning rate scheduler based on arguments."""

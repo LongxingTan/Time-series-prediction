@@ -13,16 +13,42 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest] # add windows-2019 when poetry allows installation with `-f` flag
-        python-version: [3.9, '3.11']
-        tf-version: [2.13.1, 2.15.1]
-
-        exclude:
-          - python-version: 3.9
-            tf-version: 2.13.1
-          - os: macOS-latest
-            tf-version: 2.13.1
+        include:
+          - os: ubuntu-22.04
+            python-version: '3.8'
+            tf-version: '2.13.1'
+          - os: ubuntu-22.04
+            python-version: '3.9'
+            tf-version: '2.13.1'
+          - os: ubuntu-22.04
+            python-version: '3.11'
+            tf-version: '2.13.1'
+          - os: ubuntu-22.04
+            python-version: '3.11'
+            tf-version: '2.15.1'
+          - os: ubuntu-24.04
+            python-version: '3.12'
+            tf-version: '2.16.2'
+          - os: ubuntu-24.04
+            python-version: '3.13'
+            tf-version: '2.21.0'
+          - os: macos-15-intel
+            python-version: '3.9'
+            tf-version: '2.15.1'
+          - os: macos-15-intel
+            python-version: '3.11'
+            tf-version: '2.16.2'
+          - os: macos-15
+            python-version: '3.11'
+            tf-version: '2.20.0'
+          - os: macos-15
+            python-version: '3.13'
+            tf-version: '2.21.0'
+          - os: windows-2022
+            python-version: '3.13'
+            tf-version: '2.21.0'
 
     steps:
       - uses: actions/checkout@v4
@@ -31,16 +57,16 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Get full Python version
-        id: full-python-version
-        shell: bash
-        run: echo ::set-output name=version::$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))")
-
       - name: Install poetry
         shell: bash
         run: |
-          curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            python -m pip install poetry==1.8.5
+          else
+            curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
+          fi
       - name: Set poetry path variable
+        if: runner.os != 'Windows'
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Configure poetry
@@ -58,9 +84,19 @@ jobs:
         shell: bash
         run: |
           poetry run python -m pip install pip -U
-          poetry install --no-interaction --no-root
-          poetry run python -m pip install tensorflow==${{ matrix.tf-version }}
-          poetry run python -m pip install matplotlib numpy==1.26.0
+          # Install the tooling from the lock file, but let pip select the
+          # TensorFlow wheel for this OS/architecture and matrix version.
+          poetry install --only dev --no-interaction --no-root
+          poetry run python -m pip install --upgrade --force-reinstall \
+            "tensorflow==${{ matrix.tf-version }}" \
+            "pandas>=1.3" \
+            matplotlib
+          poetry run python -m pip check
+
+      - name: Print runtime versions
+        shell: bash
+        run: |
+          poetry run python -c "import platform, sys, tensorflow as tf; print(sys.version); print(platform.platform()); print('TensorFlow', tf.__version__)"
 
       - name: Run unittest
         shell: bash
@@ -82,6 +118,22 @@ jobs:
           flags: cpu, unittest
           name: CPU-coverage
           fail_ci_if_error: false
+
+  package:
+    name: Build package on Python 3.14
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install package build tools
+        run: python -m pip install --upgrade pip build
+      - name: Compile package sources
+        run: python -m compileall -q tfts
+      - name: Build wheel
+        run: python -m build --wheel
 
   docs:
     name: Test docs build
@@ -118,7 +170,7 @@ jobs:
       - name: Upload built docs
         uses: actions/upload-artifact@v4
         with:
-          name: docs-results-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.requires }}
+          name: docs-results-${{ runner.os }}-py3.12
           path: docs/build/html/
         # Use always() to always run this step to publish test results when there are test failures
         if: success()
