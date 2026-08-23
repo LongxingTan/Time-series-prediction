@@ -30,7 +30,6 @@ class DeepARConfig(BaseConfig):
         n_series: int = 100,
     ):
         super(DeepARConfig, self).__init__()
-        # defaults match the Phase 1 PyTorch Forecasting DeepAR reference
         self.hidden_size = hidden_size
         self.rnn_layers = rnn_layers
         self.dropout = dropout

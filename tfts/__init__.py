@@ -27,6 +27,13 @@ from tfts.saving import load_model
 # Legacy compatibility
 from tfts.tasks.pipeline import Pipeline
 from tfts.trainer import EagerTrainer, KerasTrainer, Trainer, set_seed
+from tfts.training.exposure_bias import (
+    add_exposure_bias_noise,
+    add_exposure_bias_noise_np,
+    annealed_noise_std,
+    position_ramp,
+)
+from tfts.training.scheduled_sampling import scheduled_sampling_decode, teacher_forcing_decay
 from tfts.training_args import TrainingArguments
 from tfts.tuner import OptunaTuner
 
@@ -87,6 +94,13 @@ __all__ = [
     "EagerTrainer",
     "TrainingArguments",
     "set_seed",
+    # -- Exposure-bias (autoregressive) regularizers --
+    "add_exposure_bias_noise",
+    "add_exposure_bias_noise_np",
+    "annealed_noise_std",
+    "position_ramp",
+    "scheduled_sampling_decode",
+    "teacher_forcing_decay",
     # -- Tuning --
     "OptunaTuner",
     # -- Data --
