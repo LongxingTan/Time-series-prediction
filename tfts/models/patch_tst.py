@@ -37,6 +37,8 @@ class PatchTSTConfig(BaseConfig):
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
         patch_size: int = 16,
+        patch_stride: int = 8,
+        residual_last_value: bool = False,
         **kwargs,
     ) -> None:
         """
@@ -69,6 +71,8 @@ class PatchTSTConfig(BaseConfig):
         self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
         self.patch_size: int = patch_size
+        self.patch_stride: int = patch_stride
+        self.residual_last_value: bool = residual_last_value
         self.update(kwargs)
 
 
@@ -80,18 +84,19 @@ class PatchTST(BaseModel):
         self.config = config or PatchTSTConfig()
         self.predict_sequence_length = predict_sequence_length
 
-        # Embedding layer
-        self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
-
-        # Patch embedding
+        # PatchTST embeds each variable independently; the batch and channel
+        # axes are folded together before the shared encoder.
         self.patch_embedding = Dense(self.config.hidden_size)
+        self.position_embedding = tf.keras.layers.Embedding(
+            self.config.max_position_embeddings, self.config.hidden_size
+        )
 
         # Transformer blocks
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
         # Output projection
         self.flatten = Flatten()
-        self.output_projection = Dense(self.predict_sequence_length * self.config.output_size)
+        self.output_projection = Dense(self.predict_sequence_length)
 
     def __call__(
         self,
@@ -106,34 +111,46 @@ class PatchTST(BaseModel):
         # Prepare inputs
         x, encoder_feature, decoder_feature = self._prepare_3d_inputs(x, ignore_decoder_inputs=False)
 
-        # Create patches (static dims explicit so the functional graph stays fully defined)
-        seq_length = int(encoder_feature.shape[1])  # static
-        in_ch = int(encoder_feature.shape[-1])  # static
-        num_patches = seq_length // self.config.patch_size  # python int
-        patch_in = self.config.patch_size * in_ch  # static
+        # Reversible instance normalization, matching the reference forecast
+        # path. Statistics are detached from the gradient.
+        means = tf.stop_gradient(tf.reduce_mean(encoder_feature, axis=1, keepdims=True))
+        normalized = encoder_feature - means
+        stdev = tf.stop_gradient(tf.sqrt(tf.reduce_mean(tf.square(normalized), axis=1, keepdims=True) + 1e-5))
+        normalized = normalized / stdev
 
-        # [batch, num_patches, patch_size*in_ch]  (batch dim via -1)
-        reshape = ops.reshape if ops is not None else tf.reshape
-        patches = reshape(
-            encoder_feature[:, : num_patches * self.config.patch_size, :],
-            (-1, num_patches, patch_in),
+        seq_length = int(encoder_feature.shape[1])
+        channels = int(encoder_feature.shape[-1])
+        target_channels = min(channels, self.config.output_size)
+        padding = self.config.patch_stride
+        # Reference PatchEmbedding pads by repeating the final observation.
+        normalized = tf.pad(normalized, [[0, 0], [0, padding], [0, 0]], mode="SYMMETRIC")
+        channel_series = tf.transpose(normalized, [0, 2, 1])
+        patches = tf.signal.frame(
+            channel_series,
+            frame_length=self.config.patch_size,
+            frame_step=self.config.patch_stride,
+            axis=-1,
         )
+        num_patches = int((seq_length - self.config.patch_size) / self.config.patch_stride + 2)
+        reshape = ops.reshape if ops is not None else tf.reshape
+        patches = reshape(patches, (-1, num_patches, self.config.patch_size))
         x = self.patch_embedding(patches)
-
-        # Add positional embeddings
-        x = self.embedding(x)
+        x = x + self.position_embedding(tf.range(num_patches))[None, :, :]
 
         # Process through transformer blocks
         for block in self.blocks:
             x = block(x)
 
-        # Project to output -> [batch, predict_len * output_size]
         x = self.flatten(x)
         x = self.output_projection(x)
-
-        # Reshape to [batch, predict_len, output_size]
-        x = reshape(x, (-1, self.predict_sequence_length, self.config.output_size))
-        return x
+        x = reshape(x, (-1, channels, self.predict_sequence_length))[:, :target_channels, :]
+        x = tf.transpose(x, [0, 2, 1])
+        location = (
+            encoder_feature[:, -1:, :target_channels]
+            if self.config.residual_last_value
+            else means[:, :1, :target_channels]
+        )
+        return x * stdev[:, :1, :target_channels] + location
 
 
 class TransformerBlock(tf.keras.layers.Layer):
