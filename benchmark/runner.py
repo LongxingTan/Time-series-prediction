@@ -48,6 +48,7 @@ class BenchmarkRunner:
         self.config = config
         self.dataset_registry = dataset_registry or _default_dataset_registry()
         self.model_registry = model_registry or ModelRegistry()
+        self._register_configured_datasets()
         self.metrics = BenchmarkMetrics(config.metrics)
         self.results: List[Dict[str, Any]] = []
 
@@ -79,6 +80,17 @@ class BenchmarkRunner:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _register_configured_datasets(self) -> None:
+        """Register YAML aliases such as ``stallion: {type: npz, ...}``."""
+        for name, dataset_config in self.config.per_dataset_config.items():
+            dataset_type = dataset_config.get("type")
+            if dataset_type and name not in self.dataset_registry:
+                try:
+                    dataset_class = self.dataset_registry.get(dataset_type)
+                except KeyError as exc:
+                    raise ValueError(f"Unknown dataset type '{dataset_type}' for '{name}'") from exc
+                self.dataset_registry.register(name, dataset_class)
+
     def _resolve_datasets(self) -> List[str]:
         """Return the actual list of dataset names to run."""
         registered = self.dataset_registry.list_datasets()
@@ -105,6 +117,7 @@ class BenchmarkRunner:
         logger.info("Experiment: %s / %s", dataset_name, model_name)
 
         ds_config = self.config.get_dataset_config(dataset_name)
+        ds_config.pop("type", None)
         cls_ = self.dataset_registry.get(dataset_name)
         dataset = cls_()
 
@@ -144,12 +157,22 @@ class BenchmarkRunner:
 
         # Build model
         model_config = AutoConfig.for_model(model_name)
+        model_overrides = self.config.get_model_config(model_name)
+        if model_overrides:
+            model_config.update(model_overrides)
         # Adjust input shape if known
-        if hasattr(model_config, "input_shape") and train_data[0].ndim == 3:
-            model_config.input_shape = train_data[0].shape[1:]
+        train_inputs = train_data[0]
+        if hasattr(model_config, "input_shape"):
+            if isinstance(train_inputs, dict):
+                model_config.input_shape = {key: value.shape[1:] for key, value in train_inputs.items()}
+            elif getattr(train_inputs, "ndim", 0) == 3:
+                model_config.input_shape = train_inputs.shape[1:]
 
         model = AutoModel.from_config(model_config, predict_sequence_length=predict_length)
         trainer = Trainer(model)
+        training_options = self.config.get_model_training(model_name)
+        loss_fn = self._resolve_loss(training_options.pop("loss", None), model_config)
+        optimizer = self._resolve_optimizer(training_options.pop("optimizer", None), learning_rate)
 
         # Train
         history = trainer.train(
@@ -157,12 +180,25 @@ class BenchmarkRunner:
             valid_dataset=valid_data,
             epochs=epochs,
             batch_size=batch_size,
+            loss_fn=loss_fn,
+            optimizer=optimizer,
             verbose=0 if self.config.verbose < 2 else 1,
+            **training_options,
         )
 
         # Evaluate
         x_valid, y_valid = valid_data
-        y_pred = trainer.predict(x_valid)
+        try:
+            raw_prediction = trainer.predict(x_valid)
+        except AttributeError:
+            # Distribution models can return a dictionary, while Trainer.predict
+            # currently assumes a single tensor and calls .numpy() directly.
+            raw_prediction = trainer.model(x_valid, training=False)
+        y_pred = self._point_prediction(
+            raw_prediction,
+            model_config,
+            self.config.get_model_prediction(model_name),
+        )
         metrics = self.metrics.compute(y_valid, y_pred)
 
         result = {
@@ -175,10 +211,51 @@ class BenchmarkRunner:
             "epochs": epochs,
             "batch_size": batch_size,
             "learning_rate": learning_rate,
+            "model_config": model_overrides,
             "metrics": metrics,
             "history": {k: [float(v) for v in vals] for k, vals in (history.history if history else {}).items()},
         }
         return result
+
+    @staticmethod
+    def _resolve_loss(name: Optional[str], model_config: Any):
+        if name is None:
+            return None
+        if name == "multi_quantile":
+            from tfts.losses.loss import MultiQuantileLoss
+
+            return MultiQuantileLoss(model_config.quantiles)
+        if name == "smape":
+            return lambda y_true, y_pred: tf.reduce_mean(
+                200.0 * tf.abs(y_pred - y_true) / (tf.abs(y_true) + tf.abs(y_pred) + 1e-8)
+            )
+        return name
+
+    @staticmethod
+    def _resolve_optimizer(value: Any, learning_rate: float):
+        if value is None:
+            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        if isinstance(value, str):
+            optimizer = tf.keras.optimizers.get(value)
+            optimizer.learning_rate = learning_rate
+            return optimizer
+        return tf.keras.optimizers.get(value)
+
+    @staticmethod
+    def _point_prediction(prediction: Any, model_config: Any, options: Dict[str, Any]) -> np.ndarray:
+        if isinstance(prediction, dict):
+            output_key = options.get("output_key")
+            if output_key is None:
+                output_key = "prediction" if "prediction" in prediction else "loc"
+            if output_key not in prediction:
+                raise ValueError(f"Prediction output '{output_key}' is unavailable: {list(prediction)}")
+            prediction = prediction[output_key]
+        prediction = np.asarray(prediction)
+        quantiles = getattr(model_config, "quantiles", None)
+        if options.get("quantile") is not None and quantiles and prediction.shape[-1] == len(quantiles):
+            index = int(np.argmin(np.abs(np.asarray(quantiles) - float(options["quantile"]))))
+            prediction = prediction[..., index : index + 1]
+        return prediction
 
     def _save_results(self, results: BenchmarkResults) -> None:
         """Save results to the output directory."""
@@ -203,6 +280,8 @@ def _default_dataset_registry() -> DatasetRegistry:
         CMIDetectSleepStatesDataset,
         ForecastingStickerSalesDataset,
         GrocerysalesDataset,
+        M4Dataset,
+        NpzDataset,
         RecruitRestaurantDataset,
         SineDataset,
     )
@@ -210,6 +289,8 @@ def _default_dataset_registry() -> DatasetRegistry:
     registry.register("sine", SineDataset)
     registry.register("air_passengers", AirPassengersDataset)
     registry.register("grocery_sales", GrocerysalesDataset)
+    registry.register("m4", M4Dataset)
+    registry.register("npz", NpzDataset)
     registry.register("recruit_restaurant", RecruitRestaurantDataset)
     registry.register("forecasting_sticker_sales", ForecastingStickerSalesDataset)
     registry.register("CMI_detect_sleep_states", CMIDetectSleepStatesDataset)

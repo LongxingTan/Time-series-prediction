@@ -1,0 +1,46 @@
+# Run the TensorFlow TFT experiment tensors through the common benchmark.
+benchmark:
+  metrics: [mae, mse, rmse]
+  runs: 1
+  epochs: 10
+  batch_size: 128
+  learning_rate: 0.01
+  output_dir: benchmark_results/exps_tft
+
+models:
+  tft:
+    config:
+      static_real_dim: 2
+      encoder_real_dim: 10
+      decoder_real_dim: 3
+      static_categorical_cardinalities: [59, 26]
+      # Update these cardinalities if the preprocessing artifact changes.
+      temporal_categorical_cardinalities: [13, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 3]
+      hidden_size: 32
+      num_attention_heads: 4
+      output_size: 7
+      output_transform: group_softplus
+      quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+    training:
+      loss: multi_quantile
+      early_stopping_patience: 7
+      reduce_lr_patience: 4
+    prediction:
+      quantile: 0.5
+
+datasets:
+  stallion_exps:
+    type: npz
+    train_path: exps/phase2_tfts/train.npz
+    valid_path: exps/phase2_tfts/validation.npz
+    input_keys:
+      - static_categorical
+      - static_real
+      - encoder_categorical
+      - encoder_real
+      - decoder_categorical
+      - decoder_real
+      - target_scale
+    target_key: target_original
+    train_length: 24
+    predict_sequence_length: 6
