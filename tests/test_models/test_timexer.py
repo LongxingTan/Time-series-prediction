@@ -58,6 +58,13 @@ class TimeXerTest(unittest.TestCase):
         self.assertEqual(y_on.shape, (2, 6, 3))
         self.assertEqual(y_off.shape, (2, 6, 3))
 
+    def test_hidden_states_contract(self):
+        config = TimeXerConfig(hidden_size=16, num_layers=1, num_attention_heads=4, patch_len=4)
+        hidden = TimeXer(predict_sequence_length=6, config=config)(
+            tf.random.normal([2, 16, 3]), output_hidden_states=True
+        )
+        self.assertEqual(hidden.shape[-1], config.hidden_size)
+
     # def test_train(self):
     #     """Test training loop."""
     #     train, valid = tfts.get_data("sine", test_size=0.1)

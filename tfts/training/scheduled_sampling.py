@@ -54,6 +54,7 @@ def scheduled_sampling_decode(
     teacher_prob,
     stochastic: bool = True,
     seed: int = 0,
+    distribution_output=None,
 ) -> tuple:
     """Sequential decoder pass mixing teacher-forced targets with the model's own samples.
 
@@ -78,8 +79,8 @@ def scheduled_sampling_decode(
 
     Returns
     -------
-    (loc, scale): each (B, pred_len, F) predicted Normal parameters, ready for an NLL loss
-    against ``y_true``. Gradients flow to ``model``'s variables.
+    A mapping of distribution parameter names to ``(B, pred_len, F)`` tensors.
+    Gradients flow to ``model``'s variables.
     """
     if isinstance(teacher_prob, (int, float)):
         teacher_prob = tf.cast(teacher_prob, tf.float32)
@@ -89,28 +90,28 @@ def scheduled_sampling_decode(
         core = getattr(model, "core_model", None)
         if core is not None and hasattr(core, "initialize_generation_state"):
             model = core
+    distribution_output = distribution_output or getattr(model, "output_distribution", None)
+    if distribution_output is None:
+        raise ValueError("scheduled_sampling_decode requires a DistributionOutput instance")
     state = model.initialize_generation_state(x, static)
     cur = x[:, -1:, :]  # first decoder input = last encoder target (matches DeepAR)
     pred_len = int(getattr(model, "predict_sequence_length", None) or tf.shape(y_true)[1])
     B = tf.shape(x)[0]
     seed = int(seed)
-    locs, scales = [], []
+    locs, scales = [], []  # noqa: F841
     for t in range(pred_len):
         params, state = model.decode_step(cur, static, state, training=True)
-        loc, scale = params["loc"], params["scale"]
-        locs.append(loc)
-        scales.append(scale)
+        point = distribution_output.mean(params)
+        locs.append(params)
         if t + 1 < pred_len:
             # stateless, per-step-seeded draws: deterministic in eager AND under tf.function
             t_i = tf.cast(t, tf.int64)
-            sample_seed = tf.stack([tf.constant(seed, tf.int64), 2 * t_i])
             teacher_seed = tf.stack([tf.constant(seed + 1, tf.int64), 2 * t_i + 1])
             if stochastic:
-                noise = tf.random.stateless_normal(tf.shape(loc), seed=sample_seed, dtype=loc.dtype)
-                fed = loc + scale * noise
+                fed = distribution_output.sample(params, seed=tf.stack([tf.constant(seed, tf.int64), 2 * t_i]))
             else:
-                fed = loc
-            u = tf.random.stateless_uniform([B, 1, 1], seed=teacher_seed, minval=0.0, maxval=1.0, dtype=loc.dtype)
-            feed_teacher = tf.cast(u < teacher_prob, loc.dtype)
+                fed = point
+            u = tf.random.stateless_uniform([B, 1, 1], seed=teacher_seed, minval=0.0, maxval=1.0, dtype=point.dtype)
+            feed_teacher = tf.cast(u < teacher_prob, point.dtype)
             cur = feed_teacher * y_true[:, t : t + 1, :] + (1.0 - feed_teacher) * fed
-    return tf.concat(locs, axis=1), tf.concat(scales, axis=1)
+    return {name: tf.concat([step[name] for step in locs], axis=1) for name in locs[0]}

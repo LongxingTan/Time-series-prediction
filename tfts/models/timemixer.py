@@ -296,15 +296,14 @@ class TimeMixer(BaseModel):
     """
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[TimeMixerConfig] = None):
-        super().__init__()
-        self.config = config or TimeMixerConfig()
-        self.predict_sequence_length = predict_sequence_length
+        config = config or TimeMixerConfig()
+        super().__init__(predict_sequence_length=predict_sequence_length, config=config)
         self.cfg = self.config
         self.predict_layers = None
         self.projection_layer = None
         # Built lazily on the first forward once n_vars is observed.
         self.embeddings = None
-        self.pdm = None
+        self.pdm_blocks = None
         self._built = None
 
     # ------------------------------------------------------------------ helpers
@@ -347,24 +346,31 @@ class TimeMixer(BaseModel):
             c_out = int(self.cfg.c_out or N)
         self.projection_layer = Dense(c_out)
         self.embeddings = DataEmbeddingWoPos(self.cfg.d_model, self.cfg.dropout)
-        self.pdm = PastDecomposableMixing(
-            self.cfg.d_model,
-            self.cfg.d_ff,
-            moving_avg=self.cfg.moving_avg,
-            top_k=self.cfg.top_k,
-            decomp_method=self.cfg.decomp_method,
-        )
+        self.pdm_blocks = [
+            PastDecomposableMixing(
+                self.cfg.d_model,
+                self.cfg.d_ff,
+                moving_avg=self.cfg.moving_avg,
+                top_k=self.cfg.top_k,
+                decomp_method=self.cfg.decomp_method,
+            )
+            for _ in range(self.cfg.e_layers)
+        ]
         self._built = (T0, N)
 
-    def __call__(self, x, training=None, **kwargs):
-        x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
+    def __call__(
+        self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
+    ):
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
         N = int(x.shape[-1])
 
         # ---- multi-scale input + per-scale normalization ----
         x_scales = self._multi_scale_downsample(encoder_feature)
         T0 = int(x_scales[0].shape[1])
-        if self._built != (T0, N) or self.embeddings is None:
+        if self.embeddings is None:
             self._build(T0, N)
+        elif self._built != (T0, N):
+            raise ValueError(f"TimeMixer was built for input shape {self._built}, but received {(T0, N)}.")
 
         x_list = []
         for xs in x_scales:
@@ -384,8 +390,11 @@ class TimeMixer(BaseModel):
         enc_out_list = [self.embeddings(s, training=training) for s in season_list]
 
         # ---- Past Decomposable Mixing encoder, e_layers times ----
-        for _ in range(self.cfg.e_layers):
-            enc_out_list = self.pdm(enc_out_list, training=training)
+        for pdm in self.pdm_blocks:
+            enc_out_list = pdm(enc_out_list, training=training)
+
+        if output_hidden_states:
+            return enc_out_list[0]
 
         # ---- future multi-scale mixing (decoder) ----
         dec_out_list = []

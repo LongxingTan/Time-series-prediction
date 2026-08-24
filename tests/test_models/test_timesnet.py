@@ -36,15 +36,22 @@ class TimesNetTest(unittest.TestCase):
         self.assertEqual(y.shape[0], 2)  # batch size
         self.assertEqual(y.shape[1], predict_sequence_length)
 
-    def test_model_varied_input_length(self):
-        """TimesNet handles arbitrary sequence lengths thanks to FFT period discovery."""
+    def test_changed_input_length_is_rejected(self):
+        """A changed lookback must not silently replace trained projection weights."""
         config = TimesNetConfig(hidden_size=16, intermediate_size=32, num_layers=1)
         model = TimesNet(predict_sequence_length=8, config=config)
 
-        for length in (16, 40, 63):
-            x = tf.random.normal([2, length, 4])
-            y = model(x)
-            self.assertEqual(y.shape, (2, 8, 4), f"failed for length={length}")
+        self.assertEqual(model(tf.random.normal([2, 16, 4])).shape, (2, 8, 4))
+        with self.assertRaisesRegex(ValueError, "sequence length 16"):
+            model(tf.random.normal([2, 40, 4]))
+
+    def test_hidden_states_contract(self):
+        model = TimesNet(
+            predict_sequence_length=8,
+            config=TimesNetConfig(hidden_size=16, intermediate_size=32, num_layers=1),
+        )
+        hidden = model(tf.random.normal([2, 16, 4]), output_hidden_states=True)
+        self.assertEqual(hidden.shape, (2, 24, 16))
 
     def test_model_direct_instantiation(self):
         """Test model direct instantiation."""

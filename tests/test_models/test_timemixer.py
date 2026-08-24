@@ -52,6 +52,14 @@ class TimeMixerTest(unittest.TestCase):
         self.assertEqual(y.shape[0], 2)
         self.assertEqual(y.shape[1], 6)
 
+    def test_encoder_depth_uses_distinct_blocks(self):
+        config = TimeMixerConfig(d_model=16, d_ff=32, e_layers=3, moving_avg=7)
+        model = TimeMixer(predict_sequence_length=6, config=config)
+        hidden = model(tf.random.normal([2, 16, 3]), output_hidden_states=True)
+        self.assertEqual(hidden.shape, (2, 16, 16))
+        self.assertEqual(len(model.pdm_blocks), 3)
+        self.assertEqual(len({id(block) for block in model.pdm_blocks}), 3)
+
     # def test_train(self):
     #     """Test training loop."""
     #     train, valid = tfts.get_data("sine", test_size=0.1)

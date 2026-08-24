@@ -42,7 +42,6 @@ class AutoFormerConfig(BaseConfig):
         positional_type="absolute",
         use_cache=True,
         classifier_dropout=None,
-        residual_last_value=False,
         **kwargs,
     ):
         self.kernel_size = kernel_size
@@ -61,7 +60,7 @@ class AutoFormerConfig(BaseConfig):
         self.positional_type = positional_type
         self.use_cache = use_cache
         self.classifier_dropout = classifier_dropout
-        self.residual_last_value = residual_last_value
+        self.update(kwargs)
 
 
 class AutoFormer(BaseModel):
@@ -133,8 +132,6 @@ class AutoFormer(BaseModel):
         # Decoder
         decoder_output = self.decoder(decoder_feature, encoder_output)
         outputs = self.project1(decoder_output)[:, -self.predict_sequence_length :, :]
-        if self.config.residual_last_value:
-            outputs = outputs + x[:, -1:, :1]
         return outputs
 
 

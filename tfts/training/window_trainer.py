@@ -18,7 +18,7 @@ pattern. Fully self-contained — it does not depend on any ``exps/`` code.
 
 from __future__ import annotations
 
-import os
+import tempfile
 from typing import List, Sequence, Tuple
 
 import numpy as np
@@ -198,35 +198,42 @@ class WindowedTrainer:
             optimizer = tf.keras.optimizers.Adam(self.lr)
         self.model.compile(optimizer=optimizer, loss=_loss, jit_compile=self.jit_compile)
 
-        rng = np.random.default_rng(self.seed)
-        x_val, y_val, m_val = sampled_windows(
-            histories, np.random.default_rng(val_rng_seed), self.seq_len, self.pred_len, num_features=self.num_features
-        )
+        del targets, val_rng_seed  # validation is a deterministic temporal holdout
+        train_histories = [np.asarray(series)[: -self.pred_len] for series in histories]
+        x_val, _ = final_windows(train_histories, self.seq_len, self.num_features)
+        y_val, m_val = final_windows(histories, self.pred_len, self.num_features)
+        # ``final_windows`` right-aligns short sequences; forecast masks/targets
+        # must be left-aligned to match model horizon semantics.
+        y_val = np.roll(y_val, -self.pred_len, axis=1)
+        m_val = np.roll(m_val, -self.pred_len, axis=1)
         best, patience = float("inf"), self.patience
-        ckpt = ".tfts_best.weights.h5"
-        if os.path.exists(ckpt):
-            os.remove(ckpt)
         logs = []
-        for ep in range(self.epochs):
-            x, y, m = sampled_windows(histories, rng, self.seq_len, self.pred_len, num_features=self.num_features)
-            hist = self.model.fit(x, y, sample_weight=m, batch_size=self.batch_size, epochs=1, verbose=0)
-            val = float(np.mean(self.model.evaluate(x_val, y_val, sample_weight=m_val, verbose=0)))
-            logs.append({"epoch": ep + 1, "train": float(hist.history["loss"][-1]), "val": val})
-            if verbose:
-                print(
-                    f"  [tfts] epoch {ep + 1}/{self.epochs} " f"train={hist.history['loss'][-1]:.3f} val={val:.3f}",
-                    flush=True,
+        rng = np.random.default_rng(self.seed)
+        with tempfile.TemporaryDirectory(prefix="tfts-windowed-") as checkpoint_dir:
+            ckpt = f"{checkpoint_dir}/best.weights.h5"
+            for ep in range(self.epochs):
+                x, y, m = sampled_windows(
+                    train_histories, rng, self.seq_len, self.pred_len, num_features=self.num_features
                 )
-            if val < best:
-                best, patience = val, self.patience
-                self.model.save_weights(ckpt)
-            else:
-                patience -= 1
-                if patience <= 0:
-                    if verbose:
-                        print(f"  [tfts] early stop at epoch {ep + 1}", flush=True)
-                    break
-        if os.path.exists(ckpt):
+                hist = self.model.fit(x, y, sample_weight=m, batch_size=self.batch_size, epochs=1, verbose=0)
+                prediction = self.model.predict(x_val, batch_size=self.batch_size, verbose=0)
+                element_loss = _smape_loss_fn(y_val, prediction).numpy()
+                val = float(np.sum(element_loss * m_val) / max(1.0, np.sum(m_val)))
+                logs.append({"epoch": ep + 1, "train": float(hist.history["loss"][-1]), "val": val})
+                if verbose:
+                    print(
+                        f"  [tfts] epoch {ep + 1}/{self.epochs} " f"train={hist.history['loss'][-1]:.3f} val={val:.3f}",
+                        flush=True,
+                    )
+                if val < best:
+                    best, patience = val, self.patience
+                    self.model.save_weights(ckpt)
+                else:
+                    patience -= 1
+                    if patience <= 0:
+                        if verbose:
+                            print(f"  [tfts] early stop at epoch {ep + 1}", flush=True)
+                        break
             self.model.load_weights(ckpt)
         return logs
 
@@ -238,8 +245,10 @@ class WindowedTrainer:
     def evaluate(self, histories: Sequence[np.ndarray], targets: np.ndarray) -> dict:
         """Score the held-out final window of every series (SMAPE/MAE/MSE)."""
         x_final, _ = final_windows(histories, self.seq_len, self.num_features)
-        pred = self.predict(x_final)[..., 0]
-        true = targets
+        pred = self.predict(x_final)
+        true = np.asarray(targets)
+        if true.ndim == 2 and pred.shape[-1] == 1:
+            pred = pred[..., 0]
         return dict(
             smape=smape_score(pred, true),
             mae=float(np.mean(np.abs(pred - true))),

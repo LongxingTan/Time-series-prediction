@@ -230,9 +230,8 @@ class TimeXer(BaseModel):
     """TensorFlow TimeXer for multivariate time series forecasting."""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[TimeXerConfig] = None):
-        super().__init__()
-        self.config = config or TimeXerConfig()
-        self.predict_sequence_length = predict_sequence_length
+        config = config or TimeXerConfig()
+        super().__init__(predict_sequence_length=predict_sequence_length, config=config)
 
         # n_vars is filled lazily on first forward (depends on input channels).
         self.en_embedding = None
@@ -241,8 +240,10 @@ class TimeXer(BaseModel):
         self.head = None
         self.n_vars = None
 
-    def __call__(self, x, training=None, **kwargs):
-        x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
+    def __call__(
+        self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
+    ):
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
 
         # ---- instance normalization ----
         if self.config.use_norm:
@@ -281,6 +282,8 @@ class TimeXer(BaseModel):
                 self.predict_sequence_length,
                 self.config.hidden_dropout_prob,
             )
+        elif n_vars != self.n_vars:
+            raise ValueError(f"TimeXer was built for {self.n_vars} variables, but received {n_vars}.")
 
         # ---- en branch: patch each variate (features='M' path) ----
         x_patch = tf.transpose(x_norm, [0, 2, 1])  # [B, n_vars, T]
@@ -298,6 +301,8 @@ class TimeXer(BaseModel):
         pn = int(en_embed.shape[1]) - 1
         D = int(en_embed.shape[-1])
         enc_out = tf.reshape(en_embed, [B, n_vars, pn + 1, D])
+        if output_hidden_states:
+            return tf.reshape(enc_out, [B, n_vars * (pn + 1), D])
         enc_out = tf.transpose(enc_out, [0, 1, 3, 2])  # [B, n_vars, d, pn+1]
         dec_out = self.head(enc_out, training=training)  # [B, n_vars, pred_len]
         dec_out = tf.transpose(dec_out, [0, 2, 1])  # [B, pred_len, n_vars]

@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts import WindowedTrainer
 from tfts.models.timemixer import TimeMixer, TimeMixerConfig
 from tfts.models.timesnet import TimesNet, TimesNetConfig
 from tfts.models.timexer import TimeXer, TimeXerConfig
+from tfts.training import WindowedTrainer
 
 
 class WindowedTrainerTest(unittest.TestCase):

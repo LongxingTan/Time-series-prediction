@@ -160,7 +160,7 @@ class TimesBlock(tf.keras.layers.Layer):
                 tf.int32,
             )
             pad_len = length - T
-            out = tf.concat([x, tf.zeros([B, pad_len, N])], axis=1)  # [B, length, N]
+            out = tf.concat([x, tf.zeros([B, pad_len, N], dtype=x.dtype)], axis=1)  # [B, length, N]
             out = tf.reshape(out, [B, length // period, period, N])  # [B, H, W, N]
             out = self.conv(out)  # [B, H, W, N]
             out = tf.reshape(out, [B, length, N])
@@ -210,9 +210,8 @@ class TimesNet(BaseModel):
     """TensorFlow TimesNet for time series forecasting."""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[TimesNetConfig] = None):
-        super().__init__()
-        self.config = config or TimesNetConfig()
-        self.predict_sequence_length = predict_sequence_length
+        config = config or TimesNetConfig()
+        super().__init__(predict_sequence_length=predict_sequence_length, config=config)
 
         cfg = self.config
         self.enc_embedding = DataEmbedding(cfg.hidden_size, cfg.hidden_dropout_prob)
@@ -235,8 +234,10 @@ class TimesNet(BaseModel):
         self.projection = None
         self._seq_len = None
 
-    def __call__(self, x, training=None, **kwargs):
-        x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
+    def __call__(
+        self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
+    ):
+        x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
 
         # ---- instance normalization (Non-stationary Transformer style) ----
         means = tf.stop_gradient(tf.reduce_mean(encoder_feature, axis=1, keepdims=True))
@@ -249,9 +250,11 @@ class TimesNet(BaseModel):
         T = int(enc_out.shape[1])
         # predict_linear is seq_len-dependent (Dense(T + pred)), so rebuild it
         # if the input length differs from the one it was built for.
-        if self.predict_linear is None or T != self._seq_len:
+        if self.predict_linear is None:
             self._seq_len = T
             self.predict_linear = Dense(T + self.predict_sequence_length)
+        elif T != self._seq_len:
+            raise ValueError(f"TimesNet was built for sequence length {self._seq_len}, but received {T}.")
         enc_out = tf.transpose(enc_out, [0, 2, 1])  # [B, d_model, T]
         enc_out = self.predict_linear(enc_out)  # [B, d_model, T+pred]
         enc_out = tf.transpose(enc_out, [0, 2, 1])  # [B, T+pred, d_model]
@@ -259,6 +262,9 @@ class TimesNet(BaseModel):
         # ---- stacked TimesBlocks ----
         for block in self.blocks:
             enc_out = self.layer_norm(block(enc_out, training=training))
+
+        if output_hidden_states:
+            return enc_out
 
         # ---- projection + de-normalization ----
         c_out = int(self.config.c_out or x.shape[-1])
