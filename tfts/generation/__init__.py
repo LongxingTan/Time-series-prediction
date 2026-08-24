@@ -14,13 +14,60 @@ instead of a baked-in behaviour of the model ``__call__``.
 
 from .autoregressive import AutoregressiveGenerationMixin
 from .configuration import ForecastGenerationConfig
+from .engine import GenerationEngine, RolloutOutput
 from .outputs import ForecastGenerationOutput
+from .processors import (
+    CallableForecastProcessor,
+    DifferenceClipProcessor,
+    ForecastProcessor,
+    ForecastProcessorList,
+    RemoveInvalidValuesProcessor,
+    ValueClipProcessor,
+)
+from .rolling import RollingWindowGenerationMixin
 from .schedules import FeedbackTrainingConfig, ScheduleConfig
+from .strategy import (
+    AncestralSampling,
+    CallableFeedback,
+    CallableSampling,
+    FeedbackPolicy,
+    FullFeatureFeedback,
+    GreedySampling,
+    SamplingResult,
+    SamplingStrategy,
+    StepOutput,
+    TargetFeedback,
+    TeacherForcingSampling,
+    ValueFeedback,
+    register_sampling_strategy,
+)
 
 __all__ = [
     "ForecastGenerationConfig",
     "ForecastGenerationOutput",
+    "ForecastProcessor",
+    "ForecastProcessorList",
+    "CallableForecastProcessor",
+    "ValueClipProcessor",
+    "DifferenceClipProcessor",
+    "RemoveInvalidValuesProcessor",
     "AutoregressiveGenerationMixin",
     "ScheduleConfig",
     "FeedbackTrainingConfig",
+    "GenerationEngine",
+    "RolloutOutput",
+    "StepOutput",
+    "SamplingResult",
+    "SamplingStrategy",
+    "GreedySampling",
+    "AncestralSampling",
+    "TeacherForcingSampling",
+    "CallableSampling",
+    "FeedbackPolicy",
+    "ValueFeedback",
+    "CallableFeedback",
+    "FullFeatureFeedback",
+    "TargetFeedback",
+    "RollingWindowGenerationMixin",
+    "register_sampling_strategy",
 ]

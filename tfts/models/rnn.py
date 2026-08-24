@@ -8,6 +8,7 @@ from typing import Dict, Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Concatenate, Dense, Reshape
 
+from ..generation import RollingWindowGenerationMixin
 from .base import BaseConfig, BaseModel
 
 
@@ -47,7 +48,7 @@ class RNNConfig(BaseConfig):
         self.use_attention: bool = use_attention
 
 
-class RNN(BaseModel):
+class RNN(BaseModel, RollingWindowGenerationMixin):
     """tfts RNN model"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[RNNConfig] = None):
