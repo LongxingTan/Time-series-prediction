@@ -18,6 +18,7 @@ from tfts.models.auto_model import (
     AutoModelForAnomaly,
     AutoModelForClassification,
     AutoModelForPrediction,
+    AutoModelForQuantile,
     AutoModelForSegmentation,
     AutoModelForUncertainty,
 )
@@ -74,6 +75,7 @@ __all__ = [
     # -- Models --
     "AutoModel",
     "AutoModelForPrediction",
+    "AutoModelForQuantile",
     "AutoModelForClassification",
     "AutoModelForSegmentation",
     "AutoModelForAnomaly",

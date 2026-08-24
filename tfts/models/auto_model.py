@@ -1,6 +1,5 @@
 """AutoModel to choose different models"""
 
-import importlib
 import json
 import logging
 import os
@@ -12,24 +11,17 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
 from tfts.losses.loss import MultiQuantileLoss
-from tfts.models.base import BaseConfig, BaseModel
-from tfts.tasks.auto_task import (
-    AnomalyHead,
-    ClassificationHead,
-    ClassificationOutput,
-    GaussianHead,
-    PredictionHead,
-    PredictionOutput,
-)
+from tfts.models.base import BaseModel
+from tfts.tasks.auto_task import AnomalyHead, ClassificationHead, apply_prediction_residual
 
-from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
+from ..constants import TF2_WEIGHTS_NAME
 from .auto_config import AutoConfig
-from .registry import MODEL_REGISTRY
+from .registry import RegistryFieldView, get_model_class
 
 logger = logging.getLogger(__name__)
 
 
-MODEL_MAPPING_NAMES = {name: metadata["class_name"] for name, metadata in MODEL_REGISTRY.items()}
+MODEL_MAPPING_NAMES = RegistryFieldView("class_name")
 
 
 class AutoModel(BaseModel):
@@ -79,16 +71,51 @@ class AutoModel(BaseModel):
             return self.model(x)
 
     @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
+    def from_config(
+        cls,
+        config,
+        predict_sequence_length: int = 1,
+        task: Optional[str] = None,
+        num_labels: int = 1,
+        quantiles: Optional[List[float]] = None,
+    ):
+        """Create a model through the single task-aware factory.
+
+        ``task=None`` preserves the historical ``AutoModel`` behavior. Task
+        aliases delegate here, so model resolution and construction live in
+        one place.
+        """
         model_name = config.model_type
         if model_name not in MODEL_MAPPING_NAMES:
             raise ValueError(
                 f"Unrecognized model: {model_name}. Should contain one of {', '.join(MODEL_MAPPING_NAMES.keys())}"
             )
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
-        return cls(model, config, predict_sequence_length=predict_sequence_length)
+
+        normalized_task = task.lower().replace("-", "_") if task else None
+        task_models = {
+            "prediction": AutoModelForPrediction,
+            "classification": AutoModelForClassification,
+            "anomaly": AutoModelForAnomaly,
+            "segmentation": AutoModelForSegmentation,
+            "uncertainty": AutoModelForUncertainty,
+            "quantile": AutoModelForQuantile,
+        }
+        if normalized_task not in {None, "model", *task_models}:
+            raise ValueError(f"Unknown task {task!r}. Available: {sorted(task_models)}")
+        if normalized_task == "classification":
+            config.num_labels = num_labels
+        elif normalized_task == "quantile":
+            config.quantiles = list(quantiles or (0.1, 0.5, 0.9))
+            config.num_labels = num_labels
+
+        model = get_model_class(model_name)(config=config, predict_sequence_length=predict_sequence_length)
+        if normalized_task is None or normalized_task == "model":
+            return cls(model, config, predict_sequence_length=predict_sequence_length)
+
+        wrapper = task_models[normalized_task]
+        if issubclass(wrapper, AutoModel):
+            return wrapper(model, config, predict_sequence_length=predict_sequence_length)
+        return wrapper(model, config)
 
     @classmethod
     def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: Optional[int] = None):
@@ -163,6 +190,10 @@ class AutoModel(BaseModel):
 class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
+    @classmethod
+    def from_config(cls, config, predict_sequence_length: int = 1):
+        return AutoModel.from_config(config, predict_sequence_length, task="prediction")
+
     def __call__(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
@@ -172,13 +203,14 @@ class AutoModelForPrediction(AutoModel):
 
         model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
 
-        if getattr(self.config, "skip_connect_circle", False):
-            x_mean = x[:, -self.predict_sequence_length :, 0:1]
-            model_output = model_output + x_mean
-        elif getattr(self.config, "skip_connect_mean", False):
-            x_mean = tf.tile(tf.reduce_mean(x[..., 0:1], axis=1, keepdims=True), [1, self.predict_sequence_length, 1])
-            model_output = model_output + x_mean
-        return model_output
+        residual = getattr(self.config, "residual", None)
+        if residual is None and getattr(self.config, "skip_connect_circle", False):
+            residual = "last_window"
+        elif residual is None and getattr(self.config, "skip_connect_mean", False):
+            residual = "mean"
+        elif residual is None and getattr(self.config, "residual_last_value", False):
+            residual = "last_value"
+        return apply_prediction_residual(model_output, x, residual)
 
 
 class AutoModelForClassification(BaseModel):
@@ -207,12 +239,7 @@ class AutoModelForClassification(BaseModel):
 
     @classmethod
     def from_config(cls, config, num_labels: int = 1):
-        config.num_labels = num_labels
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
-        return cls(model, config)
+        return AutoModel.from_config(config, task="classification", num_labels=num_labels)
 
     def build_model(self, inputs: tf.keras.layers.Input):
         model_output = self.model(inputs)
@@ -247,11 +274,7 @@ class AutoModelForAnomaly(BaseModel):
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
-        return cls(model, config)
+        return AutoModel.from_config(config, predict_sequence_length, task="anomaly")
 
 
 class AutoModelForSegmentation(BaseModel):
@@ -273,11 +296,7 @@ class AutoModelForSegmentation(BaseModel):
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
-        return cls(model, config)
+        return AutoModel.from_config(config, predict_sequence_length, task="segmentation")
 
 
 class AutoModelForUncertainty(BaseModel):
@@ -299,11 +318,7 @@ class AutoModelForUncertainty(BaseModel):
 
     @classmethod
     def from_config(cls, config, predict_sequence_length: int = 1):
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config, predict_sequence_length=predict_sequence_length)
-        return cls(model, config)
+        return AutoModel.from_config(config, predict_sequence_length, task="uncertainty")
 
 
 class AutoModelForQuantile(BaseModel):
@@ -331,13 +346,8 @@ class AutoModelForQuantile(BaseModel):
         return self.head(model_output)
 
     @classmethod
-    def from_config(cls, config, quantiles: List[float] = [0.1, 0.5, 0.9]):
-        config.quantiles = quantiles
-        model_name = config.model_type
-        class_name = MODEL_MAPPING_NAMES[model_name]
-        module = importlib.import_module(f".{model_name}", "tfts.models")
-        model = getattr(module, class_name)(config=config)
-        return cls(model, config)
+    def from_config(cls, config, quantiles: Optional[List[float]] = None):
+        return AutoModel.from_config(config, task="quantile", quantiles=quantiles)
 
     def build_model(self, inputs):
         model_output = self.model(inputs)

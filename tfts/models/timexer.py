@@ -19,7 +19,8 @@ from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
 from tfts.layers.attention_layer import Attention
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
 class PositionalEmbedding(tf.keras.layers.Layer):
@@ -175,7 +176,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         return self.norm3(x + y)
 
 
-class TimeXerConfig(BaseConfig):
+class TimeXerConfig(CommonConfig):
     model_type: str = "timexer"
 
     def __init__(
@@ -226,6 +227,12 @@ class FlattenHead(tf.keras.layers.Layer):
         return x  # [B, n_vars, pred_len]
 
 
+@register_model(
+    "timexer",
+    config=TimeXerConfig,
+    paper="https://arxiv.org/abs/2402.19072",
+    tags=("attention", "multivariate", "patch"),
+)
 class TimeXer(BaseModel):
     """TensorFlow TimeXer for multivariate time series forecasting."""
 

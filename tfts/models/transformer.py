@@ -14,12 +14,13 @@ from tfts.layers.attention_layer import Attention, SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class TransformerConfig(BaseConfig):
+class TransformerConfig(CommonConfig):
     model_type: str = "transformer"
 
     def __init__(
@@ -87,6 +88,13 @@ class TransformerConfig(BaseConfig):
         self.pad_token_id: int = pad_token_id
 
 
+@register_model(
+    "transformer",
+    config=TransformerConfig,
+    paper="https://arxiv.org/abs/1706.03762",
+    tags=("attention", "encoder-decoder"),
+    tier="core",
+)
 class Transformer(BaseModel):
     """Transformer model"""
 

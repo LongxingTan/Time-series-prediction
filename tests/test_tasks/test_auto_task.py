@@ -3,17 +3,20 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+from tfts.distributions import NormalOutput
 from tfts.tasks.auto_task import (
     AnomalyHead,
     AnomalyOutput,
     ClassificationHead,
     ClassificationOutput,
+    DistributionHead,
     GaussianHead,
     PredictionHead,
     PredictionOutput,
+    QuantileHead,
     SegmentationHead,
 )
-from tfts.tasks.base import BaseTask, ModelOutput
+from tfts.tasks.base import BaseHead, BaseTask, ModelOutput
 
 
 class TestPredictionOutput(unittest.TestCase):
@@ -64,6 +67,41 @@ class TestPredictionHead(unittest.TestCase):
         head = PredictionHead()
         self.assertTrue(isinstance(head, tf.keras.layers.Layer))
         self.assertTrue(isinstance(head, BaseTask))
+
+    def test_call_projects_hidden_states_to_forecast_contract(self):
+        head = PredictionHead(predict_sequence_length=4, num_labels=2)
+        outputs = head(tf.random.normal([3, 9, 16]))
+        self.assertEqual(outputs.shape, (3, 4, 2))
+
+    def test_residual_last_value_is_applied_after_projection(self):
+        head = PredictionHead(predict_sequence_length=3, num_labels=1, residual="last_value")
+        hidden = tf.zeros([2, 5, 4])
+        inputs = tf.reshape(tf.range(10, dtype=tf.float32), [2, 5, 1])
+        head(hidden, inputs=inputs)
+        head.projection.kernel.assign(tf.zeros_like(head.projection.kernel))
+        head.projection.bias.assign(tf.zeros_like(head.projection.bias))
+
+        outputs = head(hidden, inputs=inputs)
+        expected = tf.tile(inputs[:, -1:, :], [1, 3, 1])
+        self.assertTrue(tf.reduce_all(outputs == expected))
+
+
+class TestComposableHeads(unittest.TestCase):
+    def test_quantile_head_contract(self):
+        outputs = QuantileHead((0.1, 0.5, 0.9), num_labels=2)(tf.random.normal([4, 7, 8]))
+        self.assertEqual(outputs.shape, (4, 7, 2, 3))
+
+    def test_distribution_head_connects_distribution_output(self):
+        head = DistributionHead(NormalOutput(target_dim=2))
+        outputs = head(tf.random.normal([4, 7, 8]))
+        self.assertEqual(set(outputs), {"loc", "scale"})
+        self.assertEqual(outputs["loc"].shape, (4, 7, 2))
+        self.assertTrue(tf.reduce_all(outputs["scale"] > 0))
+
+    def test_all_layer_heads_share_base_contract(self):
+        self.assertIsInstance(PredictionHead(), BaseHead)
+        self.assertIsInstance(ClassificationHead(), BaseHead)
+        self.assertIsInstance(QuantileHead((0.5,)), BaseHead)
 
 
 class TestClassificationHead(unittest.TestCase):

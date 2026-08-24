@@ -9,10 +9,11 @@ from typing import List, Optional, Sequence
 
 import tensorflow as tf
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class TFTransformerConfig(BaseConfig):
+class TFTransformerConfig(CommonConfig):
     model_type: str = "tft"
 
     def __init__(
@@ -164,6 +165,13 @@ class InterpretableMultiHeadAttention(tf.keras.layers.Layer):
         return self.output_projection(attended), tf.reduce_mean(attention, axis=1)
 
 
+@register_model(
+    "tft",
+    config=TFTransformerConfig,
+    paper="https://arxiv.org/abs/1912.09363",
+    tags=("interpretable", "multi-horizon", "attention", "SOTA"),
+    tier="core",
+)
 class TFTransformer(tf.keras.Model, BaseModel):
     """Temporal Fusion Transformer accepting dedicated static feature tensors."""
 

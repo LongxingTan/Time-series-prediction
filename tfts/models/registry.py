@@ -1,298 +1,189 @@
-"""Model Registry — centralized catalog of all available models.
+"""Declarative model registry and compatibility views.
 
-Provides metadata and discovery for every model in TFTS, similar to how
-transformers maintains its model hub.
+Each model registers itself next to its implementation with :func:`register_model`.
+The registry imports built-in model modules lazily, so adding a model requires no
+edits to a central mapping.
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
-
-# ---------------------------------------------------------------------------
-# Model metadata registry
-# ---------------------------------------------------------------------------
-
-MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
-    [
-        (
-            "seq2seq",
-            {
-                "class_name": "Seq2seq",
-                "config_class": "Seq2seqConfig",
-                "description": "Basic encoder-decoder sequence-to-sequence model with attention.",
-                "paper": "",
-                "tags": ["baseline", "encoder-decoder"],
-            },
-        ),
-        (
-            "rnn",
-            {
-                "class_name": "RNN",
-                "config_class": "RNNConfig",
-                "description": "Stacked LSTM/GRU with optional attention for time series.",
-                "paper": "",
-                "tags": ["baseline", "recurrent"],
-            },
-        ),
-        (
-            "wavenet",
-            {
-                "class_name": "WaveNet",
-                "config_class": "WaveNetConfig",
-                "description": "Dilated causal convolutions for long-range temporal dependencies.",
-                "paper": "https://arxiv.org/abs/1609.03499",
-                "tags": ["convolutional", "long-range"],
-            },
-        ),
-        (
-            "tcn",
-            {
-                "class_name": "TCN",
-                "config_class": "TCNConfig",
-                "description": "Temporal Convolutional Network with dilated causal convolutions.",
-                "paper": "https://arxiv.org/abs/1803.01271",
-                "tags": ["convolutional", "efficient"],
-            },
-        ),
-        (
-            "transformer",
-            {
-                "class_name": "Transformer",
-                "config_class": "TransformerConfig",
-                "description": "Classic encoder-decoder Transformer for time series forecasting.",
-                "paper": "https://arxiv.org/abs/1706.03762",
-                "tags": ["attention", "encoder-decoder"],
-            },
-        ),
-        (
-            "bert",
-            {
-                "class_name": "Bert",
-                "config_class": "BertConfig",
-                "description": "BERT-style masked pre-training adapted for time series.",
-                "paper": "https://arxiv.org/abs/1810.04805",
-                "tags": ["pretraining", "attention", "encoder-only"],
-            },
-        ),
-        (
-            "informer",
-            {
-                "class_name": "Informer",
-                "config_class": "InformerConfig",
-                "description": "Efficient Transformer with ProbSparse self-attention for long sequences.",
-                "paper": "https://arxiv.org/abs/2012.07436",
-                "tags": ["attention", "long-sequence", "efficient", "SOTA"],
-            },
-        ),
-        (
-            "autoformer",
-            {
-                "class_name": "AutoFormer",
-                "config_class": "AutoFormerConfig",
-                "description": "Auto-correlation mechanism with series decomposition for seasonal-trend modeling.",
-                "paper": "https://arxiv.org/abs/2106.13008",
-                "tags": ["decomposition", "seasonal", "SOTA"],
-            },
-        ),
-        (
-            "tft",
-            {
-                "class_name": "TFTransformer",
-                "config_class": "TFTransformerConfig",
-                "description": "Temporal Fusion Transformer — interpretable multi-horizon forecasting.",
-                "paper": "https://arxiv.org/abs/1912.09363",
-                "tags": ["interpretable", "multi-horizon", "attention", "SOTA"],
-            },
-        ),
-        (
-            "unet",
-            {
-                "class_name": "Unet",
-                "config_class": "UnetConfig",
-                "description": "U-Net style architecture with skip connections for time series.",
-                "paper": "https://arxiv.org/abs/1505.04597",
-                "tags": ["convolutional", "skip-connection"],
-            },
-        ),
-        (
-            "nbeats",
-            {
-                "class_name": "NBeats",
-                "config_class": "NBeatsConfig",
-                "description": "Neural basis expansion — pure MLP stack with interpretable basis functions.",
-                "paper": "https://arxiv.org/abs/1905.10437",
-                "tags": ["mlp", "interpretable", "SOTA", "basis-expansion"],
-            },
-        ),
-        (
-            "dlinear",
-            {
-                "class_name": "DLinear",
-                "config_class": "DLinearConfig",
-                "description": "Surprisingly strong linear baseline — questions Transformer necessity.",
-                "paper": "https://arxiv.org/abs/2205.13504",
-                "tags": ["linear", "simple", "baseline", "SOTA"],
-            },
-        ),
-        (
-            "rwkv",
-            {
-                "class_name": "RWKV",
-                "config_class": "RWKVConfig",
-                "description": "RNN-style efficient attention — linear complexity with Transformer quality.",
-                "paper": "https://arxiv.org/abs/2305.13048",
-                "tags": ["efficient", "attention", "recurrent"],
-            },
-        ),
-        (
-            "patch_tst",
-            {
-                "class_name": "PatchTST",
-                "config_class": "PatchTSTConfig",
-                "description": "Patch-based time series Transformer — segments time series into patches.",
-                "paper": "https://arxiv.org/abs/2211.14730",
-                "tags": ["patching", "attention", "SOTA"],
-            },
-        ),
-        (
-            "deep_ar",
-            {
-                "class_name": "DeepAR",
-                "config_class": "DeepARConfig",
-                "description": "Probabilistic autoregressive RNN for uncertainty-aware forecasting.",
-                "paper": "https://arxiv.org/abs/1704.04110",
-                "tags": ["probabilistic", "recurrent", "uncertainty"],
-            },
-        ),
-        (
-            "itransformer",
-            {
-                "class_name": "ITransformer",
-                "config_class": "ITransformerConfig",
-                "description": "Inverted Transformer — applies attention across variates instead of time.",
-                "paper": "https://arxiv.org/abs/2310.06625",
-                "tags": ["attention", "multivariate", "SOTA"],
-            },
-        ),
-        (
-            "timesfm",
-            {
-                "class_name": "TimesFm",
-                "config_class": "TimesFmConfig",
-                "description": "Google's foundation model for time series — decoder-only with patching.",
-                "paper": "https://arxiv.org/abs/2310.10688",
-                "tags": ["foundation-model", "patching", "decoder-only", "SOTA"],
-            },
-        ),
-        (
-            "gpt",
-            {
-                "class_name": "GPT",
-                "config_class": "GPTConfig",
-                "description": "GPT-style decoder-only Transformer adapted for time series.",
-                "paper": "",
-                "tags": ["decoder-only", "attention", "generative"],
-            },
-        ),
-        (
-            "diffusion",
-            {
-                "class_name": "Diffusion",
-                "config_class": "DiffusionConfig",
-                "description": "Denoising diffusion probabilistic model for time series generation.",
-                "paper": "https://arxiv.org/abs/2006.11239",
-                "tags": ["generative", "diffusion", "probabilistic"],
-            },
-        ),
-        (
-            "tide",
-            {
-                "class_name": "Tide",
-                "config_class": "TideConfig",
-                "description": "Time-series Dense Encoder — simple MLP with covariate projection.",
-                "paper": "https://arxiv.org/abs/2304.08424",
-                "tags": ["mlp", "efficient", "covariates"],
-            },
-        ),
-        (
-            "timesnet",
-            {
-                "class_name": "TimesNet",
-                "config_class": "TimesNetConfig",
-                "description": "TimesNet — FFT period discovery + 2D inception convolutions for long-term forecasting.",
-                "paper": "https://arxiv.org/abs/2210.02186",
-                "tags": ["attention", "periodic", "convolutional"],
-            },
-        ),
-        (
-            "timexer",
-            {
-                "class_name": "TimeXer",
-                "config_class": "TimeXerConfig",
-                "description": "TimeXer — cross-way attention between native-global exogenous "
-                "and target series via patching.",
-                "paper": "https://arxiv.org/abs/2402.19072",
-                "tags": ["attention", "multivariate", "patch"],
-            },
-        ),
-        (
-            "timemixer",
-            {
-                "class_name": "TimeMixer",
-                "config_class": "TimeMixerConfig",
-                "description": "TimeMixer — decomposable multi-scale season/trend mixing for "
-                "short & long-term forecasting.",
-                "paper": "https://arxiv.org/abs/2405.14616",
-                "tags": ["decomposition", "multi-scale", "seasonal", "SOTA"],
-            },
-        ),
-    ]
-)
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
+import importlib
+import pkgutil
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 
-def list_models(tag: Optional[str] = None) -> List[str]:
-    """List all available model names, optionally filtered by tag.
+@dataclass(frozen=True)
+class ModelMetadata:
+    """Immutable metadata stored for one model implementation."""
 
-    Args:
-        tag: If provided, only return models matching this tag
-             (e.g. ``'SOTA'``, ``'attention'``, ``'convolutional'``).
+    name: str
+    model_class: Type
+    config_class: Type
+    description: str = ""
+    paper: str = ""
+    tags: Tuple[str, ...] = ()
+    tier: str = "experimental"
 
-    Returns:
-        Sorted list of model names.
+    def as_dict(self) -> Dict[str, Any]:
+        """Return the legacy dictionary representation."""
+        return {
+            "class_name": self.model_class.__name__,
+            "config_class": self.config_class.__name__,
+            "description": self.description,
+            "paper": self.paper,
+            "tags": list(self.tags),
+            "tier": self.tier,
+        }
 
-    Examples:
-        >>> tfts.list_models()
-        ['autoformer', 'bert', 'deep_ar', 'diffusion', 'dlinear', ...]
 
-        >>> tfts.list_models(tag='SOTA')
-        ['autoformer', 'dlinear', 'informer', 'itransformer', 'nbeats', 'patch_tst', 'tft', 'timemixer', 'timesfm']
+_ENTRIES: "OrderedDict[str, ModelMetadata]" = OrderedDict()
+_BUILTINS_LOADED = False
+_LOADING_BUILTINS = False
+_NON_MODEL_MODULES = {"auto_config", "auto_model", "base", "registry"}
+
+
+def register_model(
+    name: str,
+    *,
+    config: Type,
+    paper: str = "",
+    tags: Tuple[str, ...] = (),
+    tier: str = "experimental",
+    description: str = "",
+):
+    """Register a model class where it is defined.
+
+    Duplicate names are rejected unless the decorator is evaluated again for
+    the same classes, which makes module reloads harmless.
     """
-    if tag is None:
-        return sorted(MODEL_REGISTRY.keys())
-    return sorted(k for k, v in MODEL_REGISTRY.items() if tag in v.get("tags", []))
+    if not isinstance(name, str) or not name:
+        raise ValueError("Model name must be a non-empty string")
+    if tier not in {"core", "experimental"}:
+        raise ValueError("tier must be either 'core' or 'experimental'")
+
+    def decorator(model_class: Type) -> Type:
+        entry = ModelMetadata(
+            name=name,
+            model_class=model_class,
+            config_class=config,
+            description=description or (model_class.__doc__ or "").strip().split("\n", 1)[0],
+            paper=paper,
+            tags=tuple(tags),
+            tier=tier,
+        )
+        existing = _ENTRIES.get(name)
+        if existing is not None and (
+            existing.model_class.__module__ != model_class.__module__
+            or existing.model_class.__name__ != model_class.__name__
+            or existing.config_class.__name__ != config.__name__
+        ):
+            raise ValueError(f"Model name {name!r} is already registered by {existing.model_class.__name__}")
+        _ENTRIES[name] = entry
+        return model_class
+
+    return decorator
+
+
+def _load_builtin_models() -> None:
+    """Import every implementation module once so decorators populate the registry."""
+    global _BUILTINS_LOADED, _LOADING_BUILTINS
+    if _BUILTINS_LOADED or _LOADING_BUILTINS:
+        return
+
+    _LOADING_BUILTINS = True
+    try:
+        package = importlib.import_module("tfts.models")
+        module_names = sorted(
+            info.name
+            for info in pkgutil.iter_modules(package.__path__)
+            if not info.ispkg and info.name not in _NON_MODEL_MODULES and not info.name.startswith("_")
+        )
+        for module_name in module_names:
+            importlib.import_module(f"tfts.models.{module_name}")
+        _BUILTINS_LOADED = True
+    finally:
+        _LOADING_BUILTINS = False
+
+
+class _RegistryView(Mapping[str, Dict[str, Any]]):
+    """Read-only mapping preserving the historical ``MODEL_REGISTRY`` API."""
+
+    def __getitem__(self, key: str) -> Dict[str, Any]:
+        _load_builtin_models()
+        return _ENTRIES[key].as_dict()
+
+    def __iter__(self) -> Iterator[str]:
+        _load_builtin_models()
+        return iter(_ENTRIES)
+
+    def __len__(self) -> int:
+        _load_builtin_models()
+        return len(_ENTRIES)
+
+
+MODEL_REGISTRY: Mapping[str, Dict[str, Any]] = _RegistryView()
+
+
+class RegistryFieldView(Mapping[str, Any]):
+    """Live view of one metadata field, used by legacy auto mappings."""
+
+    def __init__(self, field: str):
+        self.field = field
+
+    def __getitem__(self, key: str) -> Any:
+        return MODEL_REGISTRY[key][self.field]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(MODEL_REGISTRY)
+
+    def __len__(self) -> int:
+        return len(MODEL_REGISTRY)
+
+
+def list_models(tag: Optional[str] = None, tier: Optional[str] = None) -> List[str]:
+    """List registered models, optionally filtered by tag and stability tier."""
+    _load_builtin_models()
+    if tier is not None and tier not in {"core", "experimental"}:
+        raise ValueError("tier must be either 'core' or 'experimental'")
+    return sorted(
+        name
+        for name, entry in _ENTRIES.items()
+        if (tag is None or tag in entry.tags) and (tier is None or tier == entry.tier)
+    )
 
 
 def get_model_info(model_name: str) -> Dict[str, Any]:
-    """Get metadata for a specific model.
+    """Return metadata for a registered model."""
+    _load_builtin_models()
+    if model_name not in _ENTRIES:
+        raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}")
+    return _ENTRIES[model_name].as_dict()
 
-    Args:
-        model_name: Name of the model as used in the registry.
 
-    Returns:
-        Dictionary with keys: class_name, config_class, description, paper, tags.
+def get_model_class(model_name: str) -> Type:
+    """Resolve a registry name directly to its model class."""
+    _load_builtin_models()
+    try:
+        return _ENTRIES[model_name].model_class
+    except KeyError as error:
+        raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
 
-    Raises:
-        ValueError: If the model name is not recognized.
-    """
-    if model_name not in MODEL_REGISTRY:
-        raise ValueError(f"Unknown model '{model_name}'. Available: {list_models()}")
-    return dict(MODEL_REGISTRY[model_name])
+
+def get_config_class(model_name: str) -> Type:
+    """Resolve a registry name directly to its config class."""
+    _load_builtin_models()
+    try:
+        return _ENTRIES[model_name].config_class
+    except KeyError as error:
+        raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
 
 
 def get_model_class_name(model_name: str) -> str:
-    """Resolve a model name to its Python class name."""
-    return MODEL_REGISTRY[model_name]["class_name"]
+    """Resolve a registry name to its model class name."""
+    return get_model_class(model_name).__name__
 
 
 def get_config_class_name(model_name: str) -> str:
-    """Resolve a model name to its Config class name."""
-    return MODEL_REGISTRY[model_name]["config_class"]
+    """Resolve a registry name to its config class name."""
+    return get_config_class(model_name).__name__

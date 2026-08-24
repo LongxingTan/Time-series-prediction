@@ -13,12 +13,13 @@ from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
 from ..tasks.auto_task import PredictionOutput
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class BertConfig(BaseConfig):
+class BertConfig(CommonConfig):
 
     model_type: str = "bert"
 
@@ -82,6 +83,12 @@ class BertConfig(BaseConfig):
         self.pad_token_id: int = pad_token_id
 
 
+@register_model(
+    "bert",
+    config=BertConfig,
+    paper="https://arxiv.org/abs/1810.04805",
+    tags=("pretraining", "attention", "encoder-only"),
+)
 class Bert(BaseModel):
     """Bert model for time series forecasting.
 

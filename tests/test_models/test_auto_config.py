@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 import unittest
 
 import tensorflow as tf
@@ -5,7 +8,8 @@ import tensorflow as tf
 import tfts
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
 from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
-from tfts.models.registry import MODEL_REGISTRY, get_model_info, list_models
+from tfts.models.base import BaseConfig
+from tfts.models.registry import MODEL_REGISTRY, get_config_class, get_model_class, get_model_info, list_models
 
 
 class TestAutoModel(unittest.TestCase):
@@ -42,6 +46,30 @@ class TestAutoModel(unittest.TestCase):
 
                 self.assertEqual(type(config).__name__, info["config_class"])
                 self.assertEqual(type(model.model).__name__, info["class_name"])
+
+    def test_registry_exposes_stability_tiers_and_class_objects(self):
+        core_models = list_models(tier="core")
+        experimental_models = list_models(tier="experimental")
+
+        self.assertTrue(core_models)
+        self.assertEqual(set(core_models) | set(experimental_models), set(list_models()))
+        self.assertFalse(set(core_models) & set(experimental_models))
+        for model_name in list_models():
+            with self.subTest(model_name=model_name):
+                info = get_model_info(model_name)
+                self.assertTrue(issubclass(get_config_class(model_name), BaseConfig))
+                self.assertEqual(get_model_class(model_name).__name__, info["class_name"])
+
+    def test_every_registered_config_round_trips_through_json(self):
+        for model_name in list_models():
+            with self.subTest(model_name=model_name):
+                config = AutoConfig.for_model(model_name)
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    path = os.path.join(tmpdir, "config.json")
+                    config.to_json(path)
+                    restored = type(config).from_json(path)
+                json_normalized = json.loads(json.dumps(config.to_dict()))
+                self.assertEqual(restored.to_dict(), json_normalized)
 
     def test_listed_models_satisfy_forward_contract(self):
         # AutoFormer currently operates in its configured hidden dimension;

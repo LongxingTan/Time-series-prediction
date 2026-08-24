@@ -11,10 +11,11 @@ from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda,
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class TCNConfig(BaseConfig):
+class TCNConfig(CommonConfig):
     model_type: str = "tcn"
 
     def __init__(
@@ -35,6 +36,7 @@ class TCNConfig(BaseConfig):
         self.dense_hidden_size: int = dense_hidden_size
 
 
+@register_model("tcn", config=TCNConfig, paper="https://arxiv.org/abs/1803.01271", tags=("convolutional", "efficient"))
 class TCN(BaseModel):
     """Temporal convolutional network"""
 
