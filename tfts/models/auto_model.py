@@ -51,6 +51,9 @@ MODEL_MAPPING_NAMES = collections.OrderedDict(
         ("gpt", "GPT"),
         ("diffusion", "Diffusion"),
         ("tide", "Tide"),
+        ("timesnet", "TimesNet"),
+        ("timexer", "TimeXer"),
+        ("timemixer", "TimeMixer"),
     ]
 )
 

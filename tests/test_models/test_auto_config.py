@@ -46,7 +46,7 @@ class TestAutoModel(unittest.TestCase):
         # N-BEATS is intentionally univariate. Other models accept a small
         # multivariate input.
         feature_counts = {"autoformer": 64, "nbeats": 1}
-        multivariate_outputs = {"diffusion", "itransformer"}
+        multivariate_outputs = {"diffusion", "itransformer", "timesnet", "timexer", "timemixer"}
 
         predict_sequence_length = 8
         for model_name in list_models():

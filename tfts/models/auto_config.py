@@ -28,6 +28,9 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt", "GPTConfig"),
         ("diffusion", "DiffusionConfig"),
         ("tide", "TideConfig"),
+        ("timesnet", "TimesNetConfig"),
+        ("timexer", "TimeXerConfig"),
+        ("timemixer", "TimeMixerConfig"),
     ]
 )
 

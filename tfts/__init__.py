@@ -34,6 +34,7 @@ from tfts.training.exposure_bias import (
     position_ramp,
 )
 from tfts.training.scheduled_sampling import scheduled_sampling_decode, teacher_forcing_decay
+from tfts.training.window_trainer import WindowedTrainer, final_windows, sampled_windows, smape_score
 from tfts.training_args import TrainingArguments
 from tfts.tuner import OptunaTuner
 
@@ -92,8 +93,12 @@ __all__ = [
     "Trainer",
     "KerasTrainer",
     "EagerTrainer",
+    "WindowedTrainer",
     "TrainingArguments",
     "set_seed",
+    "final_windows",
+    "sampled_windows",
+    "smape_score",
     # -- Exposure-bias (autoregressive) regularizers --
     "add_exposure_bias_noise",
     "add_exposure_bias_noise_np",
