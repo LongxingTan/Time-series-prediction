@@ -58,6 +58,9 @@ dependencies = [
     "tensorflow>=2.4",
 ]
 
+[project.optional-dependencies]
+benchmark = ["PyYAML>=5.4"]
+
 [project.urls]
 Homepage = "https://time-series-prediction.readthedocs.io"
 Documentation = "https://time-series-prediction.readthedocs.io"
@@ -65,6 +68,10 @@ Repository = "https://github.com/LongxingTan/Time-series-prediction"
 
 [project.scripts]
 tfts-forecast = "tfts.cli.forecasting:main"
+tfts-benchmark = "benchmark.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tfts", "benchmark"]
 
 [dependency-groups]
 dev = [

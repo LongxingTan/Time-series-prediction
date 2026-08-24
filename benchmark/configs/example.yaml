@@ -1,0 +1,32 @@
+# Run with: tfts-benchmark --config benchmark/configs/example.yaml
+benchmark:
+  metrics: [mae, rmse, mape]
+  runs: 1
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+  seed: 42
+  output_dir: benchmark_results
+  verbose: 1
+
+# A mapping selects each model and passes these values to its TFTS config.
+# Use `models: [rnn, transformer]` when no model overrides are needed.
+models:
+  rnn:
+    rnn_hidden_size: 64
+  transformer:
+    hidden_size: 64
+    num_layers: 2
+
+# Dataset values are passed to get_train_valid_split. Training settings here
+# override the global benchmark settings for this dataset.
+datasets:
+  sine:
+    train_length: 24
+    predict_sequence_length: 8
+    n_examples: 500
+    test_size: 0.2
+  air_passengers:
+    train_length: 24
+    predict_sequence_length: 8
+    epochs: 20

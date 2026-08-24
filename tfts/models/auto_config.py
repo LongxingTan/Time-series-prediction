@@ -1,35 +1,12 @@
 """AutoConfig to set up models custom config"""
 
-from collections import OrderedDict
 import importlib
 from typing import Dict
 
 from .base import BaseConfig
+from .registry import MODEL_REGISTRY
 
-CONFIG_MAPPING_NAMES = OrderedDict(
-    [
-        ("seq2seq", "Seq2seqConfig"),
-        ("rnn", "RNNConfig"),
-        ("wavenet", "WaveNetConfig"),
-        ("tcn", "TCNConfig"),
-        ("transformer", "TransformerConfig"),
-        ("bert", "BertConfig"),
-        ("informer", "InformerConfig"),
-        ("autoformer", "AutoFormerConfig"),
-        ("tft", "TFTransformerConfig"),
-        ("unet", "UnetConfig"),
-        ("nbeats", "NBeatsConfig"),
-        ("dlinear", "DLinearConfig"),
-        ("rwkv", "RWKVConfig"),
-        ("patch_tst", "PatchTSTConfig"),
-        ("deep_ar", "DeepARConfig"),
-        ("itransformer", "ITransformerConfig"),
-        ("timesfm", "TimesFmConfig"),
-        ("gpt", "GPTConfig"),
-        ("diffusion", "DiffusionConfig"),
-        ("tide", "TideConfig"),
-    ]
-)
+CONFIG_MAPPING_NAMES = {name: metadata["config_class"] for name, metadata in MODEL_REGISTRY.items()}
 
 
 class AutoConfig(BaseConfig):

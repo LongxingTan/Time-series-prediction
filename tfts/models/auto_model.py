@@ -1,6 +1,5 @@
 """AutoModel to choose different models"""
 
-import collections
 import importlib
 import json
 import logging
@@ -25,34 +24,12 @@ from tfts.tasks.auto_task import (
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
 from .auto_config import AutoConfig
+from .registry import MODEL_REGISTRY
 
 logger = logging.getLogger(__name__)
 
 
-MODEL_MAPPING_NAMES = collections.OrderedDict(
-    [
-        ("seq2seq", "Seq2seq"),
-        ("rnn", "RNN"),
-        ("wavenet", "WaveNet"),
-        ("tcn", "TCN"),
-        ("transformer", "Transformer"),
-        ("bert", "Bert"),
-        ("informer", "Informer"),
-        ("autoformer", "AutoFormer"),
-        ("tft", "TFTransformer"),
-        ("unet", "Unet"),
-        ("nbeats", "NBeats"),
-        ("dlinear", "DLinear"),
-        ("rwkv", "RWKV"),
-        ("patch_tst", "PatchTST"),
-        ("deep_ar", "DeepAR"),
-        ("itransformer", "ITransformer"),
-        ("timesfm", "TimesFm"),
-        ("gpt", "GPT"),
-        ("diffusion", "Diffusion"),
-        ("tide", "Tide"),
-    ]
-)
+MODEL_MAPPING_NAMES = {name: metadata["class_name"] for name, metadata in MODEL_REGISTRY.items()}
 
 
 class AutoModel(BaseModel):

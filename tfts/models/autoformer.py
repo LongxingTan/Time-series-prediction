@@ -60,6 +60,7 @@ class AutoFormerConfig(BaseConfig):
         self.positional_type = positional_type
         self.use_cache = use_cache
         self.classifier_dropout = classifier_dropout
+        self.update(kwargs)
 
 
 class AutoFormer(BaseModel):
@@ -130,7 +131,7 @@ class AutoFormer(BaseModel):
 
         # Decoder
         decoder_output = self.decoder(decoder_feature, encoder_output)
-        outputs = self.project1(decoder_output)
+        outputs = self.project1(decoder_output)[:, -self.predict_sequence_length :, :]
         return outputs
 
 

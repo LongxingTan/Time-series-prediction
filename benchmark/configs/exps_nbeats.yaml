@@ -1,0 +1,36 @@
+# N-BEATS parity setup from exps/nbeats_phase4_tfts.
+benchmark:
+  metrics: [mae, mse, rmse]
+  runs: 1
+  epochs: 40
+  batch_size: 128
+  learning_rate: 0.01
+  output_dir: benchmark_results/exps_nbeats
+
+models:
+  nbeats:
+    config:
+      stack_types: [trend, seasonality]
+      widths: [32, 512]
+      num_blocks: [3, 3]
+      num_block_layers: [3, 3]
+      expansion_coefficient_lengths: [3, 7]
+      dropout: 0.1
+    training:
+      loss: mae
+      optimizer:
+        class_name: Adam
+        config:
+          learning_rate: 0.01
+          weight_decay: 0.01
+      early_stopping_patience: 8
+
+datasets:
+  ar_nbeats_exps:
+    type: npz
+    train_path: exps/nbeats_phase2_tfts/train.npz
+    valid_path: exps/nbeats_phase2_tfts/validation.npz
+    input_keys: [x]
+    target_key: y
+    train_length: 60
+    predict_sequence_length: 20

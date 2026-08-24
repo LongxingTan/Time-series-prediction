@@ -2,6 +2,10 @@
 
 Usage::
 
+    python -m benchmark.cli --config benchmark/configs/example.yaml
+
+Or with command-line options::
+
     python -m benchmark.cli \
         --models rnn transformer dlinear \
         --datasets sine air_passengers \
@@ -34,46 +38,51 @@ def get_parser() -> argparse.ArgumentParser:
         description="TFTS Benchmark: Run multiple models on multiple datasets.",
     )
     parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to a YAML file. Explicit CLI options override YAML values.",
+    )
+    parser.add_argument(
         "--models",
         nargs="+",
-        default=["all"],
+        default=None,
         help="Model names to benchmark (default: all). Use 'all' for every registered model.",
     )
     parser.add_argument(
         "--datasets",
         nargs="+",
-        default=["all"],
+        default=None,
         help="Dataset names to benchmark (default: all). Use 'all' for every registered dataset.",
     )
     parser.add_argument(
         "--metrics",
         nargs="+",
-        default=["mae", "rmse", "mape"],
+        default=None,
         choices=["mae", "mse", "rmse", "mape", "smape", "r2", "mape_pct"],
         help="Metrics to compute.",
     )
     parser.add_argument(
         "--runs",
         type=int,
-        default=1,
+        default=None,
         help="Number of runs per model-dataset pair (for statistical significance).",
     )
     parser.add_argument(
         "--epochs",
         type=int,
-        default=50,
+        default=None,
         help="Number of training epochs.",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=None,
         help="Batch size for training.",
     )
     parser.add_argument(
         "--learning-rate",
         type=float,
-        default=1e-3,
+        default=None,
         help="Learning rate.",
     )
     parser.add_argument(
@@ -91,20 +100,20 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=None,
         help="Base random seed.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="benchmark_results",
+        default=None,
         help="Directory to save results.",
     )
     parser.add_argument(
         "--verbose",
         type=int,
         choices=[0, 1, 2],
-        default=1,
+        default=None,
         help="Verbosity level (0=silent, 1=progress, 2=detailed).",
     )
     parser.add_argument(
@@ -138,6 +147,8 @@ def main(argv: List[str] = None) -> int:
         CMIDetectSleepStatesDataset,
         ForecastingStickerSalesDataset,
         GrocerysalesDataset,
+        M4Dataset,
+        NpzDataset,
         RecruitRestaurantDataset,
         SineDataset,
     )
@@ -145,6 +156,8 @@ def main(argv: List[str] = None) -> int:
     dataset_registry.register("sine", SineDataset)
     dataset_registry.register("air_passengers", AirPassengersDataset)
     dataset_registry.register("grocery_sales", GrocerysalesDataset)
+    dataset_registry.register("m4", M4Dataset)
+    dataset_registry.register("npz", NpzDataset)
     dataset_registry.register("recruit_restaurant", RecruitRestaurantDataset)
     dataset_registry.register("forecasting_sticker_sales", ForecastingStickerSalesDataset)
     dataset_registry.register("CMI_detect_sleep_states", CMIDetectSleepStatesDataset)
@@ -161,20 +174,25 @@ def main(argv: List[str] = None) -> int:
             print("  " + f"- {name}")
         return 0
 
-    config = BenchmarkConfig(
-        models=args.models,
-        datasets=args.datasets,
-        metrics=args.metrics,
-        runs=args.runs,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        learning_rate=args.learning_rate,
-        train_length=args.train_length,
-        predict_sequence_length=args.predict_sequence_length,
-        seed=args.seed,
-        output_dir=args.output_dir,
-        verbose=args.verbose,
-    )
+    config = BenchmarkConfig.from_yaml(args.config) if args.config else BenchmarkConfig()
+    cli_overrides = {
+        "models": args.models,
+        "datasets": args.datasets,
+        "metrics": args.metrics,
+        "runs": args.runs,
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "learning_rate": args.learning_rate,
+        "train_length": args.train_length,
+        "predict_sequence_length": args.predict_sequence_length,
+        "seed": args.seed,
+        "output_dir": args.output_dir,
+        "verbose": args.verbose,
+    }
+    for name, value in cli_overrides.items():
+        if value is not None:
+            setattr(config, name, value)
+    config.__post_init__()
 
     runner = BenchmarkRunner(config, dataset_registry, model_registry)
     results = runner.run()
@@ -185,7 +203,7 @@ def main(argv: List[str] = None) -> int:
     if args.latex:
         import os
 
-        latex_path = os.path.join(args.output_dir, "results.tex")
+        latex_path = os.path.join(config.output_dir, "results.tex")
         results.to_latex(latex_path)
         print(f"\nLaTeX table saved to: {latex_path}")
 

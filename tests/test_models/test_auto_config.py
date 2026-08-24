@@ -3,9 +3,9 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.models.auto_config import AutoConfig
-from tfts.models.auto_model import AutoModel
-from tfts.models.registry import get_model_info, list_models
+from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
+from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
+from tfts.models.registry import MODEL_REGISTRY, get_model_info, list_models
 
 
 class TestAutoModel(unittest.TestCase):
@@ -32,6 +32,8 @@ class TestAutoModel(unittest.TestCase):
                 self.assertEqual(model.config.model_type, model_name)
 
     def test_registry_metadata_matches_auto_dispatch(self):
+        self.assertEqual(set(MODEL_REGISTRY), set(MODEL_MAPPING_NAMES))
+        self.assertEqual(set(MODEL_REGISTRY), set(CONFIG_MAPPING_NAMES))
         for model_name in list_models():
             with self.subTest(model_name=model_name):
                 info = get_model_info(model_name)
@@ -46,7 +48,7 @@ class TestAutoModel(unittest.TestCase):
         # N-BEATS is intentionally univariate. Other models accept a small
         # multivariate input.
         feature_counts = {"autoformer": 64, "nbeats": 1}
-        multivariate_outputs = {"diffusion", "itransformer"}
+        multivariate_outputs = {"diffusion", "itransformer", "timesnet", "timexer", "timemixer"}
 
         predict_sequence_length = 8
         for model_name in list_models():

@@ -39,7 +39,7 @@ class DistributionOutput(tf.keras.layers.Layer, ABC):
         """Deterministic point estimate of the distribution (used by greedy decoding)."""
 
     @abstractmethod
-    def sample(self, parameters: Dict[str, tf.Tensor], seed: Optional[int] = None) -> tf.Tensor:
+    def sample(self, parameters: Dict[str, tf.Tensor], seed=None) -> tf.Tensor:
         """Draw one sample from the distribution (used by ancestral decoding)."""
 
     @abstractmethod

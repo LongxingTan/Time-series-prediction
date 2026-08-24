@@ -52,13 +52,14 @@ class NormalOutput(DistributionOutput):
     def mean(self, parameters: Dict[str, tf.Tensor]) -> tf.Tensor:
         return parameters["loc"]
 
-    def sample(self, parameters: Dict[str, tf.Tensor], seed: Optional[int] = None) -> tf.Tensor:
+    def sample(self, parameters: Dict[str, tf.Tensor], seed=None) -> tf.Tensor:
         loc = parameters["loc"]
         scale = parameters["scale"]
         if seed is None:
             noise = tf.random.normal(tf.shape(loc))
         else:
-            noise = tf.random.stateless_normal(tf.shape(loc), seed=[seed, 0])
+            stateless_seed = [seed, 0] if isinstance(seed, int) else seed
+            noise = tf.random.stateless_normal(tf.shape(loc), seed=stateless_seed, dtype=loc.dtype)
         return loc + scale * noise
 
     def loss(self, y_true: tf.Tensor, parameters: Dict[str, tf.Tensor], reduction: str = "mean") -> tf.Tensor:

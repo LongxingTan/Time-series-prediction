@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 import tensorflow as tf
 
@@ -35,3 +35,14 @@ class MultiQuantileLoss(tf.keras.losses.Loss):
             losses.append(tf.reduce_mean(quantile_l))
 
         return tf.add_n(losses)
+
+
+def smape_loss(y_true: tf.Tensor, y_pred: tf.Tensor, eps: float = 1e-3) -> tf.Tensor:
+    """Elementwise symmetric MAPE loss (SMAPE), returned per-sample (no reduction).
+
+    Returns ``(batch, pred_len, num_features)`` so Keras/`fit` can apply a
+    per-horizon ``sample_weight`` (e.g. a validity mask). Matches the M4 SMAPE
+    convention ``200 * |y_pred - y_true| / (|y_true| + |y_pred| + eps)``.
+    """
+    den = tf.abs(y_true) + tf.abs(y_pred) + eps
+    return 200.0 * tf.abs(y_pred - y_true) / den

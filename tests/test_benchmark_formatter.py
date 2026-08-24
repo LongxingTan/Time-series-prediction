@@ -12,6 +12,8 @@ from unittest.mock import patch
 import numpy as np
 
 from benchmark.base import BenchmarkConfig
+from benchmark.datasets.m4 import M4Dataset
+from benchmark.datasets.npz import NpzDataset
 from benchmark.formatter import BenchmarkResults
 from benchmark.metrics import BenchmarkMetrics
 from benchmark.registry import DatasetRegistry, ModelRegistry
@@ -301,6 +303,60 @@ class BenchmarkConfigTest(unittest.TestCase):
         self.assertEqual(config.get_dataset_config("toy")["epochs"], 1)
         self.assertEqual(config.get_dataset_config("other")["epochs"], 3)
 
+    def test_loads_yaml_with_dataset_and_model_overrides(self):
+        yaml_text = """
+benchmark:
+  epochs: 7
+  metrics: [mae]
+  output_dir: custom-results
+models:
+  rnn:
+    hidden_size: 16
+  transformer: {}
+datasets:
+  sine:
+    train_length: 12
+    n_examples: 50
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "benchmark.yaml")
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                config_file.write(yaml_text)
+            config = BenchmarkConfig.from_yaml(config_path)
+
+        self.assertEqual(config.models, ["rnn", "transformer"])
+        self.assertEqual(config.datasets, ["sine"])
+        self.assertEqual(config.metrics, ["mae"])
+        self.assertEqual(config.get_dataset_config("sine")["train_length"], 12)
+        self.assertEqual(config.get_dataset_config("sine")["n_examples"], 50)
+        self.assertEqual(config.get_model_config("rnn"), {"hidden_size": 16})
+
+    def test_nested_model_sections(self):
+        yaml_text = """
+models:
+  tft:
+    config: {hidden_size: 16}
+    training: {loss: multi_quantile}
+    prediction: {quantile: 0.5}
+datasets: [sine]
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "benchmark.yaml")
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                config_file.write(yaml_text)
+            config = BenchmarkConfig.from_yaml(config_path)
+        self.assertEqual(config.get_model_config("tft"), {"hidden_size": 16})
+        self.assertEqual(config.get_model_training("tft"), {"loss": "multi_quantile"})
+        self.assertEqual(config.get_model_prediction("tft"), {"quantile": 0.5})
+
+    def test_yaml_validation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "benchmark.yaml")
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                config_file.write("models: rnn\n")
+            with self.assertRaisesRegex(ValueError, "models"):
+                BenchmarkConfig.from_yaml(config_path)
+
 
 class RegistryTest(unittest.TestCase):
     def test_base_registry_and_model_registry_operations(self):
@@ -323,6 +379,54 @@ class RegistryTest(unittest.TestCase):
 
 
 class DatasetRegistryTest(unittest.TestCase):
+    def test_m4_dataset_builds_complete_windows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import pandas as pd
+
+            pd.DataFrame({"M4id": ["W1", "M1"], "SP": ["Weekly", "Monthly"]}).to_csv(
+                os.path.join(tmpdir, "M4-info.csv"), index=False
+            )
+            train_values = np.empty(2, dtype=object)
+            train_values[:] = [np.arange(30, dtype=np.float32), np.arange(20, dtype=np.float32)]
+            test_values = np.empty(2, dtype=object)
+            test_values[:] = [np.arange(4, dtype=np.float32), np.arange(4, dtype=np.float32)]
+            with open(os.path.join(tmpdir, "training.npz"), "wb") as output:
+                np.save(output, train_values, allow_pickle=True)
+            with open(os.path.join(tmpdir, "test.npz"), "wb") as output:
+                np.save(output, test_values, allow_pickle=True)
+
+            train, valid = M4Dataset().get_train_valid_split(
+                data_dir=tmpdir,
+                seasonal_pattern="Weekly",
+                train_length=8,
+                predict_sequence_length=4,
+                windows_per_series=2,
+                window_seed=1,
+            )
+        self.assertEqual(train[0].shape, (2, 8, 1))
+        self.assertEqual(train[1].shape, (2, 4, 1))
+        self.assertEqual(valid[0].shape, (1, 8, 1))
+        self.assertEqual(valid[1].shape, (1, 4, 1))
+
+    def test_npz_dataset_supports_array_and_structured_inputs(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            train_path = os.path.join(tmpdir, "train.npz")
+            valid_path = os.path.join(tmpdir, "valid.npz")
+            values = np.zeros((3, 4, 1), dtype=np.float32)
+            targets = np.ones((3, 2, 1), dtype=np.float32)
+            np.savez(train_path, x=values, known=values, y=targets)
+            np.savez(valid_path, x=values, known=values, y=targets)
+
+            dataset = NpzDataset()
+            train, valid = dataset.get_train_valid_split(
+                train_path=train_path,
+                valid_path=valid_path,
+                input_keys=["x", "known"],
+                target_key="y",
+            )
+        self.assertEqual(set(train[0]), {"x", "known"})
+        np.testing.assert_array_equal(valid[1], targets)
+
     def test_lazy_dataset_registration_returns_instantiable_wrapper(self):
         class ToyDataset:
             def prepare_data(self, **kwargs):

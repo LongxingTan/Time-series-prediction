@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import logging
+import os
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -37,6 +38,8 @@ class BenchmarkConfig:
         per_dataset_config: Optional per-dataset configuration overrides.
             Keys are dataset names, values are dicts with keys like ``train_length``,
             ``predict_sequence_length``, ``epochs``, etc.
+        per_model_config: Optional model architecture overrides. Keys are model
+            names and values are applied to that model's TFTS config.
     """
 
     models: List[str] = field(default_factory=lambda: ["all"])
@@ -54,12 +57,108 @@ class BenchmarkConfig:
     verbose: int = 1
     device: str = ""
     per_dataset_config: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    per_model_config: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    per_model_training: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    per_model_prediction: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.runs < 1:
             raise ValueError("runs must be >= 1")
         if self.epochs < 1:
             raise ValueError("epochs must be >= 1")
+
+    @classmethod
+    def from_yaml(cls, path: Union[str, os.PathLike]) -> "BenchmarkConfig":
+        """Load a benchmark configuration from a YAML file.
+
+        ``models`` and ``datasets`` may be simple lists, or mappings whose
+        values contain per-item configuration. Global options can be placed
+        under ``benchmark`` (recommended) or at the top level.
+        """
+        try:
+            import yaml
+        except ImportError as exc:
+            raise ImportError("PyYAML is required to load benchmark YAML files") from exc
+
+        with open(path, encoding="utf-8") as config_file:
+            raw = yaml.safe_load(config_file)
+        if raw is None:
+            raw = {}
+        if not isinstance(raw, dict):
+            raise ValueError("Benchmark YAML must contain a mapping at the top level")
+
+        benchmark_options = raw.pop("benchmark", {})
+        if not isinstance(benchmark_options, dict):
+            raise ValueError("'benchmark' must be a mapping")
+        options = dict(raw)
+        options.update(benchmark_options)
+
+        models, model_config = cls._parse_named_items(options.pop("models", ["all"]), "models")
+        datasets, dataset_config = cls._parse_named_items(options.pop("datasets", ["all"]), "datasets")
+
+        explicit_dataset_config = options.pop("per_dataset_config", {})
+        explicit_model_config = options.pop("per_model_config", {})
+        if not isinstance(explicit_dataset_config, dict) or not isinstance(explicit_model_config, dict):
+            raise ValueError("per_dataset_config and per_model_config must be mappings")
+        dataset_config.update(explicit_dataset_config)
+        model_config.update(explicit_model_config)
+
+        model_training = options.pop("per_model_training", {})
+        model_prediction = options.pop("per_model_prediction", {})
+        for name, item in list(model_config.items()):
+            if any(key in item for key in ("config", "training", "prediction")):
+                architecture = item.get("config", {})
+                if not isinstance(architecture, dict):
+                    raise ValueError(f"Model config for '{name}' must be a mapping")
+                model_training[name] = item.get("training", {})
+                model_prediction[name] = item.get("prediction", {})
+                model_config[name] = architecture
+        if not isinstance(model_training, dict) or not isinstance(model_prediction, dict):
+            raise ValueError("per_model_training and per_model_prediction must be mappings")
+        for section_name, section in (("training", model_training), ("prediction", model_prediction)):
+            if not all(isinstance(value, dict) for value in section.values()):
+                raise ValueError(f"All model {section_name} options must be mappings")
+
+        valid_fields = set(cls.__dataclass_fields__) - {
+            "models",
+            "datasets",
+            "per_dataset_config",
+            "per_model_config",
+            "per_model_training",
+            "per_model_prediction",
+        }
+        unknown = set(options) - valid_fields
+        if unknown:
+            raise ValueError(f"Unknown benchmark configuration options: {sorted(unknown)}")
+        return cls(
+            models=models,
+            datasets=datasets,
+            per_dataset_config=dataset_config,
+            per_model_config=model_config,
+            per_model_training=model_training,
+            per_model_prediction=model_prediction,
+            **options,
+        )
+
+    @staticmethod
+    def _parse_named_items(value: Any, field_name: str) -> Tuple[List[str], Dict[str, Dict[str, Any]]]:
+        """Normalize a YAML list or ``name: config`` mapping."""
+        if isinstance(value, list):
+            if not all(isinstance(name, str) for name in value):
+                raise ValueError(f"'{field_name}' list entries must be strings")
+            return value, {}
+        if isinstance(value, dict):
+            config = {}
+            for name, item_config in value.items():
+                if not isinstance(name, str):
+                    raise ValueError(f"'{field_name}' names must be strings")
+                if item_config is None:
+                    item_config = {}
+                if not isinstance(item_config, dict):
+                    raise ValueError(f"Configuration for {field_name} '{name}' must be a mapping")
+                config[name] = item_config
+            return list(value), config
+        raise ValueError(f"'{field_name}' must be a list or mapping")
 
     def get_dataset_config(self, dataset_name: str) -> Dict[str, Any]:
         """Get configuration for a specific dataset, merging with defaults."""
@@ -73,6 +172,18 @@ class BenchmarkConfig:
         if dataset_name in self.per_dataset_config:
             config.update(self.per_dataset_config[dataset_name])
         return config
+
+    def get_model_config(self, model_name: str) -> Dict[str, Any]:
+        """Return model architecture overrides for a specific model."""
+        return dict(self.per_model_config.get(model_name, {}))
+
+    def get_model_training(self, model_name: str) -> Dict[str, Any]:
+        """Return Trainer overrides for a specific model."""
+        return dict(self.per_model_training.get(model_name, {}))
+
+    def get_model_prediction(self, model_name: str) -> Dict[str, Any]:
+        """Return point-forecast extraction options for a specific model."""
+        return dict(self.per_model_prediction.get(model_name, {}))
 
 
 class Dataset(ABC):

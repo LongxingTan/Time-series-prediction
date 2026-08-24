@@ -213,6 +213,38 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = OrderedDict(
                 "tags": ["mlp", "efficient", "covariates"],
             },
         ),
+        (
+            "timesnet",
+            {
+                "class_name": "TimesNet",
+                "config_class": "TimesNetConfig",
+                "description": "TimesNet — FFT period discovery + 2D inception convolutions for long-term forecasting.",
+                "paper": "https://arxiv.org/abs/2210.02186",
+                "tags": ["attention", "periodic", "convolutional"],
+            },
+        ),
+        (
+            "timexer",
+            {
+                "class_name": "TimeXer",
+                "config_class": "TimeXerConfig",
+                "description": "TimeXer — cross-way attention between native-global exogenous "
+                "and target series via patching.",
+                "paper": "https://arxiv.org/abs/2402.19072",
+                "tags": ["attention", "multivariate", "patch"],
+            },
+        ),
+        (
+            "timemixer",
+            {
+                "class_name": "TimeMixer",
+                "config_class": "TimeMixerConfig",
+                "description": "TimeMixer — decomposable multi-scale season/trend mixing for "
+                "short & long-term forecasting.",
+                "paper": "https://arxiv.org/abs/2405.14616",
+                "tags": ["decomposition", "multi-scale", "seasonal", "SOTA"],
+            },
+        ),
     ]
 )
 
