@@ -20,10 +20,11 @@ from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class InformerConfig(BaseConfig):
+class InformerConfig(CommonConfig):
     model_type: str = "informer"
 
     def __init__(
@@ -50,6 +51,13 @@ class InformerConfig(BaseConfig):
         self.distil_conv = distil_conv
 
 
+@register_model(
+    "informer",
+    config=InformerConfig,
+    paper="https://arxiv.org/abs/2012.07436",
+    tags=("attention", "long-sequence", "efficient", "SOTA"),
+    tier="core",
+)
 class Informer(BaseModel):
     """Informer model for time series"""
 

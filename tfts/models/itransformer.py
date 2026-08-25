@@ -13,10 +13,11 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
 from ..layers.util_layer import ShapeLayer
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class ITransformerConfig(BaseConfig):
+class ITransformerConfig(CommonConfig):
     model_type: str = "itransformer"
 
     def __init__(
@@ -63,6 +64,13 @@ class ITransformerConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "itransformer",
+    config=ITransformerConfig,
+    paper="https://arxiv.org/abs/2310.06625",
+    tags=("attention", "multivariate", "SOTA"),
+    tier="core",
+)
 class ITransformer(BaseModel):
     """TensorFlow iTransformer model for time series forecasting"""
 

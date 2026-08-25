@@ -21,7 +21,8 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
 def _clamp_odd_kernel(kernel: int, length: int) -> int:
@@ -250,7 +251,7 @@ class PastDecomposableMixing(tf.keras.layers.Layer):
         return out_list
 
 
-class TimeMixerConfig(BaseConfig):
+class TimeMixerConfig(CommonConfig):
     model_type: str = "timemixer"
 
     def __init__(
@@ -287,6 +288,12 @@ class TimeMixerConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "timemixer",
+    config=TimeMixerConfig,
+    paper="https://arxiv.org/abs/2405.14616",
+    tags=("decomposition", "multi-scale", "seasonal", "SOTA"),
+)
 class TimeMixer(BaseModel):
     """TensorFlow TimeMixer for multivariate time series forecasting.
 

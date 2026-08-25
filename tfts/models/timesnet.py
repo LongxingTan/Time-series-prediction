@@ -16,7 +16,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Conv2D, Dense, Dropout, LayerNormalization
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
 class PositionalEmbedding(tf.keras.layers.Layer):
@@ -173,7 +174,7 @@ class TimesBlock(tf.keras.layers.Layer):
         return res + x  # residual
 
 
-class TimesNetConfig(BaseConfig):
+class TimesNetConfig(CommonConfig):
     model_type: str = "timesnet"
 
     def __init__(
@@ -206,6 +207,12 @@ class TimesNetConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "timesnet",
+    config=TimesNetConfig,
+    paper="https://arxiv.org/abs/2210.02186",
+    tags=("attention", "periodic", "convolutional"),
+)
 class TimesNet(BaseModel):
     """TensorFlow TimesNet for time series forecasting."""
 

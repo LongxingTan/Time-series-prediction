@@ -1,20 +1,98 @@
 """Time series task head"""
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GlobalAveragePooling1D
 
-from .base import BaseTask, ModelOutput
+from tfts.distributions import DistributionOutput
+
+from .base import BaseHead, BaseTask, ModelOutput
 
 
-class PredictionHead(tf.keras.layers.Layer, BaseTask):
-    """Prediction task head layer"""
+def apply_prediction_residual(
+    outputs: tf.Tensor, inputs: tf.Tensor, residual: Optional[str], num_labels: int = 1
+) -> tf.Tensor:
+    """Apply the canonical prediction residual to already-projected outputs."""
+    if residual is None:
+        return outputs
+    if residual not in PredictionHead._RESIDUALS:
+        raise ValueError(f"Unknown prediction residual {residual!r}")
+    if isinstance(inputs, dict):
+        inputs = inputs["x"]
+    elif isinstance(inputs, (list, tuple)):
+        inputs = inputs[0]
+    tf.debugging.assert_greater_equal(
+        tf.shape(inputs)[-1], num_labels, message="Input has fewer channels than num_labels"
+    )
+    target = inputs[..., :num_labels]
+    horizon = tf.shape(outputs)[1]
+    if residual == "mean":
+        value = tf.reduce_mean(target, axis=1, keepdims=True)
+        residual_values = tf.tile(value, [1, horizon, 1])
+    elif residual == "last_value":
+        residual_values = tf.tile(target[:, -1:, :], [1, horizon, 1])
+    else:
+        tf.debugging.assert_greater_equal(
+            tf.shape(target)[1], horizon, message="Input sequence is shorter than the prediction horizon"
+        )
+        residual_values = target[:, -horizon:, :]
+    return outputs + tf.cast(residual_values, outputs.dtype)
 
-    def __init__(self):
-        super(PredictionHead, self).__init__()
+
+class PredictionHead(BaseHead):
+    """Project the final horizon of backbone states to a point forecast."""
+
+    _RESIDUALS = {None, "last_value", "last_window", "mean"}
+
+    def __init__(
+        self,
+        predict_sequence_length: Optional[int] = None,
+        num_labels: int = 1,
+        residual: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if predict_sequence_length is not None and predict_sequence_length <= 0:
+            raise ValueError("predict_sequence_length must be positive")
+        if num_labels <= 0:
+            raise ValueError("num_labels must be positive")
+        if residual not in self._RESIDUALS:
+            raise ValueError(f"residual must be one of {sorted(str(x) for x in self._RESIDUALS)}")
+        self.predict_sequence_length = predict_sequence_length
+        self.num_labels = num_labels
+        self.residual = residual
+        self.projection = Dense(num_labels, name="output_projection")
+
+    def call(self, hidden_states: tf.Tensor, inputs: Optional[tf.Tensor] = None, **kwargs) -> tf.Tensor:
+        if hidden_states.shape.rank != 3:
+            raise ValueError("PredictionHead expects hidden states shaped (batch, time, hidden_size)")
+        if self.predict_sequence_length is not None:
+            tf.debugging.assert_greater_equal(
+                tf.shape(hidden_states)[1],
+                self.predict_sequence_length,
+                message="Backbone returned fewer hidden states than the prediction horizon",
+            )
+            hidden_states = hidden_states[:, -self.predict_sequence_length :, :]
+        outputs = self.projection(hidden_states)
+        if self.residual is not None:
+            if inputs is None:
+                raise ValueError("inputs are required when PredictionHead.residual is enabled")
+            outputs = apply_prediction_residual(outputs, inputs, self.residual, self.num_labels)
+        return outputs
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "predict_sequence_length": self.predict_sequence_length,
+                "num_labels": self.num_labels,
+                "residual": self.residual,
+            }
+        )
+        return config
 
 
 @dataclass
@@ -26,7 +104,7 @@ class PredictionOutput(ModelOutput):
     loss: Optional[tf.Tensor] = None
 
 
-class ClassificationHead(tf.keras.layers.Layer):
+class ClassificationHead(BaseHead):
     """Classification task head layer"""
 
     def __init__(self, num_labels: int = 1, dense_units: Tuple[int] = (128,)):
@@ -66,6 +144,45 @@ class ClassificationOutput(ModelOutput):
     logits: tf.Tensor = None
     hidden_states: Optional[Tuple[tf.Tensor, ...]] = None
     loss: Optional[tf.Tensor] = None
+
+
+class QuantileHead(BaseHead):
+    """Project hidden states to ``(batch, time, labels, quantiles)``."""
+
+    def __init__(self, quantiles: Sequence[float], num_labels: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.quantiles = tuple(float(q) for q in quantiles)
+        self.num_labels = int(num_labels)
+        if not self.quantiles or any(q <= 0 or q >= 1 for q in self.quantiles):
+            raise ValueError("quantiles must contain values strictly between 0 and 1")
+        if tuple(sorted(self.quantiles)) != self.quantiles or len(set(self.quantiles)) != len(self.quantiles):
+            raise ValueError("quantiles must be unique and sorted")
+        if self.num_labels <= 0:
+            raise ValueError("num_labels must be positive")
+        self.projection = Dense(self.num_labels * len(self.quantiles))
+
+    def call(self, hidden_states: tf.Tensor, **kwargs) -> tf.Tensor:
+        projected = self.projection(hidden_states)
+        shape = tf.concat([tf.shape(projected)[:-1], [self.num_labels, len(self.quantiles)]], axis=0)
+        return tf.reshape(projected, shape)
+
+
+class DistributionHead(BaseHead):
+    """Adapt a :class:`DistributionOutput` to the common task-head contract."""
+
+    def __init__(self, distribution: DistributionOutput, **kwargs):
+        super().__init__(**kwargs)
+        if not isinstance(distribution, DistributionOutput):
+            raise TypeError("distribution must be a DistributionOutput instance")
+        self.distribution = distribution
+
+    def build(self, input_shape):
+        # Parameter layers owned by DistributionOutput build on their first
+        # ``parameters`` call; this head itself has no additional state.
+        super().build(input_shape)
+
+    def call(self, hidden_states: tf.Tensor, **kwargs):
+        return self.distribution.parameters(hidden_states)
 
 
 class AnomalyHead:

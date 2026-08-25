@@ -4,7 +4,6 @@ import logging
 from typing import Callable, Dict, List, Optional, Type, Union
 
 from benchmark.base import Dataset
-from tfts.models.auto_config import CONFIG_MAPPING_NAMES
 from tfts.models.auto_model import MODEL_MAPPING_NAMES
 
 logger = logging.getLogger(__name__)
@@ -87,22 +86,25 @@ class ModelRegistry:
     """
 
     def __init__(self):
-        # Synchronized with tfts.models.auto_model.MODEL_MAPPING_NAMES
-        self._models: Dict[str, str] = dict(MODEL_MAPPING_NAMES)
+        # Built-ins are a live view over the declarative library registry.
+        # This local mapping only preserves the legacy benchmark-only extension API.
+        self._custom_models: Dict[str, str] = {}
 
     @property
     def available_models(self) -> List[str]:
-        return list(self._models.keys())
+        return sorted(set(MODEL_MAPPING_NAMES) | set(self._custom_models))
 
     def get(self, name: str) -> str:
-        if name not in self._models:
+        if name in self._custom_models:
+            return self._custom_models[name]
+        if name not in MODEL_MAPPING_NAMES:
             raise KeyError(f"Model '{name}' not found. Available: {self.available_models}")
-        return self._models[name]
+        return MODEL_MAPPING_NAMES[name]
 
     def register(self, name: str, class_name: str) -> None:
         """Register a custom model."""
-        self._models[name] = class_name
+        self._custom_models[name] = class_name
         logger.debug("Registered model: %s -> %s", name, class_name)
 
     def __contains__(self, item: str) -> bool:
-        return item in self._models
+        return item in self._custom_models or item in MODEL_MAPPING_NAMES

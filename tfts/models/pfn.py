@@ -8,12 +8,12 @@ TODO: Implement ForecastPFN model. This is currently a stub.
 import logging
 from typing import Optional
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
 
 logger = logging.getLogger(__name__)
 
 
-class PFNConfig(BaseConfig):
+class PFNConfig(CommonConfig):
     model_type: str = "pfn"
 
     def __init__(self, **kwargs):
