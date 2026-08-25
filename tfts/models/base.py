@@ -47,18 +47,29 @@ class BaseModel(tf.keras.Model, ABC):
 
     def build(self, input_shape):
         """Record the serializable input contract and use Keras' build state."""
+        nested_input = isinstance(input_shape, dict) or (
+            isinstance(input_shape, (list, tuple))
+            and input_shape
+            and isinstance(input_shape[0], (list, tuple, tf.TensorShape))
+        )
         if self.config is not None:
             if isinstance(input_shape, dict):
                 self.config.input_shape = {key: tuple(shape[1:]) for key, shape in input_shape.items()}
-            elif (
-                isinstance(input_shape, (list, tuple))
-                and input_shape
-                and isinstance(input_shape[0], (list, tuple, tf.TensorShape))
-            ):
+            elif nested_input:
                 self.config.input_shape = [tuple(shape[1:]) for shape in input_shape]
             else:
                 self.config.input_shape = tuple(tf.TensorShape(input_shape)[1:])
-        super().build(input_shape)
+
+        if nested_input:
+            # TensorFlow 2.13's Model.build() passes nested TensorShape values
+            # to the placeholder helper as if they were dimensions. The
+            # resulting ``Dimension value must be integer`` error only affects
+            # nested inputs; the normal model call can build child layers
+            # correctly once the outer layer is marked built.
+            self._build_input_shape = input_shape
+            tf.keras.layers.Layer.build(self, input_shape)
+        else:
+            super().build(input_shape)
 
     def build_from_config(self, config):
         """Create child variables before Keras restores their saved values.
