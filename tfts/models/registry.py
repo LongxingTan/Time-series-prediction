@@ -6,11 +6,11 @@ edits to a central mapping.
 """
 
 from collections import OrderedDict
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator
 from dataclasses import dataclass
 import importlib
 import pkgutil
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Type
 
 
 @dataclass(frozen=True)
