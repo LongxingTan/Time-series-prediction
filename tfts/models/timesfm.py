@@ -75,7 +75,7 @@ class TimesFm(BaseModel):
         # Output projection
         self.output_projection = Dense(1)
 
-    def __call__(self, x: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
+    def call(self, x: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
         """Process inputs through the TimesFm model.
 
         Parameters

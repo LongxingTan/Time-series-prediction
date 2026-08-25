@@ -124,7 +124,7 @@ class Unet(BaseModel):
         # Output projection
         self.output_projection = Dense(1)
 
-    def __call__(
+    def call(
         self,
         x: tf.Tensor,
         training: bool = True,

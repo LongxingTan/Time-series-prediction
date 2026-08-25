@@ -120,18 +120,6 @@ class BaseTrainer(object):
             raise ValueError("Unsupported dataset type. Expected tf.data.Dataset, keras.utils.Sequence, or list/tuple.")
         return inputs
 
-    def _keras_model_for_saving(self) -> tf.keras.Model:
-        if isinstance(self.model, tf.keras.Model):
-            return self.model
-        if isinstance(self.model, BaseModel):
-            model = self.model.model
-            if isinstance(model, tf.keras.Model):
-                return model
-        raise ValueError(
-            "Model weights cannot be saved before the model is built. "
-            "Call `train(...)`, or build the model with input shapes before `save_model(...)`."
-        )
-
     def _prepare_inputs_for_model(
         self, x: Union[np.ndarray, pd.DataFrame]
     ) -> Union[Dict[str, tf.keras.layers.Input], List[tf.keras.layers.Input], tf.keras.layers.Input]:
@@ -166,7 +154,10 @@ class BaseTrainer(object):
             logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
 
-        keras_model = self._keras_model_for_saving()
+        if not isinstance(self.model, tf.keras.Model):
+            raise TypeError("Trainer expects a tf.keras.Model")
+        if not self.model.built:
+            raise ValueError("Model cannot be saved before the model is built.")
 
         os.makedirs(save_directory, exist_ok=True)
         # Use model_type from config if available, otherwise derive from class name
@@ -178,7 +169,7 @@ class BaseTrainer(object):
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
 
-        keras_model.save_weights(weights_file)
+        self.model.save_weights(weights_file)
         logging.info(f"Model weights successfully saved in {weights_file}")
 
     @property
@@ -289,20 +280,8 @@ class Trainer(BaseTrainer):
             if isinstance(optimizer, (str, dict)):
                 optimizer = tf.keras.optimizers.get(optimizer)
 
-            # Build model if needed
             if not isinstance(self.model, tf.keras.Model):
-                inputs = self.get_inputs(train_dataset)
-                if "build_model" not in dir(self.model):
-                    raise TypeError("Trainer model must be `tf.keras.Model` or have `build_model()`")
-                self.model = self.model.build_model(inputs=inputs)
-            elif self.strategy is not None and self.strategy.num_replicas_in_sync > 1:
-                # A pre-built Keras model has variables that were created outside this
-                # strategy scope. TensorFlow refuses to mix scopes (colocate_vars_with),
-                # so re-create the same architecture inside the scope and copy weights.
-                rebuilt = tf.keras.models.clone_model(self.model)
-                rebuilt.build(self.model.input_shape)
-                rebuilt.set_weights(self.model.get_weights())
-                self.model = rebuilt
+                raise TypeError("Trainer expects a tf.keras.Model")
 
             compile_kwargs = {
                 "loss": loss_fn,
@@ -556,14 +535,7 @@ class EagerTrainer(object):
         best_metric: float = float("inf")
 
         if not isinstance(self.model, tf.keras.Model):
-            if "build_model" not in dir(self.model):
-                raise TypeError("Trainer model should either be tf.keras.Model or has the build_model method")
-            x = list(train_loader.take(1).as_numpy_iterator())[0][0]
-            if isinstance(x, dict):
-                inputs = {key: Input(item.shape[1:]) for key, item in x.items()}
-            else:
-                inputs = Input(x.shape[1:])
-            self.model = self.model.build_model(inputs=inputs)
+            raise TypeError("Trainer expects a tf.keras.Model")
 
         if use_ema:
             try:

@@ -137,7 +137,7 @@ class DeepAR(BaseModel, AutoregressiveGenerationMixin):
         )(x)
 
     # -------------------------------------------------- teacher-forced forward
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         output_hidden_states: Optional[bool] = None,

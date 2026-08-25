@@ -57,7 +57,6 @@ class StallionBatch:
 
 
 def feature_engineer_stallion(data: pd.DataFrame) -> pd.DataFrame:
-    """Reproduce the official PyTorch Forecasting tutorial features exactly."""
     data = data.copy()
     data["time_idx"] = data["date"].dt.year * 12 + data["date"].dt.month
     data["time_idx"] -= data["time_idx"].min()
@@ -73,7 +72,6 @@ def feature_engineer_stallion(data: pd.DataFrame) -> pd.DataFrame:
 class StallionPreprocessor:
     """Fit encoders/scalers and construct fixed 24-to-6 TFT windows.
 
-    The row split and feature roles match the PyTorch Forecasting tutorial.
     The target transform is its ``GroupNormalizer(..., transformation=
     "softplus")``: inverse-softplus followed by a per-(agency, sku) standard
     transform. Other real covariates use training-row standardization, matching

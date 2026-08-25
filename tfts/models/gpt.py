@@ -120,7 +120,7 @@ class GPT(BaseModel):
 
         self.projection = Dense(predict_sequence_length, activation=None)
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

@@ -61,7 +61,7 @@ class RNN(BaseModel, RollingWindowGenerationMixin):
         self.dense2 = Dense(self.config.dense_hidden_size, activation="relu")
         self.project1 = Dense(predict_sequence_length, activation=None)
 
-    def __call__(
+    def call(
         self, inputs, teacher=None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ):
         """RNN model call

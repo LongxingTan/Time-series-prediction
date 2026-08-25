@@ -80,7 +80,7 @@ class ITransformer(BaseModel):
         # Project from hidden_size to predict_sequence_length
         self.projector = Dense(self.predict_sequence_length)
 
-    def __call__(self, x, training=None, **kwargs):
+    def call(self, x, training=None, **kwargs):
         """iTransformer forward pass: Inverting Variates and Time"""
         # x shape: (batch, seq_len, n_vars)
         x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)

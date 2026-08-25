@@ -88,7 +88,7 @@ class RWKV(BaseModel):
             states.append((att_states, ffn_state))
         return states
 
-    def __call__(
+    def call(
         self,
         x,
         states=None,

@@ -145,15 +145,20 @@ class NBeats(BaseModel):
                 stack.append(block)
             self.stacks.append(stack)
 
-    def __call__(
-        self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
-    ):
+    def build(self, input_shape):
+        value_shape, _ = self._input_shapes(input_shape)
+        self.train_sequence_length = int(value_shape[1])
+        self.config.train_sequence_length = self.train_sequence_length
+        self._build_stacks()
+        super().build(input_shape)
+
+    def call(self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
         x = self._extract_x(inputs)
         # x: (batch, train_sequence_length, n_features)
-        self.train_sequence_length = x.shape[1]
-        self.config.train_sequence_length = int(self.train_sequence_length)
-        if self.stacks is None:
-            self._build_stacks()
+        if int(x.shape[1]) != self.train_sequence_length:
+            raise ValueError(
+                f"NBeats was built for sequence length {self.train_sequence_length}, but received {x.shape[1]}."
+            )
 
         # squeeze the feature dim; Keras 3 forbids raw `tf.*` on symbolic tensors, so wrap in Lambda
         squeeze = tf.keras.layers.Lambda(lambda t: tf.squeeze(t, axis=2), output_shape=lambda s: (s[0], s[1]))

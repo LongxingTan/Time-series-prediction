@@ -139,7 +139,7 @@ class Bert(BaseModel):
         self.reshape = Reshape((self.predict_sequence_length, self.config.output_size))
         logger.debug("Model building completed")
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

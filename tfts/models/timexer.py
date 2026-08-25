@@ -240,7 +240,34 @@ class TimeXer(BaseModel):
         self.head = None
         self.n_vars = None
 
-    def __call__(
+    def build(self, input_shape):
+        _, encoder_shape = self._input_shapes(input_shape)
+        self.n_vars = int(encoder_shape[-1])
+        patch_num = int(encoder_shape[1]) // self.config.patch_len
+        self.en_embedding = PatchEmbedding(
+            self.n_vars, self.config.hidden_size, self.config.patch_len, self.config.hidden_dropout_prob
+        )
+        self.ex_embedding = InvertedEmbedding(self.config.hidden_size)
+        self.blocks = [
+            EncoderLayer(
+                self.config.hidden_size,
+                self.config.intermediate_size,
+                self.config.num_attention_heads,
+                self.config.hidden_dropout_prob,
+                self.config.hidden_act,
+                self.config.layer_norm_eps,
+            )
+            for _ in range(self.config.num_layers)
+        ]
+        self.head = FlattenHead(
+            self.n_vars,
+            self.config.hidden_size * (patch_num + 1),
+            self.predict_sequence_length,
+            self.config.hidden_dropout_prob,
+        )
+        super().build(input_shape)
+
+    def call(
         self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
     ):
         x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
@@ -256,33 +283,8 @@ class TimeXer(BaseModel):
             means = stdev = tf.constant(0.0)
 
         n_vars = int(encoder_feature.shape[-1])
-        patch_num = int(encoder_feature.shape[1]) // self.config.patch_len
 
-        # ---- lazily build variate-count-dependent sub-layers on first forward ----
-        if self.en_embedding is None:
-            self.n_vars = n_vars
-            self.en_embedding = PatchEmbedding(
-                n_vars, self.config.hidden_size, self.config.patch_len, self.config.hidden_dropout_prob
-            )
-            self.ex_embedding = InvertedEmbedding(self.config.hidden_size)
-            self.blocks = [
-                EncoderLayer(
-                    self.config.hidden_size,
-                    self.config.intermediate_size,
-                    self.config.num_attention_heads,
-                    self.config.hidden_dropout_prob,
-                    self.config.hidden_act,
-                    self.config.layer_norm_eps,
-                )
-                for _ in range(self.config.num_layers)
-            ]
-            self.head = FlattenHead(
-                n_vars,
-                self.config.hidden_size * (patch_num + 1),
-                self.predict_sequence_length,
-                self.config.hidden_dropout_prob,
-            )
-        elif n_vars != self.n_vars:
+        if n_vars != self.n_vars:
             raise ValueError(f"TimeXer was built for {self.n_vars} variables, but received {n_vars}.")
 
         # ---- en branch: patch each variate (features='M' path) ----

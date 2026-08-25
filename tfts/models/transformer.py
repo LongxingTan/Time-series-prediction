@@ -118,7 +118,7 @@ class Transformer(BaseModel):
             layer_norm_eps=self.config.layer_norm_eps,
         )
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

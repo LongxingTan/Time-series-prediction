@@ -87,7 +87,7 @@ class Informer(BaseModel):
         )
         self.projection = Dense(1)
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

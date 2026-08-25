@@ -203,7 +203,7 @@ class ARDeepARBatch:
 class ARDeepARPreprocessor:
     """DeepAR windows from ``generate_ar_data`` output, replicating the Phase 1 spec.
 
-    Feature-for-feature the Phase 1 PyTorch Forecasting pipeline:
+    Feature-for-feature the Forecasting pipeline:
       - identical ``generate_ar_data`` call/seed and train/validation split boundaries,
       - fixed encoder/decoder lengths (60 / 20),
       - ``value`` as the sole time-varying real, ``series`` as a static categorical
