@@ -21,8 +21,7 @@ from .registry import register_model
 
 
 class PositionalEmbedding(tf.keras.layers.Layer):
-    """Fixed sinusoidal positional encoding, matching the PyTorch
-    ``PositionalEmbedding`` of the reference library."""
+    """Sinusoidal positional encoding"""
 
     def __init__(self, d_model: int, **kwargs):
         super().__init__(**kwargs)
@@ -49,8 +48,7 @@ class PositionalEmbedding(tf.keras.layers.Layer):
 
 
 class TokenEmbedding(tf.keras.layers.Layer):
-    """Conv1d token embedding with circular padding over time, matching the
-    PyTorch ``TokenEmbedding`` (padding=1, kernel_size=3, padding_mode='circular')."""
+    """Conv1d token embedding with circular padding over time (padding=1, kernel_size=3, padding_mode='circular')."""
 
     def __init__(self, d_model: int, **kwargs):
         super().__init__(**kwargs)
@@ -234,14 +232,19 @@ class TimesNet(BaseModel):
             for _ in range(cfg.num_layers)
         ]
         self.layer_norm = LayerNormalization(epsilon=cfg.layer_norm_eps)
-        # Created lazily on first forward once the (dynamic) sequence length and
-        # number of input channels are observed. tf.keras.Model() captures any
-        # variables these create during the symbolic build in ``build_model``.
         self.predict_linear = None
         self.projection = None
         self._seq_len = None
 
-    def __call__(
+    def build(self, input_shape):
+        value_shape, encoder_shape = self._input_shapes(input_shape)
+        self._seq_len = int(encoder_shape[1])
+        c_out = int(self.config.c_out or value_shape[-1])
+        self.predict_linear = Dense(self._seq_len + self.predict_sequence_length)
+        self.projection = Dense(c_out)
+        super().build(input_shape)
+
+    def call(
         self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
     ):
         x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
@@ -255,12 +258,7 @@ class TimesNet(BaseModel):
         # ---- embedding + temporal upsampling (predict_linear) ----
         enc_out = self.enc_embedding(x_norm, training=training)  # [B, T, d_model]
         T = int(enc_out.shape[1])
-        # predict_linear is seq_len-dependent (Dense(T + pred)), so rebuild it
-        # if the input length differs from the one it was built for.
-        if self.predict_linear is None:
-            self._seq_len = T
-            self.predict_linear = Dense(T + self.predict_sequence_length)
-        elif T != self._seq_len:
+        if T != self._seq_len:
             raise ValueError(f"TimesNet was built for sequence length {self._seq_len}, but received {T}.")
         enc_out = tf.transpose(enc_out, [0, 2, 1])  # [B, d_model, T]
         enc_out = self.predict_linear(enc_out)  # [B, d_model, T+pred]
@@ -275,8 +273,6 @@ class TimesNet(BaseModel):
 
         # ---- projection + de-normalization ----
         c_out = int(self.config.c_out or x.shape[-1])
-        if self.projection is None:
-            self.projection = Dense(c_out)
         dec_out = self.projection(enc_out)  # [B, T+pred, c_out]
         dec_out = dec_out * stdev[:, :, :c_out] + means[:, :, :c_out]
 

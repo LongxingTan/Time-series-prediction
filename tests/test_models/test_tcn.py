@@ -49,8 +49,8 @@ class TCNTest(unittest.TestCase):
             restored = TCN.from_pretrained(tmpdir)
             actual = restored.predict(sample, verbose=0)
 
-            restored.model.compile(optimizer="adam", loss="mse")
-            restored.model.train_on_batch(sample, np.zeros_like(actual))
+            restored.compile(optimizer="adam", loss="mse")
+            restored.train_on_batch(sample, np.zeros_like(actual))
 
         self.assertEqual(restored.predict_sequence_length, 2)
         np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=1e-5)

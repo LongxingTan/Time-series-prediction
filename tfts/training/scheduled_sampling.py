@@ -84,12 +84,11 @@ def scheduled_sampling_decode(
     """
     if isinstance(teacher_prob, (int, float)):
         teacher_prob = tf.cast(teacher_prob, tf.float32)
-    # resolve the model instance that actually implements the generation hooks
-    # (an ``AutoModel``/wrapped model exposes them via ``core_model``).
+    # Resolve a task model's tracked backbone when generation lives there.
     if not hasattr(model, "initialize_generation_state"):
-        core = getattr(model, "core_model", None)
-        if core is not None and hasattr(core, "initialize_generation_state"):
-            model = core
+        backbone = getattr(model, "backbone", None)
+        if backbone is not None and hasattr(backbone, "initialize_generation_state"):
+            model = backbone
     distribution_output = distribution_output or getattr(model, "output_distribution", None)
     if distribution_output is None:
         raise ValueError("scheduled_sampling_decode requires a DistributionOutput instance")

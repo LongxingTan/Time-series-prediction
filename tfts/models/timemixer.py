@@ -43,9 +43,7 @@ def _clamp_odd_kernel(kernel: int, length: int) -> int:
 def _moving_average(x: tf.Tensor, kernel: int) -> tf.Tensor:
     """Edge-padded, per-channel moving average along the time axis (axis 1).
 
-    Matches the PyTorch ``moving_avg`` (reflect-detectable front/end tile +
-    equal-weight window) but uses a cumulative-sum sliding window so it works
-    for any (integer) kernel, including kernels larger than the sequence.
+    Uses a cumulative-sum sliding window so it works for any kernel, including kernels larger than the sequence.
     """
     T = int(x.shape[1])
     k = _clamp_odd_kernel(kernel, T)
@@ -313,6 +311,11 @@ class TimeMixer(BaseModel):
         self.pdm_blocks = None
         self._built = None
 
+    def build(self, input_shape):
+        value_shape, encoder_shape = self._input_shapes(input_shape)
+        self._build(int(encoder_shape[1]), int(value_shape[-1]))
+        super().build(input_shape)
+
     # ------------------------------------------------------------------ helpers
     def _multi_scale_downsample(self, x: tf.Tensor) -> List[tf.Tensor]:
         """Return ``down_sampling_layers + 1`` scales of ``x`` over time.
@@ -365,7 +368,7 @@ class TimeMixer(BaseModel):
         ]
         self._built = (T0, N)
 
-    def __call__(
+    def call(
         self, inputs, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, training=None
     ):
         x, encoder_feature, _ = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=True)
@@ -374,9 +377,7 @@ class TimeMixer(BaseModel):
         # ---- multi-scale input + per-scale normalization ----
         x_scales = self._multi_scale_downsample(encoder_feature)
         T0 = int(x_scales[0].shape[1])
-        if self.embeddings is None:
-            self._build(T0, N)
-        elif self._built != (T0, N):
+        if self._built != (T0, N):
             raise ValueError(f"TimeMixer was built for input shape {self._built}, but received {(T0, N)}.")
 
         x_list = []

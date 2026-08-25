@@ -9,11 +9,8 @@ Encapsulates the winning recipe measured on M4 short-term forecasting:
 - **per-epoch fresh random windows** sampled from each series history,
 - held-out scoring on the **final window** of every series.
 
-It works with *any* tfts model, including the raw-``tf``-op ports (TimesNet,
-TimeMixer, TimeXer, PatchTST) that are **not** ``build_model(Input)``-symbolic
-safe: these are wrapped in a real-tensor Keras model and pre-built with one
-real forward before wrapping, exactly like the repo's ``Trainable<Model>``
-pattern. Fully self-contained — it does not depend on any ``exps/`` code.
+It works with any tfts model because all tfts models are native Keras models.
+Fully self-contained — it does not depend on any ``exps/`` code.
 """
 
 from __future__ import annotations
@@ -97,33 +94,6 @@ def smape_score(pred: np.ndarray, true: np.ndarray) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Real-tensor wrapper for raw-tf-op BaseModels (not build_model-symbolic-safe)
-# ---------------------------------------------------------------------------
-def _collect_sublayers(core) -> dict:
-    """Surface a BaseModel's (lazily-created) sublayers for Keras tracking."""
-    tracked = {}
-    for name, val in vars(core).items():
-        if isinstance(val, tf.keras.layers.Layer):
-            tracked[name] = val
-        elif isinstance(val, (list, tuple)) and any(isinstance(x, tf.keras.layers.Layer) for x in val):
-            tracked[name] = val
-    return tracked
-
-
-class TrainableWrapper(tf.keras.Model):
-    """Wraps a BaseModel and tracks its sublayers so gradients flow through fit()."""
-
-    def __init__(self, core, attrs: dict):
-        super().__init__()
-        self.core = core
-        for name, layer in attrs.items():
-            setattr(self, name, layer)
-
-    def call(self, inputs):
-        return self.core(inputs)
-
-
-# ---------------------------------------------------------------------------
 # The public trainer
 # ---------------------------------------------------------------------------
 class WindowedTrainer:
@@ -171,12 +141,12 @@ class WindowedTrainer:
         self.lr_schedule = lr_schedule
         self.jit_compile = jit_compile
 
-        # Pre-build the lazily-created sublayers with one real forward, then wrap.
-        # Compilation happens once in ``train()`` (it needs the series count for the
-        # cosine schedule, and a compile here would be discarded/replaced anyway).
+        if not isinstance(model, tf.keras.Model):
+            raise TypeError("WindowedTrainer expects a tf.keras.Model")
+        # Build lazily-created state with a real tensor. Compilation happens in
+        # ``train()`` once the cosine schedule length is known.
         _ = model(tf.zeros((2, seq_len, num_features), tf.float32))
-        attrs = _collect_sublayers(model)
-        self.model = TrainableWrapper(model, attrs)
+        self.model = model
 
     def train(
         self, histories: Sequence[np.ndarray], targets: np.ndarray, val_rng_seed: int = 7, verbose: bool = True

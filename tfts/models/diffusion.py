@@ -132,7 +132,7 @@ class Diffusion(BaseModel):
         # Initialize the projection layer here once
         self.output_projection = Dense(1)
 
-    def __call__(self, x, training=None, **kwargs):
+    def call(self, x, training=None, **kwargs):
         """Diffusion model forward pass logic."""
         # 1. Prepare inputs (using BaseModel helper)
         # Note: ignore_decoder_inputs=True because diffusion usually denoises the encoder path

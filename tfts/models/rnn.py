@@ -8,7 +8,8 @@ from typing import Dict, Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Concatenate, Dense, Reshape
 
-from .base import BaseModel, CommonConfig
+from ..generation import RollingWindowGenerationMixin
+from .base import BaseConfig, BaseModel, CommonConfig
 from .registry import register_model
 
 
@@ -49,7 +50,7 @@ class RNNConfig(CommonConfig):
 
 
 @register_model("rnn", config=RNNConfig, tags=("baseline", "recurrent"), tier="core")
-class RNN(BaseModel):
+class RNN(BaseModel, RollingWindowGenerationMixin):
     """tfts RNN model"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[RNNConfig] = None):
@@ -62,7 +63,7 @@ class RNN(BaseModel):
         self.dense2 = Dense(self.config.dense_hidden_size, activation="relu")
         self.project1 = Dense(predict_sequence_length, activation=None)
 
-    def __call__(
+    def call(
         self, inputs, teacher=None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ):
         """RNN model call

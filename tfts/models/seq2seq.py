@@ -74,7 +74,7 @@ class Seq2seq(BaseModel):
             attention_probs_dropout_prob=self.config.attention_probs_dropout_prob,
         )
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

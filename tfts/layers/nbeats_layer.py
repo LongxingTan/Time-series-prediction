@@ -52,12 +52,12 @@ class TrendBlock(Layer):
         norm = np.sqrt(forecast_length / thetas_dim)
         b_ls, f_ls = _linspace(backcast_length, forecast_length, centered=True)
         powers = np.arange(thetas_dim)[:, None]
-        self._backcast_time = tf.constant(b_ls.astype(np.float32), dtype=tf.float32)
-        self._forecast_time = tf.constant(f_ls.astype(np.float32), dtype=tf.float32)
+        self._backcast_time = b_ls.astype(np.float32)
+        self._forecast_time = f_ls.astype(np.float32)
         backcast_basis = (b_ls[None, :] ** powers) * norm  # (thetas_dim, backcast)
         forecast_basis = (f_ls[None, :] ** powers) * norm  # (thetas_dim, forecast)
-        self._backcast_basis = tf.constant(backcast_basis.astype(np.float32), dtype=tf.float32)
-        self._forecast_basis = tf.constant(forecast_basis.astype(np.float32), dtype=tf.float32)
+        self._backcast_basis = backcast_basis.astype(np.float32)
+        self._forecast_basis = forecast_basis.astype(np.float32)
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -131,8 +131,8 @@ class SeasonalityBlock(Layer):
         s2_b = np.sin(2.0 * np.pi * freqs2[:, None] * b_ls[None, :])
         s1_f = np.cos(2.0 * np.pi * freqs1[:, None] * f_ls[None, :])
         s2_f = np.sin(2.0 * np.pi * freqs2[:, None] * f_ls[None, :])
-        self._backcast_basis = tf.constant(np.vstack([s1_b, s2_b]).astype(np.float32), dtype=tf.float32)
-        self._forecast_basis = tf.constant(np.vstack([s1_f, s2_f]).astype(np.float32), dtype=tf.float32)
+        self._backcast_basis = np.vstack([s1_b, s2_b]).astype(np.float32)
+        self._forecast_basis = np.vstack([s1_f, s2_f]).astype(np.float32)
 
     def build(self, input_shape):
         super().build(input_shape)

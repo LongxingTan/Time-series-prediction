@@ -17,11 +17,11 @@ from ..layers.util_layer import CreateDecoderFeature
 logger = logging.getLogger(__name__)
 
 
-class BaseModel(ABC):
+class BaseModel(tf.keras.Model, ABC):
     """Base model for time series forecasting.
 
-    Abstract base class that all tfts models inherit from.
-    Subclasses must implement __call__ and can optionally override build_model.
+    This is a regular :class:`tf.keras.Model`: subclasses define layers in
+    ``__init__`` (or ``build``) and implement ``call``.
 
     Parameters
     ----------
@@ -31,28 +31,78 @@ class BaseModel(ABC):
         Configuration parameters for the model, by default None
     """
 
-    def __init__(self, predict_sequence_length: int = 1, config: Optional["BaseConfig"] = None):
+    def __init__(
+        self,
+        predict_sequence_length: int = 1,
+        config: Optional["BaseConfig"] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
         self.config = config
         self.predict_sequence_length = predict_sequence_length
         if isinstance(self.config, dict):
             self.config["predict_sequence_length"] = predict_sequence_length
         elif self.config is not None:
             self.config.predict_sequence_length = predict_sequence_length
-        self.model = None  # Model should be defined later (may not be directly used in all subclasses)
-        # ``core_model`` keeps the object that carries any generation hooks (e.g. DeepAR's
-        # ``generate``); ``keras_model`` is the compiled teacher-forced graph. Both are
-        # needed because ``build_model`` replaces ``self.model`` with a ``tf.keras.Model``
-        # that no longer exposes subclass methods like ``generate``.
-        self.core_model: Optional["BaseModel"] = None
-        self.keras_model: Optional[tf.keras.Model] = None
 
-    def build_model(self, inputs: tf.keras.layers.Input) -> tf.keras.Model:
-        # Retain the object that carries generation hooks across the ``self.model``
-        # replacement below (first call only; never clobber an already-captured core).
-        if self.core_model is None:
-            candidate = getattr(self, "model", None)
-            self.core_model = candidate if isinstance(candidate, BaseModel) else self
+    def build(self, input_shape):
+        """Record the serializable input contract and use Keras' build state."""
+        nested_input = isinstance(input_shape, dict) or (
+            isinstance(input_shape, (list, tuple))
+            and input_shape
+            and isinstance(input_shape[0], (list, tuple, tf.TensorShape))
+        )
+        if self.config is not None:
+            if isinstance(input_shape, dict):
+                self.config.input_shape = {key: tuple(shape[1:]) for key, shape in input_shape.items()}
+            elif nested_input:
+                self.config.input_shape = [tuple(shape[1:]) for shape in input_shape]
+            else:
+                self.config.input_shape = tuple(tf.TensorShape(input_shape)[1:])
 
+        if nested_input:
+            # TensorFlow 2.13's Model.build() passes nested TensorShape values
+            # to the placeholder helper as if they were dimensions. The
+            # resulting ``Dimension value must be integer`` error only affects
+            # nested inputs; the normal model call can build child layers
+            # correctly once the outer layer is marked built.
+            self._build_input_shape = input_shape
+            tf.keras.layers.Layer.build(self, input_shape)
+        else:
+            super().build(input_shape)
+
+    def build_from_config(self, config):
+        """Create child variables before Keras restores their saved values.
+
+        Most TFTS models create child-layer variables on their first forward
+        pass. Calling ``build(input_shape)`` alone would mark the outer model
+        built while leaving those children empty, so use one shape-only dummy
+        forward when loading a full ``.keras`` archive.
+        """
+
+        def make_dummy(shape):
+            shape = tf.TensorShape(shape).as_list()
+            return tf.zeros([dimension if dimension is not None else 1 for dimension in shape], dtype=self.dtype)
+
+        def make_inputs(shape):
+            if isinstance(shape, dict):
+                return {key: make_inputs(value) for key, value in shape.items()}
+            if isinstance(shape, (list, tuple)) and shape and isinstance(shape[0], (list, tuple, tf.TensorShape)):
+                return [make_inputs(value) for value in shape]
+            return make_dummy(shape)
+
+        input_shape = config.get("input_shape")
+        if input_shape is None:
+            return
+        self(make_inputs(input_shape))
+
+    def build_model(self, inputs) -> tf.keras.Model:
+        """Compatibility shim: build this model and return it.
+
+        New code should call the model directly or use ``model.build(shape)``.
+        Unlike the legacy implementation, this never creates a second model or
+        mutates an attribute from a backbone into a Functional model.
+        """
         if hasattr(self, "config"):
             if isinstance(inputs, dict):
                 self.config.input_shape = {k: tuple(v.shape[1:]) for k, v in inputs.items()}
@@ -62,41 +112,21 @@ class BaseModel(ABC):
             else:
                 self.config.input_shape = tuple(inputs.shape[1:])
 
-        if self.model is not None:
-            # only accept the inputs parameters after built
-            outputs = self.model(inputs)
-            # to handles the Keras symbolic tensors for tf2.3.1, use []
-            self.keras_model = tf.keras.Model(inputs, outputs)
-            self.model = self.keras_model
-            return self.model
-        else:
-            outputs = self(inputs)
-            self.keras_model = tf.keras.Model(inputs, outputs)
-            self.model = self.keras_model
-            return self.model
-
-    def _keras_model_for_saving(self) -> tf.keras.Model:
-        if isinstance(self.model, tf.keras.Model):
-            return self.model
-        if isinstance(self.model, BaseModel) and isinstance(self.model.model, tf.keras.Model):
-            return self.model.model
-        raise ValueError(
-            "Model weights cannot be saved before the model is built. "
-            "Call `build_model(...)` or train the model before saving weights."
-        )
+        self(inputs)
+        return self
 
     def to_model(self):
         inputs = tf.keras.Input(shape=(self.config.input_shape))
         return self.build_model(inputs)
 
     def predict(self, x, **kwargs):
-        return self.model.predict(x, **kwargs)
+        return super().predict(x, **kwargs)
 
     def load_pretrained_weights(self, weights_dir: str):
         if not os.path.exists(weights_dir):
             raise FileNotFoundError(f"Weights file not found at {weights_dir}")
-        self.model = tf.keras.models.load_model(weights_dir)
-        # self.model = model.load_weights(os.path.join(weights_dir, "weights.h5"))
+        loaded = tf.keras.models.load_model(weights_dir)
+        self.set_weights(loaded.get_weights())
 
     @classmethod
     def from_pretrained(
@@ -139,7 +169,7 @@ class BaseModel(ABC):
         weights_path = os.path.join(model_dir, TF2_WEIGHTS_NAME)
         if not os.path.isfile(weights_path):
             raise FileNotFoundError(f"Model weights not found at {weights_path}")
-        model.model.load_weights(weights_path)
+        model.load_weights(weights_path)
         return model
 
     def _prepare_3d_inputs(self, inputs, ignore_decoder_inputs=True):
@@ -172,6 +202,24 @@ class BaseModel(ABC):
                 decoder_feature = CreateDecoderFeature(self.predict_sequence_length)(encoder_feature)
         return x, encoder_feature, decoder_feature
 
+    @staticmethod
+    def _input_shapes(input_shape):
+        """Return ``(value_shape, encoder_shape)`` for supported input nests."""
+        if isinstance(input_shape, dict):
+            value_shape = tf.TensorShape(input_shape["x"])
+            feature_shape = tf.TensorShape(input_shape["encoder_feature"])
+            return value_shape, value_shape[:-1].concatenate(value_shape[-1] + feature_shape[-1])
+        if (
+            isinstance(input_shape, (list, tuple))
+            and input_shape
+            and isinstance(input_shape[0], (list, tuple, tf.TensorShape))
+        ):
+            value_shape = tf.TensorShape(input_shape[0])
+            feature_shape = tf.TensorShape(input_shape[1])
+            return value_shape, value_shape[:-1].concatenate(value_shape[-1] + feature_shape[-1])
+        shape = tf.TensorShape(input_shape)
+        return shape, shape
+
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -181,8 +229,6 @@ class BaseModel(ABC):
         if os.path.isfile(save_directory):
             logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
-
-        keras_model = self._keras_model_for_saving()
 
         os.makedirs(save_directory, exist_ok=True)
         # Use model_type from config if available, otherwise derive from class name
@@ -194,7 +240,7 @@ class BaseModel(ABC):
 
         weights_file = os.path.join(save_directory, TF2_WEIGHTS_NAME)  # Or the appropriate extension
 
-        keras_model.save_weights(weights_file)
+        super().save_weights(weights_file)
         logging.info(f"Model weights successfully saved in {weights_file}")
 
     def save_weights(self, weights_path: str):
@@ -211,27 +257,43 @@ class BaseModel(ABC):
             weights_file = os.path.join(weights_path, TF2_WEIGHTS_NAME)
             config_file = os.path.join(weights_path, CONFIG_NAME)
 
-        self._keras_model_for_saving().save_weights(weights_file)
+        super().save_weights(weights_file)
         self.config.to_json(config_file)
         logger.info(f"Model weights successfully saved in {weights_file}")
 
     def save_model(self, weights_dir: str):
-        self._keras_model_for_saving().save(weights_dir)
+        self.save(weights_dir)
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
-    def summary(self):
-        if hasattr(self, "model") and self.model is not None:
-            self.model.summary()
-        else:
-            raise RuntimeError("Model has not been built yet. Please build the model first.")
+    def summary(self, *args, **kwargs):
+        return super().summary(*args, **kwargs)
 
     def get_config(self):
-        return self.config.to_dict() if self.config else {}
+        """Return the constructor configuration used by Keras serialization."""
+        model_config = self.config.to_dict() if self.config is not None else None
+        model_type = model_config.get("model_type") if model_config is not None else None
+        return {
+            "model_type": model_type,
+            "predict_sequence_length": self.predict_sequence_length,
+            "config": model_config,
+        }
 
-    def compute_output_shape(self, input_shape):
-        batch_size = input_shape[0]
-        output_dim = self.config.hidden_size if self.config and hasattr(self.config, "hidden_size") else 1
-        return (batch_size, self.predict_sequence_length, output_dim)
+    @classmethod
+    def from_config(cls, config):
+        """Rebuild a TFTS model from a Keras object configuration."""
+        from .auto_config import AutoConfig
+
+        config = config.copy()
+        model_type = config.pop("model_type", None)
+        model_config = config.pop("config", None)
+        if model_config is not None:
+            model_type = model_config.get("model_type", model_type)
+            if model_type is None:
+                raise ValueError("Serialized TFTS model config is missing `model_type`.")
+            restored_config = AutoConfig.for_model(model_type)
+            restored_config.update(model_config)
+            config["config"] = restored_config
+        return cls(**config)
 
 
 class BaseConfig(ABC):

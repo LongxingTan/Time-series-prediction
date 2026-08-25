@@ -57,7 +57,7 @@ class TCN(BaseModel):
         self.drop2 = Dropout(0.0)
         self.dense2 = Dense(self.config.dense_hidden_size * 16, activation="relu")
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

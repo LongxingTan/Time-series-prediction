@@ -7,11 +7,30 @@ import zipfile
 import numpy as np
 import tensorflow as tf
 
+from tfts.models.dlinear import DLinear, DLinearConfig
 from tfts.models.tcn import Encoder
 from tfts.saving import get_custom_objects, load_model
 
 
 class TestKerasModelLoading(unittest.TestCase):
+    def test_base_model_round_trip(self):
+        config = DLinearConfig(kernel_size=3, channels=2)
+        model = DLinear(predict_sequence_length=4, config=config)
+        sample = np.random.default_rng(7).normal(size=(2, 12, 2)).astype(np.float32)
+        expected = model(sample).numpy()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model_path = os.path.join(tmpdir, "dlinear.keras")
+            model.save(model_path)
+            restored = load_model(model_path, compile=False)
+            actual = restored(sample).numpy()
+
+        self.assertIsInstance(restored, DLinear)
+        self.assertEqual(restored.predict_sequence_length, 4)
+        self.assertEqual(restored.config.model_type, "dlinear")
+        self.assertEqual(actual.shape, expected.shape)
+        np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=1e-5)
+
     def test_discovers_tfts_objects_from_keras_archive(self):
         config = {
             "class_name": "Functional",

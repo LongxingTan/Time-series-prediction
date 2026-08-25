@@ -172,13 +172,16 @@ class InterpretableMultiHeadAttention(tf.keras.layers.Layer):
     tags=("interpretable", "multi-horizon", "attention", "SOTA"),
     tier="core",
 )
-class TFTransformer(tf.keras.Model, BaseModel):
+class TFTransformer(BaseModel):
     """Temporal Fusion Transformer accepting dedicated static feature tensors."""
 
     def __init__(self, predict_sequence_length=1, config: Optional[TFTransformerConfig] = None):
         config = config or TFTransformerConfig()
-        tf.keras.Model.__init__(self, name="temporal_fusion_transformer")
-        BaseModel.__init__(self, predict_sequence_length=predict_sequence_length, config=config)
+        super().__init__(
+            predict_sequence_length=predict_sequence_length,
+            config=config,
+            name="temporal_fusion_transformer",
+        )
         self.config = config
         hidden, dropout = config.hidden_size, config.hidden_dropout_prob
         self.static_cat_embeddings = [

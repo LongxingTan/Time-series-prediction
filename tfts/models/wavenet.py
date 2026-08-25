@@ -92,7 +92,7 @@ class WaveNet(BaseModel):
             predict_sequence_length=self.predict_sequence_length,
         )
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

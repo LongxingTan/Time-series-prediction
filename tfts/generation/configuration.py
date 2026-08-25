@@ -1,7 +1,7 @@
 """Configuration for forecast generation."""
 
 from dataclasses import dataclass, fields
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 
 @dataclass
@@ -12,6 +12,9 @@ class ForecastGenerationConfig:
     generative (sampled) forecasting is only used when the user explicitly calls
     ``model.generate(...)`` with (or without) a config.
     """
+
+    horizon: Optional[int] = None
+    """Number of generated steps. Defaults to the model prediction length."""
 
     mode: str = "ancestral"
     """Decoding strategy. One of ``ancestral``, ``greedy``, ``teacher_forced``, ``sample``.
@@ -41,6 +44,15 @@ class ForecastGenerationConfig:
 
     quantiles: Optional[List[float]] = None
     """Optional quantile aggregation targets (future), e.g. ``[0.1, 0.5, 0.9]``."""
+
+    strategy: Optional[Any] = None
+    """Optional SamplingStrategy instance or callable. Overrides ``mode``."""
+
+    feedback: Optional[Any] = None
+    """Optional FeedbackPolicy instance used to construct the next decoder input."""
+
+    processors: Optional[Any] = None
+    """Optional forecast processor or iterable applied to every generated value."""
 
     @classmethod
     def from_args(

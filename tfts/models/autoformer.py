@@ -106,7 +106,7 @@ class AutoFormer(BaseModel):
         self.dense2 = Dense(1024, activation="relu")
         self.project1 = Dense(1, activation=None)
 
-    def __call__(
+    def call(
         self,
         inputs: tf.Tensor,
         teacher: Optional[tf.Tensor] = None,

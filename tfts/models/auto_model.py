@@ -33,17 +33,20 @@ class AutoModel(BaseModel):
     def __init__(self, model, config, predict_sequence_length: Optional[int] = None):
         predict_sequence_length = predict_sequence_length or getattr(model, "predict_sequence_length", 1)
         super().__init__(predict_sequence_length=predict_sequence_length, config=config)
-        self.model = model
-        # retain the wrapped model that owns generation hooks (DeepAR's ``generate``),
-        # since ``build_model`` later overwrites ``self.model`` with a ``tf.keras.Model``.
-        self.core_model = model
+        self.backbone = model
         self.config = config
 
-    def __call__(
+    @property
+    def model(self):
+        """Deprecated compatibility alias; use ``backbone``."""
+        return self.backbone
+
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        training: Optional[bool] = None,
     ):
         """auto_model callable
 
@@ -65,10 +68,11 @@ class AutoModel(BaseModel):
                     f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
                     f"but got {len(x[0].shape)}"
                 )
-        if isinstance(self.model, BaseModel):
-            return self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
-        else:  # after build_model, the model will become tf.keras.Model
-            return self.model(x)
+        return self.backbone(
+            x,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
     @classmethod
     def from_config(
@@ -150,7 +154,7 @@ class AutoModel(BaseModel):
                 inputs = tf.keras.layers.Input(shape=config.input_shape, name="input")
 
             model.build_model(inputs)
-            model.model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
+            model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
             return model
         except Exception as e:
             raise OSError(
@@ -168,8 +172,7 @@ class AutoModel(BaseModel):
         support this directly. Subclasses can also add the legacy ``GenerationMixin``
         after ``AutoModel`` in their MRO.
         """
-        core = getattr(self, "core_model", None) or self.model
-        generate_fn = getattr(core, "generate", None)
+        generate_fn = getattr(self.backbone, "generate", None)
         if generate_fn is not None:
             return generate_fn(inputs, generation_config, **kwargs)
 
@@ -180,9 +183,9 @@ class AutoModel(BaseModel):
             return inherited_generate(inputs, generation_config=generation_config, **kwargs)
 
         model_type = (
-            self.config.get("model_type", type(core).__name__)
+            self.config.get("model_type", type(self.backbone).__name__)
             if isinstance(self.config, dict)
-            else getattr(self.config, "model_type", type(core).__name__)
+            else getattr(self.config, "model_type", type(self.backbone).__name__)
         )
         raise TypeError(f"{model_type} does not support generation.")
 
@@ -190,18 +193,19 @@ class AutoModel(BaseModel):
 class AutoModelForPrediction(AutoModel):
     """tfts model for prediction"""
 
-    @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
-        return AutoModel.from_config(config, predict_sequence_length, task="prediction")
-
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        training: Optional[bool] = None,
     ):
 
-        model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        model_output = self.backbone(
+            x,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
         residual = getattr(self.config, "residual", None)
         if residual is None and getattr(self.config, "skip_connect_circle", False):
@@ -218,34 +222,23 @@ class AutoModelForClassification(BaseModel):
 
     def __init__(self, model, config):
         super(AutoModelForClassification, self).__init__()
-        self.model = model
+        self.backbone = model
         self.config = config
         self.head = ClassificationHead(num_labels=config.num_labels)
-        self.keras_model: Optional[tf.keras.Model] = None
 
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         output_hidden_states: Optional[bool] = True,
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        if self.keras_model is not None:
-            logits = self.keras_model(x)
-        else:
-            model_output = self.model(x, output_hidden_states=output_hidden_states, return_dict=return_dict)
-            logits = self.head(model_output)
-        return logits
+        model_output = self.backbone(x, output_hidden_states=output_hidden_states, return_dict=return_dict, **kwargs)
+        return self.head(model_output)
 
     @classmethod
     def from_config(cls, config, num_labels: int = 1):
         return AutoModel.from_config(config, task="classification", num_labels=num_labels)
-
-    def build_model(self, inputs: tf.keras.layers.Input):
-        model_output = self.model(inputs)
-        logits = self.head(model_output)  # Apply the head layer to the output
-        self.keras_model = tf.keras.Model(inputs, logits)  # Create a complete model
-        return self.keras_model
 
 
 class AutoModelForAnomaly(BaseModel):
@@ -253,7 +246,7 @@ class AutoModelForAnomaly(BaseModel):
 
     def __init__(self, model, config):
         super().__init__(config=config)
-        self.model = model
+        self.backbone = model
         self.config = config
         self.head = AnomalyHead(config.train_sequence_length)
 
@@ -262,7 +255,7 @@ class AutoModelForAnomaly(BaseModel):
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         labels=None,
     ):
-        model_output = self.model(x)
+        model_output = self.backbone(x)
         dist = self.head(model_output, labels)
         return dist
 
@@ -282,16 +275,16 @@ class AutoModelForSegmentation(BaseModel):
 
     def __init__(self, model, config):
         super().__init__(config=config)
-        self.model = model
+        self.backbone = model
         self.config = config
 
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        model_output = self.model(x, return_dict=return_dict)
+        model_output = self.backbone(x, return_dict=return_dict, **kwargs)
         return model_output
 
     @classmethod
@@ -304,16 +297,16 @@ class AutoModelForUncertainty(BaseModel):
 
     def __init__(self, model, config):
         super().__init__(config=config)
-        self.model = model
+        self.backbone = model
         self.config = config
 
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        model_output = self.model(x, return_dict=return_dict)
+        model_output = self.backbone(x, return_dict=return_dict, **kwargs)
         return model_output
 
     @classmethod
@@ -326,36 +319,26 @@ class AutoModelForQuantile(BaseModel):
 
     def __init__(self, model, config):
         super(AutoModelForQuantile, self).__init__()
-        self.model = model
+        self.backbone = model
         self.config = config
         self.quantiles = getattr(config, "quantiles", [0.1, 0.5, 0.9])
         self.num_labels = getattr(config, "num_labels", 1)
         self.head = Dense(self.num_labels * len(self.quantiles))
-        self.keras_model: Optional[tf.keras.Model] = None
 
-    def __call__(
+    def call(
         self,
         x: Union[tf.data.Dataset, Tuple[np.ndarray], List[np.ndarray]],
         output_hidden_states: Optional[bool] = True,
         **kwargs,
     ):
-        if self.keras_model is not None:
-            return self.keras_model(x)
-
-        model_output = self.model(x, output_hidden_states=output_hidden_states)
+        model_output = self.backbone(x, output_hidden_states=output_hidden_states, **kwargs)
         return self.head(model_output)
 
     @classmethod
     def from_config(cls, config, quantiles: Optional[List[float]] = None):
         return AutoModel.from_config(config, task="quantile", quantiles=quantiles)
 
-    def build_model(self, inputs):
-        model_output = self.model(inputs)
-        outputs = self.head(model_output)
-        self.keras_model = tf.keras.Model(inputs, outputs)
-        return self.keras_model
-
     def compile_model(self, optimizer="adam"):
         """Helper to compile with the correct loss"""
         loss_fn = MultiQuantileLoss(quantiles=self.quantiles)
-        self.keras_model.compile(optimizer=optimizer, loss=loss_fn)
+        self.compile(optimizer=optimizer, loss=loss_fn)

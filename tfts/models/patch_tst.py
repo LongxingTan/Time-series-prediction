@@ -106,7 +106,7 @@ class PatchTST(BaseModel):
         self.flatten = Flatten()
         self.output_projection = Dense(self.predict_sequence_length)
 
-    def __call__(
+    def call(
         self,
         x,
         states=None,
