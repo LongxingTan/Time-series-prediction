@@ -10,10 +10,11 @@ from tensorflow.keras.layers import Dense, Lambda
 
 from tfts.layers.autoformer_layer import SeriesDecomp
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class DLinearConfig(BaseConfig):
+class DLinearConfig(CommonConfig):
     model_type: str = "dlinear"
 
     def __init__(
@@ -41,6 +42,13 @@ class DLinearConfig(BaseConfig):
             raise ValueError(f"dropout_rate must be in [0, 1), got {self.dropout_rate}")
 
 
+@register_model(
+    "dlinear",
+    config=DLinearConfig,
+    paper="https://arxiv.org/abs/2205.13504",
+    tags=("linear", "simple", "baseline", "SOTA"),
+    tier="core",
+)
 class DLinear(BaseModel):
     """DLinear Network for Time Series Forecasting."""
 

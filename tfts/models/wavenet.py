@@ -13,12 +13,13 @@ from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class WaveNetConfig(BaseConfig):
+class WaveNetConfig(CommonConfig):
     model_type: str = "wavenet"
 
     def __init__(
@@ -61,6 +62,9 @@ class WaveNetConfig(BaseConfig):
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
 
 
+@register_model(
+    "wavenet", config=WaveNetConfig, paper="https://arxiv.org/abs/1609.03499", tags=("convolutional", "long-range")
+)
 class WaveNet(BaseModel):
     """WaveNet model for time series"""
 

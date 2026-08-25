@@ -12,12 +12,13 @@ from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 from ..layers.attention_layer import SelfAttention
 from ..layers.dense_layer import FeedForwardNetwork
 from ..layers.embed_layer import DataEmbedding
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class TimesFmConfig(BaseConfig):
+class TimesFmConfig(CommonConfig):
     model_type: str = "timesfm"
 
     def __init__(
@@ -48,6 +49,12 @@ class TimesFmConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "timesfm",
+    config=TimesFmConfig,
+    paper="https://arxiv.org/abs/2310.10688",
+    tags=("foundation-model", "patching", "decoder-only", "SOTA"),
+)
 class TimesFm(BaseModel):
     """TimesFm model for time series forecasting"""
 

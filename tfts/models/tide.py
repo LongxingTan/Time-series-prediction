@@ -12,12 +12,13 @@ from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 from ..layers.attention_layer import Attention, SelfAttention
 from ..layers.dense_layer import FeedForwardNetwork
 from ..layers.embed_layer import DataEmbedding
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class TideConfig(BaseConfig):
+class TideConfig(CommonConfig):
     model_type: str = "tide"
 
     def __init__(
@@ -48,6 +49,9 @@ class TideConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "tide", config=TideConfig, paper="https://arxiv.org/abs/2304.08424", tags=("mlp", "efficient", "covariates")
+)
 class Tide(BaseModel):
     """TiDE model for time series forecasting"""
 

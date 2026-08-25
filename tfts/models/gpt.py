@@ -11,10 +11,11 @@ from tensorflow.keras.layers import Dense, Reshape
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class GPTConfig(BaseConfig):
+class GPTConfig(CommonConfig):
 
     model_type: str = "gpt"
 
@@ -96,6 +97,7 @@ class GPTConfig(BaseConfig):
             )
 
 
+@register_model("gpt", config=GPTConfig, tags=("decoder-only", "attention", "generative"))
 class GPT(BaseModel):
     """GPT decoder model for time series"""
 

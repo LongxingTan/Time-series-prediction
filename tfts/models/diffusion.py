@@ -12,10 +12,11 @@ from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class DiffusionConfig(BaseConfig):
+class DiffusionConfig(CommonConfig):
     model_type: str = "diffusion"
 
     def __init__(
@@ -108,6 +109,12 @@ class NoiseScheduler:
         return denoised_x
 
 
+@register_model(
+    "diffusion",
+    config=DiffusionConfig,
+    paper="https://arxiv.org/abs/2006.11239",
+    tags=("generative", "diffusion", "probabilistic"),
+)
 class Diffusion(BaseModel):
     """TensorFlow Diffusion model for time series forecasting"""
 

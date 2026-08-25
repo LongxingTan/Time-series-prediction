@@ -14,10 +14,11 @@ from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
 from ..layers.util_layer import ShapeLayer
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class AutoFormerConfig(BaseConfig):
+class AutoFormerConfig(CommonConfig):
     """
     Configuration class to store the configuration of a [`AutoFormer`]
     """
@@ -63,6 +64,13 @@ class AutoFormerConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "autoformer",
+    config=AutoFormerConfig,
+    paper="https://arxiv.org/abs/2106.13008",
+    tags=("decomposition", "seasonal", "SOTA"),
+    tier="core",
+)
 class AutoFormer(BaseModel):
     """AutoFormer model"""
 

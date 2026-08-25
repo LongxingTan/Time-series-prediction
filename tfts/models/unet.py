@@ -23,12 +23,13 @@ from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.unet_layer import ConvbrLayer, ReBlock, SeBlock
 
 from ..layers.util_layer import ShapeLayer
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class UnetConfig(BaseConfig):
+class UnetConfig(CommonConfig):
     model_type: str = "unet"
 
     def __init__(
@@ -63,6 +64,9 @@ class UnetConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "unet", config=UnetConfig, paper="https://arxiv.org/abs/1505.04597", tags=("convolutional", "skip-connection")
+)
 class Unet(BaseModel):
     """Unet model for sequence-to-sequence prediction tasks."""
 

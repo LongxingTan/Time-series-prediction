@@ -37,6 +37,18 @@ class TestAutoModel(unittest.TestCase):
         y = model(x)
         self.assertEqual(y.shape, (2, 3, 1))
 
+    def test_task_aware_factory_matches_prediction_alias(self):
+        config = AutoConfig.for_model("bert")
+        model = AutoModel.from_config(config, task="prediction", predict_sequence_length=3)
+
+        self.assertIsInstance(model, AutoModelForPrediction)
+        self.assertEqual(model(tf.random.normal([2, 14, 4])).shape, (2, 3, 1))
+
+    def test_task_aware_factory_rejects_unknown_task(self):
+        config = AutoConfig.for_model("bert")
+        with self.assertRaisesRegex(ValueError, "Unknown task"):
+            AutoModel.from_config(config, task="not-a-task")
+
     def test_auto_model_for_classification(self):
         num_labels = 3
         config = AutoConfig.for_model("bert")

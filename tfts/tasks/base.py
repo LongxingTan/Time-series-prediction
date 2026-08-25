@@ -5,6 +5,8 @@ from collections import OrderedDict, UserDict
 from dataclasses import dataclass, fields
 from typing import Any
 
+import tensorflow as tf
+
 
 class BaseTask(ABC):
     """Base task for tfts task."""
@@ -12,6 +14,12 @@ class BaseTask(ABC):
     @abstractmethod
     def __call__(self, *args, **kwargs):
         pass
+
+
+class BaseHead(tf.keras.layers.Layer, BaseTask):
+    """Base contract for layers that map hidden states to task outputs."""
+
+    pass
 
 
 class ModelOutput(OrderedDict):

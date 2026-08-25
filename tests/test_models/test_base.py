@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from tfts.models.base import BaseConfig, BaseModel
+from tfts.models.base import BaseConfig, BaseModel, CommonConfig
 
 
 class TestBaseConfig(unittest.TestCase):
@@ -42,6 +42,22 @@ class TestBaseConfig(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdirname:
             with self.assertRaises(TypeError):
                 self.config.save_pretrained(tmpdirname)
+
+    def test_common_config_maps_legacy_names_without_getattribute_override(self):
+        config = CommonConfig(d_model=96, d_ff=192, e_layers=3, hidden_dropout_prob=0.2)
+
+        self.assertEqual(config.hidden_size, 96)
+        self.assertEqual(config.d_model, 96)
+        self.assertEqual(config.intermediate_size, 192)
+        self.assertEqual(config.num_layers, 3)
+        self.assertEqual(config.dropout, 0.2)
+        self.assertNotIn("d_model", config.to_dict())
+
+    def test_common_config_validates_at_construction(self):
+        with self.assertRaisesRegex(ValueError, "hidden_size"):
+            CommonConfig(hidden_size=0)
+        with self.assertRaisesRegex(ValueError, "dropout"):
+            CommonConfig(dropout=1.0)
 
 
 class TestBaseModel(unittest.TestCase):

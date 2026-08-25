@@ -17,10 +17,11 @@ from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class PatchTSTConfig(BaseConfig):
+class PatchTSTConfig(CommonConfig):
     model_type: str = "patch_tst"
 
     def __init__(
@@ -76,6 +77,13 @@ class PatchTSTConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "patch_tst",
+    config=PatchTSTConfig,
+    paper="https://arxiv.org/abs/2211.14730",
+    tags=("patching", "attention", "SOTA"),
+    tier="core",
+)
 class PatchTST(BaseModel):
     """TensorFlow PatchTST model for time series forecasting"""
 

@@ -11,10 +11,11 @@ from tensorflow.keras.layers import GRU, Dense, LayerNormalization
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class RWKVConfig(BaseConfig):
+class RWKVConfig(CommonConfig):
     model_type: str = "rwkv"
 
     def __init__(
@@ -55,6 +56,9 @@ class RWKVConfig(BaseConfig):
         self.update(kwargs)
 
 
+@register_model(
+    "rwkv", config=RWKVConfig, paper="https://arxiv.org/abs/2305.13048", tags=("efficient", "attention", "recurrent")
+)
 class RWKV(BaseModel):
     """TensorFlow RWKV model for time series forecasting"""
 

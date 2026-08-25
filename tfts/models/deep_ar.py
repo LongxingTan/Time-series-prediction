@@ -15,10 +15,11 @@ from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCel
 
 from ..distributions import NormalOutput
 from ..generation import AutoregressiveGenerationMixin
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class DeepARConfig(BaseConfig):
+class DeepARConfig(CommonConfig):
     model_type: str = "deep_ar"
 
     def __init__(
@@ -81,6 +82,13 @@ class DeepAREncoder(tf.keras.layers.Layer):
         return h, states
 
 
+@register_model(
+    "deep_ar",
+    config=DeepARConfig,
+    paper="https://arxiv.org/abs/1704.04110",
+    tags=("probabilistic", "recurrent", "uncertainty"),
+    tier="core",
+)
 class DeepAR(BaseModel, AutoregressiveGenerationMixin):
     """DeepAR -- autoregressive LSTM + univariate Normal head.
 

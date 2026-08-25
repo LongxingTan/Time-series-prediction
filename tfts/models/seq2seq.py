@@ -12,12 +12,13 @@ from tensorflow.keras.layers import GRU, LSTM, Dense, GRUCell, LSTMCell
 
 from tfts.layers.attention_layer import Attention
 
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 logger = logging.getLogger(__name__)
 
 
-class Seq2seqConfig(BaseConfig):
+class Seq2seqConfig(CommonConfig):
     model_type: str = "seq2seq"
 
     def __init__(
@@ -49,6 +50,7 @@ class Seq2seqConfig(BaseConfig):
             assert self.attention_size == self.dense_hidden_size
 
 
+@register_model("seq2seq", config=Seq2seqConfig, tags=("baseline", "encoder-decoder"))
 class Seq2seq(BaseModel):
     """Seq2seq model for time series prediction with configurable encoder-decoder architectures."""
 

@@ -9,10 +9,11 @@ from typing import List, Optional
 import tensorflow as tf
 
 from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
-from .base import BaseConfig, BaseModel
+from .base import BaseModel, CommonConfig
+from .registry import register_model
 
 
-class NBeatsConfig(BaseConfig):
+class NBeatsConfig(CommonConfig):
     model_type: str = "nbeats"
 
     def __init__(
@@ -58,6 +59,7 @@ class NBeatsConfig(BaseConfig):
     # tolerate the old singular-parameter spelling
     @classmethod
     def from_dict(cls, config_dict):
+        config_dict = dict(config_dict)
         legacy = {}
         if "hidden_size" in config_dict and "widths" not in config_dict:
             hs = config_dict.pop("hidden_size")
@@ -73,9 +75,18 @@ class NBeatsConfig(BaseConfig):
                 s if s != "seasonality_block" else "seasonality" for s in config_dict["stack_types"]
             ]
         config_dict.update(legacy)
-        return cls(**config_dict)
+        config = cls()
+        config.update(config_dict)
+        return config
 
 
+@register_model(
+    "nbeats",
+    config=NBeatsConfig,
+    paper="https://arxiv.org/abs/1905.10437",
+    tags=("mlp", "interpretable", "SOTA", "basis-expansion"),
+    tier="core",
+)
 class NBeats(BaseModel):
     """NBeats model (interpretable trend + seasonality stacks, doubly-residual stacking)."""
 

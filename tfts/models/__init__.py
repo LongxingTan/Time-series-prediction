@@ -6,8 +6,9 @@ from .auto_model import (
     AutoModelForAnomaly,
     AutoModelForClassification,
     AutoModelForPrediction,
+    AutoModelForQuantile,
     AutoModelForSegmentation,
     AutoModelForUncertainty,
 )
-from .base import BaseConfig, BaseModel
-from .registry import list_models
+from .base import BaseConfig, BaseModel, CommonConfig
+from .registry import get_model_info, list_models, register_model

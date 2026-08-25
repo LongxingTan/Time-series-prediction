@@ -181,6 +181,7 @@ User Guide
    :caption: Advanced Topics
 
    feature_engineering
+   architecture
    tricks
 
 

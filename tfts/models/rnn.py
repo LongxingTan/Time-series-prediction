@@ -9,10 +9,11 @@ import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Concatenate, Dense, Reshape
 
 from ..generation import RollingWindowGenerationMixin
-from .base import BaseConfig, BaseModel
+from .base import BaseConfig, BaseModel, CommonConfig
+from .registry import register_model
 
 
-class RNNConfig(BaseConfig):
+class RNNConfig(CommonConfig):
     model_type: str = "rnn"
 
     def __init__(
@@ -48,6 +49,7 @@ class RNNConfig(BaseConfig):
         self.use_attention: bool = use_attention
 
 
+@register_model("rnn", config=RNNConfig, tags=("baseline", "recurrent"), tier="core")
 class RNN(BaseModel, RollingWindowGenerationMixin):
     """tfts RNN model"""
 
