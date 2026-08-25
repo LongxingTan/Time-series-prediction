@@ -59,6 +59,31 @@ class BaseModel(tf.keras.Model, ABC):
                 self.config.input_shape = tuple(tf.TensorShape(input_shape)[1:])
         super().build(input_shape)
 
+    def build_from_config(self, config):
+        """Create child variables before Keras restores their saved values.
+
+        Most TFTS models create child-layer variables on their first forward
+        pass. Calling ``build(input_shape)`` alone would mark the outer model
+        built while leaving those children empty, so use one shape-only dummy
+        forward when loading a full ``.keras`` archive.
+        """
+
+        def make_dummy(shape):
+            shape = tf.TensorShape(shape).as_list()
+            return tf.zeros([dimension if dimension is not None else 1 for dimension in shape], dtype=self.dtype)
+
+        def make_inputs(shape):
+            if isinstance(shape, dict):
+                return {key: make_inputs(value) for key, value in shape.items()}
+            if isinstance(shape, (list, tuple)) and shape and isinstance(shape[0], (list, tuple, tf.TensorShape)):
+                return [make_inputs(value) for value in shape]
+            return make_dummy(shape)
+
+        input_shape = config.get("input_shape")
+        if input_shape is None:
+            return
+        self(make_inputs(input_shape))
+
     def build_model(self, inputs) -> tf.keras.Model:
         """Compatibility shim: build this model and return it.
 
@@ -228,11 +253,35 @@ class BaseModel(tf.keras.Model, ABC):
         self.save(weights_dir)
         logger.info(f"Protobuf model successfully saved in {weights_dir}")
 
-    def summary(self):
-        return super().summary()
+    def summary(self, *args, **kwargs):
+        return super().summary(*args, **kwargs)
 
     def get_config(self):
-        return self.config.to_dict() if self.config else {}
+        """Return the constructor configuration used by Keras serialization."""
+        model_config = self.config.to_dict() if self.config is not None else None
+        model_type = model_config.get("model_type") if model_config is not None else None
+        return {
+            "model_type": model_type,
+            "predict_sequence_length": self.predict_sequence_length,
+            "config": model_config,
+        }
+
+    @classmethod
+    def from_config(cls, config):
+        """Rebuild a TFTS model from a Keras object configuration."""
+        from .auto_config import AutoConfig
+
+        config = config.copy()
+        model_type = config.pop("model_type", None)
+        model_config = config.pop("config", None)
+        if model_config is not None:
+            model_type = model_config.get("model_type", model_type)
+            if model_type is None:
+                raise ValueError("Serialized TFTS model config is missing `model_type`.")
+            restored_config = AutoConfig.for_model(model_type)
+            restored_config.update(model_config)
+            config["config"] = restored_config
+        return cls(**config)
 
 
 class BaseConfig(ABC):
