@@ -337,6 +337,14 @@ class Trainer(BaseTrainer):
                 valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(
                     batch_size, drop_remainder=drop_remainder
                 )
+            # A bare NumPy/array validation input (reconstruction models pass the
+            # same windows as both inputs and targets, e.g. run_anomaly.py). Feed
+            # it through a tf.data.Dataset so `model.fit` doesn't hit
+            # "The truth value of an array ... is ambiguous" on `if validation_data:`.
+            elif isinstance(valid_dataset, np.ndarray):
+                valid_dataset = tf.data.Dataset.from_tensor_slices((valid_dataset, valid_dataset)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
 
             history = self.model.fit(
                 train_dataset,
