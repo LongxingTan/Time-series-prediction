@@ -459,6 +459,10 @@ class EagerTrainerTest(unittest.TestCase):
         finally:
             tf.keras.mixed_precision.set_global_policy("float32")
 
+    @unittest.skipIf(
+        os.name == "nt" and tf.__version__.startswith("2.21."),
+        "TensorFlow 2.21 bfloat16 CPU kernels can crash with SIGILL on Windows",
+    )
     def test_trainer_mixed_precision_bf16_cpu_and_gpu(self):
         """bf16 mixed-precision training runs on both CPU and GPU (safe for CI)."""
         tf.keras.mixed_precision.set_global_policy("mixed_bfloat16")

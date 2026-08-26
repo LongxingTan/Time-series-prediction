@@ -47,6 +47,8 @@ class ForecastingModel(TimeSeriesTaskModel):
                 self._require_sequence()
                 self.output_distribution = NormalOutput(target_dim=task_config.target_dim)
                 self.head = DistributionForecastHead(self.output_distribution, task_config.prediction_length)
+        if self.output_distribution is not None:
+            self._loss_tracker = tf.keras.metrics.Mean(name="loss")
 
     def _require_sequence(self):
         if not self.capabilities.has_port(OutputPort.SEQUENCE):
@@ -198,6 +200,7 @@ class ImputationModel(TimeSeriesTaskModel):
             raise ValueError("%s does not support imputation" % backbone.config.model_type)
         super().__init__(backbone, task_config, capabilities, **kwargs)
         self.head = ReconstructionHead(task_config.target_dim)
+        self._loss_tracker = tf.keras.metrics.Mean(name="loss")
 
     def forward(self, inputs, training=None):
         batch = self.normalize_batch(inputs)
@@ -269,6 +272,7 @@ class AnomalyDetectionModel(TimeSeriesTaskModel):
         self.head = ReconstructionHead(task_config.target_dim)
         self.scorer = make_anomaly_scorer(task_config.scorer)
         self.calibrator = QuantileCalibrator(task_config.threshold_quantile)
+        self._loss_tracker = tf.keras.metrics.Mean(name="loss")
 
     def forward(self, inputs, training=None):
         batch = self.normalize_batch(inputs)
