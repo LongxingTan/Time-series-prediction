@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU
 
+from tfts.contracts import BackboneCapabilities, OutputPort
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
@@ -36,7 +37,15 @@ class TCNConfig(CommonConfig):
         self.dense_hidden_size: int = dense_hidden_size
 
 
-@register_model("tcn", config=TCNConfig, paper="https://arxiv.org/abs/1803.01271", tags=("convolutional", "efficient"))
+@register_model(
+    "tcn",
+    config=TCNConfig,
+    paper="https://arxiv.org/abs/1803.01271",
+    tags=("convolutional", "efficient"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
+)
 class TCN(BaseModel):
     """Temporal convolutional network"""
 

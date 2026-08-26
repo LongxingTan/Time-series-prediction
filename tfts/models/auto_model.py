@@ -1,344 +1,158 @@
-"""AutoModel to choose different models"""
+"""Task-aware model factories built on explicit backbone capabilities."""
 
 import json
-import logging
 import os
-from typing import List, Optional, Tuple, Union
+from typing import Optional
 
-import numpy as np
-import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
 
-from tfts.losses.loss import MultiQuantileLoss
-from tfts.models.base import BaseModel
-from tfts.tasks.auto_task import AnomalyHead, ClassificationHead, apply_prediction_residual
+from tfts.contracts import (
+    AnomalyDetectionTaskConfig,
+    ClassificationTaskConfig,
+    ForecastTaskConfig,
+    ImputationTaskConfig,
+    TaskType,
+)
+from tfts.tasks.task_models import AnomalyDetectionModel, ClassificationModel, ForecastingModel, ImputationModel
 
-from ..constants import TF2_WEIGHTS_NAME
-from .auto_config import AutoConfig
-from .registry import RegistryFieldView, get_model_class
-
-logger = logging.getLogger(__name__)
-
+from .registry import RegistryFieldView, get_model_capabilities, get_model_class
 
 MODEL_MAPPING_NAMES = RegistryFieldView("class_name")
 
 
-class AutoModel(BaseModel):
-    """tfts auto model
-    input tensor: [batch_size, sequence_length, num_features]
-    output tensor: [batch_size, predict_sequence_length, num_labels]
-    """
+class AutoBackbone:
+    """Instantiate a registered architecture without attaching task behavior."""
 
-    def __init__(self, model, config, predict_sequence_length: Optional[int] = None):
-        predict_sequence_length = predict_sequence_length or getattr(model, "predict_sequence_length", 1)
-        super().__init__(predict_sequence_length=predict_sequence_length, config=config)
-        self.backbone = model
-        self.config = config
-
-    @property
-    def model(self):
-        """Deprecated compatibility alias; use ``backbone``."""
-        return self.backbone
-
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        training: Optional[bool] = None,
-    ):
-        """auto_model callable
-
-        Parameters
-        ----------
-        x : tf.data.Dataset, np.array
-            model inputs
-        return_dict: bool
-            if return output a dict
-
-        Returns
-        -------
-        tf.Tensor
-            model output
-        """
-        if isinstance(x, (list, tuple)):
-            if len(x[0].shape) != 3:
-                raise ValueError(
-                    f"Expected input dimension is 3 (batch_size, train_sequence_length, num_features), "
-                    f"but got {len(x[0].shape)}"
-                )
-        return self.backbone(
-            x,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+    def __init__(self, *args, **kwargs):
+        raise TypeError("AutoBackbone must be constructed with from_config()")
 
     @classmethod
-    def from_config(
-        cls,
-        config,
-        predict_sequence_length: int = 1,
-        task: Optional[str] = None,
-        num_labels: int = 1,
-        quantiles: Optional[List[float]] = None,
-    ):
-        """Create a model through the single task-aware factory.
-
-        ``task=None`` preserves the historical ``AutoModel`` behavior. Task
-        aliases delegate here, so model resolution and construction live in
-        one place.
-        """
-        model_name = config.model_type
-        if model_name not in MODEL_MAPPING_NAMES:
-            raise ValueError(
-                f"Unrecognized model: {model_name}. Should contain one of {', '.join(MODEL_MAPPING_NAMES.keys())}"
-            )
-
-        normalized_task = task.lower().replace("-", "_") if task else None
-        task_models = {
-            "prediction": AutoModelForPrediction,
-            "classification": AutoModelForClassification,
-            "anomaly": AutoModelForAnomaly,
-            "segmentation": AutoModelForSegmentation,
-            "uncertainty": AutoModelForUncertainty,
-            "quantile": AutoModelForQuantile,
-        }
-        if normalized_task not in {None, "model", *task_models}:
-            raise ValueError(f"Unknown task {task!r}. Available: {sorted(task_models)}")
-        if normalized_task == "classification":
-            config.num_labels = num_labels
-        elif normalized_task == "quantile":
-            config.quantiles = list(quantiles or (0.1, 0.5, 0.9))
-            config.num_labels = num_labels
-
-        model = get_model_class(model_name)(config=config, predict_sequence_length=predict_sequence_length)
-        if normalized_task is None or normalized_task == "model":
-            return cls(model, config, predict_sequence_length=predict_sequence_length)
-
-        wrapper = task_models[normalized_task]
-        if issubclass(wrapper, AutoModel):
-            return wrapper(model, config, predict_sequence_length=predict_sequence_length)
-        return wrapper(model, config)
-
-    @classmethod
-    def from_pretrained(cls, weights_dir: Union[str, os.PathLike], predict_sequence_length: Optional[int] = None):
-        config_path = os.path.join(weights_dir, "config.json")
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found at {config_path}")
+    def from_config(cls, config, prediction_length: int = 1):
         try:
-            with open(config_path, "r") as f:
-                config_dict = json.load(f)
-        except Exception as e:
-            raise OSError(f"Error loading config file from {config_path}. Original error: {e}")
-
-        try:
-            model_type = config_dict.get("model_type")
-            if model_type is None:
-                raise ValueError("Missing `model_type` in config.")
-
-            # Dynamically get the correct Config subclass
-            config = AutoConfig.for_model(model_type)
-            config.update(config_dict)  # update with the saved values
-            predict_sequence_length = predict_sequence_length or getattr(config, "predict_sequence_length", 1)
-
-            # Build model and load weights
-            model = cls.from_config(config, predict_sequence_length=predict_sequence_length)
-            if isinstance(config.input_shape, dict):
-                inputs = {k: tf.keras.layers.Input(shape=v, name=k) for k, v in config.input_shape.items()}
-            elif isinstance(config.input_shape[0], (list, tuple)):
-                inputs = [
-                    tf.keras.layers.Input(shape=shape, name=f"input_{i}") for i, shape in enumerate(config.input_shape)
-                ]
-            else:
-                inputs = tf.keras.layers.Input(shape=config.input_shape, name="input")
-
-            model.build_model(inputs)
-            model.load_weights(os.path.join(weights_dir, TF2_WEIGHTS_NAME))
-            return model
-        except Exception as e:
-            raise OSError(
-                f"Error loading model weights from {weights_dir}. "
-                f"Ensure weights were saved using model.save_weights(...). Original error: {e}"
-            )
-
-    def get_config(self):
-        return self.config.to_dict() if self.config else {}
-
-    def generate(self, inputs, generation_config=None, **kwargs):
-        """Delegate generation to the wrapped core model (opt-in feature).
-
-        Only models that implement ``generate`` (e.g. DeepAR via ``AutoregressiveGenerationMixin``)
-        support this directly. Subclasses can also add the legacy ``GenerationMixin``
-        after ``AutoModel`` in their MRO.
-        """
-        generate_fn = getattr(self.backbone, "generate", None)
-        if generate_fn is not None:
-            return generate_fn(inputs, generation_config, **kwargs)
-
-        # Preserve the dataframe-oriented GenerationMixin API used by subclasses
-        # such as ``class Model(AutoModel, GenerationMixin)``.
-        inherited_generate = getattr(super(), "generate", None)
-        if inherited_generate is not None:
-            return inherited_generate(inputs, generation_config=generation_config, **kwargs)
-
-        model_type = (
-            self.config.get("model_type", type(self.backbone).__name__)
-            if isinstance(self.config, dict)
-            else getattr(self.config, "model_type", type(self.backbone).__name__)
-        )
-        raise TypeError(f"{model_type} does not support generation.")
+            backbone_class = get_model_class(config.model_type)
+        except (AttributeError, ValueError) as error:
+            raise ValueError("Unknown backbone config %r" % type(config).__name__) from error
+        return backbone_class(config=config, predict_sequence_length=prediction_length)
 
 
-class AutoModelForPrediction(AutoModel):
-    """tfts model for prediction"""
+class _BaseAutoTaskModel:
+    task_type = None
+    task_config_class = None
+    model_class = None
 
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        training: Optional[bool] = None,
-    ):
-
-        model_output = self.backbone(
-            x,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-        residual = getattr(self.config, "residual", None)
-        if residual is None and getattr(self.config, "skip_connect_circle", False):
-            residual = "last_window"
-        elif residual is None and getattr(self.config, "skip_connect_mean", False):
-            residual = "mean"
-        elif residual is None and getattr(self.config, "residual_last_value", False):
-            residual = "last_value"
-        return apply_prediction_residual(model_output, x, residual)
-
-
-class AutoModelForClassification(BaseModel):
-    """tfts model for classification"""
-
-    def __init__(self, model, config):
-        super(AutoModelForClassification, self).__init__()
-        self.backbone = model
-        self.config = config
-        self.head = ClassificationHead(num_labels=config.num_labels)
-
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        output_hidden_states: Optional[bool] = True,
-        return_dict: Optional[bool] = None,
-        **kwargs,
-    ):
-        model_output = self.backbone(x, output_hidden_states=output_hidden_states, return_dict=return_dict, **kwargs)
-        return self.head(model_output)
+    def __init__(self, *args, **kwargs):
+        raise TypeError("%s must be constructed with from_config()" % type(self).__name__)
 
     @classmethod
-    def from_config(cls, config, num_labels: int = 1):
-        return AutoModel.from_config(config, task="classification", num_labels=num_labels)
+    def from_config(cls, config, task_config=None, **task_kwargs):
+        if task_config is not None and task_kwargs:
+            raise ValueError("Pass either task_config or task keyword arguments, not both")
+        if "predict_sequence_length" in task_kwargs:
+            if "prediction_length" in task_kwargs:
+                raise ValueError("Use only prediction_length")
+            task_kwargs["prediction_length"] = task_kwargs.pop("predict_sequence_length")
+        task_config = task_config or cls.task_config_class(**task_kwargs)
+        if TaskType.normalize(task_config.task) != cls.task_type:
+            raise ValueError("Expected task %s, got %s" % (cls.task_type.value, task_config.task.value))
+        prediction_length = getattr(task_config, "prediction_length", 1)
+        backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
+        capabilities = get_model_capabilities(config.model_type)
+        return cls.model_class(backbone, task_config, capabilities)
 
 
-class AutoModelForAnomaly(BaseModel):
-    """tfts model for anomaly detection"""
-
-    def __init__(self, model, config):
-        super().__init__(config=config)
-        self.backbone = model
-        self.config = config
-        self.head = AnomalyHead(config.train_sequence_length)
-
-    def detect(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        labels=None,
-    ):
-        model_output = self.backbone(x)
-        dist = self.head(model_output, labels)
-        return dist
-
-    @classmethod
-    def from_pretrained(cls, weights_dir: Union[str, os.PathLike]):
-        model = AutoModel.from_pretrained(weights_dir)
-        logger.info(f"Loaded anomaly model from {weights_dir}")
-        return cls(model, model.config)
-
-    @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
-        return AutoModel.from_config(config, predict_sequence_length, task="anomaly")
+class AutoModelForForecasting(_BaseAutoTaskModel):
+    task_type = TaskType.FORECASTING
+    task_config_class = ForecastTaskConfig
+    model_class = ForecastingModel
 
 
-class AutoModelForSegmentation(BaseModel):
-    """tfts model for time series segmentation"""
-
-    def __init__(self, model, config):
-        super().__init__(config=config)
-        self.backbone = model
-        self.config = config
-
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        return_dict: Optional[bool] = None,
-        **kwargs,
-    ):
-        model_output = self.backbone(x, return_dict=return_dict, **kwargs)
-        return model_output
-
-    @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
-        return AutoModel.from_config(config, predict_sequence_length, task="segmentation")
+class AutoModelForTimeSeriesClassification(_BaseAutoTaskModel):
+    task_type = TaskType.CLASSIFICATION
+    task_config_class = ClassificationTaskConfig
+    model_class = ClassificationModel
 
 
-class AutoModelForUncertainty(BaseModel):
-    """tfts model for time series uncertainty probabilistic forecasting model, not a point forecasting"""
+class AutoModelForImputation(_BaseAutoTaskModel):
+    task_type = TaskType.IMPUTATION
+    task_config_class = ImputationTaskConfig
+    model_class = ImputationModel
 
-    def __init__(self, model, config):
-        super().__init__(config=config)
-        self.backbone = model
-        self.config = config
 
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], Tuple[pd.DataFrame], List[np.ndarray], List[pd.DataFrame]],
-        return_dict: Optional[bool] = None,
-        **kwargs,
-    ):
-        model_output = self.backbone(x, return_dict=return_dict, **kwargs)
-        return model_output
+class AutoModelForAnomalyDetection(_BaseAutoTaskModel):
+    task_type = TaskType.ANOMALY_DETECTION
+    task_config_class = AnomalyDetectionTaskConfig
+    model_class = AnomalyDetectionModel
+
+
+class AutoModel:
+    """Single task-aware entry point; explicit AutoModelFor classes are preferred."""
+
+    _FACTORIES = {
+        TaskType.FORECASTING: AutoModelForForecasting,
+        TaskType.CLASSIFICATION: AutoModelForTimeSeriesClassification,
+        TaskType.IMPUTATION: AutoModelForImputation,
+        TaskType.ANOMALY_DETECTION: AutoModelForAnomalyDetection,
+    }
+
+    def __init__(self, *args, **kwargs):
+        raise TypeError("AutoModel must be constructed with from_config()")
 
     @classmethod
-    def from_config(cls, config, predict_sequence_length: int = 1):
-        return AutoModel.from_config(config, predict_sequence_length, task="uncertainty")
-
-
-class AutoModelForQuantile(BaseModel):
-    """tfts model for quantile forecasting"""
-
-    def __init__(self, model, config):
-        super(AutoModelForQuantile, self).__init__()
-        self.backbone = model
-        self.config = config
-        self.quantiles = getattr(config, "quantiles", [0.1, 0.5, 0.9])
-        self.num_labels = getattr(config, "num_labels", 1)
-        self.head = Dense(self.num_labels * len(self.quantiles))
-
-    def call(
-        self,
-        x: Union[tf.data.Dataset, Tuple[np.ndarray], List[np.ndarray]],
-        output_hidden_states: Optional[bool] = True,
-        **kwargs,
-    ):
-        model_output = self.backbone(x, output_hidden_states=output_hidden_states, **kwargs)
-        return self.head(model_output)
+    def from_config(cls, config, task="forecasting", task_config=None, **task_kwargs):
+        task_type = TaskType.normalize(task)
+        if "predict_sequence_length" in task_kwargs:
+            if "prediction_length" in task_kwargs:
+                raise ValueError("Use only prediction_length")
+            task_kwargs["prediction_length"] = task_kwargs.pop("predict_sequence_length")
+        return cls._FACTORIES[task_type].from_config(config, task_config=task_config, **task_kwargs)
 
     @classmethod
-    def from_config(cls, config, quantiles: Optional[List[float]] = None):
-        return AutoModel.from_config(config, task="quantile", quantiles=quantiles)
+    def from_pretrained(cls, model_directory, sample_batch=None):
+        from tfts.constants import TF2_WEIGHTS_NAME
 
-    def compile_model(self, optimizer="adam"):
-        """Helper to compile with the correct loss"""
-        loss_fn = MultiQuantileLoss(quantiles=self.quantiles)
-        self.compile(optimizer=optimizer, loss=loss_fn)
+        from .auto_config import AutoConfig
+        from .base import BaseConfig
+
+        task_path = os.path.join(model_directory, "task_config.json")
+        if not os.path.isfile(task_path):
+            raise FileNotFoundError("Missing task artifact %s" % task_path)
+        architecture = BaseConfig.from_pretrained(model_directory).to_dict()
+        model_type = architecture.get("model_type")
+        config = AutoConfig.for_model(model_type)
+        config.update(architecture)
+        with open(task_path, "r", encoding="utf-8") as file:
+            artifact = json.load(file)
+        if artifact.get("schema_version") != 1:
+            raise ValueError("Unsupported task artifact schema %r" % artifact.get("schema_version"))
+        task_values = dict(artifact["task_config"])
+        task_type = TaskType.normalize(task_values.pop("task"))
+        task_config_class = cls._FACTORIES[task_type].task_config_class
+        task_config = task_config_class(task=task_type, **task_values)
+        model = cls.from_config(config, task=task_type, task_config=task_config)
+        if sample_batch is None:
+            input_shape = getattr(config, "input_shape", None)
+            if input_shape is None or isinstance(input_shape, dict):
+                raise ValueError("sample_batch is required to restore this model")
+            sample_batch = tf.zeros([1] + list(input_shape), tf.float32)
+            if task_type == TaskType.IMPUTATION:
+                sample_batch = {
+                    "past_values": sample_batch,
+                    "past_observed_mask": tf.ones_like(sample_batch),
+                }
+        model(sample_batch)
+        model.load_weights(os.path.join(model_directory, TF2_WEIGHTS_NAME))
+        return model
+
+
+# Short aliases that do not change the architecture.
+AutoModelForPrediction = AutoModelForForecasting
+AutoModelForClassification = AutoModelForTimeSeriesClassification
+AutoModelForAnomaly = AutoModelForAnomalyDetection
+
+
+class AutoModelForQuantile(AutoModelForForecasting):
+    @classmethod
+    def from_config(cls, config, task_config: Optional[ForecastTaskConfig] = None, **kwargs):
+        if task_config is None:
+            kwargs["head"] = "quantile"
+        return super().from_config(config, task_config=task_config, **kwargs)

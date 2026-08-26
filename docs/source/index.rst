@@ -39,7 +39,7 @@ TFTS simplifies time series modeling by providing:
    Modular design allows easy customization of model components, training loops, and data pipelines. Integrate TFTS models as backbones in your custom architectures.
 
 **Comprehensive Tasks**
-   Support for forecasting (univariate/multivariate), classification, anomaly detection, and segmentation tasks with task-specific model heads.
+   Support for forecasting (univariate/multivariate), classification, imputation, and anomaly detection with task-specific model heads.
 
 
 Key Features
@@ -50,7 +50,7 @@ Key Features
    - Probabilistic forecasting with uncertainty quantification
    - Time series classification
    - Anomaly detection
-   - Change point detection and segmentation
+   - Missing-value imputation
 
 🚀 **20+ Models**
    - Classic: RNN, LSTM, GRU, Seq2Seq

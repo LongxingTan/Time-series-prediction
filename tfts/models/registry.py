@@ -11,6 +11,8 @@ import importlib
 import pkgutil
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Tuple, Type
 
+from tfts.contracts.capabilities import BackboneCapabilities
+
 
 @dataclass(frozen=True)
 class ModelMetadata:
@@ -23,9 +25,17 @@ class ModelMetadata:
     paper: str = ""
     tags: Tuple[str, ...] = ()
     tier: str = "experimental"
+    capabilities: BackboneCapabilities = BackboneCapabilities()
 
     def as_dict(self) -> Dict[str, Any]:
         """Return the legacy dictionary representation."""
+        capabilities = {
+            "output_ports": sorted(port.value for port in self.capabilities.output_ports),
+            "forecast_modes": sorted(mode.value for mode in self.capabilities.forecast_modes),
+            "supports_future_covariates": self.capabilities.supports_future_covariates,
+            "supports_missing_mask": self.capabilities.supports_missing_mask,
+            "supports_variable_length": self.capabilities.supports_variable_length,
+        }
         return {
             "class_name": self.model_class.__name__,
             "config_class": self.config_class.__name__,
@@ -33,6 +43,7 @@ class ModelMetadata:
             "paper": self.paper,
             "tags": list(self.tags),
             "tier": self.tier,
+            "capabilities": capabilities,
         }
 
 
@@ -50,6 +61,7 @@ def register_model(
     tags: Tuple[str, ...] = (),
     tier: str = "experimental",
     description: str = "",
+    capabilities: Optional[BackboneCapabilities] = None,
 ):
     """Register a model class where it is defined.
 
@@ -70,6 +82,7 @@ def register_model(
             paper=paper,
             tags=tuple(tags),
             tier=tier,
+            capabilities=capabilities or BackboneCapabilities(),
         )
         existing = _ENTRIES.get(name)
         if existing is not None and (
@@ -167,6 +180,28 @@ def get_model_class(model_name: str) -> Type:
         return _ENTRIES[model_name].model_class
     except KeyError as error:
         raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
+
+
+def get_model_capabilities(model_name: str) -> BackboneCapabilities:
+    """Return the immutable capabilities declared by a backbone."""
+    _load_builtin_models()
+    try:
+        return _ENTRIES[model_name].capabilities
+    except KeyError as error:
+        raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
+
+
+def list_supported_tasks(model_name: str) -> List[str]:
+    """Derive safe task support from the backbone's declared output ports."""
+    from tfts.contracts import OutputPort
+
+    capabilities = get_model_capabilities(model_name)
+    tasks = ["forecasting"]
+    if capabilities.has_port(OutputPort.SEQUENCE):
+        tasks.append("classification")
+    if capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):
+        tasks.extend(["imputation", "anomaly_detection"])
+    return tasks
 
 
 def get_config_class(model_name: str) -> Type:

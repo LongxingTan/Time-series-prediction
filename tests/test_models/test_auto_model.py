@@ -7,92 +7,78 @@ import tensorflow as tf
 from tfts import (
     AutoConfig,
     AutoModel,
-    AutoModelForAnomaly,
-    AutoModelForClassification,
-    AutoModelForPrediction,
-    AutoModelForSegmentation,
-    AutoModelForUncertainty,
+    AutoModelForAnomalyDetection,
+    AutoModelForForecasting,
+    AutoModelForImputation,
+    AutoModelForTimeSeriesClassification,
+)
+from tfts.contracts import (
+    AnomalyDetectionOutput,
+    ClassificationOutput,
+    ForecastOutput,
+    ImputationOutput,
+    TimeSeriesBatch,
 )
 
 
 class TestAutoModel(unittest.TestCase):
-    def test_auto_model_init(
-        self,
-    ):
-        config = AutoConfig.for_model("seq2seq")
+    def test_factory_returns_a_task_model_with_structured_output(self):
+        config = AutoConfig.for_model("dlinear")
+        model = AutoModelForForecasting.from_config(config, prediction_length=3)
+        batch = TimeSeriesBatch(tf.random.normal([2, 12, 2]))
 
-        auto_model = AutoModel.from_config(config, predict_sequence_length=5)
-        input_data = np.random.rand(1, 10, 3)
-        output = auto_model(input_data)
+        output = model(batch, return_dict=True)
 
-        self.assertEqual(output.shape, (1, 5, 1))
+        self.assertIsInstance(output, ForecastOutput)
+        self.assertEqual(output.predictions.shape, (2, 3, 1))
+        self.assertIs(model.config, model.backbone.config)
 
-    def test_auto_model_for_prediction(self):
+    def test_task_dispatch_and_capability_validation(self):
         config = AutoConfig.for_model("bert")
-        config.skip_connect_circle = False
-        config.skip_connect_mean = False
-        model = AutoModelForPrediction.from_config(config, predict_sequence_length=3)
+        classifier = AutoModel.from_config(config, task="classification", num_labels=3)
+        output = classifier(tf.random.normal([2, 10, 4]), return_dict=True)
 
-        x = tf.random.normal([2, 14, 4])
-        y = model(x)
-        self.assertEqual(y.shape, (2, 3, 1))
+        self.assertIsInstance(classifier, AutoModelForTimeSeriesClassification.model_class)
+        self.assertIsInstance(output, ClassificationOutput)
+        self.assertEqual(output.logits.shape, (2, 3))
+        np.testing.assert_allclose(tf.reduce_sum(output.probabilities, axis=-1).numpy(), np.ones(2), atol=1e-6)
 
-    def test_task_aware_factory_matches_prediction_alias(self):
-        config = AutoConfig.for_model("bert")
-        model = AutoModel.from_config(config, task="prediction", predict_sequence_length=3)
+        with self.assertRaisesRegex(ValueError, "does not support imputation"):
+            AutoModelForImputation.from_config(AutoConfig.for_model("dlinear"))
 
-        self.assertIsInstance(model, AutoModelForPrediction)
-        self.assertEqual(model(tf.random.normal([2, 14, 4])).shape, (2, 3, 1))
+    def test_imputation_preserves_observed_values(self):
+        model = AutoModelForImputation.from_config(AutoConfig.for_model("bert"), target_dim=2)
+        values = tf.random.normal([2, 8, 2])
+        mask = tf.constant([[[1.0, 0.0]] * 8] * 2)
+        output = model(TimeSeriesBatch(past_values=values, past_observed_mask=mask), return_dict=True)
 
-    def test_task_aware_factory_rejects_unknown_task(self):
-        config = AutoConfig.for_model("bert")
-        with self.assertRaisesRegex(ValueError, "Unknown task"):
-            AutoModel.from_config(config, task="not-a-task")
+        self.assertIsInstance(output, ImputationOutput)
+        np.testing.assert_allclose((output.imputed_values * mask).numpy(), (values * mask).numpy(), atol=1e-6)
 
-    def test_auto_model_for_classification(self):
-        num_labels = 3
-        config = AutoConfig.for_model("bert")
-        model = AutoModelForClassification.from_config(config, num_labels=num_labels)
+    def test_anomaly_calibration_is_a_separate_fitted_stage(self):
+        model = AutoModelForAnomalyDetection.from_config(AutoConfig.for_model("bert"))
+        batch = TimeSeriesBatch(tf.random.normal([2, 8, 1]))
+        model.calibrate(batch)
+        output = model.detect(batch)
 
-        x = tf.random.normal([2, 14, 4])
-        y = model(x)
-        self.assertEqual(y.shape, (2, num_labels))
+        self.assertIsInstance(output, AnomalyDetectionOutput)
+        self.assertEqual(output.labels.shape, (2, 8))
+        self.assertTrue(bool(tf.math.is_finite(output.threshold)))
 
-    def test_auto_model_for_anomaly(self):
-        config = AutoConfig.for_model("bert")
-        config.train_sequence_length = 14
-        model = AutoModelForAnomaly.from_config(config)
-
-        x = tf.random.normal([2, 14, 4])
-        y_test = tf.random.normal([2, 1])
-        dist = model.detect(x, y_test)
-        print(dist)
-
-    def test_auto_model_for_segmentation(self):
-        config = AutoConfig.for_model("bert")
-        model = AutoModelForSegmentation.from_config(config)
-
-        x = tf.random.normal([2, 14, 4])
-        output = model(x)
-        print(output.shape)
-
-    def test_auto_model_for_uncertainty(self):
-        config = AutoConfig.for_model("bert")
-        model = AutoModelForUncertainty.from_config(config)
-
-        x = tf.random.normal([2, 14, 4])
-        output = model(x)
-        print(output.shape)
-
-    def test_save_and_load_preserves_prediction_length(self):
+    def test_task_artifact_round_trip(self):
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=3)
-        model.build_model(tf.keras.Input(shape=(8, 2)))
+        model = AutoModelForForecasting.from_config(config, prediction_length=3)
+        sample = tf.random.normal([2, 8, 2])
+        expected = model(sample)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            model.save_pretrained(tmpdir)
-            loaded = AutoModel.from_pretrained(tmpdir)
-            output = loaded(tf.random.normal([2, 8, 2]))
+        with tempfile.TemporaryDirectory() as directory:
+            model.save_pretrained(directory)
+            restored = AutoModel.from_pretrained(directory)
+            actual = restored(sample)
 
-        self.assertEqual(loaded.predict_sequence_length, 3)
-        self.assertEqual(output.shape, (2, 3, 1))
+        self.assertEqual(restored.task_config.prediction_length, 3)
+        np.testing.assert_allclose(actual.numpy(), expected.numpy(), rtol=1e-5, atol=1e-5)
+
+
+if __name__ == "__main__":
+    unittest.main()

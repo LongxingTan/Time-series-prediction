@@ -13,8 +13,9 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
+from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+
 from ..distributions import NormalOutput
-from ..generation import AutoregressiveGenerationMixin
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -88,8 +89,12 @@ class DeepAREncoder(tf.keras.layers.Layer):
     paper="https://arxiv.org/abs/1704.04110",
     tags=("probabilistic", "recurrent", "uncertainty"),
     tier="core",
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
+        forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
+    ),
 )
-class DeepAR(BaseModel, AutoregressiveGenerationMixin):
+class DeepAR(BaseModel):
     """DeepAR -- autoregressive LSTM + univariate Normal head.
 
     Public API

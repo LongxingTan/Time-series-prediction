@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 import numpy as np
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModel
+from tfts import AutoConfig, AutoModel, AutoModelForTimeSeriesClassification
 from tfts.trainer import BaseTrainer, EagerTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
 from tfts.training.runtime import configure_precision, create_distribution_strategy
 from tfts.training_args import TrainingArguments
@@ -207,14 +207,14 @@ class BaseTrainerTest(unittest.TestCase):
         """Test model saving functionality."""
         with tempfile.TemporaryDirectory() as tmpdir:
             trainer = BaseTrainer(self.model)
-            inputs = tf.keras.Input(shape=(10, 1))
-            trainer.model = trainer.model.build_model(inputs)
+            trainer.model(tf.zeros([1, 10, 1]))
             trainer._save(tmpdir)
             # Check that config file exists
             config_path = os.path.join(tmpdir, "config.json")
             self.assertTrue(os.path.exists(config_path))
             weights_path = os.path.join(tmpdir, "tf_model.weights.h5")
             self.assertTrue(os.path.exists(weights_path))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "task_config.json")))
 
     def test_save_unbuilt_model_raises_clear_error(self):
         """Test saving an unbuilt model fails before writing partial files."""
@@ -658,12 +658,16 @@ class KerasTrainerTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             trainer.evaluate("invalid")
 
-        trainer._task = "classification"
-        self.assertIsInstance(trainer._default_loss(), tf.keras.losses.SparseCategoricalCrossentropy)
-        self.assertEqual(trainer._default_metrics(), ["accuracy"])
-        trainer._task = "forecasting"
         self.assertIsInstance(trainer._default_loss(), tf.keras.losses.MeanSquaredError)
         self.assertEqual(trainer._default_metrics(), ["mae"])
+
+        classifier = AutoModelForTimeSeriesClassification.from_config(AutoConfig.for_model("bert"), num_labels=3)
+        classification_trainer = _tfts_trainer(classifier)
+        self.assertIsInstance(
+            classification_trainer._default_loss(),
+            tf.keras.losses.SparseCategoricalCrossentropy,
+        )
+        self.assertEqual([metric.name for metric in classification_trainer._default_metrics()], ["accuracy"])
 
     def test_build_callbacks_covers_optional_callbacks(self):
         with tempfile.TemporaryDirectory() as tmpdir:

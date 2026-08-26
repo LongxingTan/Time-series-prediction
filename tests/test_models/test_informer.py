@@ -133,21 +133,21 @@ class InformerTest(unittest.TestCase):
         n_decoder_feature = 3
         batch_size = 1
 
-        x_train = (
-            np.random.rand(batch_size, train_length, 1),
-            np.random.rand(batch_size, train_length, n_encoder_feature),
-            np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
-        )
+        x_train = {
+            "past_values": np.random.rand(batch_size, train_length, 1),
+            "past_time_features": np.random.rand(batch_size, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
+        }
         y_train = np.random.rand(batch_size, predict_sequence_length, 1)  # target: (batch, predict_sequence_length, 1)
 
-        x_valid = (
-            np.random.rand(batch_size, train_length, 1),
-            np.random.rand(batch_size, train_length, n_encoder_feature),
-            np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
-        )
+        x_valid = {
+            "past_values": np.random.rand(batch_size, train_length, 1),
+            "past_time_features": np.random.rand(batch_size, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(batch_size, predict_sequence_length, n_decoder_feature),
+        }
         y_valid = np.random.rand(batch_size, predict_sequence_length, 1)
 
         config = AutoConfig.for_model("informer")
-        model = AutoModel.from_config(config, predict_sequence_length)
+        model = AutoModel.from_config(config, prediction_length=predict_sequence_length)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)

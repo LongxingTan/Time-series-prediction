@@ -9,10 +9,10 @@ from typing import Dict, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda, Reshape
 
+from tfts.contracts import BackboneCapabilities, OutputPort
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
-from ..tasks.auto_task import PredictionOutput
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -88,6 +88,9 @@ class BertConfig(CommonConfig):
     config=BertConfig,
     paper="https://arxiv.org/abs/1810.04805",
     tags=("pretraining", "attention", "encoder-only"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
 )
 class Bert(BaseModel):
     """Bert model for time series forecasting.

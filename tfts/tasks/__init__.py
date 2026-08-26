@@ -1,27 +1,32 @@
-"""Task-specific handlers and pipelines for time series prediction."""
+"""Task heads, task models, and anomaly services."""
 
+from .anomaly import AbsoluteErrorScorer, AnomalyScorer, QuantileCalibrator, SquaredErrorScorer
 from .auto_task import (
-    AnomalyHead,
     ClassificationHead,
-    DistributionHead,
-    GaussianHead,
-    PredictionHead,
-    QuantileHead,
-    SegmentationHead,
+    DistributionForecastHead,
+    PointForecastHead,
+    QuantileForecastHead,
+    ReconstructionHead,
 )
-from .base import BaseHead, BaseTask, ModelOutput
-from .pipeline import Pipeline
+from .base import BaseHead, BaseTask, ModelOutput, TimeSeriesTaskModel
+from .task_models import AnomalyDetectionModel, ClassificationModel, ForecastingModel, ImputationModel
 
 __all__ = [
-    "AnomalyHead",
+    "AbsoluteErrorScorer",
+    "AnomalyDetectionModel",
+    "AnomalyScorer",
     "BaseHead",
     "BaseTask",
     "ClassificationHead",
-    "DistributionHead",
-    "GaussianHead",
+    "ClassificationModel",
+    "DistributionForecastHead",
+    "ForecastingModel",
+    "ImputationModel",
     "ModelOutput",
-    "Pipeline",
-    "PredictionHead",
-    "QuantileHead",
-    "SegmentationHead",
+    "PointForecastHead",
+    "QuantileCalibrator",
+    "QuantileForecastHead",
+    "ReconstructionHead",
+    "SquaredErrorScorer",
+    "TimeSeriesTaskModel",
 ]

@@ -13,10 +13,10 @@ Examples:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..models.auto_config import AutoConfig
-from ..models.auto_model import AutoModel
+from ..tasks.pipeline import TaskPipeline
 
 if TYPE_CHECKING:
     from .forecasting import ForecastingPipeline
@@ -34,7 +34,7 @@ def __getattr__(name: str):
 
 def pipeline(
     task: str = "forecasting",
-    model: Union[str, AutoModel] = "dlinear",
+    model: Any = "dlinear",
     lookback: int = 96,
     horizon: int = 24,
     config: Optional[AutoConfig] = None,
@@ -80,7 +80,8 @@ def pipeline(
     """
     from .forecasting import ForecastingPipeline
 
-    if task == "forecasting":
+    normalized_task = task.lower().replace("-", "_")
+    if normalized_task == "forecasting":
         return ForecastingPipeline(
             model=model,
             lookback=lookback,
@@ -95,7 +96,13 @@ def pipeline(
             **kwargs,
         )
 
-    raise ValueError(
-        f"Unknown task '{task}'. Currently supported: 'forecasting'. "
-        f"More tasks (classification, anomaly) are coming soon."
+    task_only_kwargs = dict(kwargs)
+    if normalized_task == "classification" and "num_labels" not in task_only_kwargs:
+        raise ValueError("classification pipeline requires num_labels")
+    return TaskPipeline(
+        normalized_task,
+        model,
+        config=config,
+        processor=task_only_kwargs.pop("processor", None),
+        **task_only_kwargs,
     )

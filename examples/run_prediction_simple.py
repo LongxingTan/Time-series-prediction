@@ -94,7 +94,7 @@ def run_manual(args):
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 
     config = tfts.AutoConfig.for_model(args.use_model)
-    model = tfts.AutoModel.from_config(config, predict_sequence_length=args.predict_sequence_length)
+    model = tfts.AutoModelForForecasting.from_config(config, prediction_length=args.predict_sequence_length)
 
     trainer = tfts.Trainer(
         model,

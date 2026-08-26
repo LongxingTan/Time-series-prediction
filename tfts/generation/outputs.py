@@ -1,7 +1,7 @@
 """Structured outputs for forecast generation."""
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -25,6 +25,8 @@ class ForecastGenerationOutput:
     samples: Optional[Union[tf.Tensor, np.ndarray]] = None
     loc: Optional[Union[tf.Tensor, np.ndarray]] = None
     scale: Optional[Union[tf.Tensor, np.ndarray]] = None
+    distribution_params: Optional[Mapping[str, tf.Tensor]] = None
+    quantile_values: Optional[Union[tf.Tensor, np.ndarray]] = None
 
     def numpy(self) -> "ForecastGenerationOutput":
         """Return a copy with all tensors converted via ``.numpy()`` (eager only)."""
@@ -40,4 +42,6 @@ class ForecastGenerationOutput:
             samples=_to(self.samples),
             loc=_to(self.loc),
             scale=_to(self.scale),
+            distribution_params=self.distribution_params,
+            quantile_values=_to(self.quantile_values),
         )

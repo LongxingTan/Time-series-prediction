@@ -1,50 +1,31 @@
 import unittest
-from unittest.mock import MagicMock, Mock, patch
 
 import tensorflow as tf
 
-from tfts.tasks.pipeline import Pipeline
+from tfts.contracts import ClassificationOutput
+from tfts.tasks.pipeline import TaskPipeline
 
 
-class TestPipeline(unittest.TestCase):
-    """Test Pipeline class from the second document"""
+class TestTaskPipeline(unittest.TestCase):
+    def test_pipeline_builds_task_model_from_registry_name(self):
+        pipeline = TaskPipeline("classification", "bert", num_labels=3)
+        output = pipeline(tf.random.normal([2, 8, 2]))
 
-    def setUp(self):
-        # Create a mock config
-        self.mock_cfg = Mock()
-        self.mock_cfg.model.name = "test_model"
-        self.mock_cfg.model.train_sequence_length = 10
-        self.mock_cfg.model.predict_sequence_length = 5
-        self.mock_cfg.model.n_features = 3
-        self.mock_cfg.model.n_outputs = 1
-        self.mock_cfg.training.loss = "MeanSquaredError"
-        self.mock_cfg.training.optimizer = "Adam"
-        self.mock_cfg.training.learning_rate = 0.001
-        self.mock_cfg.training.epochs = 10
+        self.assertIsInstance(output, ClassificationOutput)
+        self.assertEqual(output.logits.shape, (2, 3))
 
-    @patch("tensorflow.config.list_physical_devices")
-    def test_setup_strategy_multi_gpu(self, mock_list_devices):
-        """Test strategy setup with multiple GPUs"""
-        mock_list_devices.return_value = ["GPU:0", "GPU:1"]
+    def test_generation_is_only_exposed_for_forecasting(self):
+        pipeline = TaskPipeline("forecasting", "dlinear", prediction_length=2)
+        output = pipeline(
+            tf.random.normal([2, 8, 1]),
+            generation_config={"prediction_length": 4, "strategy": "recursive"},
+        )
+        self.assertEqual(output.predictions.shape, (2, 4, 1))
 
-        pipeline = Pipeline(self.mock_cfg)
+        classifier = TaskPipeline("classification", "bert", num_labels=2)
+        with self.assertRaisesRegex(ValueError, "only valid for forecasting"):
+            classifier(tf.random.normal([2, 8, 1]), generation_config={})
 
-        self.assertIsInstance(pipeline.strategy, tf.distribute.Strategy)
 
-    @patch("tensorflow.config.list_physical_devices")
-    def test_setup_strategy_single_gpu(self, mock_list_devices):
-        """Test strategy setup with single GPU"""
-        mock_list_devices.return_value = ["GPU:0"]
-
-        pipeline = Pipeline(self.mock_cfg)
-
-        self.assertIsInstance(pipeline.strategy, tf.distribute.Strategy)
-
-    @patch("tensorflow.config.list_physical_devices")
-    def test_setup_strategy_cpu(self, mock_list_devices):
-        """Test strategy setup with CPU only"""
-        mock_list_devices.return_value = []
-
-        pipeline = Pipeline(self.mock_cfg)
-
-        self.assertIsInstance(pipeline.strategy, tf.distribute.Strategy)
+if __name__ == "__main__":
+    unittest.main()

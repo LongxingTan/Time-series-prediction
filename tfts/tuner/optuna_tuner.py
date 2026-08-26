@@ -172,7 +172,7 @@ class OptunaTuner:
                 logger.debug(f"Config key {key!r} not found on {model_type} config, skipping")
 
         # Build & train model
-        model = AutoModel.from_config(config, predict_sequence_length=self.predict_sequence_length)
+        model = AutoModel.from_config(config, prediction_length=self.predict_sequence_length)
         trainer = Trainer(model)
 
         # Unpack learning_rate if present — pass via optimizer
