@@ -278,9 +278,27 @@ class Trainer(BaseTrainer):
                 optimizer = self._create_optimizer(learning_rate=self._create_lr_scheduler())
             if metrics is None:
                 metrics = self._default_metrics()
+                # Keras 3 fails when compiling with an *empty* metrics list on a
+                # custom ``train_step`` that only reports ``{"loss": ...}`` (e.g.
+                # anomaly / imputation models): the compiled metrics are never
+                # built and ``get_metrics_result()`` raises "Cannot get result()
+                # since the metric has not yet been built". Fall back to None so
+                # Keras uses its default empty-metrics behavior.
+                if not metrics:
+                    metrics = None
 
             if isinstance(optimizer, (str, dict)):
                 optimizer = tf.keras.optimizers.get(optimizer)
+
+            # A user-supplied optimizer may have been created outside the strategy
+            # scope. Under a multi-replica strategy, Keras 3 then raises "Mixing
+            # different tf.distribute.Strategy objects" during `model.fit`. Rebuild
+            # the optimizer from its serialized config *inside* the scope so its
+            # variables are tied to the active strategy. This is safe for fresh
+            # optimizers (the common case); pre-trained optimizer state is not
+            # transferred across device scopes by TF anyway.
+            if isinstance(optimizer, tf.keras.optimizers.Optimizer) and self.strategy.num_replicas_in_sync > 1:
+                optimizer = tf.keras.optimizers.deserialize(tf.keras.optimizers.serialize(optimizer))
 
             if not isinstance(self.model, tf.keras.Model):
                 raise TypeError("Trainer expects a tf.keras.Model")
@@ -304,12 +322,21 @@ class Trainer(BaseTrainer):
             # and a too-small batch splits unevenly across replicas. Batching here to
             # the global (replica-scaled) batch keeps behavior identical on a single
             # device (num_replicas == 1) and correct on multi-GPU.
+            # Under a multi-replica strategy every batch must split into equal
+            # per-replica chunks; a trailing odd-sized batch trips a collective
+            # shape mismatch (CollectiveReduceV2). drop_remainder drops that last
+            # partial batch while keeping every consumed batch even.
+            drop_remainder = self.strategy is not None and self.strategy.num_replicas_in_sync > 1
             if isinstance(train_dataset, (list, tuple)):
                 x_train, y_train = train_dataset
-                train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+                train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
             if isinstance(valid_dataset, (list, tuple)):
                 x_valid, y_valid = valid_dataset
-                valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(batch_size)
+                valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
 
             history = self.model.fit(
                 train_dataset,

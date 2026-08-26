@@ -84,6 +84,10 @@ class TestAutoModel(unittest.TestCase):
             with self.subTest(model_name=model_name):
                 feature_count = feature_counts.get(model_name, 3)
                 config = AutoConfig.for_model(model_name)
+                if model_name == "tft":
+                    # TFT treats every historical target channel as an encoder
+                    # real variable; keep its explicit variable count aligned.
+                    config.encoder_real_dim = feature_count
                 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
                 if model_name == "deep_ar":
                     inputs = TimeSeriesBatch(

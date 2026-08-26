@@ -20,17 +20,9 @@ class BackboneAdapter:
         self._call_parameters = set(inspect.signature(backbone.call).parameters)
 
     def prepare_inputs(self, batch: TimeSeriesBatch):
-        if self.model_type == "deep_ar":
-            decoder_values = batch.future_values
-            if decoder_values is not None:
-                decoder_values = tf.concat([batch.past_values[:, -1:, :], decoder_values[:, :-1, :]], axis=1)
-            static = batch.static_categorical_features
-            if static is None:
-                static = tf.zeros([batch.batch_size, 1], dtype=tf.int32)
-            return {"x": batch.past_values, "decoder_feature": decoder_values, "static": static}
-
-        if self.model_type == "tft":
-            return self._prepare_tft_inputs(batch)
+        adapt_batch = getattr(self.backbone, "adapt_batch", None)
+        if adapt_batch is not None:
+            return adapt_batch(batch)
 
         if batch.past_time_features is None and batch.future_time_features is None:
             return batch.past_values
@@ -41,30 +33,6 @@ class BackboneAdapter:
         values = {"x": batch.past_values, "encoder_feature": past_features}
         if batch.future_time_features is not None:
             values["decoder_feature"] = batch.future_time_features
-        return values
-
-    def _prepare_tft_inputs(self, batch: TimeSeriesBatch) -> Dict[str, tf.Tensor]:
-        config = self.backbone.config
-        batch_size = batch.batch_size
-        horizon = (
-            tf.shape(batch.future_time_features)[1]
-            if batch.future_time_features is not None
-            else int(getattr(self.backbone, "predict_sequence_length", 1))
-        )
-        encoder_real = batch.past_time_features if batch.past_time_features is not None else batch.past_values
-        decoder_real = batch.future_time_features
-        if decoder_real is None:
-            decoder_real = tf.zeros([batch_size, horizon, config.decoder_real_dim], batch.past_values.dtype)
-        values = {
-            "encoder_real": encoder_real,
-            "decoder_real": decoder_real,
-            "encoder_categorical": tf.zeros([batch_size, batch.context_length, 0], tf.int32),
-            "decoder_categorical": tf.zeros([batch_size, horizon, 0], tf.int32),
-        }
-        if batch.static_real_features is not None:
-            values["static_real"] = batch.static_real_features
-        if batch.static_categorical_features is not None:
-            values["static_categorical"] = batch.static_categorical_features
         return values
 
     def _invoke(self, inputs, training=None, output_hidden_states=False):

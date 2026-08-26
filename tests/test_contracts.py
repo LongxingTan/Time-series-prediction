@@ -18,6 +18,23 @@ class TimeSeriesBatchTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires past_observed_mask"):
             batch.validate_for("imputation")
 
+    def test_temporal_feature_lengths_are_validated(self):
+        batch = TimeSeriesBatch(
+            past_values=tf.zeros([2, 8, 1]),
+            past_categorical_features=tf.zeros([2, 7, 2], tf.int32),
+        )
+        with self.assertRaisesRegex(tf.errors.InvalidArgumentError, "time length mismatch"):
+            batch.validate_for("forecasting")
+
+    def test_future_feature_horizons_must_match(self):
+        batch = TimeSeriesBatch(
+            past_values=tf.zeros([2, 8, 1]),
+            future_time_features=tf.zeros([2, 4, 2]),
+            future_categorical_features=tf.zeros([2, 3, 1], tf.int32),
+        )
+        with self.assertRaisesRegex(tf.errors.InvalidArgumentError, "horizon mismatch"):
+            batch.validate_for("forecasting")
+
 
 class TaskConfigTest(unittest.TestCase):
     def test_configs_are_validated_and_json_friendly(self):

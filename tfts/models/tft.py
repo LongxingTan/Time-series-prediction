@@ -9,6 +9,8 @@ from typing import List, Optional, Sequence
 
 import tensorflow as tf
 
+from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -171,6 +173,11 @@ class InterpretableMultiHeadAttention(tf.keras.layers.Layer):
     paper="https://arxiv.org/abs/1912.09363",
     tags=("interpretable", "multi-horizon", "attention", "SOTA"),
     tier="core",
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
+        forecast_modes=frozenset({ForecastMode.DIRECT}),
+        supports_future_covariates=True,
+    ),
 )
 class TFTransformer(BaseModel):
     """Temporal Fusion Transformer accepting dedicated static feature tensors."""
@@ -225,6 +232,65 @@ class TFTransformer(BaseModel):
         self.pre_output_gate = GateAddNorm(hidden, dropout)
         self.output_projection = tf.keras.layers.Dense(config.output_size)
         self.last_selection_weights = self.last_attention_weights = None
+
+    @staticmethod
+    def _require_feature_width(name, values, expected):
+        actual = values.shape[-1]
+        if actual is not None and int(actual) != expected:
+            raise ValueError(f"{name} has {actual} features, but the TFT config expects {expected}")
+        tf.debugging.assert_equal(tf.shape(values)[-1], expected, message=f"{name} feature width mismatch")
+
+    def adapt_batch(self, batch):
+        """Translate the canonical batch into TFT variable groups.
+
+        Historical targets are always encoder variables. Real-valued past
+        covariates are appended to them; future targets are deliberately not
+        consumed, preventing label leakage during teacher-forced training.
+        """
+        horizon = (
+            tf.shape(batch.future_time_features)[1]
+            if batch.future_time_features is not None
+            else (
+                tf.shape(batch.future_categorical_features)[1]
+                if batch.future_categorical_features is not None
+                else self.predict_sequence_length
+            )
+        )
+        encoder_real = batch.past_values
+        if batch.past_time_features is not None:
+            encoder_real = tf.concat([encoder_real, tf.cast(batch.past_time_features, encoder_real.dtype)], axis=-1)
+        decoder_real = batch.future_time_features
+        if decoder_real is None:
+            decoder_real = tf.zeros([batch.batch_size, horizon, self.config.decoder_real_dim], encoder_real.dtype)
+        encoder_categorical = batch.past_categorical_features
+        if encoder_categorical is None:
+            encoder_categorical = tf.zeros(
+                [batch.batch_size, batch.context_length, len(self.temporal_cat_embeddings)], tf.int32
+            )
+        decoder_categorical = batch.future_categorical_features
+        if decoder_categorical is None:
+            decoder_categorical = tf.zeros([batch.batch_size, horizon, len(self.temporal_cat_embeddings)], tf.int32)
+
+        self._require_feature_width("past_values + past_time_features", encoder_real, self.config.encoder_real_dim)
+        self._require_feature_width("future_time_features", decoder_real, self.config.decoder_real_dim)
+        self._require_feature_width("past_categorical_features", encoder_categorical, len(self.temporal_cat_embeddings))
+        self._require_feature_width(
+            "future_categorical_features", decoder_categorical, len(self.temporal_cat_embeddings)
+        )
+        values = {
+            "encoder_real": encoder_real,
+            "decoder_real": decoder_real,
+            "encoder_categorical": tf.cast(encoder_categorical, tf.int32),
+            "decoder_categorical": tf.cast(decoder_categorical, tf.int32),
+        }
+        if self.has_static:
+            if batch.static_real_features is None and self.config.static_real_dim:
+                raise ValueError("TFT config requires static_real_features")
+            if batch.static_categorical_features is None and self.static_cat_embeddings:
+                raise ValueError("TFT config requires static_categorical_features")
+            values["static_real"] = batch.static_real_features
+            values["static_categorical"] = batch.static_categorical_features
+        return values
 
     @staticmethod
     def _embed_categoricals(values, embeddings):

@@ -5,7 +5,7 @@ import unittest
 import pandas as pd
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModel, KerasTrainer
+from tfts import AutoConfig, AutoModel, KerasTrainer, TimeSeriesBatch
 from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.tft import TFTransformer, TFTransformerConfig
 from tfts.training_args import TrainingArguments
@@ -62,6 +62,44 @@ class TFTransformerTest(unittest.TestCase):
         self.assertEqual(output.shape, (3, 6, 3))
         self.assertEqual(model.last_attention_weights.shape, (3, 6, 30))
         self.assertEqual(model.last_selection_weights["static"].shape, (3, 4))
+
+    def test_canonical_batch_keeps_targets_and_all_covariate_types(self):
+        config = TFTransformerConfig(
+            encoder_real_dim=3,
+            decoder_real_dim=2,
+            static_real_dim=1,
+            static_categorical_cardinalities=[5],
+            temporal_categorical_cardinalities=[7, 3],
+            hidden_size=16,
+            num_attention_heads=4,
+        )
+        model = AutoModel.from_config(config, prediction_length=4)
+        batch = TimeSeriesBatch(
+            past_values=tf.random.normal([2, 8, 1]),
+            past_time_features=tf.random.normal([2, 8, 2]),
+            future_time_features=tf.random.normal([2, 4, 2]),
+            past_categorical_features=tf.zeros([2, 8, 2], tf.int32),
+            future_categorical_features=tf.zeros([2, 4, 2], tf.int32),
+            static_real_features=tf.zeros([2, 1]),
+            static_categorical_features=tf.zeros([2, 1], tf.int32),
+        )
+
+        output = model(batch)
+
+        self.assertEqual(output.shape, (2, 4, 1))
+        self.assertEqual(model.backbone.last_selection_weights["encoder"].shape, (2, 8, 5))
+        self.assertEqual(model.backbone.last_selection_weights["decoder"].shape, (2, 4, 4))
+
+    def test_canonical_batch_rejects_mismatched_tft_config(self):
+        config = TFTransformerConfig(encoder_real_dim=2)
+        model = AutoModel.from_config(config, prediction_length=4)
+        batch = TimeSeriesBatch(
+            past_values=tf.zeros([1, 8, 1]),
+            past_time_features=tf.zeros([1, 8, 2]),
+        )
+
+        with self.assertRaisesRegex(ValueError, "TFT config expects 2"):
+            model(batch)
 
     def test_train(self):
         data = get_data(name="ar", seasonality=10.0, timesteps=40, n_series=10, seed=42)

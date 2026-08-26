@@ -131,7 +131,7 @@ class ForecastingModel(TimeSeriesTaskModel):
         x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         batch = self.normalize_batch(x)
         with tf.GradientTape() as tape:
-            output = self.forward(batch, training=True)
+            output = self(batch, training=True, return_dict=True)
             loss = self._distribution_loss(batch, y, output)
             if self.losses:
                 loss += tf.add_n(self.losses)
@@ -142,15 +142,18 @@ class ForecastingModel(TimeSeriesTaskModel):
             if gradient is not None
         ]
         self.optimizer.apply_gradients(pairs)
-        return {"loss": loss}
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
     def test_step(self, data):
         if self.output_distribution is None:
             return super().test_step(data)
         x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         batch = self.normalize_batch(x)
-        output = self.forward(batch, training=False)
-        return {"loss": self._distribution_loss(batch, y, output)}
+        output = self(batch, training=False, return_dict=True)
+        loss = self._distribution_loss(batch, y, output)
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
     def generate(self, inputs, generation_config=None, **kwargs):
         from tfts.generation import generate
@@ -229,7 +232,7 @@ class ImputationModel(TimeSeriesTaskModel):
         if target is None:
             raise ValueError("Imputation training requires clean targets as y or batch.labels")
         with tf.GradientTape() as tape:
-            output = self.forward(batch, training=True)
+            output = self(batch, training=True, return_dict=True)
             loss = self._masked_loss(batch, target, output.reconstructed_values)
             if self.losses:
                 loss += tf.add_n(self.losses)
@@ -240,7 +243,8 @@ class ImputationModel(TimeSeriesTaskModel):
             if gradient is not None
         ]
         self.optimizer.apply_gradients(pairs)
-        return {"loss": loss}
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
     def test_step(self, data):
         x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
@@ -248,8 +252,10 @@ class ImputationModel(TimeSeriesTaskModel):
         target = batch.labels if y is None else y
         if target is None:
             raise ValueError("Imputation evaluation requires clean targets as y or batch.labels")
-        output = self.forward(batch, training=False)
-        return {"loss": self._masked_loss(batch, target, output.reconstructed_values)}
+        output = self(batch, training=False, return_dict=True)
+        loss = self._masked_loss(batch, target, output.reconstructed_values)
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
 
 class AnomalyDetectionModel(TimeSeriesTaskModel):
@@ -299,7 +305,7 @@ class AnomalyDetectionModel(TimeSeriesTaskModel):
         batch = self.normalize_batch(x)
         target = batch.past_values if y is None else y
         with tf.GradientTape() as tape:
-            output = self.forward(batch, training=True)
+            output = self(batch, training=True, return_dict=True)
             error = tf.square(tf.cast(target, output.reconstruction.dtype) - output.reconstruction)
             if batch.past_observed_mask is not None:
                 mask = tf.cast(batch.past_observed_mask, error.dtype)
@@ -315,17 +321,19 @@ class AnomalyDetectionModel(TimeSeriesTaskModel):
             if gradient is not None
         ]
         self.optimizer.apply_gradients(pairs)
-        return {"loss": loss}
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
     def test_step(self, data):
         x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         batch = self.normalize_batch(x)
         target = batch.past_values if y is None else y
-        output = self.forward(batch, training=False)
+        output = self(batch, training=False, return_dict=True)
         error = tf.square(tf.cast(target, output.reconstruction.dtype) - output.reconstruction)
         if batch.past_observed_mask is not None:
             mask = tf.cast(batch.past_observed_mask, error.dtype)
             loss = tf.math.divide_no_nan(tf.reduce_sum(error * mask), tf.reduce_sum(mask))
         else:
             loss = tf.reduce_mean(error)
-        return {"loss": loss}
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}

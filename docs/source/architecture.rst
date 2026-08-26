@@ -14,9 +14,19 @@ Contracts
 ---------
 
 ``TimeSeriesBatch`` is the only public model-input vocabulary.  It names past
-and future values, time features, static features, observed masks, padding, and
-labels.  Architecture-specific input names stay behind ``BackboneAdapter``.
+and future values, real and categorical temporal features, static features,
+observed masks, padding, and labels.  Architecture-specific input names stay
+behind ``BackboneAdapter``.  A backbone with a specialized input structure can
+implement ``adapt_batch(batch)``; adding it never requires a model-name branch
+in the shared adapter.
 Masks consistently use ``1``/``True`` for observed or valid positions.
+
+For TFT, historical targets are always included among the encoder real
+variables.  Therefore ``encoder_real_dim`` is the number of target channels
+plus ``past_time_features`` channels.  ``decoder_real_dim`` counts known
+``future_time_features`` only.  Temporal categorical variables use
+``past_categorical_features`` and ``future_categorical_features`` with one
+channel per configured cardinality.
 
 Backbones declare immutable ``BackboneCapabilities`` in the model registry.
 Task factories validate those capabilities before constructing a head.  A

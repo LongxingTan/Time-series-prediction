@@ -20,6 +20,8 @@ class TimeSeriesBatch:
     future_values: Optional[tf.Tensor] = None
     past_time_features: Optional[tf.Tensor] = None
     future_time_features: Optional[tf.Tensor] = None
+    past_categorical_features: Optional[tf.Tensor] = None
+    future_categorical_features: Optional[tf.Tensor] = None
     static_real_features: Optional[tf.Tensor] = None
     static_categorical_features: Optional[tf.Tensor] = None
     past_observed_mask: Optional[tf.Tensor] = None
@@ -38,6 +40,8 @@ class TimeSeriesBatch:
             "future_values",
             "past_time_features",
             "future_time_features",
+            "past_categorical_features",
+            "future_categorical_features",
             "static_real_features",
             "static_categorical_features",
             "past_observed_mask",
@@ -86,10 +90,32 @@ class TimeSeriesBatch:
         return tf.shape(self.past_values)[-1]
 
     def validate_for(self, task: str) -> None:
-        if task == "forecasting" and self.future_time_features is not None:
-            if self.future_time_features.shape.rank != 3:
-                raise ValueError("future_time_features must have shape [batch, horizon, feature]")
-        elif task == "imputation":
+        temporal_fields = (
+            ("past_time_features", self.past_time_features, self.context_length),
+            ("past_categorical_features", self.past_categorical_features, self.context_length),
+        )
+        for name, value, expected_length in temporal_fields:
+            if value is not None:
+                if value.shape.rank != 3:
+                    raise ValueError(f"{name} must have shape [batch, time, feature]")
+                tf.debugging.assert_equal(tf.shape(value)[0], self.batch_size, message=f"{name} batch size mismatch")
+                tf.debugging.assert_equal(tf.shape(value)[1], expected_length, message=f"{name} time length mismatch")
+
+        future_lengths = []
+        for name, value in (
+            ("future_time_features", self.future_time_features),
+            ("future_categorical_features", self.future_categorical_features),
+            ("future_values", self.future_values),
+        ):
+            if value is not None:
+                if value.shape.rank != 3:
+                    raise ValueError(f"{name} must have shape [batch, horizon, feature]")
+                tf.debugging.assert_equal(tf.shape(value)[0], self.batch_size, message=f"{name} batch size mismatch")
+                future_lengths.append((name, tf.shape(value)[1]))
+        for name, length in future_lengths[1:]:
+            tf.debugging.assert_equal(length, future_lengths[0][1], message=f"{name} horizon mismatch")
+
+        if task == "imputation":
             if self.past_observed_mask is None:
                 raise ValueError("imputation requires past_observed_mask")
             if self.past_observed_mask.shape != self.past_values.shape:
