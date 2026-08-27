@@ -18,7 +18,9 @@ and future values, real and categorical temporal features, static features,
 observed masks, padding, and labels.  Architecture-specific input names stay
 behind ``BackboneAdapter``.  A backbone with a specialized input structure can
 implement ``adapt_batch(batch)``; adding it never requires a model-name branch
-in the shared adapter.
+in the shared adapter.  ``TimeSeriesBatch.from_inputs`` accepts canonical named
+fields or a single tensor shorthand for ``past_values``; it deliberately does
+not infer positional inputs or architecture-specific field names.
 Masks consistently use ``1``/``True`` for observed or valid positions.
 
 For TFT, historical targets are always included among the encoder real

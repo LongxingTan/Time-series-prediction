@@ -13,6 +13,14 @@ class TimeSeriesBatchTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown TimeSeriesBatch fields"):
             TimeSeriesBatch.from_inputs({"x": tf.zeros([2, 8, 1])})
 
+    def test_positional_inputs_are_rejected(self):
+        values = tf.zeros([2, 8, 1])
+        past_features = tf.zeros([2, 8, 2])
+        future_features = tf.zeros([2, 4, 3])
+
+        with self.assertRaisesRegex(ValueError, "Positional time-series inputs are ambiguous"):
+            TimeSeriesBatch.from_inputs((values, past_features, future_features))
+
     def test_imputation_requires_observed_mask(self):
         batch = TimeSeriesBatch(tf.zeros([2, 8, 1]))
         with self.assertRaisesRegex(ValueError, "requires past_observed_mask"):

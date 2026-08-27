@@ -268,7 +268,9 @@ class TrainingRuntimeTest(unittest.TestCase):
     @patch("tfts.training.runtime.tf.distribute.MirroredStrategy", create=True)
     @patch("tfts.training.runtime._nccl_available")
     @patch("tensorflow.config.list_physical_devices")
-    def test_create_distribution_strategy_auto_multi_gpu_no_nccl(self, mock_list_devices, mock_nccl, mock_mirrored_strategy):
+    def test_create_distribution_strategy_auto_multi_gpu_no_nccl(
+        self, mock_list_devices, mock_nccl, mock_mirrored_strategy
+    ):
         """Test automatic strategy selection falls back when NCCL is unavailable."""
         mock_nccl.return_value = False
         mock_list_devices.return_value = ["GPU:0", "GPU:1"]
