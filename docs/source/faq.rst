@@ -22,7 +22,6 @@ TFTS supports multiple time series tasks:
 - **Probabilistic Forecasting:** Uncertainty quantification with confidence intervals
 - **Classification:** Time series classification tasks
 - **Anomaly Detection:** Identifying outliers and anomalies
-- **Segmentation:** Change point detection
 
 
 How does TFTS compare to other libraries?
@@ -251,7 +250,7 @@ My model isn't learning. What should I do?
 
    # Start with RNN or DLinear
    config = AutoConfig.for_model('rnn')
-   model = AutoModel.from_config(config, predict_sequence_length=8)
+   model = AutoModelForForecasting.from_config(config, prediction_length=8)
 
 4. **Adjust learning rate:**
 
@@ -329,7 +328,7 @@ Can I use pretrained models?
    new_model = AutoModel.from_pretrained('./my_model')
 
    # Fine-tune on new data
-   trainer = KerasTrainer(new_model)
+   trainer = Trainer(new_model)
    trainer.train(new_data, epochs=10)
 
 How do I load a ``.keras`` model with TFTS custom layers?
@@ -366,8 +365,8 @@ How do I deploy TFTS models?
 
 .. code-block:: python
 
-   # Save model
-   model.save('./saved_model')
+   # Save model (Keras archive, recommended for serving)
+   model.save('./saved_model.keras')
 
 .. code-block:: bash
 
@@ -504,25 +503,38 @@ Can I customize model architectures?
 
 .. code-block:: python
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
-   model.project = tf.keras.Sequential([
-       tf.keras.layers.Dense(128, activation='relu'),
-       tf.keras.layers.Dense(1)
-   ])
+   import tensorflow as tf
+   from tfts import AutoBackbone, AutoConfig
+
+   config = AutoConfig.for_model('seq2seq')
+   backbone = AutoBackbone.from_config(config, prediction_length=24)
+
+   # Wrap the TFTS backbone with your own Keras head
+   inputs = tf.keras.Input(shape=(24, 1))
+   outputs = tf.keras.layers.Dense(1, activation='sigmoid')(backbone(inputs))
+   model = tf.keras.Model(inputs=inputs, outputs=outputs)
+   model.compile(loss='mse', optimizer='rmsprop')
 
 3. **Fully custom model:**
 
 .. code-block:: python
 
+   import tensorflow as tf
+   from tfts import AutoBackbone, AutoConfig
+
    class CustomModel(tf.keras.Model):
        def __init__(self):
            super().__init__()
-           self.backbone = AutoModel.from_config(config)
-           self.custom_layers = ...
+           self.backbone = AutoBackbone.from_config(
+               AutoConfig.for_model('transformer'), prediction_length=24
+           )
+           self.custom_layers = tf.keras.Sequential([
+               tf.keras.layers.Dense(128, activation='relu'),
+               tf.keras.layers.Dense(1),
+           ])
 
        def call(self, inputs):
-           features = self.backbone(inputs)
-           return self.custom_layers(features)
+           return self.custom_layers(self.backbone(inputs))
 
 
 How do I implement custom loss functions?
@@ -538,29 +550,41 @@ How do I implement custom loss functions?
            return mse + 0.1 * mae
 
    # Use in training
-   trainer = KerasTrainer(model, loss_fn=CustomLoss())
+   trainer = Trainer(model)
+   trainer.train(train, valid, loss_fn=CustomLoss())
 
 
-Can I use attention weights for interpretability?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How do I quantify forecast uncertainty?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Yes, for models with attention:**
+Use a probabilistic model (e.g. ``deep_ar`` or ``diffusion``) and sample
+multiple predictive paths at inference time. The ``mean`` aggregation gives a
+point forecast while ``samples`` lets you build confidence intervals:
 
 .. code-block:: python
 
-   # Get model with attention outputs
-   model = AutoModel.from_config(config, output_attention=True)
+   import numpy as np
+   import tensorflow as tf
+   from tfts import AutoConfig, AutoModelForForecasting, ForecastGenerationConfig
 
-   # Make prediction
-   outputs = model(x, output_attention=True)
-   predictions = outputs['predictions']
-   attention_weights = outputs['attention_weights']
+   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), prediction_length=24)
 
-   # Visualize attention
-   import matplotlib.pyplot as plt
-   plt.imshow(attention_weights[0], cmap='hot')
-   plt.colorbar()
-   plt.show()
+   out = model.generate(
+       {
+           "past_values": tf.random.normal([4, 96, 1]),      # (batch, lookback, features)
+           "static_categorical_features": tf.constant([[1], [2], [3], [4]]),  # series ids
+       },
+       generation_config=ForecastGenerationConfig(
+           prediction_length=24,
+           num_samples=100,          # ancestral MC paths
+           aggregation="mean",       # collapse samples -> point forecast
+           return_samples=True,      # keep the raw samples for intervals
+       ),
+   )
+   point = out.predictions                     # (batch, 24, 1)
+   samps = out.samples.numpy()                 # (batch, num_samples, 24, 1)
+   lower = np.quantile(samps, 0.1, axis=1)     # low percentile across samples
+   upper = np.quantile(samps, 0.9, axis=1)     # high percentile across samples
 
 
 Troubleshooting

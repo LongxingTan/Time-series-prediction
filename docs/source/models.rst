@@ -131,20 +131,20 @@ Classic encoder-decoder architecture with attention mechanism.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('seq2seq')
    config.rnn_type = 'lstm'  # or 'gru'
-   config.rnn_size = 128
-   config.attention_sizes = 128
+   config.rnn_hidden_size = 64
+   config.attention_size = 64
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **Key Parameters:**
    - ``rnn_type``: Choose between 'lstm' or 'gru'
-   - ``rnn_size``: Hidden state dimension (default: 128)
-   - ``attention_sizes``: Attention mechanism dimension
-   - ``num_layers``: Number of stacked RNN layers
+   - ``rnn_hidden_size``: Hidden state dimension (default: 128)
+   - ``attention_size``: Attention mechanism dimension
+   - ``num_stacked_layers``: Number of stacked RNN layers
 
 **References:**
    - Sutskever et al. "Sequence to Sequence Learning with Neural Networks" (NeurIPS 2014)
@@ -170,13 +170,23 @@ Probabilistic forecasting model using autoregressive RNN.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('deep_ar')
-   config.rnn_size = 64
-   config.num_samples = 100  # MC samples
+   config.hidden_size = 64
+   config.rnn_layers = 2
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+
+   # Ancestral sampling at inference time (e.g. 100 MC paths):
+   from tfts import ForecastGenerationConfig
+   out = model.generate(
+       x,
+       generation_config=ForecastGenerationConfig(
+           prediction_length=24, num_samples=100, aggregation="mean",
+       ),
+   )
+   print(out.predictions.shape)
 
 **References:**
    - Salinas et al. "DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks" (2020)
@@ -204,21 +214,21 @@ Dilated causal convolutions for sequence modeling.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('tcn')
    config.filters = 64
-   config.kernel_size = 3
-   config.num_blocks = 3
+   config.kernel_sizes = [3]
+   config.num_layers = 3
    config.dropout = 0.1
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **Key Parameters:**
    - ``filters``: Number of convolutional filters
-   - ``kernel_size``: Convolution kernel size
-   - ``num_blocks``: Number of dilated residual blocks
-   - ``dilation_rate``: Exponential dilation factor
+   - ``kernel_sizes``: Convolution kernel sizes (per layer)
+   - ``num_layers``: Number of dilated residual layers
+   - ``dilation_rates``: dilation factors
 
 **References:**
    - Bai et al. "An Empirical Evaluation of Generic Convolutional and Recurrent Networks" (2018)
@@ -243,14 +253,14 @@ Deep generative model with dilated causal convolutions.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('wavenet')
    config.filters = 32
-   config.num_blocks = 2
-   config.num_layers = 10
+   config.num_layers = 4
+   config.kernel_sizes = [3]
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **References:**
    - van den Oord et al. "WaveNet: A Generative Model for Raw Audio" (2016)
@@ -279,7 +289,7 @@ Standard Transformer architecture adapted for time series.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('transformer')
    config.hidden_size = 128
@@ -287,13 +297,13 @@ Standard Transformer architecture adapted for time series.
    config.num_attention_heads = 8
    config.attention_probs_dropout_prob = 0.1
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **Key Parameters:**
    - ``hidden_size``: Model dimension
    - ``num_layers``: Number of encoder/decoder layers
    - ``num_attention_heads``: Parallel attention heads
-   - ``ffn_intermediate_size``: Feed-forward network hidden size
+   - ``intermediate_size``: Feed-forward network hidden size
 
 **References:**
    - Vaswani et al. "Attention Is All You Need" (NeurIPS 2017)
@@ -318,19 +328,19 @@ Efficient Transformer for long sequence time series forecasting.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('informer')
-   config.hidden_size = 256
-   config.num_layers = 3
-   config.num_attention_heads = 8
-   config.factor = 5  # ProbSparse factor
+   config.hidden_size = 32
+   config.num_layers = 2
+   config.num_attention_heads = 4
+   config.prob_attention = True  # enable ProbSparse attention
 
-   model = AutoModel.from_config(config, predict_sequence_length=96)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **Key Parameters:**
-   - ``factor``: Sampling factor for ProbSparse attention (higher = more efficient)
-   - ``distil``: Enable attention distilling
+   - ``prob_attention``: Use ProbSparse attention (True/False)
+   - ``distil_conv``: Enable attention distilling
 
 **References:**
    - Zhou et al. "Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting" (AAAI 2021)
@@ -355,14 +365,14 @@ Transformer with Auto-Correlation mechanism and decomposition.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('autoformer')
-   config.hidden_size = 128
+   config.hidden_size = 32
    config.num_layers = 2
-   config.moving_avg = 25  # Window for decomposition
+   config.kernel_size = 25  # Window for the moving-average decomposition
 
-   model = AutoModel.from_config(config, predict_sequence_length=96)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **References:**
    - Wu et al. "Autoformer: Decomposition Transformers with Auto-Correlation" (NeurIPS 2021)
@@ -388,13 +398,13 @@ Attention-based model with interpretable multi-horizon forecasting.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('tft')
    config.hidden_size = 160
    config.num_attention_heads = 4
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **References:**
    - Lim et al. "Temporal Fusion Transformers for Interpretable Multi-horizon Time Series Forecasting" (2021)
@@ -419,14 +429,14 @@ Patch-based Transformer for efficient time series modeling.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('patch_tst')
    config.patch_size = 16  # Patch length
    config.hidden_size = 128
    config.num_layers = 3
 
-   model = AutoModel.from_config(config, predict_sequence_length=96)
+   model = AutoModelForForecasting.from_config(config, prediction_length=96)
 
 **References:**
    - Nie et al. "A Time Series is Worth 64 Words: Long-term Forecasting with Transformers" (ICLR 2023)
@@ -451,13 +461,13 @@ Inverted Transformer treating variates as tokens.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('itransformer')
    config.hidden_size = 128
    config.num_layers = 3
 
-   model = AutoModel.from_config(config, predict_sequence_length=96)
+   model = AutoModelForForecasting.from_config(config, prediction_length=96)
 
 **References:**
    - Liu et al. "iTransformer: Inverted Transformers Are Effective for Time Series Forecasting" (2023)
@@ -486,14 +496,14 @@ Neural Basis Expansion Analysis for interpretable forecasting.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('nbeats')
-   config.num_blocks = 3
-   config.stack_types = ['trend', 'seasonality']
-   config.num_layers_per_block = 4
+   config.num_blocks = [3, 3]          # blocks per stack
+   config.stack_types = ['trend', 'seasonality']  # interpretable stacks
+   config.num_block_layers = [3, 3]    # layers per block
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **References:**
    - Oreshkin et al. "N-BEATS: Neural Basis Expansion Analysis for Interpretable Time Series Forecasting" (ICLR 2020)
@@ -518,13 +528,13 @@ Simple linear model with seasonal-trend decomposition.
 
 .. code-block:: python
 
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    config = AutoConfig.for_model('dlinear')
-   config.moving_avg = 25  # Decomposition window
+   config.kernel_size = 25  # Window for the moving-average decomposition
    config.channels = 1  # Number of features
 
-   model = AutoModel.from_config(config, predict_sequence_length=96)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
 **References:**
    - Zeng et al. "Are Transformers Effective for Time Series Forecasting?" (AAAI 2023)
@@ -570,15 +580,13 @@ Most models share these common parameters:
    - ``num_layers``: Number of layers (default: 2-4)
    - ``dropout``: Dropout rate (default: 0.1)
 
-**Training:**
+**Training (set on the Trainer / TrainingArguments, not the config):**
    - ``learning_rate``: Initial learning rate
    - ``batch_size``: Training batch size
    - ``epochs``: Number of training epochs
 
 **Input/Output:**
-   - ``train_sequence_length``: Input sequence length
-   - ``predict_sequence_length``: Output forecast horizon
-   - ``num_features``: Number of input features
+   - ``prediction_length``: Output forecast horizon (set on the task model)
 
 
 Model Comparison
@@ -677,18 +685,15 @@ You can create custom models by combining TFTS components:
 .. code-block:: python
 
    import tensorflow as tf
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoBackbone, AutoConfig
    from tfts.layers import Attention, FeedForwardNetwork
 
    class CustomModel(tf.keras.Model):
-       def __init__(self, predict_sequence_length):
+       def __init__(self, prediction_length):
            super().__init__()
            # Use TFTS backbone
            config = AutoConfig.for_model('transformer')
-           self.backbone = AutoModel.from_config(
-               config,
-               predict_sequence_length=predict_sequence_length
-           )
+           self.backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
 
            # Add custom head
            self.custom_head = tf.keras.Sequential([

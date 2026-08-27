@@ -76,13 +76,10 @@ class DLinear(BaseModel):
             return_dict: Whether to return outputs as a dictionary.
 
         Returns:
-            If return_dict is False:
-                Forecasted values tensor of shape [batch_size, predict_sequence_length, input_dim]
-            If return_dict is True:
-                Dictionary containing:
-                - 'predictions': Forecasted values
-                - 'seasonal_component': Seasonal component (if output_hidden_states is True)
-                - 'trend_component': Trend component (if output_hidden_states is True)
+            A forecast tensor of shape ``[batch_size, predict_sequence_length, input_dim]``
+            when ``return_dict`` is False. Otherwise a dictionary with ``'predictions'``
+            and, when ``output_hidden_states`` is True, the model's decomposed
+            ``'seasonal_component'`` and ``'trend_component'``.
         """
         # Decompose the input into trend and seasonal components
         seasonal, trend = self.decomposition(inputs)

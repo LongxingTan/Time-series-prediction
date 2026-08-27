@@ -255,13 +255,26 @@ class TrainingRuntimeTest(unittest.TestCase):
         self.assertEqual(tf.keras.mixed_precision.global_policy().name, "mixed_float16")
 
     @patch("tfts.training.runtime.tf.distribute.MirroredStrategy", create=True)
+    @patch("tfts.training.runtime._nccl_available")
     @patch("tensorflow.config.list_physical_devices")
-    def test_create_distribution_strategy_auto_multi_gpu(self, mock_list_devices, mock_mirrored_strategy):
-        """Test automatic strategy selection for multiple GPUs."""
+    def test_create_distribution_strategy_auto_multi_gpu(self, mock_list_devices, mock_nccl, mock_mirrored_strategy):
+        """Test automatic strategy selection for multiple GPUs with NCCL present."""
+        mock_nccl.return_value = True
         mock_list_devices.return_value = ["GPU:0", "GPU:1"]
         strategy = create_distribution_strategy(TrainingArguments(output_dir="./test"))
         mock_mirrored_strategy.assert_called_once_with()
         self.assertEqual(strategy, mock_mirrored_strategy.return_value)
+
+    @patch("tfts.training.runtime.tf.distribute.MirroredStrategy", create=True)
+    @patch("tfts.training.runtime._nccl_available")
+    @patch("tensorflow.config.list_physical_devices")
+    def test_create_distribution_strategy_auto_multi_gpu_no_nccl(self, mock_list_devices, mock_nccl, mock_mirrored_strategy):
+        """Test automatic strategy selection falls back when NCCL is unavailable."""
+        mock_nccl.return_value = False
+        mock_list_devices.return_value = ["GPU:0", "GPU:1"]
+        strategy = create_distribution_strategy(TrainingArguments(output_dir="./test"))
+        mock_mirrored_strategy.assert_not_called()
+        self.assertIsInstance(strategy, tf.distribute.Strategy)
 
     @patch("tensorflow.config.list_physical_devices")
     def test_create_distribution_strategy_auto_cpu(self, mock_list_devices):

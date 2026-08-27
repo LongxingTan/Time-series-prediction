@@ -76,7 +76,7 @@ def pipeline(
         >>> pipe = tfts.pipeline("forecasting", model="dlinear",
         ...                      lookback=96, horizon=24)
         >>> pipe.fit(df, target_col="sales", epochs=50)
-        >>> preds = pipe.predict(steps=24)
+        >>> preds = pipe.predict(steps=24, df=df.tail(96))
     """
     from .forecasting import ForecastingPipeline
 
