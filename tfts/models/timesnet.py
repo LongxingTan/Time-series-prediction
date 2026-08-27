@@ -16,6 +16,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Conv2D, Dense, Dropout, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities, OutputPort
+
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -210,6 +212,9 @@ class TimesNetConfig(CommonConfig):
     config=TimesNetConfig,
     paper="https://arxiv.org/abs/2210.02186",
     tags=("attention", "periodic", "convolutional"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
 )
 class TimesNet(BaseModel):
     """TensorFlow TimesNet for time series forecasting."""

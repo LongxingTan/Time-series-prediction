@@ -8,6 +8,7 @@ from typing import Dict, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Reshape
 
+from tfts.contracts import BackboneCapabilities, OutputPort
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
 from tfts.models.transformer import Encoder
 
@@ -97,7 +98,14 @@ class GPTConfig(CommonConfig):
             )
 
 
-@register_model("gpt", config=GPTConfig, tags=("decoder-only", "attention", "generative"))
+@register_model(
+    "gpt",
+    config=GPTConfig,
+    tags=("decoder-only", "attention", "generative"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
+)
 class GPT(BaseModel):
     """GPT decoder model for time series"""
 

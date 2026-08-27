@@ -11,7 +11,7 @@ from typing import Any, Callable, Iterable, Optional
 
 import tensorflow as tf
 
-from .strategy import SamplingResult, StepOutput
+from .samplers import SamplingResult, StepOutput
 
 
 class ForecastProcessor(ABC):

@@ -59,7 +59,7 @@ def run_train(args):
     model = AutoModelForClassification.from_config(config, num_labels=args.num_labels)
 
     opt = tf.keras.optimizers.Adam(args.learning_rate)
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     trainer = KerasTrainer(model)
     early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0, patience=5)
 

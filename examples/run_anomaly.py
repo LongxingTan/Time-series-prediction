@@ -16,27 +16,25 @@ from tfts import AutoConfig, AutoModelForAnomaly, KerasTrainer, set_seed
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=315, required=False, help="seed")
-    parser.add_argument("--use_model", type=str, default="rnn", help="model for train")
+    parser.add_argument("--use_model", type=str, default="tcn", help="model for train")
     parser.add_argument("--train_length", type=int, default=12, help="sequence length for train")
-    parser.add_argument("--predict_sequence_length", type=int, default=1, help="sequence length for predict")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate for training")
+    parser.add_argument("--learning_rate", type=float, default=1e-3, help="learning rate for training")
     parser.add_argument("--output_dir", type=str, default="./weights", help="saved model weights")
     return parser.parse_args()
 
 
-def create_subsequences(time_series, train_length, pred_length):
-    """Create subsequences for training and prediction."""
-    subsequences, next_values = [], []
-    for i in range(len(time_series) - train_length - pred_length + 1):
+def create_subsequences(time_series, train_length):
+    """Create overlapping input windows to feed the reconstruction model."""
+    subsequences = []
+    for i in range(len(time_series) - train_length + 1):
         subsequences.append(time_series[i : i + train_length])
-        next_values.append(time_series[i + train_length : i + train_length + pred_length].T[0])
-    return subsequences, next_values
+    return np.array(subsequences)
 
 
 def load_and_preprocess_data(args):
-    """Load ECG data, scale it, and prepare subsequences."""
+    """Load ECG data, scale it, and prepare input windows."""
     url = "http://www.cs.ucr.edu/~eamonn/discords/qtdbsel102.txt"
     df = pd.read_csv(url, header=None, delimiter="\t")
     ecg_data = df.iloc[:, 2].values.reshape(-1, 1)
@@ -47,24 +45,26 @@ def load_and_preprocess_data(args):
     scaler = StandardScaler()
     scaled_ecg = scaler.fit_transform(ecg_data)
 
-    # Create subsequences for training and prediction
-    subsequences, next_values = create_subsequences(scaled_ecg, args.train_length, args.predict_sequence_length)
-    return np.array(subsequences), np.array(next_values), scaled_ecg
+    # Create input windows: the anomaly model learns to reconstruct each window.
+    windows = create_subsequences(scaled_ecg, args.train_length)
+    return windows, scaled_ecg
 
 
-def train_model(args):
-    """Train the model using the specified arguments."""
-    set_seed(args.seed)
-    x_train, y_train, _ = load_and_preprocess_data(args)
-
+def build_model(args):
+    """Build the reconstruction-based anomaly detection model."""
     config = AutoConfig.for_model(args.use_model)
     config.train_sequence_length = args.train_length
     model = AutoModelForAnomaly.from_config(config)
+    return model
 
+
+def train_model(args, model, train_windows):
+    """Train the reconstruction model."""
+    set_seed(args.seed)
     trainer = KerasTrainer(model)
     trainer.train(
-        (x_train, y_train),
-        (x_train, y_train),
+        train_windows,
+        train_windows,
         optimizer=tf.keras.optimizers.Adam(args.learning_rate),
         epochs=args.epochs,
         batch_size=args.batch_size,
@@ -75,30 +75,24 @@ def train_model(args):
     print(f"Model trained and saved to {args.output_dir}")
 
 
-def perform_inference(args):
-    """Perform inference using the trained model."""
-    x_test, y_test, _ = load_and_preprocess_data(args)
-
-    print("Starting inference...")
-    model = AutoModelForAnomaly.from_pretrained(args.output_dir)
-
-    anomaly_scores = model.detect(x_test, y_test)
-    return _, anomaly_scores
+def perform_inference(model, fit_windows, test_windows):
+    """Calibrate the threshold on normal data, then score the test windows."""
+    model.calibrate(fit_windows)
+    output = model.detect(test_windows)
+    return np.asarray(output.scores.numpy()).squeeze(), test_windows
 
 
-def plot_results(signal, anomaly_scores):
-    """Plot the original signal and detected anomalies."""
+def plot_results(test_windows, anomaly_scores):
+    """Plot the input windows and the anomaly scores."""
     fig, axes = plt.subplots(nrows=2, figsize=(15, 10))
 
-    axes[0].plot(signal, color="b", label="Original Data")
-    x_range = np.arange(4200, 4400)
-    axes[0].fill_between(x_range, -3, 3, facecolor="g", alpha=0.3)
-    axes[0].set_title("ECG Data with Anomalies")
+    # Plot a slice of the test signal (first channel of the first windows).
+    signal = test_windows[..., 0].flatten()
+    axes[0].plot(signal, color="b", label="Test ECG windows")
+    axes[0].set_title("ECG Data")
     axes[0].legend()
 
-    axes[1].plot(anomaly_scores, color="r", label="Mahalanobis Distance")
-    axes[1].set_ylim(0, 1000)
-    axes[1].fill_between(x_range, 0, 1000, facecolor="g", alpha=0.3)
+    axes[1].plot(anomaly_scores, color="r", label="Reconstruction Error")
     axes[1].set_title("Anomaly Detection Scores")
     axes[1].legend()
 
@@ -109,11 +103,18 @@ def plot_results(signal, anomaly_scores):
 def main():
     """Main function to orchestrate training, inference, and plotting."""
     args = parse_args()
-    train_model(args)
+    windows, _ = load_and_preprocess_data(args)
+
+    # Split into a fitting split (train + calibrate) and a detection split.
+    split = int(len(windows) * 0.8)
+    fit_windows, test_windows = windows[:split], windows[split:]
+
+    model = build_model(args)
+    train_model(args, model, fit_windows)
 
     # Run inference
-    signal, anomaly_scores = perform_inference(args)
-    plot_results(signal, anomaly_scores)
+    anomaly_scores, test_windows = perform_inference(model, fit_windows, test_windows)
+    plot_results(test_windows, anomaly_scores)
 
 
 if __name__ == "__main__":

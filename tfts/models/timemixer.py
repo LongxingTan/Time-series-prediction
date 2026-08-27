@@ -21,6 +21,8 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Dense, Dropout, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities, OutputPort
+
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -291,6 +293,9 @@ class TimeMixerConfig(CommonConfig):
     config=TimeMixerConfig,
     paper="https://arxiv.org/abs/2405.14616",
     tags=("decomposition", "multi-scale", "seasonal", "SOTA"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
 )
 class TimeMixer(BaseModel):
     """TensorFlow TimeMixer for multivariate time series forecasting.

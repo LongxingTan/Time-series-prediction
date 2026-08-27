@@ -17,6 +17,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities, OutputPort
 from tfts.layers.attention_layer import Attention
 
 from .base import BaseModel, CommonConfig
@@ -232,6 +233,9 @@ class FlattenHead(tf.keras.layers.Layer):
     config=TimeXerConfig,
     paper="https://arxiv.org/abs/2402.19072",
     tags=("attention", "multivariate", "patch"),
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+    ),
 )
 class TimeXer(BaseModel):
     """TensorFlow TimeXer for multivariate time series forecasting."""

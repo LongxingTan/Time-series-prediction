@@ -45,15 +45,15 @@ class InputsTest(unittest.TestCase):
         n_encoder_feature = 2
         n_decoder_feature = 3
         x_train = {
-            "x": np.random.rand(1, train_length, 1),
-            "encoder_feature": np.random.rand(1, train_length, n_encoder_feature),
-            "decoder_feature": np.random.rand(1, predict_sequence_length, n_decoder_feature),
+            "past_values": np.random.rand(1, train_length, 1),
+            "past_time_features": np.random.rand(1, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(1, predict_sequence_length, n_decoder_feature),
         }
         y_train = np.random.rand(1, predict_sequence_length, 1)
         x_valid = {
-            "x": np.random.rand(1, train_length, 1),
-            "encoder_feature": np.random.rand(1, train_length, n_encoder_feature),
-            "decoder_feature": np.random.rand(1, predict_sequence_length, n_decoder_feature),
+            "past_values": np.random.rand(1, train_length, 1),
+            "past_time_features": np.random.rand(1, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(1, predict_sequence_length, n_decoder_feature),
         }
         y_valid = np.random.rand(1, predict_sequence_length, 1)
 
@@ -69,18 +69,17 @@ class InputsTest(unittest.TestCase):
         n_encoder_feature = 2
         n_decoder_feature = 3
 
-        x_train = (
-            # x, encoder, decoder
-            np.random.rand(1, train_length, 1),
-            np.random.rand(1, train_length, n_encoder_feature),
-            np.random.rand(1, predict_sequence_length, n_decoder_feature),
-        )
+        x_train = {
+            "past_values": np.random.rand(1, train_length, 1),
+            "past_time_features": np.random.rand(1, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(1, predict_sequence_length, n_decoder_feature),
+        }
         y_train = np.random.rand(1, predict_sequence_length, 1)
-        x_valid = (
-            np.random.rand(1, train_length, 1),
-            np.random.rand(1, train_length, n_encoder_feature),
-            np.random.rand(1, predict_sequence_length, n_decoder_feature),
-        )
+        x_valid = {
+            "past_values": np.random.rand(1, train_length, 1),
+            "past_time_features": np.random.rand(1, train_length, n_encoder_feature),
+            "future_time_features": np.random.rand(1, predict_sequence_length, n_decoder_feature),
+        }
         y_valid = np.random.rand(1, predict_sequence_length, 1)
 
         for m in self.test_models:
@@ -112,13 +111,27 @@ class InputsTest(unittest.TestCase):
         train_reader = FakeReader(predict_sequence_length=predict_sequence_length)
         train_loader = tf.data.Dataset.from_generator(
             train_reader.iter,
-            ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
+            output_signature=(
+                {
+                    "past_values": tf.TensorSpec([20, 1], tf.float32),
+                    "past_time_features": tf.TensorSpec([20, 2], tf.float32),
+                    "future_time_features": tf.TensorSpec([predict_sequence_length, 3], tf.float32),
+                },
+                tf.TensorSpec([predict_sequence_length, 1], tf.float32),
+            ),
         )
         train_loader = train_loader.batch(batch_size=1)
         valid_reader = FakeReader(predict_sequence_length=predict_sequence_length)
         valid_loader = tf.data.Dataset.from_generator(
             valid_reader.iter,
-            ({"x": tf.float32, "encoder_feature": tf.float32, "decoder_feature": tf.float32}, tf.float32),
+            output_signature=(
+                {
+                    "past_values": tf.TensorSpec([20, 1], tf.float32),
+                    "past_time_features": tf.TensorSpec([20, 2], tf.float32),
+                    "future_time_features": tf.TensorSpec([predict_sequence_length, 3], tf.float32),
+                },
+                tf.TensorSpec([predict_sequence_length, 1], tf.float32),
+            ),
         )
         valid_loader = valid_loader.batch(batch_size=1)
 
@@ -150,10 +163,10 @@ class FakeReader(object):
 
     def __getitem__(self, idx):
         return {
-            "x": self.x[idx],
-            "encoder_feature": self.encoder_feature[idx],
-            "decoder_feature": self.decoder_feature[idx],
-        }, self.target[idx]
+            "past_values": self.x[idx].astype(np.float32),
+            "past_time_features": self.encoder_feature[idx].astype(np.float32),
+            "future_time_features": self.decoder_feature[idx].astype(np.float32),
+        }, self.target[idx].astype(np.float32)
 
     def iter(self):
         for i in range(len(self.x)):

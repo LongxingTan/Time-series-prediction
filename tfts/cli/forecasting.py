@@ -83,7 +83,7 @@ class ForecastingPipeline:
         if isinstance(model, str):
             self.config = config or AutoConfig.for_model(model)
             self.config.update(kwargs)
-            self._model = AutoModel.from_config(self.config, predict_sequence_length=horizon)
+            self._model = AutoModel.from_config(self.config, prediction_length=horizon)
         else:
             self._model = model
             self.config = getattr(model, "config", config)
@@ -178,7 +178,20 @@ class ForecastingPipeline:
 
         if df is not None:
             ds = self.processor.prepare_for_inference(df, target_col=self._target_col, time_col=self._time_col)
-            preds = self.trainer.predict(ds)
+            if steps <= self.horizon:
+                preds = self.trainer.predict(ds)
+            else:
+                generated = []
+                for batch in ds:
+                    model_inputs = batch[0] if isinstance(batch, (tuple, list)) else batch
+                    generated.append(
+                        self._model.generate(
+                            model_inputs,
+                            prediction_length=steps,
+                            strategy="recursive",
+                        ).predictions
+                    )
+                preds = tf.concat(generated, axis=0).numpy()
         else:
             # Use the model directly — user is responsible for input shape
             raise ValueError(
@@ -274,7 +287,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     config = AutoConfig.for_model(args.model)
-    model = AutoModel.from_config(config, predict_sequence_length=args.horizon)
+    model = AutoModel.from_config(config, prediction_length=args.horizon)
     trainer = Trainer(model)
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 

@@ -13,8 +13,9 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
+from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+
 from ..distributions import NormalOutput
-from ..generation import AutoregressiveGenerationMixin
 from .base import BaseModel, CommonConfig
 from .registry import register_model
 
@@ -88,8 +89,12 @@ class DeepAREncoder(tf.keras.layers.Layer):
     paper="https://arxiv.org/abs/1704.04110",
     tags=("probabilistic", "recurrent", "uncertainty"),
     tier="core",
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
+        forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
+    ),
 )
-class DeepAR(BaseModel, AutoregressiveGenerationMixin):
+class DeepAR(BaseModel):
     """DeepAR -- autoregressive LSTM + univariate Normal head.
 
     Public API
@@ -116,6 +121,16 @@ class DeepAR(BaseModel, AutoregressiveGenerationMixin):
         self.encoder = DeepAREncoder(self.config, name="deepar_encoder")
         # probabilistic head: univariate Normal (loc + softplus scale), NLL loss.
         self.output_distribution = NormalOutput(target_dim=1)
+
+    def adapt_batch(self, batch):
+        """Map the public batch contract to DeepAR's teacher-forced inputs."""
+        decoder_values = batch.future_values
+        if decoder_values is not None:
+            decoder_values = tf.concat([batch.past_values[:, -1:, :], decoder_values[:, :-1, :]], axis=1)
+        static = batch.static_categorical_features
+        if static is None:
+            static = tf.zeros([batch.batch_size, 1], dtype=tf.int32)
+        return {"x": batch.past_values, "decoder_feature": decoder_values, "static": static}
 
     # ------------------------------------------------------------------ input
     def _extract(self, inputs):

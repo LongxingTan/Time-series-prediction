@@ -159,6 +159,10 @@ class BaseTrainer(object):
         if not self.model.built:
             raise ValueError("Model cannot be saved before the model is built.")
 
+        if getattr(self.model, "task_config", None) is not None:
+            self.model.save_pretrained(save_directory)
+            return
+
         os.makedirs(save_directory, exist_ok=True)
         # Use model_type from config if available, otherwise derive from class name
         name = self.model.__class__.__name__
@@ -186,7 +190,7 @@ class Trainer(BaseTrainer):
     Examples:
         >>> from tfts import AutoModel, AutoConfig, Trainer
         >>> config = AutoConfig.for_model("transformer")
-        >>> model = AutoModel.from_config(config, predict_sequence_length=12)
+        >>> model = AutoModel.from_config(config, prediction_length=12)
         >>> trainer = Trainer(model)
         >>> trainer.train(train_dataset, valid_dataset, epochs=50)
     """
@@ -201,8 +205,6 @@ class Trainer(BaseTrainer):
         super().__init__(model, args, strategy, **kwargs)
         self.model = model
         self.config = model.config if hasattr(model, "config") else None
-        self._task: str = "forecasting"  # 'forecasting', 'classification', 'anomaly'
-
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -276,9 +278,27 @@ class Trainer(BaseTrainer):
                 optimizer = self._create_optimizer(learning_rate=self._create_lr_scheduler())
             if metrics is None:
                 metrics = self._default_metrics()
+                # Keras 3 fails when compiling with an *empty* metrics list on a
+                # custom ``train_step`` that only reports ``{"loss": ...}`` (e.g.
+                # anomaly / imputation models): the compiled metrics are never
+                # built and ``get_metrics_result()`` raises "Cannot get result()
+                # since the metric has not yet been built". Fall back to None so
+                # Keras uses its default empty-metrics behavior.
+                if not metrics:
+                    metrics = None
 
             if isinstance(optimizer, (str, dict)):
                 optimizer = tf.keras.optimizers.get(optimizer)
+
+            # A user-supplied optimizer may have been created outside the strategy
+            # scope. Under a multi-replica strategy, Keras 3 then raises "Mixing
+            # different tf.distribute.Strategy objects" during `model.fit`. Rebuild
+            # the optimizer from its serialized config *inside* the scope so its
+            # variables are tied to the active strategy. This is safe for fresh
+            # optimizers (the common case); pre-trained optimizer state is not
+            # transferred across device scopes by TF anyway.
+            if isinstance(optimizer, tf.keras.optimizers.Optimizer) and self.strategy.num_replicas_in_sync > 1:
+                optimizer = tf.keras.optimizers.deserialize(tf.keras.optimizers.serialize(optimizer))
 
             if not isinstance(self.model, tf.keras.Model):
                 raise TypeError("Trainer expects a tf.keras.Model")
@@ -302,12 +322,29 @@ class Trainer(BaseTrainer):
             # and a too-small batch splits unevenly across replicas. Batching here to
             # the global (replica-scaled) batch keeps behavior identical on a single
             # device (num_replicas == 1) and correct on multi-GPU.
+            # Under a multi-replica strategy every batch must split into equal
+            # per-replica chunks; a trailing odd-sized batch trips a collective
+            # shape mismatch (CollectiveReduceV2). drop_remainder drops that last
+            # partial batch while keeping every consumed batch even.
+            drop_remainder = self.strategy is not None and self.strategy.num_replicas_in_sync > 1
             if isinstance(train_dataset, (list, tuple)):
                 x_train, y_train = train_dataset
-                train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+                train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
             if isinstance(valid_dataset, (list, tuple)):
                 x_valid, y_valid = valid_dataset
-                valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(batch_size)
+                valid_dataset = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
+            # A bare NumPy/array validation input (reconstruction models pass the
+            # same windows as both inputs and targets, e.g. run_anomaly.py). Feed
+            # it through a tf.data.Dataset so `model.fit` doesn't hit
+            # "The truth value of an array ... is ambiguous" on `if validation_data:`.
+            elif isinstance(valid_dataset, np.ndarray):
+                valid_dataset = tf.data.Dataset.from_tensor_slices((valid_dataset, valid_dataset)).batch(
+                    batch_size, drop_remainder=drop_remainder
+                )
 
             history = self.model.fit(
                 train_dataset,
@@ -338,6 +375,13 @@ class Trainer(BaseTrainer):
         Returns:
             Dictionary of metric_name -> value.
         """
+        if getattr(self.model, "task_name", None) is not None:
+            if isinstance(dataset, (list, tuple)) and len(dataset) == 2:
+                result = self.model.evaluate(dataset[0], dataset[1], return_dict=True, verbose=0)
+            else:
+                result = self.model.evaluate(dataset, return_dict=True, verbose=0)
+            return {name: float(value) for name, value in result.items()}
+
         from .metrics import evaluate as compute_metrics
 
         if isinstance(dataset, (list, tuple)):
@@ -404,8 +448,9 @@ class Trainer(BaseTrainer):
 
     def _default_loss(self) -> tf.keras.losses.Loss:
         """Return a sensible default loss for the current task."""
-        if self._task == "classification":
-            return tf.keras.losses.SparseCategoricalCrossentropy()
+        model_loss = getattr(self.model, "default_loss", None)
+        if model_loss is not None:
+            return model_loss
         return tf.keras.losses.MeanSquaredError()
 
     def _default_optimizer(self) -> tf.keras.optimizers.Optimizer:
@@ -414,8 +459,9 @@ class Trainer(BaseTrainer):
 
     def _default_metrics(self) -> List[str]:
         """Return default metrics for monitoring."""
-        if self._task == "classification":
-            return ["accuracy"]
+        model_metrics = getattr(self.model, "default_metrics", None)
+        if model_metrics is not None:
+            return list(model_metrics)
         return ["mae"]
 
     @staticmethod
@@ -657,6 +703,10 @@ class EagerTrainer(object):
         return tf.squeeze(y_test_trues, axis=-1), y_test_preds
 
     def save_model(self, model_dir, only_pb=True):
+        if getattr(self.model, "task_config", None) is not None:
+            self.model.save_pretrained(model_dir)
+            logger.info(f"Task model successfully saved in {model_dir}")
+            return
         if not model_dir.endswith(".keras"):
             model_dir = f"{model_dir}.keras"
         os.makedirs(os.path.dirname(model_dir), exist_ok=True)

@@ -168,7 +168,7 @@ class BenchmarkRunner:
             elif getattr(train_inputs, "ndim", 0) == 3:
                 model_config.input_shape = train_inputs.shape[1:]
 
-        model = AutoModel.from_config(model_config, predict_sequence_length=predict_length)
+        model = AutoModel.from_config(model_config, prediction_length=predict_length)
         trainer = Trainer(model)
         training_options = self.config.get_model_training(model_name)
         loss_fn = self._resolve_loss(training_options.pop("loss", None), model_config)

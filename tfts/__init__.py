@@ -1,32 +1,37 @@
 """TFTS — Deep Learning for Time Series.
 
-Usage:
-    >>> import tfts
-    >>> pipe = tfts.pipeline("forecasting", model="dlinear", lookback=96, horizon=24)
-    >>> pipe.fit(df, target_col="value", epochs=50)
-    >>> preds = pipe.predict(steps=24)
-    >>> tfts.list_models()
+The primary composition is explicit: backbone config + task config -> task model.
 """
 
 from tfts.cli import pipeline
+from tfts.contracts import (
+    AnomalyDetectionTaskConfig,
+    ClassificationTaskConfig,
+    ForecastTaskConfig,
+    ImputationTaskConfig,
+    TaskType,
+    TimeSeriesBatch,
+)
 from tfts.data import AutoPreprocessor, DataProcessor, TimeSeriesSequence, get_data
 from tfts.features import AutoFeatureEngineer, FeatureRegistry
+from tfts.generation import ForecastGenerationConfig
 from tfts.metrics import evaluate as evaluate_metrics
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import (
+    AutoBackbone,
     AutoModel,
     AutoModelForAnomaly,
+    AutoModelForAnomalyDetection,
     AutoModelForClassification,
+    AutoModelForForecasting,
+    AutoModelForImputation,
     AutoModelForPrediction,
     AutoModelForQuantile,
-    AutoModelForSegmentation,
-    AutoModelForUncertainty,
+    AutoModelForTimeSeriesClassification,
 )
-from tfts.models.registry import list_models
+from tfts.models.registry import list_models, list_supported_tasks
 from tfts.saving import load_model
-
-# Legacy compatibility
-from tfts.tasks.pipeline import Pipeline
+from tfts.tasks.pipeline import Pipeline, TaskPipeline
 from tfts.trainer import EagerTrainer, KerasTrainer, Trainer, set_seed
 from tfts.training_args import TrainingArguments
 from tfts.tuner import OptunaTuner
@@ -74,14 +79,25 @@ __all__ = [
     "FeatureRegistry",
     # -- Models --
     "AutoModel",
+    "AutoBackbone",
+    "AutoModelForForecasting",
     "AutoModelForPrediction",
     "AutoModelForQuantile",
     "AutoModelForClassification",
-    "AutoModelForSegmentation",
+    "AutoModelForTimeSeriesClassification",
+    "AutoModelForImputation",
     "AutoModelForAnomaly",
-    "AutoModelForUncertainty",
+    "AutoModelForAnomalyDetection",
     "AutoConfig",
+    "ForecastTaskConfig",
+    "ClassificationTaskConfig",
+    "ImputationTaskConfig",
+    "AnomalyDetectionTaskConfig",
+    "ForecastGenerationConfig",
+    "TaskType",
+    "TimeSeriesBatch",
     "list_models",
+    "list_supported_tasks",
     "load_model",
     # -- Training --
     "Trainer",
@@ -96,7 +112,8 @@ __all__ = [
     "TimeSeriesSequence",
     # -- Evaluation --
     "evaluate_metrics",
-    # -- Legacy --
+    # -- Pipelines --
+    "TaskPipeline",
     "Pipeline",
 ] + _BENCHMARK_EXPORTS
 

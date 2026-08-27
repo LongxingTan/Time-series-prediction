@@ -44,13 +44,30 @@ def create_adamw(learning_rate: Any, **kwargs: Any) -> tf.keras.optimizers.Optim
         return tf.keras.optimizers.Adam(**optimizer_kwargs)
 
 
+_MIRRORED_STRATEGY_CACHE = {}
+
+
 def _create_mirrored_strategy() -> tf.distribute.Strategy:
-    """Create MirroredStrategy when this TensorFlow build supports it."""
+    """Create (and reuse) a MirroredStrategy when this TensorFlow build supports it.
+
+    The strategy is cached as a process-wide singleton. Building a *new*
+    MirroredStrategy object each time a ``Trainer``/``KerasTrainer`` is created
+    collides TensorFlow's per-(GPU, graph) collective executor across sequential
+    ``fit`` calls with differently-shaped models (e.g. per-optuna-trial sizes),
+    surfacing as ``CollectiveReduceV2`` shape mismatches. Reusing one strategy
+    keeps the collective graph consistent.
+    """
     mirrored_strategy = getattr(tf.distribute, "MirroredStrategy", None)
     if mirrored_strategy is None:
         logger.warning("MirroredStrategy is not available in this TensorFlow build; using default strategy.")
         return tf.distribute.get_strategy()
-    return mirrored_strategy()
+    cached = _MIRRORED_STRATEGY_CACHE.get("mirrored")
+    # Include the factory identity so monkeypatching and TensorFlow runtime
+    # replacement cannot accidentally return a strategy from another runtime.
+    if cached is None or cached[0] is not mirrored_strategy:
+        cached = (mirrored_strategy, mirrored_strategy())
+        _MIRRORED_STRATEGY_CACHE["mirrored"] = cached
+    return cached[1]
 
 
 def create_distribution_strategy(args: Optional[TrainingArguments] = None) -> tf.distribute.Strategy:
