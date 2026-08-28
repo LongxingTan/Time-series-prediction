@@ -356,17 +356,17 @@ Run a quick training test:
 
 .. code-block:: python
 
-   import tensorflow as tf
    import tfts
-   from tfts import AutoConfig, AutoModel, KerasTrainer
+   from tfts import AutoConfig, AutoModelForForecasting, Trainer, TrainingArguments
 
    # Generate sample data
-   train, valid = tfts.get_data('sine', train_length=24, predict_length=8)
+   train, valid = tfts.get_data('sine', train_length=24, predict_sequence_length=8)
 
-   # Create and train model
+   # Create and train model (strategy="default" keeps a single device,
+   # so this works on CPU, a single GPU, or many GPUs without NCCL)
    config = AutoConfig.for_model('seq2seq')
-   model = AutoModel.from_config(config, predict_sequence_length=8)
-   trainer = KerasTrainer(model)
+   model = AutoModelForForecasting.from_config(config, prediction_length=8)
+   trainer = Trainer(model, args=TrainingArguments(output_dir="./output", strategy="default"))
    trainer.train(train, valid, epochs=2)
 
    print("✅ Installation successful!")
@@ -389,7 +389,7 @@ Keep TFTS up to date with the latest features and bug fixes:
    pip install --upgrade tfts
 
    # Update to specific version
-   pip install --upgrade tfts==1.3.0
+   pip install --upgrade tfts==0.0.5
 
 
 Development Builds
@@ -423,11 +423,11 @@ Next Steps
 
 Now that you have TFTS installed:
 
-1. **Quick Start:** Try the :doc:`quickstart` tutorial
+1. **Quick Start:** Try the :ref:`Tutorials <tutorials>` page
 2. **Learn the Basics:** Read :doc:`tutorials`
 3. **Explore Models:** Check :doc:`models` documentation
-4. **Prepare Data:** See :doc:`data_preparation` guide
-5. **Train Models:** Follow :doc:`training` best practices
+4. **Prepare Data:** See :doc:`feature_engineering` guide
+5. **Train Models:** Follow :doc:`tutorials` best practices
 
 
 Getting Help

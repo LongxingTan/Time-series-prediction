@@ -117,10 +117,8 @@ class DataProcessor:
             time_col: Name of the time column. Auto-detected if None.
 
         Returns:
-            If ``validation_split > 0``:
-                ``(train_ds, valid_ds)``
-            If ``validation_split == 0``:
-                ``train_ds``
+            - If ``validation_split > 0``: a tuple ``(train_ds, valid_ds)``.
+            - If ``validation_split == 0``: a single ``train_ds``.
         """
         df = df.copy()
 

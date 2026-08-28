@@ -84,7 +84,7 @@ Install TFTS using pip:
    pip install tfts
 
 Requirements:
-   - Python >= 3.7
+   - Python >= 3.8 (3.11-3.13 recommended)
    - TensorFlow >= 2.4
 
 For development installation:
@@ -103,9 +103,8 @@ Here's a minimal example to get started with TFTS:
 
 .. code-block:: python
 
-   import tensorflow as tf
    import tfts
-   from tfts import AutoConfig, AutoModel, KerasTrainer
+   from tfts import AutoConfig, AutoModelForForecasting, Trainer, TrainingArguments
 
    # 1. Load sample data
    train_length = 24
@@ -114,10 +113,12 @@ Here's a minimal example to get started with TFTS:
 
    # 2. Choose and configure a model
    config = AutoConfig.for_model('transformer')
-   model = AutoModel.from_config(config, predict_sequence_length=predict_length)
+   model = AutoModelForForecasting.from_config(config, prediction_length=predict_length)
 
    # 3. Train the model
-   trainer = KerasTrainer(model)
+   # strategy="default" keeps a single, portable device (see the tutorials page
+   # for how to enable multi-GPU training).
+   trainer = Trainer(model, args=TrainingArguments(output_dir="./output", strategy="default"))
    trainer.train(train, valid, epochs=10)
 
    # 4. Make predictions
@@ -173,15 +174,7 @@ User Guide
    :caption: User Guide
 
    models
-   training
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Advanced Topics
-
    feature_engineering
-   architecture
    tricks
 
 
@@ -196,7 +189,7 @@ User Guide
    :maxdepth: 1
    :caption: Additional Information
 
-   examples
+   architecture
    faq
 
 
@@ -228,13 +221,13 @@ Advanced Examples
 .. code-block:: python
 
    import tensorflow as tf
-   from tfts import AutoConfig, AutoModel
+   from tfts import AutoConfig, AutoModelForForecasting
 
    # Configure for multi-variate input
    config = AutoConfig.for_model('informer')
-   config.num_features = 10  # 10 input features
+   config.hidden_size = 32
 
-   model = AutoModel.from_config(config, predict_sequence_length=24)
+   model = AutoModelForForecasting.from_config(config, prediction_length=24)
 
    # Input: (batch, sequence_length, num_features)
    x = tf.random.normal([32, 96, 10])
@@ -243,92 +236,61 @@ Advanced Examples
 
 **Probabilistic Forecasting**
 
-.. code-block:: python
-
-   from tfts import AutoConfig, AutoModel
-
-   # Use model with uncertainty quantification
-   config = AutoConfig.for_model('deep_ar')
-   model = AutoModel.from_config(config, predict_sequence_length=24)
-
-   # Get probabilistic predictions
-   predictions = model(x)  # Returns distribution parameters
-
-
-**Custom Feature Engineering**
+Use a probabilistic backbone (``deep_ar``, ``diffusion``) and draw ancestral
+samples at inference time for confidence intervals:
 
 .. code-block:: python
 
-   from tfts.data import TimeSeriesSequence
+   import tensorflow as tf
+   from tfts import AutoConfig, AutoModelForForecasting, ForecastGenerationConfig
+
+   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), prediction_length=24)
+
+   out = model.generate(
+       {
+           "past_values": tf.random.normal([4, 96, 1]),
+           "static_categorical_features": tf.constant([[1], [2], [3], [4]]),
+       },
+       generation_config=ForecastGenerationConfig(
+           prediction_length=24, num_samples=100, aggregation="mean",
+       ),
+   )
+   predictions = out.predictions  # point forecast
+
+
+**Feature Engineering**
+
+Use :class:`tfts.features.AutoFeatureEngineer` to create lag, rolling and
+datetime features, then window the result with ``TimeSeriesSequence``:
+
+.. code-block:: python
+
+   import numpy as np
    import pandas as pd
+   from tfts.features import AutoFeatureEngineer
+   from tfts.data import TimeSeriesSequence
 
-   # Configure feature engineering
-   feature_config = {
-       'datetime': {
-           'type': 'datetime',
-           'features': ['hour', 'dayofweek', 'month'],
-           'time_col': 'timestamp'
-       },
-       'lags': {
-           'type': 'lag',
-           'columns': 'target',
-           'lags': [1, 2, 3, 7, 14]
-       },
-       'rolling': {
-           'type': 'rolling',
-           'columns': 'target',
-           'windows': [7, 14],
-           'functions': ['mean', 'std']
-       }
-   }
+   df = pd.DataFrame({
+       "timestamp": pd.date_range("2020-01-01", periods=1000, freq="h"),
+       "target": np.random.randn(1000).cumsum(),
+   })
 
-   # Create data loader with automatic feature engineering
+   engineer = AutoFeatureEngineer(
+       lags=[1, 2, 3, 7, 14],
+       windows=[7, 14],
+       rolling_functions=["mean", "std"],
+       add_datetime=True,
+       datetime_features=["hour", "dayofweek", "month"],
+   )
+   df = engineer.fit_transform(df, time_col="timestamp", target_col="target")
+
    data_loader = TimeSeriesSequence(
-       data=df,
-       time_idx='timestamp',
-       target_column='target',
+       df,
+       target_column="target",
+       time_idx="timestamp",
        train_sequence_length=24,
        predict_sequence_length=8,
-       feature_config=feature_config
    )
-
-
-.. Performance Benchmarks
-.. ----------------------
-
-.. TFTS models have been evaluated on standard benchmarks:
-
-.. .. list-table::
-..    :header-rows: 1
-..    :widths: 20 20 20 20 20
-
-..    * - Model
-..      - ETTh1 (MSE)
-..      - Weather (MAE)
-..      - Traffic (MSE)
-..      - Training Speed
-..    * - Transformer
-..      - 0.495
-..      - 0.245
-..      - 0.612
-..      - 1.0x
-..    * - Informer
-..      - 0.472
-..      - 0.231
-..      - 0.598
-..      - 1.2x
-..    * - Autoformer
-..      - 0.449
-..      - 0.217
-..      - 0.573
-..      - 1.1x
-..    * - DLinear
-..      - 0.458
-..      - 0.223
-..      - 0.587
-..      - 3.5x
-
-.. *Benchmarks run on single V100 GPU with batch size 32*
 
 
 Community and Support

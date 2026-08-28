@@ -47,6 +47,28 @@ def create_adamw(learning_rate: Any, **kwargs: Any) -> tf.keras.optimizers.Optim
 _MIRRORED_STRATEGY_CACHE = {}
 
 
+def _nccl_available() -> bool:
+    """Return True if the NCCL library is loadable.
+
+    ``MirroredStrategy`` uses NCCL for cross-GPU collective gradient reduction.
+    When no NCCL is installed, building the strategy succeeds but every
+    ``CollectiveReduceV2`` op aborts with ``NCCL: Unable to load NCCL library``.
+    Probes the loader so callers can degrade to a single device instead.
+    """
+    import ctypes
+    import ctypes.util
+
+    for name in ("libnccl.so.2", "libnccl.so"):
+        path = ctypes.util.find_library(name)
+        if path is not None:
+            try:
+                ctypes.CDLL(path)
+                return True
+            except OSError:
+                continue
+    return False
+
+
 def _create_mirrored_strategy() -> tf.distribute.Strategy:
     """Create (and reuse) a MirroredStrategy when this TensorFlow build supports it.
 
@@ -91,6 +113,16 @@ def create_distribution_strategy(args: Optional[TrainingArguments] = None) -> tf
     gpus = tf.config.list_physical_devices("GPU")
 
     if strategy_name == "mirrored":
+        if len(gpus) > 1 and not _nccl_available():
+            # Degrade to the default strategy: MirroredStrategy across these
+            # GPUs can't reduce gradients without NCCL and would abort on
+            # CollectiveReduceV2. The default strategy keeps ops on the GPU
+            # without cross-device collectives.
+            logger.warning(
+                "NCCL is unavailable; falling back to the default TensorFlow "
+                "strategy instead of multi-GPU MirroredStrategy."
+            )
+            return tf.distribute.get_strategy()
         logger.info("Using MirroredStrategy")
         return _create_mirrored_strategy()
 
@@ -99,6 +131,9 @@ def create_distribution_strategy(args: Optional[TrainingArguments] = None) -> tf
         logger.info("Using OneDeviceStrategy on %s", device)
         return tf.distribute.OneDeviceStrategy(device=device)
 
+    if len(gpus) > 1 and not _nccl_available():
+        logger.warning("NCCL is unavailable; falling back to a single device instead of " "multi-GPU MirroredStrategy.")
+        gpus = gpus[:1]
     if len(gpus) > 1:
         logger.info("Using MirroredStrategy with %s GPUs", len(gpus))
         return _create_mirrored_strategy()

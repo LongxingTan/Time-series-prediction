@@ -140,23 +140,19 @@ class GPT(BaseModel):
         """GPT model forward pass.
 
         Args:
-            inputs: Input time-series data, can be:
-                - A single tensor of shape [batch_size, seq_len, feature_dim]
-                - A tuple/list of (x, encoder_feature, decoder_feature)
-                - A dictionary with keys 'x' and 'encoder_feature'
+            inputs: Input time-series data. Accepts a tensor of shape
+                ``[batch_size, seq_len, feature_dim]``, a ``(x, encoder_feature,
+                decoder_feature)`` tuple/list, or a dict with keys ``'x'`` and
+                ``'encoder_feature'``.
             teacher: Optional teacher forcing tensor for autoregression.
-            training: Whether the model is in training mode.
-            mask: Optional attention mask.
             output_hidden_states: Whether to return hidden states.
             return_dict: Whether to return outputs as a dictionary.
 
         Returns:
-            If return_dict is False and output_hidden_states is False:
-                Forecasted values tensor of shape [batch_size, predict_sequence_length, input_dim]
-            If output_hidden_states is True:
-                Hidden states from the encoder.
-            If return_dict is True:
-                Dictionary containing model outputs.
+            - If ``return_dict`` is False and ``output_hidden_states`` is False:
+              a forecast tensor of shape ``[batch_size, predict_sequence_length, input_dim]``.
+            - If ``output_hidden_states`` is True: hidden states from the encoder.
+            - If ``return_dict`` is True: a dictionary of model outputs.
         """
         if isinstance(inputs, (list, tuple)):
             x, encoder_feature, decoder_feature = inputs

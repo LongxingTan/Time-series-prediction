@@ -60,6 +60,10 @@ autosummary_generate = True
 numpydoc_class_members_toctree = False
 numpydoc_show_class_members = False
 
+# The tutorial notebooks are multi-GPU / data-heavy; run them interactively in
+# docs/source/tutorials and commit the rendered outputs. Sphinx just renders them.
+nbsphinx_execute = "never"
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -172,6 +176,10 @@ html_sidebars = {
 
 autodoc_member_order = "groupwise"
 autoclass_content = "both"
+# Keras base-class docstrings (e.g. tf.keras.Model.save_weights) are not
+# written in RST and produce docutils errors when inherited. Only document the
+# docstrings TFTS actually defines.
+autodoc_inherit_docstrings = False
 
 # autosummary
 autosummary_generate = True

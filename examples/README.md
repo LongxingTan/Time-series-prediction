@@ -9,9 +9,16 @@ Get started with these basic examples:
 
 
 ## 📓 Notebooks
-Dive deeper with these notebooks:
-- [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/single_step_weather_prediction.ipynb): A guided example on predicting the next time point in weather data.
-- [multi steps prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/examples/notebooks/multi_steps_sales_prediction.ipynb): Learn how to forecast multiple future time points in a sales dataset.
+Dive deeper with these notebooks (kept in `docs/source/tutorials/`, rendered on the docs site):
+
+- [single step prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/single_step_weather_prediction.ipynb): A guided example on predicting the next time point in a weather dataset.
+- [multi steps prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/multi_steps_sales_prediction.ipynb): Forecast multiple future time points in a sales dataset.
+- [DeepAR forecast demo](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/deepar_ar_demo.ipynb): Probabilistic DeepAR on synthetic AR data, trained with scheduled sampling.
+- [N-BEATS forecast demo](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/nbeats_ar_demo.ipynb): N-BEATS on synthetic AR data.
+- [PatchTST & Autoformer forecast demo](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/patchtst_autoformer_ar_demo.ipynb): Compact PatchTST and Autoformer on identical synthetic AR windows.
+- [TFT Stallion demand prediction](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/tft_stallion_prediction.ipynb): Temporal Fusion Transformer on the Stallion demand dataset.
+- [TimesNet & TimeMixer M4 demo](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/timesnet_timemixer_m4_demo.ipynb): TimesNet and TimeMixer on the M4 Weekly forecasting task via the `tfts` pipeline.
+- [Mitsui recursive LSTM demo](https://nbviewer.org/github/LongxingTan/Time-series-prediction/blob/master/docs/source/tutorials/mitsui_recursive_lstm_demo.ipynb): Recursive full-feature forecasting with TFTS.
 
 ## 💾 Save, load, and fine-tune
 

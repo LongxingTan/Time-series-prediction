@@ -57,9 +57,10 @@ class TimeSeriesBatch:
     def from_inputs(cls, inputs: Any) -> "TimeSeriesBatch":
         """Normalize a canonical mapping, tensor, or existing batch.
 
-        Plain tensors intentionally mean ``past_values``. A mapping must use
-        canonical field names; architecture-specific names are handled only by
-        the private backbone adapter layer.
+        Plain tensors intentionally mean ``past_values``. Mappings must use
+        :class:`TimeSeriesBatch` field names. Positional multi-tensor inputs are
+        rejected because they cannot distinguish covariates, future targets,
+        masks, or dataset-level ``(inputs, labels)`` pairs.
         """
         if isinstance(inputs, cls):
             return inputs
@@ -69,6 +70,8 @@ class TimeSeriesBatch:
             if unknown:
                 raise ValueError("Unknown TimeSeriesBatch fields: %s" % sorted(unknown))
             return cls(**dict(inputs))
+        if isinstance(inputs, (tuple, list)):
+            raise ValueError("Positional time-series inputs are ambiguous; use canonical " "TimeSeriesBatch fields")
         return cls(past_values=inputs)
 
     def as_dict(self, include_none: bool = False) -> Dict[str, Any]:

@@ -19,32 +19,28 @@ class DataEmbedding(tf.keras.layers.Layer):
 
     Args:
         embed_size (int): Embedding size for tokens.
-        positional_type (str, optional): Type of positional embedding to use.
-            Options:
-                - "positional encoding": Uses sinusoidal positional encoding
-                - "positional embedding": Uses learned positional embeddings
-                - "relative encoding": Uses relative position embeddings
-                - None: No positional embedding is applied
-            Defaults to None.
+        positional_type (str, optional): Type of positional embedding to use; one of
+            ``"positional encoding"``, ``"positional embedding"``, ``"relative encoding"``,
+            or None. Defaults to None.
 
     Input shape:
-        - 3D tensor with shape `(batch_size, time_steps, input_dim)`
+        - 3D tensor with shape ``(batch_size, time_steps, input_dim)``
 
     Output shape:
-        - 3D tensor with shape `(batch_size, time_steps, embed_size)`
+        - 3D tensor with shape ``(batch_size, time_steps, embed_size)``
 
     Example:
-        ```python
-        # Create a DataEmbedding layer with embedding size of 256 and positional encoding
-        embedding_layer = DataEmbedding(
-            embed_size=256,
-            positional_type="positional encoding"
-        )
+        .. code-block:: python
 
-        # Apply to input with shape (batch_size, sequence_length, features)
-        input_tensor = tf.random.normal((32, 100, 10))
-        output_tensor = embedding_layer(input_tensor)  # Shape: (32, 100, 256)
-        ```
+            # Create a DataEmbedding layer with embedding size of 256 and positional encoding
+            embedding_layer = DataEmbedding(
+                embed_size=256,
+                positional_type="positional encoding",
+            )
+
+            # Apply to input with shape (batch_size, sequence_length, features)
+            input_tensor = tf.random.normal((32, 100, 10))
+            output_tensor = embedding_layer(input_tensor)  # Shape: (32, 100, 256)
     """
 
     def __init__(self, embed_size: int, positional_type: Optional[str] = "positional encoding", **kwargs):
@@ -128,20 +124,20 @@ class TokenEmbedding(tf.keras.layers.Layer):
         embed_size (int): The size of the embedding output dimension.
 
     Input shape:
-        - 3D tensor with shape `(batch_size, time_steps, input_dim)`
+        - 3D tensor with shape ``(batch_size, time_steps, input_dim)``
 
     Output shape:
-        - 3D tensor with shape `(batch_size, time_steps, embed_size)`
+        - 3D tensor with shape ``(batch_size, time_steps, embed_size)``
 
     Example:
-        ```python
-        # Create a TokenEmbedding layer with embedding size of 256
-        embedding_layer = TokenEmbedding(embed_size=256)
+        .. code-block:: python
 
-        # Apply to input with shape (batch_size, sequence_length, features)
-        input_tensor = tf.random.normal((32, 100, 10))
-        output_tensor = embedding_layer(input_tensor)  # Shape: (32, 100, 256)
-        ```
+            # Create a TokenEmbedding layer with embedding size of 256
+            embedding_layer = TokenEmbedding(embed_size=256)
+
+            # Apply to input with shape (batch_size, sequence_length, features)
+            input_tensor = tf.random.normal((32, 100, 10))
+            output_tensor = embedding_layer(input_tensor)  # Shape: (32, 100, 256)
     """
 
     def __init__(self, embed_size: int, **kwargs):
