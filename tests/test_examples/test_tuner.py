@@ -33,6 +33,12 @@ class TunerExampleTest(unittest.TestCase):
         self.assertTrue(np.isfinite(score))
         self.assertGreaterEqual(score, 0.0)
 
+    def test_rejects_backbones_without_a_search_space(self):
+        from examples.run_tuner import AutoTuner
+
+        with self.assertRaisesRegex(ValueError, "RNN-specific"):
+            AutoTuner("bert", self.tuner.train_data, self.tuner.valid_data)
+
     def test_run_returns_study(self):
         with patch.object(self.tuner, "objective", return_value=1.0):
             study = self.tuner.run(n_trials=1, direction="minimize")

@@ -16,6 +16,7 @@ from .auto_task import (
 from .base import TimeSeriesTaskModel
 
 
+@tf.keras.utils.register_keras_serializable(package="tfts")
 class ForecastingModel(TimeSeriesTaskModel):
     task_name = "forecasting"
 
@@ -163,6 +164,7 @@ class ForecastingModel(TimeSeriesTaskModel):
         return generate(self, inputs, generation_config=generation_config, **kwargs)
 
 
+@tf.keras.utils.register_keras_serializable(package="tfts")
 class ClassificationModel(TimeSeriesTaskModel):
     task_name = "classification"
     required_output_port = OutputPort.SEQUENCE
@@ -191,6 +193,7 @@ class ClassificationModel(TimeSeriesTaskModel):
         return (tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy"),)
 
 
+@tf.keras.utils.register_keras_serializable(package="tfts")
 class ImputationModel(TimeSeriesTaskModel):
     task_name = "imputation"
     required_output_port = OutputPort.TEMPORAL_SEQUENCE
@@ -261,6 +264,7 @@ class ImputationModel(TimeSeriesTaskModel):
         return {"loss": self._loss_tracker.result()}
 
 
+@tf.keras.utils.register_keras_serializable(package="tfts")
 class AnomalyDetectionModel(TimeSeriesTaskModel):
     task_name = "anomaly_detection"
     required_output_port = OutputPort.TEMPORAL_SEQUENCE

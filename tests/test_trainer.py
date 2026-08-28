@@ -616,6 +616,38 @@ class KerasTrainerTest(unittest.TestCase):
 
         trainer.train(train_dataset=(x_train, y_train), callbacks=[early_stopping], epochs=5, batch_size=1)
 
+    def test_trainer_with_full_model_checkpoint(self):
+        """A Keras full-model checkpoint can serialize a TFTS task model."""
+        x_train = np.random.random((2, 10, 1)).astype(np.float32)
+        y_train = np.random.random((2, 2, 1)).astype(np.float32)
+        x_valid = np.random.random((1, 10, 1)).astype(np.float32)
+        y_valid = np.random.random((1, 2, 1)).astype(np.float32)
+        config = AutoConfig.for_model("rnn")
+        model = AutoModel.from_config(config, predict_sequence_length=2)
+        trainer = _tfts_trainer(model)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_path = os.path.join(tmpdir, "best.keras")
+            checkpoint = tf.keras.callbacks.ModelCheckpoint(
+                checkpoint_path,
+                monitor="val_loss",
+                save_best_only=True,
+                save_weights_only=False,
+            )
+            trainer.train(
+                train_dataset=(x_train, y_train),
+                valid_dataset=(x_valid, y_valid),
+                callbacks=[checkpoint],
+                epochs=1,
+                batch_size=1,
+                verbose=0,
+            )
+
+            self.assertTrue(os.path.isfile(checkpoint_path))
+            restored = tf.keras.models.load_model(checkpoint_path, compile=False)
+
+        np.testing.assert_allclose(restored(x_valid).numpy(), model(x_valid).numpy(), rtol=1e-5, atol=1e-5)
+
     def test_trainer_with_steps_per_epoch(self):
         """Test training with custom steps_per_epoch."""
         x_train = np.random.random((10, 10, 1))

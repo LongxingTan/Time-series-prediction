@@ -1,4 +1,4 @@
-"""Demo of time series prediction by tfts
+"""End-to-end time-series forecasting with TFTS.
 
 Two equivalent approaches:
   1. Simple pipeline API (recommended)
@@ -8,8 +8,7 @@ Two equivalent approaches:
 """
 
 import argparse
-import os
-import random
+import tempfile
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,8 +34,27 @@ def parse_args():
         default="auto",
         help="Distribution strategy: auto/default/one_device/mirrored/multi_worker",
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./outputs/forecasting_model",
+        help="Directory in which to save the trained model",
+    )
     parser.add_argument("--manual", action="store_true", help="Use the manual API instead of pipeline")
     return parser.parse_args()
+
+
+def _output_dir(args):
+    """Return the artifact directory for CLI and programmatic callers."""
+    return getattr(args, "output_dir", None) or tempfile.mkdtemp(prefix="tfts_forecasting_")
+
+
+def load_and_predict(model_dir, inputs):
+    """Restore a saved forecasting model and run a small inference batch."""
+    restored_model = tfts.AutoModel.from_pretrained(model_dir, sample_batch=inputs[:1])
+    predictions = restored_model(inputs, training=False).numpy()
+    print(f"Loaded model from {model_dir}, inference shape: {predictions.shape}")
+    return predictions
 
 
 # ==============================================================
@@ -45,7 +63,7 @@ def parse_args():
 
 
 def run_pipeline(args):
-    """3-line forecasting with the pipeline API."""
+    """Train, save, restore, and infer with the pipeline API."""
     tfts.set_seed(args.seed)
 
     # Get data
@@ -75,7 +93,13 @@ def run_pipeline(args):
         early_stopping_patience=5,
     )
 
-    pred = pipe.trainer.predict(valid[0])
+    model_dir = _output_dir(args)
+    pipe.trainer.save_model(model_dir)
+    print(f"Saved model to {model_dir}")
+
+    # Use the restored artifact for the inference demo. In a production
+    # service, `valid[0]` would be replaced with the latest input window.
+    pred = load_and_predict(model_dir, valid[0])
     pipe.trainer.plot(history=valid[0], true=valid[1], pred=pred)
     return pred
 
@@ -86,9 +110,10 @@ def run_pipeline(args):
 
 
 def run_manual(args):
-    """Step-by-step control with AutoConfig / AutoModel / Trainer."""
+    """Train, save, restore, and infer with the lower-level API."""
     tfts.set_seed(args.seed)
     train, valid = tfts.get_data(args.use_data, args.train_length, args.predict_sequence_length, test_size=0.2)
+    model_dir = _output_dir(args)
 
     loss_fn = tf.keras.losses.MeanSquaredError()
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
@@ -99,7 +124,7 @@ def run_manual(args):
     trainer = tfts.Trainer(
         model,
         args=tfts.TrainingArguments(
-            output_dir=os.path.join(os.getcwd(), "output"),
+            output_dir=model_dir,
             strategy=getattr(args, "strategy", "auto"),
         ),
     )
@@ -112,7 +137,11 @@ def run_manual(args):
         callbacks=[EarlyStopping("val_loss", patience=5)],
     )
 
-    pred = trainer.predict(valid[0])
+    trainer.save_model(model_dir)
+    print(f"Saved model to {model_dir}")
+
+    # Restore the saved model and use it for the inference demo.
+    pred = load_and_predict(model_dir, valid[0])
     trainer.plot(history=valid[0], true=valid[1], pred=pred)
 
     # Evaluate

@@ -1,14 +1,15 @@
-"""Demo of time series classification"""
+"""End-to-end time-series classification with TFTS."""
 
 import argparse
 import logging
+import tempfile
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModelForClassification, KerasTrainer, set_seed
+from tfts import AutoConfig, AutoModel, AutoModelForClassification, KerasTrainer, set_seed
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
@@ -21,6 +22,12 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=2e-4, help="learning rate for training")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./outputs/classification_model",
+        help="Directory in which to save the trained model",
+    )
     return parser.parse_args()
 
 
@@ -73,15 +80,30 @@ def run_train(args):
         metrics=["sparse_categorical_accuracy"],
         callbacks=[early_stop_callback],
     )
+
+    model_dir = getattr(args, "output_dir", None) or tempfile.mkdtemp(prefix="tfts_classification_")
+    trainer.save_model(model_dir)
+    print(f"Saved model to {model_dir}")
+
+    # Restore the saved task model and use it for inference. Passing a sample
+    # batch makes the input contract explicit and also supports older artifacts
+    # whose config does not contain an input shape.
+    restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_val[:1])
+
     # note that tfts model summary only work during training process
     print(trainer.model.summary())
 
-    y_pred = model(x_val)
-    y_pred_classes = np.argmax(y_pred, axis=1)
+    val_logits = restored_model(x_val, training=False).numpy()
+    y_pred_classes = np.argmax(val_logits, axis=1)
 
     cm = confusion_matrix(y_val, y_pred_classes)
     print(cm)
-    return
+    val_accuracy = np.mean(y_pred_classes == y_val)
+    test_logits = restored_model(x_test, training=False).numpy()
+    test_predictions = np.argmax(test_logits, axis=1)
+    test_accuracy = np.mean(test_predictions == y_test)
+    print(f"Loaded model inference accuracy — validation: {val_accuracy:.3f}, test: {test_accuracy:.3f}")
+    return cm
 
 
 if __name__ == "__main__":

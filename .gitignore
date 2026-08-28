@@ -94,6 +94,7 @@ coverage.xml
 *.log
 /weights/
 !/weights/.gitkeep
+/outputs/
 CLAUDE.md
 temp/
 *.keras

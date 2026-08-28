@@ -19,6 +19,31 @@ from .registry import RegistryFieldView, get_model_capabilities, get_model_class
 
 MODEL_MAPPING_NAMES = RegistryFieldView("class_name")
 
+_TASK_MODEL_SPECS = {
+    TaskType.FORECASTING: (ForecastTaskConfig, ForecastingModel),
+    TaskType.CLASSIFICATION: (ClassificationTaskConfig, ClassificationModel),
+    TaskType.IMPUTATION: (ImputationTaskConfig, ImputationModel),
+    TaskType.ANOMALY_DETECTION: (AnomalyDetectionTaskConfig, AnomalyDetectionModel),
+}
+
+
+def task_config_from_dict(values):
+    """Restore the right task dataclass from its serialized values."""
+    values = dict(values)
+    task_type = TaskType.normalize(values.get("task"))
+    task_config_class, _ = _TASK_MODEL_SPECS[task_type]
+    return task_config_class(**values)
+
+
+def build_task_model(config, task_config, model_kwargs=None):
+    """Build a task model through the single task-to-model registry."""
+    task_type = TaskType.normalize(task_config.task)
+    _, model_class = _TASK_MODEL_SPECS[task_type]
+    prediction_length = getattr(task_config, "prediction_length", 1)
+    backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
+    capabilities = get_model_capabilities(config.model_type)
+    return model_class(backbone, task_config, capabilities, **(model_kwargs or {}))
+
 
 class AutoBackbone:
     """Instantiate a registered architecture without attaching task behavior."""
@@ -38,7 +63,6 @@ class AutoBackbone:
 class _BaseAutoTaskModel:
     task_type = None
     task_config_class = None
-    model_class = None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("%s must be constructed with from_config()" % type(self).__name__)
@@ -54,10 +78,7 @@ class _BaseAutoTaskModel:
         task_config = task_config or cls.task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != cls.task_type:
             raise ValueError("Expected task %s, got %s" % (cls.task_type.value, task_config.task.value))
-        prediction_length = getattr(task_config, "prediction_length", 1)
-        backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
-        capabilities = get_model_capabilities(config.model_type)
-        return cls.model_class(backbone, task_config, capabilities)
+        return build_task_model(config, task_config)
 
 
 class AutoModelForForecasting(_BaseAutoTaskModel):
@@ -87,24 +108,23 @@ class AutoModelForAnomalyDetection(_BaseAutoTaskModel):
 class AutoModel:
     """Single task-aware entry point; explicit AutoModelFor classes are preferred."""
 
-    _FACTORIES = {
-        TaskType.FORECASTING: AutoModelForForecasting,
-        TaskType.CLASSIFICATION: AutoModelForTimeSeriesClassification,
-        TaskType.IMPUTATION: AutoModelForImputation,
-        TaskType.ANOMALY_DETECTION: AutoModelForAnomalyDetection,
-    }
-
     def __init__(self, *args, **kwargs):
         raise TypeError("AutoModel must be constructed with from_config()")
 
     @classmethod
     def from_config(cls, config, task="forecasting", task_config=None, **task_kwargs):
         task_type = TaskType.normalize(task)
+        if task_config is not None and task_kwargs:
+            raise ValueError("Pass either task_config or task keyword arguments, not both")
         if "predict_sequence_length" in task_kwargs:
             if "prediction_length" in task_kwargs:
                 raise ValueError("Use only prediction_length")
             task_kwargs["prediction_length"] = task_kwargs.pop("predict_sequence_length")
-        return cls._FACTORIES[task_type].from_config(config, task_config=task_config, **task_kwargs)
+        task_config_class, _ = _TASK_MODEL_SPECS[task_type]
+        task_config = task_config or task_config_class(**task_kwargs)
+        if TaskType.normalize(task_config.task) != task_type:
+            raise ValueError("Expected task %s, got %s" % (task_type.value, task_config.task.value))
+        return build_task_model(config, task_config)
 
     @classmethod
     def from_pretrained(cls, model_directory, sample_batch=None):
@@ -124,11 +144,9 @@ class AutoModel:
             artifact = json.load(file)
         if artifact.get("schema_version") != 1:
             raise ValueError("Unsupported task artifact schema %r" % artifact.get("schema_version"))
-        task_values = dict(artifact["task_config"])
-        task_type = TaskType.normalize(task_values.pop("task"))
-        task_config_class = cls._FACTORIES[task_type].task_config_class
-        task_config = task_config_class(task=task_type, **task_values)
-        model = cls.from_config(config, task=task_type, task_config=task_config)
+        task_config = task_config_from_dict(artifact["task_config"])
+        task_type = TaskType.normalize(task_config.task)
+        model = build_task_model(config, task_config)
         if sample_batch is None:
             input_shape = getattr(config, "input_shape", None)
             if input_shape is None or isinstance(input_shape, dict):

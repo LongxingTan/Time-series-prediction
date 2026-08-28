@@ -1,8 +1,10 @@
-"""Demo of time series anomaly detection
+"""End-to-end time-series anomaly detection with TFTS.
+
 - https://keras.io/examples/timeseries/timeseries_anomaly_detection/
 """
 
 import argparse
+import tempfile
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +12,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModelForAnomaly, KerasTrainer, set_seed
+from tfts import AutoConfig, AutoModel, AutoModelForAnomaly, KerasTrainer, set_seed
 
 
 def parse_args():
@@ -21,8 +23,22 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="learning rate for training")
-    parser.add_argument("--output_dir", type=str, default="./weights", help="saved model weights")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./outputs/anomaly_model",
+        help="Directory in which to save the trained model",
+    )
     return parser.parse_args()
+
+
+def _output_dir(args):
+    """Return a stable artifact directory for one example run."""
+    model_dir = getattr(args, "output_dir", None)
+    if not model_dir:
+        model_dir = tempfile.mkdtemp(prefix="tfts_anomaly_")
+        args.output_dir = model_dir
+    return model_dir
 
 
 def create_subsequences(time_series, train_length):
@@ -71,15 +87,24 @@ def train_model(args, model, train_windows):
     )
     # Trainer.save_model stores the TFTS config + weights, so the model can be
     # reconstructed for inference or fine-tuning without Keras custom_objects.
-    trainer.save_model(args.output_dir)
-    print(f"Model trained and saved to {args.output_dir}")
+    model_dir = _output_dir(args)
+    trainer.save_model(model_dir)
+    print(f"Model trained and saved to {model_dir}")
+
+
+def load_model_for_inference(model_dir, sample_batch):
+    """Restore a saved detector; calibration remains an inference step."""
+    return AutoModel.from_pretrained(model_dir, sample_batch=sample_batch)
 
 
 def perform_inference(model, fit_windows, test_windows):
     """Calibrate the threshold on normal data, then score the test windows."""
     model.calibrate(fit_windows)
     output = model.detect(test_windows)
-    return np.asarray(output.scores.numpy()).squeeze(), test_windows
+    anomaly_scores = np.asarray(output.scores.numpy()).squeeze()
+    anomaly_count = int(tf.reduce_sum(output.labels).numpy())
+    print(f"Detected {anomaly_count} anomalous points at threshold {float(output.threshold.numpy()):.4f}")
+    return anomaly_scores, test_windows
 
 
 def plot_results(test_windows, anomaly_scores):
@@ -103,6 +128,7 @@ def plot_results(test_windows, anomaly_scores):
 def main():
     """Main function to orchestrate training, inference, and plotting."""
     args = parse_args()
+    model_dir = _output_dir(args)
     windows, _ = load_and_preprocess_data(args)
 
     # Split into a fitting split (train + calibrate) and a detection split.
@@ -112,8 +138,10 @@ def main():
     model = build_model(args)
     train_model(args, model, fit_windows)
 
-    # Run inference
-    anomaly_scores, test_windows = perform_inference(model, fit_windows, test_windows)
+    # Restore the saved artifact and run inference on the restored detector.
+    restored_model = load_model_for_inference(model_dir, fit_windows[:1])
+    anomaly_scores, test_windows = perform_inference(restored_model, fit_windows, test_windows)
+    print(f"Loaded model from {model_dir}, inference shape: {anomaly_scores.shape}")
     plot_results(test_windows, anomaly_scores)
 
 
