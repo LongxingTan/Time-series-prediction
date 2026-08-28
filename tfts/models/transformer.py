@@ -181,7 +181,7 @@ class Encoder(tf.keras.layers.Layer):
         self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.layer_norm_eps = layer_norm_eps
-        self.layers: List[List[tf.keras.layers.Layer]] = []
+        self.encoder_layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape: Tuple[int]) -> None:
         for _ in range(self.num_hidden_layers):
@@ -195,7 +195,7 @@ class Encoder(tf.keras.layers.Layer):
             )
             ln_layer1 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
-            self.layers.append([attention_layer, ln_layer1, ffn_layer, ln_layer2])
+            self.encoder_layers.extend([attention_layer, ln_layer1, ffn_layer, ln_layer2])
         super(Encoder, self).build(input_shape)
 
     def call(self, inputs: tf.Tensor, mask: Optional[tf.Tensor] = None):
@@ -214,8 +214,8 @@ class Encoder(tf.keras.layers.Layer):
             Transformer encoder output
         """
         x = inputs
-        for _, layer in enumerate(self.layers):
-            attention_layer, ln_layer1, ffn_layer, ln_layer2 = layer
+        for index in range(0, len(self.encoder_layers), 4):
+            attention_layer, ln_layer1, ffn_layer, ln_layer2 = self.encoder_layers[index : index + 4]
             x = ln_layer1(x + attention_layer(x, mask=mask))
             x = ln_layer2(x + ffn_layer(x))
         return x
@@ -384,7 +384,7 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.ffn_intermediate_size = ffn_intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.layer_norm_eps = layer_norm_eps
-        self.layers: List[List[tf.keras.layers.Layer]] = []
+        self.decoder_layers: List[tf.keras.layers.Layer] = []
 
     def build(self, input_shape):
         for _ in range(self.num_decoder_layers):
@@ -398,7 +398,7 @@ class DecoderLayer(tf.keras.layers.Layer):
             ln_layer1 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer2 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
             ln_layer3 = LayerNormalization(epsilon=self.layer_norm_eps, dtype="float32")
-            self.layers.append(
+            self.decoder_layers.extend(
                 [self_attention_layer, cross_attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3]
             )
         super(DecoderLayer, self).build(input_shape)
@@ -413,7 +413,10 @@ class DecoderLayer(tf.keras.layers.Layer):
         """Forward pass through the decoder layer."""
         x = decoder_inputs
 
-        for self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 in self.layers:
+        for index in range(0, len(self.decoder_layers), 6):
+            self_attention_layer, attention_layer, ffn_layer, ln_layer1, ln_layer2, ln_layer3 = self.decoder_layers[
+                index : index + 6
+            ]
             x = ln_layer1(x + self_attention_layer(x, mask=tgt_mask))
             x = ln_layer2(x + attention_layer(x, encoder_memory, encoder_memory, mask=cross_mask))
             x = ln_layer3(x + ffn_layer(x))

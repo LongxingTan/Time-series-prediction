@@ -86,6 +86,12 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         if input_shape is not None:
             self(make_inputs(input_shape))
 
+    def save(self, filepath, *args, **kwargs):
+        """Save while tolerating Keras 2 callbacks' empty native-save options."""
+        if os.fspath(filepath).endswith(".keras"):
+            kwargs.pop("options", None)
+        return super().save(filepath, *args, **kwargs)
+
     def get_config(self):
         """Return a Keras-serializable description of the task model.
 
