@@ -9,9 +9,12 @@ from collections import OrderedDict
 from dataclasses import dataclass
 import importlib
 import pkgutil
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional, Tuple, Type
 
 from tfts.contracts.capabilities import BackboneCapabilities
+
+if TYPE_CHECKING:
+    from tfts.features import FeaturePlan, FeatureSelection, TimeSeriesSchema
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,17 @@ class ModelMetadata:
             "supports_future_covariates": self.capabilities.supports_future_covariates,
             "supports_missing_mask": self.capabilities.supports_missing_mask,
             "supports_variable_length": self.capabilities.supports_variable_length,
+            "input_spec": {
+                "layout": self.capabilities.input_spec.layout.value,
+                "accepted_roles": sorted(self.capabilities.input_spec.accepted_roles),
+                "supports_categorical": self.capabilities.input_spec.supports_categorical,
+                "supports_static": self.capabilities.input_spec.supports_static,
+                "supports_multivariate_target": self.capabilities.input_spec.supports_multivariate_target,
+                "accepted_dtypes_by_role": {
+                    role: sorted(dtypes)
+                    for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
+                },
+            },
         }
         return {
             "class_name": self.model_class.__name__,
@@ -189,6 +203,19 @@ def get_model_capabilities(model_name: str) -> BackboneCapabilities:
         return _ENTRIES[model_name].capabilities
     except KeyError as error:
         raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
+
+
+def resolve_model_features(
+    model_name: str,
+    schema: "TimeSeriesSchema",
+    selection: Optional["FeatureSelection"] = None,
+    unsupported: str = "raise",
+) -> "FeaturePlan":
+    """Resolve an ordered feature plan against a registered model's inputs."""
+    from tfts.features import resolve_feature_plan
+
+    capabilities = get_model_capabilities(model_name)
+    return resolve_feature_plan(schema, selection, capabilities.input_spec, unsupported=unsupported)
 
 
 def list_supported_tasks(model_name: str) -> List[str]:

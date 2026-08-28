@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, OutputPort
 
 from ..distributions import NormalOutput
 from .base import BaseModel, CommonConfig
@@ -92,6 +92,13 @@ class DeepAREncoder(tf.keras.layers.Layer):
     capabilities=BackboneCapabilities(
         output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
         forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset({"static"}),
+            supports_categorical=True,
+            supports_static=True,
+            supports_multivariate_target=False,
+            accepted_dtypes_by_role={"static": frozenset({"categorical"})},
+        ),
     ),
 )
 class DeepAR(BaseModel):

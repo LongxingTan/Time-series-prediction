@@ -9,7 +9,7 @@ from typing import List, Optional, Sequence
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, OutputPort
 
 from .base import BaseModel, CommonConfig
 from .registry import register_model
@@ -27,6 +27,8 @@ class TFTransformerConfig(CommonConfig):
         decoder_real_dim: Optional[int] = None,
         static_categorical_cardinalities: Optional[Sequence[int]] = None,
         temporal_categorical_cardinalities: Optional[Sequence[int]] = None,
+        encoder_categorical_cardinalities: Optional[Sequence[int]] = None,
+        decoder_categorical_cardinalities: Optional[Sequence[int]] = None,
         hidden_size: int = 32,
         num_layers: int = 1,
         num_attention_heads: int = 4,
@@ -49,7 +51,14 @@ class TFTransformerConfig(CommonConfig):
         self.encoder_real_dim = encoder_real_dim or encoder_input_dim
         self.decoder_real_dim = decoder_real_dim or decoder_input_dim
         self.static_categorical_cardinalities = list(static_categorical_cardinalities or [])
-        self.temporal_categorical_cardinalities = list(temporal_categorical_cardinalities or [])
+        temporal_cardinalities = list(temporal_categorical_cardinalities or [])
+        self.temporal_categorical_cardinalities = temporal_cardinalities
+        self.encoder_categorical_cardinalities = list(
+            temporal_cardinalities if encoder_categorical_cardinalities is None else encoder_categorical_cardinalities
+        )
+        self.decoder_categorical_cardinalities = list(
+            temporal_cardinalities if decoder_categorical_cardinalities is None else decoder_categorical_cardinalities
+        )
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_attention_heads = num_attention_heads
@@ -177,6 +186,11 @@ class InterpretableMultiHeadAttention(tf.keras.layers.Layer):
         output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
         forecast_modes=frozenset({ForecastMode.DIRECT}),
         supports_future_covariates=True,
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset({"observed_past", "known_future", "static"}),
+            supports_categorical=True,
+            supports_static=True,
+        ),
     ),
 )
 class TFTransformer(BaseModel):
@@ -195,10 +209,23 @@ class TFTransformer(BaseModel):
             tf.keras.layers.Embedding(cardinality, hidden, name=f"static_cat_{i}")
             for i, cardinality in enumerate(config.static_categorical_cardinalities)
         ]
-        self.temporal_cat_embeddings = [
-            tf.keras.layers.Embedding(cardinality, hidden, name=f"temporal_cat_{i}")
-            for i, cardinality in enumerate(config.temporal_categorical_cardinalities)
-        ]
+        if config.encoder_categorical_cardinalities == config.decoder_categorical_cardinalities:
+            self.temporal_cat_embeddings = [
+                tf.keras.layers.Embedding(cardinality, hidden, name=f"temporal_cat_{i}")
+                for i, cardinality in enumerate(config.encoder_categorical_cardinalities)
+            ]
+            self.encoder_cat_embeddings = self.temporal_cat_embeddings
+            self.decoder_cat_embeddings = self.temporal_cat_embeddings
+        else:
+            self.temporal_cat_embeddings = []
+            self.encoder_cat_embeddings = [
+                tf.keras.layers.Embedding(cardinality, hidden, name=f"encoder_temporal_cat_{i}")
+                for i, cardinality in enumerate(config.encoder_categorical_cardinalities)
+            ]
+            self.decoder_cat_embeddings = [
+                tf.keras.layers.Embedding(cardinality, hidden, name=f"decoder_temporal_cat_{i}")
+                for i, cardinality in enumerate(config.decoder_categorical_cardinalities)
+            ]
         self.static_real_projections = [
             tf.keras.layers.Dense(hidden, name=f"static_real_{i}") for i in range(config.static_real_dim)
         ]
@@ -216,8 +243,8 @@ class TFTransformer(BaseModel):
             self.static_hidden_context = GatedResidualNetwork(hidden, dropout=dropout)
             self.static_cell_context = GatedResidualNetwork(hidden, dropout=dropout)
             self.static_enrichment_context = GatedResidualNetwork(hidden, dropout=dropout)
-        encoder_count = len(self.temporal_cat_embeddings) + len(self.encoder_real_projections)
-        decoder_count = len(self.temporal_cat_embeddings) + len(self.decoder_real_projections)
+        encoder_count = len(self.encoder_cat_embeddings) + len(self.encoder_real_projections)
+        decoder_count = len(self.decoder_cat_embeddings) + len(self.decoder_real_projections)
         self.encoder_selection = VariableSelectionNetwork(encoder_count, hidden, dropout, self.has_static)
         self.decoder_selection = VariableSelectionNetwork(decoder_count, hidden, dropout, self.has_static)
         self.encoder_lstm = tf.keras.layers.LSTM(hidden, return_sequences=True, return_state=True)
@@ -265,17 +292,17 @@ class TFTransformer(BaseModel):
         encoder_categorical = batch.past_categorical_features
         if encoder_categorical is None:
             encoder_categorical = tf.zeros(
-                [batch.batch_size, batch.context_length, len(self.temporal_cat_embeddings)], tf.int32
+                [batch.batch_size, batch.context_length, len(self.encoder_cat_embeddings)], tf.int32
             )
         decoder_categorical = batch.future_categorical_features
         if decoder_categorical is None:
-            decoder_categorical = tf.zeros([batch.batch_size, horizon, len(self.temporal_cat_embeddings)], tf.int32)
+            decoder_categorical = tf.zeros([batch.batch_size, horizon, len(self.decoder_cat_embeddings)], tf.int32)
 
         self._require_feature_width("past_values + past_time_features", encoder_real, self.config.encoder_real_dim)
         self._require_feature_width("future_time_features", decoder_real, self.config.decoder_real_dim)
-        self._require_feature_width("past_categorical_features", encoder_categorical, len(self.temporal_cat_embeddings))
+        self._require_feature_width("past_categorical_features", encoder_categorical, len(self.encoder_cat_embeddings))
         self._require_feature_width(
-            "future_categorical_features", decoder_categorical, len(self.temporal_cat_embeddings)
+            "future_categorical_features", decoder_categorical, len(self.decoder_cat_embeddings)
         )
         values = {
             "encoder_real": encoder_real,
@@ -325,10 +352,10 @@ class TFTransformer(BaseModel):
             ]
             enrichment_context = self.static_enrichment_context(static_context, training=training)
         encoder_variables = self._embed_categoricals(
-            inputs["encoder_categorical"], self.temporal_cat_embeddings
+            inputs["encoder_categorical"], self.encoder_cat_embeddings
         ) + self._project_reals(inputs["encoder_real"], self.encoder_real_projections)
         decoder_variables = self._embed_categoricals(
-            inputs["decoder_categorical"], self.temporal_cat_embeddings
+            inputs["decoder_categorical"], self.decoder_cat_embeddings
         ) + self._project_reals(inputs["decoder_real"], self.decoder_real_projections)
         selected_encoder, encoder_weights = self.encoder_selection(
             encoder_variables, context=static_variable_context, training=training
