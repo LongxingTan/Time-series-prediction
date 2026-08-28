@@ -36,6 +36,16 @@ def create_adamw(learning_rate: Any, **kwargs: Any) -> tf.keras.optimizers.Optim
                 return legacy_adamw(**optimizer_kwargs)
             except (AttributeError, ImportError):
                 pass
+        try:
+            legacy_adam = tf.keras.optimizers.legacy.Adam
+        except (AttributeError, ImportError):
+            legacy_adam = None
+        if legacy_adam is not None:
+            optimizer_kwargs.pop("weight_decay", None)
+            try:
+                return legacy_adam(**optimizer_kwargs)
+            except (AttributeError, ImportError):
+                pass
 
     try:
         return tf.keras.optimizers.AdamW(**optimizer_kwargs)

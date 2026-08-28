@@ -7,12 +7,51 @@ import zipfile
 import numpy as np
 import tensorflow as tf
 
+from tfts import (
+    AutoConfig,
+    AutoModelForAnomalyDetection,
+    AutoModelForForecasting,
+    AutoModelForImputation,
+    AutoModelForTimeSeriesClassification,
+)
 from tfts.models.dlinear import DLinear, DLinearConfig
 from tfts.models.tcn import Encoder
 from tfts.saving import get_custom_objects, load_model
 
 
 class TestKerasModelLoading(unittest.TestCase):
+    def _assert_task_model_round_trip(self, model_factory, expected_class, sample):
+        config = AutoConfig.for_model("bert")
+        config.positional_type = None
+        model = model_factory(config)
+        if expected_class == "ImputationModel":
+            sample = {"past_values": sample, "past_observed_mask": np.ones_like(sample)}
+        expected = model(sample).numpy()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model_path = os.path.join(tmpdir, "task.keras")
+            model.save(model_path)
+            restored = load_model(model_path, compile=False)
+            actual = restored(sample).numpy()
+
+        self.assertEqual(type(restored).__name__, expected_class)
+        np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=1e-5)
+
+    def test_all_task_models_round_trip_without_custom_objects(self):
+        sample = np.random.default_rng(11).normal(size=(2, 8, 1)).astype(np.float32)
+        cases = (
+            (lambda config: AutoModelForForecasting.from_config(config, prediction_length=2), "ForecastingModel"),
+            (
+                lambda config: AutoModelForTimeSeriesClassification.from_config(config, num_labels=3),
+                "ClassificationModel",
+            ),
+            (lambda config: AutoModelForImputation.from_config(config), "ImputationModel"),
+            (lambda config: AutoModelForAnomalyDetection.from_config(config), "AnomalyDetectionModel"),
+        )
+        for model_factory, expected_class in cases:
+            with self.subTest(task=expected_class):
+                self._assert_task_model_round_trip(model_factory, expected_class, sample)
+
     def test_base_model_round_trip(self):
         config = DLinearConfig(kernel_size=3, channels=2)
         model = DLinear(predict_sequence_length=4, config=config)

@@ -59,7 +59,7 @@ pip install tfts
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tfts
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -69,10 +69,18 @@ predict_sequence_length = 8
 model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
 config = AutoConfig.for_model(model_name_or_path)
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
-trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
-trainer.train((x_train, y_train), (x_valid, y_valid), epochs=30)
+trainer = KerasTrainer(model)
+trainer.train(
+    (x_train, y_train),
+    (x_valid, y_valid),
+    optimizer=tf.keras.optimizers.Adam(0.0007),
+    epochs=30,
+)
 
-pred = trainer.predict(x_valid)
+model_dir = "./outputs/quickstart_forecasting"
+trainer.save_model(model_dir)
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
+pred = restored_model(x_valid, training=False).numpy()
 trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
@@ -88,7 +96,7 @@ plt.show()
 
 ```python
 import numpy as np
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -103,6 +111,12 @@ config = AutoConfig.for_model("rnn")
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
+
+model_dir = "./outputs/encoder_only"
+trainer.save_model(model_dir)
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
+inference = restored_model(x_valid[:1], training=False).numpy()
+print(inference.shape)
 ```
 
 编码-解码类模型输入
@@ -110,7 +124,7 @@ trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid)
 ```python
 # option1: np.ndarray — 使用规范的 TimeSeriesBatch 字段，以 dict 形式传入特征
 import numpy as np
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -134,13 +148,19 @@ config = AutoConfig.for_model("seq2seq")
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
+
+model_dir = "./outputs/encoder_decoder"
+trainer.save_model(model_dir)
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid)
+inference = restored_model(x_valid, training=False).numpy()
+print(inference.shape)
 ```
 
 ```python
 # option2
 import numpy as np
 import tensorflow as tf
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_sequence_length):
@@ -184,6 +204,13 @@ config = AutoConfig.for_model("seq2seq")
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
+
+model_dir = "./outputs/encoder_decoder_tfdata"
+trainer.save_model(model_dir)
+inference_inputs = next(iter(valid_loader.take(1)))[0]
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=inference_inputs)
+inference = restored_model(inference_inputs, training=False).numpy()
+print(inference.shape)
 ```
 
 **修改模型配置参数**
@@ -240,6 +267,10 @@ def build_model():
 
 东流tfts专注业界领先的深度模型
 
+- [时序预测](./examples/run_prediction_simple.py)：训练、恢复模型并进行预测
+- [时序分类](./examples/run_classification.py)：训练、恢复并评估 FordA 分类模型
+- [异常检测](./examples/run_anomaly.py)：训练、恢复、校准并检测 ECG 窗口
+- [参数调优](./examples/run_tuner.py)：保存每个 Optuna trial，并恢复最佳模型进行推理
 - [Bert模型](https://github.com/LongxingTan/KDDCup2022-Baidu) 获得KDD CUP2022-百度风机功率预测第3名
 - [Seq2seq模型](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) 获得阿里天池-AI earth人工智能气象挑战赛第4名
 - 更多示例参考[examples](./examples)

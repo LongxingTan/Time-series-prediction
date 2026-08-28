@@ -37,7 +37,7 @@
 - Documentation lives at [time-series-prediction.readthedocs.io](https://time-series-prediction.readthedocs.io)
 
 
-## Tutorial
+## Getting started
 
 **Installation**
 
@@ -57,7 +57,7 @@ pip install tfts
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tfts
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -66,13 +66,25 @@ predict_sequence_length = 8
 model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
 config = AutoConfig.for_model(model_name_or_path)
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
-trainer = KerasTrainer(model, optimizer=tf.keras.optimizers.Adam(0.0007))
-trainer.train((x_train, y_train), (x_valid, y_valid), epochs=30)
+trainer = KerasTrainer(model)
+trainer.train(
+    (x_train, y_train),
+    (x_valid, y_valid),
+    optimizer=tf.keras.optimizers.Adam(0.0007),
+    epochs=30,
+)
 
-pred = trainer.predict(x_valid)
+# Save the model
+model_dir = "./outputs/quickstart_forecasting"
+trainer.save_model(model_dir)
+
+# Load the model
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
+pred = restored_model(x_valid, training=False).numpy()
 trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
+
 
 **Prepare your own data**
 
@@ -85,7 +97,7 @@ Encoder only model inputs
 
 ```python
 import numpy as np
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -100,6 +112,12 @@ config = AutoConfig.for_model('rnn')
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
+
+model_dir = "./outputs/encoder_only"
+trainer.save_model(model_dir)
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
+inference = restored_model(x_valid[:1], training=False).numpy()
+print(inference.shape)
 ```
 
 Encoder-decoder model inputs
@@ -107,7 +125,7 @@ Encoder-decoder model inputs
 ```python
 # option1: np.ndarray — pass features as a dict with canonical TimeSeriesBatch fields
 import numpy as np
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 train_length = 24
 predict_sequence_length = 8
@@ -132,13 +150,19 @@ config = AutoConfig.for_model("seq2seq")
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
+
+model_dir = "./outputs/encoder_decoder"
+trainer.save_model(model_dir)
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid)
+inference = restored_model(x_valid, training=False).numpy()
+print(inference.shape)
 ```
 
 ```python
 # option2: tf.data.Dataset
 import numpy as np
 import tensorflow as tf
-from tfts import AutoConfig, AutoModelForForecasting, KerasTrainer
+from tfts import AutoConfig, AutoModel, AutoModelForForecasting, KerasTrainer
 
 class FakeReader(object):
     def __init__(self, predict_sequence_length):
@@ -182,6 +206,13 @@ config = AutoConfig.for_model("seq2seq")
 model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
+
+model_dir = "./outputs/encoder_decoder_tfdata"
+trainer.save_model(model_dir)
+inference_inputs = next(iter(valid_loader.take(1)))[0]
+restored_model = AutoModel.from_pretrained(model_dir, sample_batch=inference_inputs)
+inference = restored_model(inference_inputs, training=False).numpy()
+print(inference.shape)
 ```
 
 **Prepare custom model config**
@@ -241,6 +272,10 @@ def build_model():
 
 ## Examples
 
+- [Forecasting](./examples/run_prediction_simple.py): train, restore, and forecast with either the pipeline or manual API
+- [Classification](./examples/run_classification.py): train, restore, and evaluate a FordA classifier
+- [Anomaly detection](./examples/run_anomaly.py): train, restore, calibrate, and score ECG windows
+- [Parameter tuning](./examples/run_tuner.py): save each Optuna trial and restore the best trial for inference
 - [TFTS-Bert](https://github.com/LongxingTan/KDDCup2022-Baidu) wins the **3rd place** in KDD Cup 2022-wind power forecasting
 - [TFTS-Seq2seq](https://github.com/LongxingTan/Data-competitions/tree/master/tianchi-enso-prediction) wins the **4th place** in Tianchi-ENSO index prediction 2021
 - [More examples ...](./examples)

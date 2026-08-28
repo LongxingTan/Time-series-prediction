@@ -67,6 +67,73 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         output = self.forward(inputs, training=training)
         return output if return_dict else self.primary_output(output)
 
+    def build_from_config(self, config):
+        """Build every child layer before Keras restores saved variables."""
+
+        def make_dummy(shape):
+            shape = tf.TensorShape(shape).as_list()
+            dimensions = [dimension if dimension is not None else 1 for dimension in shape]
+            return tf.zeros(dimensions, dtype=self.compute_dtype)
+
+        def make_inputs(shape):
+            if isinstance(shape, dict):
+                return {key: make_inputs(value) for key, value in shape.items()}
+            if isinstance(shape, (list, tuple)) and shape and isinstance(shape[0], (list, tuple, tf.TensorShape)):
+                return [make_inputs(value) for value in shape]
+            return make_dummy(shape)
+
+        input_shape = config.get("input_shape")
+        if input_shape is not None:
+            self(make_inputs(input_shape))
+
+    def save(self, filepath, *args, **kwargs):
+        """Save while tolerating Keras 2 callbacks' empty native-save options."""
+        if os.fspath(filepath).endswith(".keras"):
+            kwargs.pop("options", None)
+        return super().save(filepath, *args, **kwargs)
+
+    def get_config(self):
+        """Return a Keras-serializable description of the task model.
+
+        The task model is constructed from a backbone instance, a task
+        dataclass, and registry metadata.  Those live Python objects cannot be
+        passed directly through a Keras config, so persist their stable
+        representations instead.  The child backbone and task head weights
+        remain tracked by Keras and are restored from the same archive.
+        """
+        config = super().get_config()
+        config.update(
+            {
+                "backbone_config": self.backbone_config.to_dict(),
+                "task_config": self.task_config.to_dict(),
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Reconstruct a task model from a Keras object config."""
+        from tfts.models.auto_config import AutoConfig
+        from tfts.models.auto_model import build_task_model, task_config_from_dict
+
+        config = dict(config)
+        backbone_values = config.pop("backbone_config", None)
+        task_values = config.pop("task_config", None)
+        if not isinstance(backbone_values, dict) or not isinstance(task_values, dict):
+            raise ValueError("Serialized task model config must contain backbone_config and task_config mappings")
+
+        model_type = backbone_values.get("model_type")
+        if model_type is None:
+            raise ValueError("Serialized task model config is missing backbone model_type")
+
+        backbone_config = AutoConfig.for_model(model_type)
+        backbone_config.update(backbone_values)
+
+        model = build_task_model(backbone_config, task_config_from_dict(task_values), model_kwargs=config)
+        if not isinstance(model, cls):
+            raise ValueError("Serialized task config does not match %s" % cls.__name__)
+        return model
+
     def save_pretrained(self, save_directory):
         """Save one coherent architecture + task + weights artifact."""
         from tfts.constants import TF2_WEIGHTS_NAME
