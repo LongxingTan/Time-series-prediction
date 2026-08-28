@@ -96,7 +96,6 @@ docs = [
     "nbconvert>=6.3.0",
     "nbsphinx",
     "optuna>=2.0",
-    "pandoc",
     "pydata-sphinx-theme",
     "recommonmark",
     "scikit-learn>0.23",
