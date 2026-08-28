@@ -67,6 +67,25 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         output = self.forward(inputs, training=training)
         return output if return_dict else self.primary_output(output)
 
+    def build_from_config(self, config):
+        """Build every child layer before Keras restores saved variables."""
+
+        def make_dummy(shape):
+            shape = tf.TensorShape(shape).as_list()
+            dimensions = [dimension if dimension is not None else 1 for dimension in shape]
+            return tf.zeros(dimensions, dtype=self.compute_dtype)
+
+        def make_inputs(shape):
+            if isinstance(shape, dict):
+                return {key: make_inputs(value) for key, value in shape.items()}
+            if isinstance(shape, (list, tuple)) and shape and isinstance(shape[0], (list, tuple, tf.TensorShape)):
+                return [make_inputs(value) for value in shape]
+            return make_dummy(shape)
+
+        input_shape = config.get("input_shape")
+        if input_shape is not None:
+            self(make_inputs(input_shape))
+
     def get_config(self):
         """Return a Keras-serializable description of the task model.
 
