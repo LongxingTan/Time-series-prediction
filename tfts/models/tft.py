@@ -9,7 +9,7 @@ from typing import List, Optional, Sequence
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, OutputPort
+from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, OutputPort
 
 from .base import BaseModel, CommonConfig
 from .registry import register_model
@@ -177,6 +177,11 @@ class InterpretableMultiHeadAttention(tf.keras.layers.Layer):
         output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
         forecast_modes=frozenset({ForecastMode.DIRECT}),
         supports_future_covariates=True,
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset({"observed_past", "known_future", "static"}),
+            supports_categorical=True,
+            supports_static=True,
+        ),
     ),
 )
 class TFTransformer(BaseModel):

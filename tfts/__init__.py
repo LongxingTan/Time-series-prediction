@@ -12,8 +12,25 @@ from tfts.contracts import (
     TaskType,
     TimeSeriesBatch,
 )
-from tfts.data import AutoPreprocessor, DataProcessor, TimeSeriesSequence, get_data
-from tfts.features import AutoFeatureEngineer, FeatureRegistry
+from tfts.data import (
+    AutoPreprocessor,
+    DataProcessor,
+    SequenceMaterializer,
+    TabularMaterializer,
+    TimeSeriesSequence,
+    WindowIndexer,
+    WindowSpec,
+    get_data,
+)
+from tfts.features import (
+    AutoFeatureEngineer,
+    FeaturePipeline,
+    FeatureRegistry,
+    FeatureRole,
+    FeatureSelection,
+    FeatureSpec,
+    TimeSeriesSchema,
+)
 from tfts.generation import ForecastGenerationConfig
 from tfts.metrics import evaluate as evaluate_metrics
 from tfts.models.auto_config import AutoConfig
@@ -29,7 +46,7 @@ from tfts.models.auto_model import (
     AutoModelForQuantile,
     AutoModelForTimeSeriesClassification,
 )
-from tfts.models.registry import list_models, list_supported_tasks
+from tfts.models.registry import list_models, list_supported_tasks, resolve_model_features
 from tfts.saving import load_model
 from tfts.tasks.pipeline import Pipeline, TaskPipeline
 from tfts.trainer import EagerTrainer, KerasTrainer, Trainer, set_seed
@@ -77,6 +94,11 @@ __all__ = [
     # -- Features --
     "AutoFeatureEngineer",
     "FeatureRegistry",
+    "FeaturePipeline",
+    "FeatureRole",
+    "FeatureSelection",
+    "FeatureSpec",
+    "TimeSeriesSchema",
     # -- Models --
     "AutoModel",
     "AutoBackbone",
@@ -98,6 +120,7 @@ __all__ = [
     "TimeSeriesBatch",
     "list_models",
     "list_supported_tasks",
+    "resolve_model_features",
     "load_model",
     # -- Training --
     "Trainer",
@@ -110,6 +133,10 @@ __all__ = [
     # -- Data --
     "get_data",
     "TimeSeriesSequence",
+    "WindowIndexer",
+    "WindowSpec",
+    "TabularMaterializer",
+    "SequenceMaterializer",
     # -- Evaluation --
     "evaluate_metrics",
     # -- Pipelines --

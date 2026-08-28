@@ -60,6 +60,67 @@ A typical pipeline is *feature engineer → sequence windowing → train*:
    x, y = loader[0]                 # (batch, lookback, n_features), (batch, horizon, 1)
 
 
+Shared features for tabular and sequence models
+------------------------------------------------
+
+For new pipelines, describe feature availability once with
+``TimeSeriesSchema``. Build feature columns and window boundaries once, then
+choose the physical layout only at the model boundary. ``TabularMaterializer``
+defaults to one row per forecast horizon, which can be passed to LightGBM or
+another sklearn-style estimator. ``SequenceMaterializer`` creates the canonical
+``TimeSeriesBatch`` used by TensorFlow models.
+
+.. code-block:: python
+
+   from tfts.data import SequenceMaterializer, TabularMaterializer, WindowIndexer, WindowSpec
+   from tfts.features import (
+       DatetimeTransform,
+       CategoricalEncoderTransform,
+       FeatureDType,
+       FeaturePipeline,
+       FeatureRole,
+       FeatureSelection,
+       FeatureSpec,
+       LagTransform,
+       TimeSeriesSchema,
+   )
+
+   schema = TimeSeriesSchema(
+       time_col="date",
+       target_cols=("sales",),
+       group_cols=("store",),
+       features=(
+           FeatureSpec("promotion", FeatureRole.KNOWN_FUTURE),
+           FeatureSpec("store_type", FeatureRole.STATIC, FeatureDType.CATEGORICAL),
+       ),
+   )
+   feature_pipeline = FeaturePipeline(
+       [
+           LagTransform("sales", [1, 7, 28]),
+           DatetimeTransform(["month", "dayofweek"]),
+           CategoricalEncoderTransform("store_type"),
+       ]
+   )
+   prepared = feature_pipeline.fit_transform(train_df, schema)
+   windows = WindowIndexer().build(prepared, WindowSpec(context_length=28, prediction_length=7))
+
+   selection = FeatureSelection(
+       include_tags={"target_history", "calendar", "encoded"},
+       exclude_names={"sales_lag_1"},
+   )
+   tabular = TabularMaterializer().materialize(prepared, windows, selection=selection)
+   # estimator.fit(tabular.X, tabular.y.ravel())  # for a single target
+
+   sequence = SequenceMaterializer().materialize(prepared, windows, selection=selection)
+   tf_dataset = SequenceMaterializer.as_tf_dataset(sequence, batch_size=32)
+
+Generated target lags and rolling statistics are observed-past features and
+cannot enter decoder inputs. Datetime/Fourier outputs are known-future features
+and are available to both the encoder and decoder. The fitted feature manifest
+records ordered feature semantics, lineage, required warm-up history, and a
+stable fingerprint.
+
+
 Available features
 ------------------
 
