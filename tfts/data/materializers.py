@@ -219,12 +219,19 @@ class SequenceMaterializer:
         )
 
     @staticmethod
-    def as_tf_dataset(batch: TimeSeriesBatch, batch_size: int = 32, shuffle: bool = False, seed=None):
-        """Convert one materialized batch to a standard Keras dataset."""
+    def as_tf_dataset(
+        batch: TimeSeriesBatch,
+        batch_size: int = 32,
+        shuffle: bool = False,
+        seed=None,
+        include_future_values: bool = True,
+    ):
+        """Convert a batch to Keras data, optionally retaining teacher-forcing values."""
         inputs = batch.as_dict()
         labels = inputs.pop("labels", None)
         inputs.pop("metadata", None)
-        inputs.pop("future_values", None)
+        if not include_future_values:
+            inputs.pop("future_values", None)
         dataset = tf.data.Dataset.from_tensor_slices((inputs, labels) if labels is not None else inputs)
         if shuffle:
             dataset = dataset.shuffle(int(batch.past_values.shape[0]), seed=seed)

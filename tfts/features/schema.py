@@ -7,6 +7,7 @@ from enum import Enum
 import hashlib
 import json
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Dict, FrozenSet, Iterable, Mapping, Optional, Sequence, Tuple
 
 
@@ -31,6 +32,28 @@ def _as_enum(value, enum_class):
     return value if isinstance(value, enum_class) else enum_class(value)
 
 
+def _freeze_value(value):
+    """Recursively detach and freeze JSON-like contract values."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_value(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_value(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return frozenset(_freeze_value(item) for item in value)
+    return value
+
+
+def _thaw_value(value):
+    """Return ordinary JSON-compatible containers from frozen contract values."""
+    if isinstance(value, Mapping):
+        return {key: _thaw_value(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_value(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return sorted((_thaw_value(item) for item in value), key=str)
+    return value
+
+
 @dataclass(frozen=True)
 class FeatureSpec:
     """Description and lineage for one model feature."""
@@ -49,7 +72,7 @@ class FeatureSpec:
             raise ValueError("feature name must be a non-empty string")
         object.__setattr__(self, "role", _as_enum(self.role, FeatureRole))
         object.__setattr__(self, "dtype", _as_enum(self.dtype, FeatureDType))
-        object.__setattr__(self, "parameters", dict(self.parameters))
+        object.__setattr__(self, "parameters", _freeze_value(self.parameters))
         object.__setattr__(self, "tags", frozenset(self.tags))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -59,7 +82,7 @@ class FeatureSpec:
             "dtype": self.dtype.value,
             "source": self.source,
             "transform": self.transform,
-            "parameters": dict(self.parameters),
+            "parameters": _thaw_value(self.parameters),
             "tags": sorted(self.tags),
             "enabled_by_default": self.enabled_by_default,
         }
@@ -159,14 +182,14 @@ class FeatureManifest:
     def __post_init__(self) -> None:
         if self.required_history < 0:
             raise ValueError("required_history cannot be negative")
-        object.__setattr__(self, "fitted_state", dict(self.fitted_state))
+        object.__setattr__(self, "fitted_state", _freeze_value(self.fitted_state))
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "schema_version": self.schema_version,
             "required_history": self.required_history,
             "schema": self.schema.to_dict(),
-            "fitted_state": dict(self.fitted_state),
+            "fitted_state": _thaw_value(self.fitted_state),
         }
 
     @classmethod
@@ -226,6 +249,10 @@ class FeaturePlan:
     selected: Tuple[FeatureSpec, ...]
     excluded: Mapping[str, str]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "selected", tuple(self.selected))
+        object.__setattr__(self, "excluded", MappingProxyType(dict(self.excluded)))
+
     @property
     def feature_names(self) -> Tuple[str, ...]:
         return tuple(spec.name for spec in self.selected)
@@ -241,6 +268,8 @@ def resolve_feature_plan(
 
     if unsupported not in {"raise", "drop"}:
         raise ValueError("unsupported must be either 'raise' or 'drop'")
+    if input_spec is not None and not input_spec.supports_multivariate_target and len(schema.target_cols) > 1:
+        raise ValueError("model does not support multivariate targets")
     selection = selection or FeatureSelection()
     known_names = set(schema.feature_names)
     unknown = (selection.include_names | selection.exclude_names) - known_names
@@ -287,4 +316,7 @@ def _input_incompatibility(spec: FeatureSpec, input_spec: Optional[Any]) -> Opti
         return "model does not accept categorical features"
     if spec.role == FeatureRole.STATIC and not input_spec.supports_static:
         return "model does not accept static features"
+    accepted_dtypes = input_spec.accepted_dtypes_by_role.get(spec.role.value)
+    if accepted_dtypes is not None and spec.dtype.value not in accepted_dtypes:
+        return f"model does not accept dtype {spec.dtype.value!r} for role {spec.role.value!r}"
     return None

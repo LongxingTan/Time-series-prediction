@@ -44,6 +44,10 @@ class ModelMetadata:
                 "supports_categorical": self.capabilities.input_spec.supports_categorical,
                 "supports_static": self.capabilities.input_spec.supports_static,
                 "supports_multivariate_target": self.capabilities.input_spec.supports_multivariate_target,
+                "accepted_dtypes_by_role": {
+                    role: sorted(dtypes)
+                    for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
+                },
             },
         }
         return {

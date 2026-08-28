@@ -93,7 +93,11 @@ class DeepAREncoder(tf.keras.layers.Layer):
         output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
         forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
         input_spec=ModelInputSpec(
-            accepted_roles=frozenset({"static"}), supports_categorical=True, supports_static=True
+            accepted_roles=frozenset({"static"}),
+            supports_categorical=True,
+            supports_static=True,
+            supports_multivariate_target=False,
+            accepted_dtypes_by_role={"static": frozenset({"categorical"})},
         ),
     ),
 )

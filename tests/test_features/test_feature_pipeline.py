@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
+from tfts import AutoConfig, AutoModelForForecasting
 from tfts.contracts import InputLayout, ModelInputSpec
 from tfts.data import SequenceMaterializer, TabularMaterializer, WindowIndexer, WindowSpec
 from tfts.features import (
@@ -110,8 +111,38 @@ class FeaturePipelineTest(unittest.TestCase):
         self.assertEqual(transformed.frame.loc[0, "store_type_encoded"], 0)
         self.assertEqual(
             transformed.manifest.fitted_state["0:CategoricalEncoderTransform"]["store_type"],
-            ["urban", "rural"],
+            ("urban", "rural"),
         )
+
+    def test_categorical_encoder_reserves_configured_unknown_code(self):
+        frame = self.frame.copy()
+        frame["store_type"] = ["urban", "rural"] * 12
+        schema = TimeSeriesSchema(
+            "time",
+            ("sales",),
+            (FeatureSpec("store_type", FeatureRole.KNOWN_FUTURE, FeatureDType.CATEGORICAL),),
+        )
+        pipeline = FeaturePipeline([CategoricalEncoderTransform("store_type", unknown_value=1)])
+        prepared = pipeline.fit_transform(frame, schema)
+        self.assertEqual(prepared.frame["store_type_encoded"].tolist()[:2], [0, 2])
+        self.assertEqual(prepared.schema.get("store_type_encoded").parameters["cardinality"], 3)
+
+        inference = frame.copy()
+        inference.loc[0, "store_type"] = "unseen"
+        self.assertEqual(pipeline.transform(inference).frame.loc[0, "store_type_encoded"], 1)
+        with self.assertRaisesRegex(ValueError, "non-negative"):
+            CategoricalEncoderTransform("store_type", unknown_value=-1)
+
+    def test_manifest_contract_values_are_immutable(self):
+        prepared = FeaturePipeline([LagTransform("sales", [1])]).fit_transform(self.frame, self.schema)
+        fingerprint = prepared.manifest.fingerprint
+        lag_spec = prepared.schema.get("sales_lag_1")
+
+        with self.assertRaises(TypeError):
+            lag_spec.parameters["lag"] = 99
+        with self.assertRaises(TypeError):
+            prepared.manifest.fitted_state["new"] = {}
+        self.assertEqual(prepared.manifest.fingerprint, fingerprint)
 
     def test_selection_is_resolved_against_model_inputs(self):
         selection = FeatureSelection(include_tags={"commercial", "weather"}, exclude_names={"temperature"})
@@ -141,6 +172,20 @@ class FeaturePipelineTest(unittest.TestCase):
         )
         rnn_plan = resolve_model_features("rnn", self.schema, unsupported="drop")
         self.assertEqual(rnn_plan.feature_names, ("temperature",))
+
+    def test_deep_ar_rejects_unsupported_static_real_and_multivariate_targets(self):
+        schema = TimeSeriesSchema(
+            "time",
+            ("sales",),
+            (FeatureSpec("store_size", FeatureRole.STATIC),),
+        )
+        plan = resolve_model_features("deep_ar", schema, unsupported="drop")
+        self.assertEqual(plan.feature_names, ())
+        self.assertIn("dtype", plan.excluded["store_size"])
+
+        multivariate = TimeSeriesSchema("time", ("sales", "returns"))
+        with self.assertRaisesRegex(ValueError, "multivariate targets"):
+            resolve_model_features("deep_ar", multivariate, unsupported="drop")
 
 
 class MaterializerTest(unittest.TestCase):
@@ -211,6 +256,29 @@ class MaterializerTest(unittest.TestCase):
         self.assertIsNone(batch.labels)
         np.testing.assert_allclose(batch.future_time_features.numpy()[0, :, 0], [2.0, 3.0])
         np.testing.assert_array_equal(batch.future_categorical_features.numpy()[0, :, 0], [1, 2])
+
+    def test_tf_dataset_retains_teacher_forcing_values_for_deep_ar(self):
+        prepared = self._prepared()
+        windows = WindowIndexer().build(prepared, WindowSpec(4, 2))
+        batch = SequenceMaterializer().materialize(
+            prepared,
+            windows,
+            selection=FeatureSelection(
+                exclude_names={"known_real", "known_cat", "observed_real", "static_cat", "target_lag_2"}
+            ),
+        )
+        inputs, labels = next(iter(SequenceMaterializer.as_tf_dataset(batch, batch_size=2)))
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("deep_ar"), prediction_length=2)
+
+        output = model(inputs, training=True)
+
+        self.assertEqual(output.shape, (2, 2, 1))
+        np.testing.assert_allclose(inputs["future_values"].numpy(), labels.numpy())
+
+        inputs_without_future, _ = next(
+            iter(SequenceMaterializer.as_tf_dataset(batch, batch_size=2, include_future_values=False))
+        )
+        self.assertNotIn("future_values", inputs_without_future)
 
 
 if __name__ == "__main__":

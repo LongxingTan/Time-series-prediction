@@ -233,6 +233,8 @@ class CategoricalEncoderTransform(FeatureTransform):
             raise ValueError("suffix must be non-empty")
         self.suffix = suffix
         self.unknown_value = int(unknown_value)
+        if self.unknown_value < 0:
+            raise ValueError("unknown_value must be non-negative for embedding compatibility")
         self.tags = frozenset(tags)
         self.categories_: Dict[str, Tuple[Any, ...]] = {}
 
@@ -254,7 +256,9 @@ class CategoricalEncoderTransform(FeatureTransform):
         specs = []
         for column in self.columns:
             source = schema.get(column)
-            mapping = {value: index + 1 for index, value in enumerate(self.categories_[column])}
+            available_codes = (code for code in range(len(self.categories_[column]) + 1) if code != self.unknown_value)
+            mapping = {value: code for value, code in zip(self.categories_[column], available_codes)}
+            cardinality = max([self.unknown_value, *mapping.values()]) + 1
             name = f"{column}{self.suffix}"
             result[name] = result[column].map(mapping).fillna(self.unknown_value).astype("int32")
             specs.append(
@@ -264,7 +268,7 @@ class CategoricalEncoderTransform(FeatureTransform):
                     FeatureDType.CATEGORICAL,
                     source=column,
                     transform="categorical_encode",
-                    parameters={"unknown_value": self.unknown_value},
+                    parameters={"unknown_value": self.unknown_value, "cardinality": cardinality},
                     tags=source.tags | self.tags,
                 )
             )

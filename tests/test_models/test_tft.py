@@ -2,11 +2,13 @@
 
 import unittest
 
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer, TimeSeriesBatch
-from tfts.data import TimeSeriesSequence, get_data
+from tfts.data import SequenceMaterializer, TimeSeriesSequence, WindowIndexer, WindowSpec, get_data
+from tfts.features import FeatureDType, FeaturePipeline, FeatureRole, FeatureSpec, TimeSeriesSchema
 from tfts.models.tft import TFTransformer, TFTransformerConfig
 from tfts.training_args import TrainingArguments
 
@@ -100,6 +102,39 @@ class TFTransformerTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "TFT config expects 2"):
             model(batch)
+
+    def test_materialized_mixed_categorical_roles_use_asymmetric_embeddings(self):
+        frame = pd.DataFrame(
+            {
+                "time": pd.date_range("2024-01-01", periods=12),
+                "target": np.arange(12, dtype=np.float32),
+                "observed_cat": np.arange(12) % 2,
+                "known_cat": np.arange(12) % 3,
+            }
+        )
+        schema = TimeSeriesSchema(
+            "time",
+            ("target",),
+            (
+                FeatureSpec("observed_cat", FeatureRole.OBSERVED_PAST, FeatureDType.CATEGORICAL),
+                FeatureSpec("known_cat", FeatureRole.KNOWN_FUTURE, FeatureDType.CATEGORICAL),
+            ),
+        )
+        prepared = FeaturePipeline().fit_transform(frame, schema)
+        windows = WindowIndexer().build(prepared, WindowSpec(4, 2))
+        batch = SequenceMaterializer().materialize(prepared, windows)
+        config = TFTransformerConfig(
+            encoder_real_dim=1,
+            decoder_real_dim=1,
+            encoder_categorical_cardinalities=[2, 3],
+            decoder_categorical_cardinalities=[3],
+            hidden_size=16,
+            num_attention_heads=4,
+        )
+
+        output = AutoModel.from_config(config, prediction_length=2)(batch)
+
+        self.assertEqual(output.shape, (len(windows), 2, 1))
 
     def test_train(self):
         data = get_data(name="ar", seasonality=10.0, timesteps=40, n_series=10, seed=42)
