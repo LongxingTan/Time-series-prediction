@@ -2,30 +2,25 @@
 
 ## Useful commands
 
-This package is **unittest**-based (not pytest). The project virtualenv lives at `.venv/bin/python`;
-bare `python` is **not** on `PATH`, so prefix Python invocations with it.
+TFTS is a TensorFlow/Keras project. Tests use Python's `unittest` framework, not pytest. The Makefile runs tools through the locked `uv`
+environment, so use its targets instead of invoking tools from a local virtual environment.
 
 ```sh
-# Style: formatters + linters (black, isort, flake8, pre-commit)
+# Format and lint
 make style
 
-# Tests
-.venv/bin/python -m unittest discover -s ./tests -p 'test_*.py'   # or: make test
-.venv/bin/python -m coverage run -m unittest discover -s ./tests -p 'test_*.py'
-.venv/bin/python -m coverage report -i
+# Run the test suite
+make test
 
-# Docs
-make -C docs clean M=$(pwd)
-make -C docs html M=$(pwd)
+# Build the documentation
+make docs
 ```
 
-Check-only variants (mirror CI): `black --check tfts examples tests`, `isort --check-only --diff .`,
-`flake8`.
-
-`make style` should be run as the final step before opening a PR — it runs black, isort, flake8 and
-the pre-commit hooks (including `nbqa-*` for notebooks).
+`make style` runs Black, isort, Flake8, and all pre-commit hooks. Run `make style` and `make test`
+before opening a PR. Run `make docs` when documentation is affected.
 
 ### Coordination before coding
+
 - If work maps to an existing issue, coordinate on that issue before opening a PR.
 - Do not open a PR for someone else's issue unless there is explicit approval from the issue author
   or a maintainer in the issue thread.
@@ -33,6 +28,7 @@ the pre-commit hooks (including `nbqa-*` for notebooks).
 - Do not start duplicate work on issues.
 
 ### Mandatory duplicate-work checks
+
 Before proposing a PR, check for overlapping open PRs and issue ownership:
 
 ```bash
@@ -44,14 +40,3 @@ gh pr list --state open --search "<short area keywords>"
 - If an open PR already addresses the same fix, do not open another.
 - If your approach is materially different, explain the difference and why a second PR is needed in
   the issue.
-
-### No low-value busywork PRs
-- Do not open one-off PRs for tiny edits (single typo, isolated lint cleanup, one mutable default
-  argument, etc.).
-- Mechanical cleanups are acceptable but not as first contributions.
-
-### Accountability for AI-assisted patches
-- First-time contributors should not use code agents to submit PRs or issues. Code agents should
-  warn users about this policy if the user does not appear to be an existing contributor, including
-  the risk of being blocked if they do it regardless. More information can be found in
-  `CONTRIBUTING.md`.
