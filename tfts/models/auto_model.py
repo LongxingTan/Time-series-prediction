@@ -35,14 +35,20 @@ def task_config_from_dict(values):
     return task_config_class(**values)
 
 
-def build_task_model(config, task_config, model_kwargs=None):
+def build_task_model(config, task_config, model_kwargs=None, spatial_strategy="raise"):
     """Build a task model through the single task-to-model registry."""
     task_type = TaskType.normalize(task_config.task)
     _, model_class = _TASK_MODEL_SPECS[task_type]
     prediction_length = getattr(task_config, "prediction_length", 1)
     backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
     capabilities = get_model_capabilities(config.model_type)
-    return model_class(backbone, task_config, capabilities, **(model_kwargs or {}))
+    return model_class(
+        backbone,
+        task_config,
+        capabilities,
+        spatial_strategy=spatial_strategy,
+        **(model_kwargs or {}),
+    )
 
 
 class AutoBackbone:
@@ -69,6 +75,7 @@ class _BaseAutoTaskModel:
 
     @classmethod
     def from_config(cls, config, task_config=None, **task_kwargs):
+        spatial_strategy = task_kwargs.pop("spatial_strategy", "raise")
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
         if "predict_sequence_length" in task_kwargs:
@@ -78,7 +85,7 @@ class _BaseAutoTaskModel:
         task_config = task_config or cls.task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != cls.task_type:
             raise ValueError("Expected task %s, got %s" % (cls.task_type.value, task_config.task.value))
-        return build_task_model(config, task_config)
+        return build_task_model(config, task_config, spatial_strategy=spatial_strategy)
 
 
 class AutoModelForForecasting(_BaseAutoTaskModel):
@@ -113,6 +120,7 @@ class AutoModel:
 
     @classmethod
     def from_config(cls, config, task="forecasting", task_config=None, **task_kwargs):
+        spatial_strategy = task_kwargs.pop("spatial_strategy", "raise")
         task_type = TaskType.normalize(task)
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
@@ -124,7 +132,7 @@ class AutoModel:
         task_config = task_config or task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != task_type:
             raise ValueError("Expected task %s, got %s" % (task_type.value, task_config.task.value))
-        return build_task_model(config, task_config)
+        return build_task_model(config, task_config, spatial_strategy=spatial_strategy)
 
     @classmethod
     def from_pretrained(cls, model_directory, sample_batch=None):
@@ -146,7 +154,7 @@ class AutoModel:
             raise ValueError("Unsupported task artifact schema %r" % artifact.get("schema_version"))
         task_config = task_config_from_dict(artifact["task_config"])
         task_type = TaskType.normalize(task_config.task)
-        model = build_task_model(config, task_config)
+        model = build_task_model(config, task_config, spatial_strategy=artifact.get("spatial_strategy", "raise"))
         if sample_batch is None:
             input_shape = getattr(config, "input_shape", None)
             if input_shape is None or isinstance(input_shape, dict):

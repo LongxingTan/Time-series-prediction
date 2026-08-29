@@ -227,9 +227,20 @@ class SequenceMaterializer:
         include_future_values: bool = True,
     ):
         """Convert a batch to Keras data, optionally retaining teacher-forcing values."""
-        inputs = batch.as_dict()
+        inputs = batch.as_tensor_dict()
+        sample_count = tf.shape(batch.past_values)[0]
+        for name, value in tuple(inputs.items()):
+            if not name.startswith("structure."):
+                continue
+            if name.endswith("adjacency") and value.shape.rank == 2:
+                inputs[name] = tf.repeat(value[None, ...], sample_count, axis=0)
+            elif name.endswith(("node_mask", "valid_mask")) and value.shape.rank in (1, 2):
+                inputs[name] = tf.repeat(value[None, ...], sample_count, axis=0)
+            elif name.endswith(("node_features", "node_coordinates", "coordinates")):
+                expected_shared_rank = 3 if name.endswith("coordinates") and "grid" in name else 2
+                if value.shape.rank == expected_shared_rank:
+                    inputs[name] = tf.repeat(value[None, ...], sample_count, axis=0)
         labels = inputs.pop("labels", None)
-        inputs.pop("metadata", None)
         if not include_future_values:
             inputs.pop("future_values", None)
         dataset = tf.data.Dataset.from_tensor_slices((inputs, labels) if labels is not None else inputs)

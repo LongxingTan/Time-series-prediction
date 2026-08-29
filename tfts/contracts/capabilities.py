@@ -5,6 +5,8 @@ from enum import Enum
 from types import MappingProxyType
 from typing import FrozenSet, Mapping
 
+from .structure import SpatialLayout
+
 
 class OutputPort(str, Enum):
     SEQUENCE = "sequence"
@@ -38,6 +40,11 @@ class ModelInputSpec:
     supports_static: bool = False
     supports_multivariate_target: bool = True
     accepted_dtypes_by_role: Mapping[str, FrozenSet[str]] = field(default_factory=dict)
+    accepted_layouts: FrozenSet[SpatialLayout] = frozenset({SpatialLayout.NONE})
+    requires_structure: bool = False
+    supports_dynamic_graph: bool = False
+    supports_edge_features: bool = False
+    supports_node_mask: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "layout", InputLayout(self.layout))
@@ -64,6 +71,16 @@ class ModelInputSpec:
         if not self.supports_categorical and any("categorical" in dtypes for dtypes in accepted_dtypes.values()):
             raise ValueError("categorical dtype constraints require supports_categorical=True")
         object.__setattr__(self, "accepted_dtypes_by_role", MappingProxyType(accepted_dtypes))
+        layouts = frozenset(SpatialLayout.normalize(layout) for layout in self.accepted_layouts)
+        if not layouts:
+            raise ValueError("accepted_layouts cannot be empty")
+        if self.requires_structure and layouts == {SpatialLayout.NONE}:
+            raise ValueError("requires_structure needs a spatial accepted_layout")
+        if (self.supports_dynamic_graph or self.supports_edge_features or self.supports_node_mask) and (
+            SpatialLayout.NODES not in layouts
+        ):
+            raise ValueError("graph capabilities require the nodes layout")
+        object.__setattr__(self, "accepted_layouts", layouts)
 
 
 @dataclass(frozen=True)

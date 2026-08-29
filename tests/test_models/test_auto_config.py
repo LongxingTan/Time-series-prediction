@@ -6,7 +6,7 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import TimeSeriesBatch
+from tfts.contracts import GraphStructure, TimeSeriesBatch
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
 from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
 from tfts.models.base import BaseConfig
@@ -89,7 +89,12 @@ class TestAutoModel(unittest.TestCase):
                     # real variable; keep its explicit variable count aligned.
                     config.encoder_real_dim = feature_count
                 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-                if model_name == "deep_ar":
+                if model_name == "stgcn":
+                    inputs = TimeSeriesBatch(
+                        past_values=tf.random.normal([1, 16, 3, 1]),
+                        structure=GraphStructure(3, adjacency=tf.eye(3)),
+                    )
+                elif model_name == "deep_ar":
                     inputs = TimeSeriesBatch(
                         past_values=tf.random.normal([1, 16, 1]),
                         future_values=tf.random.normal([1, predict_sequence_length, 1]),
@@ -99,7 +104,9 @@ class TestAutoModel(unittest.TestCase):
                     inputs = tf.random.normal([1, 16, feature_count])
                 output = model(inputs)
 
-                if model_name == "deep_ar":
+                if model_name == "stgcn":
+                    self.assertEqual(output.shape, (1, predict_sequence_length, 3, 1))
+                elif model_name == "deep_ar":
                     self.assertEqual(output.shape, (1, predict_sequence_length, 1))
                 elif model_name in multivariate_outputs:
                     self.assertEqual(output.shape, (1, predict_sequence_length, feature_count))

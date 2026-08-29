@@ -25,7 +25,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     task_name = None
     required_output_port = None
 
-    def __init__(self, backbone, task_config, capabilities, **kwargs):
+    def __init__(self, backbone, task_config, capabilities, spatial_strategy="raise", **kwargs):
         super().__init__(**kwargs)
         from tfts.models.adapters import BackboneAdapter
 
@@ -34,6 +34,9 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         self.task_config = task_config
         self.capabilities = capabilities
         self.adapter = BackboneAdapter(backbone, capabilities)
+        if spatial_strategy not in {"raise", "per_node", "flatten"}:
+            raise ValueError("spatial_strategy must be 'raise', 'per_node', or 'flatten'")
+        self.spatial_strategy = spatial_strategy
 
     @property
     def config(self):
@@ -53,7 +56,22 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def normalize_batch(self, inputs: Any) -> TimeSeriesBatch:
         batch = TimeSeriesBatch.from_inputs(inputs)
         batch.validate_for(self.task_name)
+        self._batch_build_shapes = {name: tuple(value.shape) for name, value in batch.as_tensor_dict().items()}
         return batch
+
+    def prepare_backbone_batch(self, batch):
+        """Validate direct spatial support or apply the configured fallback."""
+        from tfts.layers.fold_layer import SpatialBatchTransform
+        from tfts.models.registry import check_batch_support
+
+        if batch.layout in self.capabilities.input_spec.accepted_layouts:
+            check_batch_support(self.backbone_config.model_type, batch)
+            return batch, lambda value: value
+        if self.spatial_strategy == "raise":
+            check_batch_support(self.backbone_config.model_type, batch)
+        transformed, restore = SpatialBatchTransform(self.spatial_strategy).apply(batch)
+        check_batch_support(self.backbone_config.model_type, transformed)
+        return transformed, restore
 
     @abstractmethod
     def forward(self, inputs, training=None) -> ModelOutput:
@@ -82,9 +100,20 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
                 return [make_inputs(value) for value in shape]
             return make_dummy(shape)
 
+        batch_shapes = config.get("batch_shapes")
+        if batch_shapes is not None:
+            self({name: make_dummy(shape) for name, shape in batch_shapes.items()})
+            return
         input_shape = config.get("input_shape")
         if input_shape is not None:
             self(make_inputs(input_shape))
+
+    def get_build_config(self):
+        """Persist tensor-only canonical batch shapes for Keras restoration."""
+        batch_shapes = getattr(self, "_batch_build_shapes", None)
+        if batch_shapes is not None:
+            return {"batch_shapes": batch_shapes}
+        return super().get_build_config()
 
     def save(self, filepath, *args, **kwargs):
         """Save while tolerating Keras 2 callbacks' empty native-save options."""
@@ -106,6 +135,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
             {
                 "backbone_config": self.backbone_config.to_dict(),
                 "task_config": self.task_config.to_dict(),
+                "spatial_strategy": self.spatial_strategy,
             }
         )
         return config
@@ -129,7 +159,13 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         backbone_config = AutoConfig.for_model(model_type)
         backbone_config.update(backbone_values)
 
-        model = build_task_model(backbone_config, task_config_from_dict(task_values), model_kwargs=config)
+        spatial_strategy = config.pop("spatial_strategy", "raise")
+        model = build_task_model(
+            backbone_config,
+            task_config_from_dict(task_values),
+            model_kwargs=config,
+            spatial_strategy=spatial_strategy,
+        )
         if not isinstance(model, cls):
             raise ValueError("Serialized task config does not match %s" % cls.__name__)
         return model
@@ -145,7 +181,15 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         task_values = asdict(self.task_config)
         task_values["task"] = self.task_config.task.value
         with open(os.path.join(save_directory, "task_config.json"), "w", encoding="utf-8") as file:
-            json.dump({"schema_version": 1, "task_config": task_values}, file, indent=2)
+            json.dump(
+                {
+                    "schema_version": 1,
+                    "task_config": task_values,
+                    "spatial_strategy": self.spatial_strategy,
+                },
+                file,
+                indent=2,
+            )
         self.save_weights(os.path.join(save_directory, TF2_WEIGHTS_NAME))
 
     @property

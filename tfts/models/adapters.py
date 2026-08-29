@@ -24,6 +24,9 @@ class BackboneAdapter:
         if adapt_batch is not None:
             return adapt_batch(batch)
 
+        if batch.structure is not None:
+            raise ValueError(f"{self.model_type} has no spatial batch adapter for {batch.layout.value} inputs")
+
         if batch.past_time_features is None and batch.future_time_features is None:
             return batch.past_values
 

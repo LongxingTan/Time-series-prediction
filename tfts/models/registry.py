@@ -48,6 +48,11 @@ class ModelMetadata:
                     role: sorted(dtypes)
                     for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
                 },
+                "accepted_layouts": sorted(layout.value for layout in self.capabilities.input_spec.accepted_layouts),
+                "requires_structure": self.capabilities.input_spec.requires_structure,
+                "supports_dynamic_graph": self.capabilities.input_spec.supports_dynamic_graph,
+                "supports_edge_features": self.capabilities.input_spec.supports_edge_features,
+                "supports_node_mask": self.capabilities.input_spec.supports_node_mask,
             },
         }
         return {
@@ -203,6 +208,28 @@ def get_model_capabilities(model_name: str) -> BackboneCapabilities:
         return _ENTRIES[model_name].capabilities
     except KeyError as error:
         raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
+
+
+def check_batch_support(model_name: str, batch) -> None:
+    """Raise a directive error when a backbone cannot consume a batch."""
+    spec = get_model_capabilities(model_name).input_spec
+    if batch.layout not in spec.accepted_layouts:
+        accepted = sorted(layout.value for layout in spec.accepted_layouts)
+        raise ValueError(
+            f"{model_name!r} accepts layouts {accepted}, but the batch is {batch.layout.value}. "
+            "Use spatial_strategy='per_node' or choose a spatial model."
+        )
+    if spec.requires_structure and batch.structure is None:
+        raise ValueError(f"{model_name!r} requires a spatial structure")
+    structure = batch.structure
+    if structure is not None and getattr(structure, "is_dynamic", False) and not spec.supports_dynamic_graph:
+        raise ValueError(f"{model_name!r} does not support time-varying adjacency")
+    if structure is not None and getattr(structure, "edge_features", None) is not None:
+        if not spec.supports_edge_features:
+            raise ValueError(f"{model_name!r} does not support edge features")
+    if structure is not None and getattr(structure, "node_mask", None) is not None:
+        if not spec.supports_node_mask:
+            raise ValueError(f"{model_name!r} does not support masked nodes")
 
 
 def resolve_model_features(

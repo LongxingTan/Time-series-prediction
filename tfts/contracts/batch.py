@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
+
+from .structure import EXPECTED_RANK, GraphStructure, GridStructure, SpatialLayout, SpatialStructure
 
 
 @dataclass
@@ -29,13 +31,18 @@ class TimeSeriesBatch:
     padding_mask: Optional[tf.Tensor] = None
     labels: Optional[tf.Tensor] = None
     metadata: Optional[Mapping[str, Any]] = None
+    structure: Optional[SpatialStructure] = None
 
     def __post_init__(self) -> None:
         if self.past_values is None:
             raise ValueError("past_values is required")
         self.past_values = tf.convert_to_tensor(self.past_values)
-        if self.past_values.shape.rank != 3:
-            raise ValueError("past_values must have shape [batch, time, target]")
+        expected_rank = EXPECTED_RANK[self.layout]
+        if self.past_values.shape.rank != expected_rank:
+            raise ValueError(
+                f"{self.layout.value} layout expects rank-{expected_rank} past_values, "
+                f"got rank {self.past_values.shape.rank}"
+            )
         for name in (
             "future_values",
             "past_time_features",
@@ -52,6 +59,8 @@ class TimeSeriesBatch:
             value = getattr(self, name)
             if value is not None:
                 setattr(self, name, tf.convert_to_tensor(value))
+        if self.structure is not None:
+            self.structure.validate(self.past_values)
 
     @classmethod
     def from_inputs(cls, inputs: Any) -> "TimeSeriesBatch":
@@ -65,6 +74,17 @@ class TimeSeriesBatch:
         if isinstance(inputs, cls):
             return inputs
         if isinstance(inputs, Mapping):
+            inputs = dict(inputs)
+            graph_values = {key: value for key, value in inputs.items() if key.startswith("structure.graph.")}
+            grid_values = {key: value for key, value in inputs.items() if key.startswith("structure.grid.")}
+            if graph_values and grid_values:
+                raise ValueError("A batch cannot contain both graph and grid structure tensors")
+            for key in (*graph_values, *grid_values):
+                inputs.pop(key)
+            if graph_values:
+                inputs["structure"] = GraphStructure.from_tensor_dict(graph_values)
+            elif grid_values:
+                inputs["structure"] = GridStructure.from_tensor_dict(grid_values)
             known = {field.name for field in fields(cls)}
             unknown = set(inputs) - known
             if unknown:
@@ -80,6 +100,28 @@ class TimeSeriesBatch:
             return values
         return {name: value for name, value in values.items() if value is not None}
 
+    def as_tensor_dict(self, include_structure: bool = True) -> Dict[str, tf.Tensor]:
+        """Return tensor leaves only for Keras and ``tf.data`` boundaries."""
+        values = {
+            field.name: getattr(self, field.name) for field in fields(self) if tf.is_tensor(getattr(self, field.name))
+        }
+        if include_structure and self.structure is not None:
+            prefix = "structure.graph." if self.layout == SpatialLayout.NODES else "structure.grid."
+            values.update(self.structure.to_tensor_dict(prefix))
+        return values
+
+    @property
+    def layout(self) -> SpatialLayout:
+        return self.structure.layout if self.structure is not None else SpatialLayout.NONE
+
+    @property
+    def spatial_shape(self) -> Tuple[int, ...]:
+        return self.structure.spatial_shape if self.structure is not None else ()
+
+    @property
+    def spatial_axes(self) -> Tuple[int, ...]:
+        return tuple(range(2, 2 + len(self.spatial_shape)))
+
     @property
     def batch_size(self):
         return tf.shape(self.past_values)[0]
@@ -93,14 +135,15 @@ class TimeSeriesBatch:
         return tf.shape(self.past_values)[-1]
 
     def validate_for(self, task: str) -> None:
+        spatial_rank = EXPECTED_RANK[self.layout]
         temporal_fields = (
             ("past_time_features", self.past_time_features, self.context_length),
             ("past_categorical_features", self.past_categorical_features, self.context_length),
         )
         for name, value, expected_length in temporal_fields:
             if value is not None:
-                if value.shape.rank != 3:
-                    raise ValueError(f"{name} must have shape [batch, time, feature]")
+                if value.shape.rank not in {3, spatial_rank}:
+                    raise ValueError(f"{name} must be shared rank-3 or match the batch layout")
                 tf.debugging.assert_equal(tf.shape(value)[0], self.batch_size, message=f"{name} batch size mismatch")
                 tf.debugging.assert_equal(tf.shape(value)[1], expected_length, message=f"{name} time length mismatch")
 
@@ -111,12 +154,19 @@ class TimeSeriesBatch:
             ("future_values", self.future_values),
         ):
             if value is not None:
-                if value.shape.rank != 3:
-                    raise ValueError(f"{name} must have shape [batch, horizon, feature]")
+                if value.shape.rank not in {3, spatial_rank}:
+                    raise ValueError(f"{name} must be shared rank-3 or match the batch layout")
                 tf.debugging.assert_equal(tf.shape(value)[0], self.batch_size, message=f"{name} batch size mismatch")
                 future_lengths.append((name, tf.shape(value)[1]))
         for name, length in future_lengths[1:]:
             tf.debugging.assert_equal(length, future_lengths[0][1], message=f"{name} horizon mismatch")
+
+        for name, value, reference in (
+            ("past_observed_mask", self.past_observed_mask, self.past_values),
+            ("future_observed_mask", self.future_observed_mask, self.future_values),
+        ):
+            if value is not None and reference is not None and value.shape != reference.shape:
+                raise ValueError(f"{name} must have the same shape as its values")
 
         if task == "imputation":
             if self.past_observed_mask is None:
