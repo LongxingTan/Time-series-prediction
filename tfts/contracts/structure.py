@@ -194,7 +194,7 @@ class GridStructure(SpatialStructure):
         kwargs = {key[len(prefix) :]: value for key, value in values.items() if key.startswith(prefix)}
         mask = kwargs.get("valid_mask")
         coordinates = kwargs.get("coordinates")
-        candidate = mask if mask is not None else coordinates
+        candidate = coordinates if coordinates is not None else mask
         if candidate is None:
             raise ValueError("grid dimensions cannot be inferred from structure tensors")
         kwargs.setdefault("height", int(candidate.shape[-3] if coordinates is not None else candidate.shape[-2]))

@@ -6,11 +6,18 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import GraphStructure, TimeSeriesBatch
+from tfts.contracts import GraphStructure, SpatialLayout, TimeSeriesBatch
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
 from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
 from tfts.models.base import BaseConfig
-from tfts.models.registry import MODEL_REGISTRY, get_config_class, get_model_class, get_model_info, list_models
+from tfts.models.registry import (
+    MODEL_REGISTRY,
+    check_batch_support,
+    get_config_class,
+    get_model_class,
+    get_model_info,
+    list_models,
+)
 
 
 class TestAutoModel(unittest.TestCase):
@@ -60,6 +67,25 @@ class TestAutoModel(unittest.TestCase):
                 info = get_model_info(model_name)
                 self.assertTrue(issubclass(get_config_class(model_name), BaseConfig))
                 self.assertEqual(get_model_class(model_name).__name__, info["class_name"])
+
+    def test_registry_rejects_unsupported_graph_features(self):
+        with self.assertRaisesRegex(ValueError, "layouts"):
+            check_batch_support("dlinear", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=GraphStructure(3)))
+
+        class BatchStub:
+            layout = SpatialLayout.NODES
+            structure = None
+
+        with self.assertRaisesRegex(ValueError, "requires a spatial structure"):
+            check_batch_support("stgcn", BatchStub())
+
+        for structure, message in (
+            (GraphStructure(3, adjacency=tf.zeros([1, 2, 3, 3])), "time-varying"),
+            (GraphStructure(3, edge_features=tf.ones([2, 1])), "edge features"),
+            (GraphStructure(3, node_mask=tf.ones([3])), "masked nodes"),
+        ):
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                check_batch_support("stgcn", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=structure))
 
     def test_every_registered_config_round_trips_through_json(self):
         for model_name in list_models():
