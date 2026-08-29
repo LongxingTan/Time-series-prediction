@@ -33,9 +33,7 @@ def from_knn(coords, k: int, sigma=None, symmetric=True, metric="euclidean") -> 
     rows = np.repeat(np.arange(nodes), int(k))
     columns = neighbors.reshape(-1)
     retained = distances[rows, columns]
-    scale = float(np.std(retained) if sigma is None else sigma)
-    if not np.isfinite(scale) or scale <= 0:
-        scale = 1.0
+    scale = _distance_scale(retained, sigma)
     adjacency = np.zeros((nodes, nodes), dtype=np.float32)
     adjacency[rows, columns] = np.exp(-np.square(retained / scale)).astype(np.float32)
     if symmetric:
@@ -50,9 +48,7 @@ def from_radius(coords, radius: float, sigma=None, metric="euclidean") -> GraphS
     distances = _pairwise_distance(coordinates, metric)
     keep = (distances <= radius) & (distances > 0)
     retained = distances[keep]
-    scale = float(np.std(retained) if sigma is None and retained.size else (sigma or 1.0))
-    if not np.isfinite(scale) or scale <= 0:
-        scale = 1.0
+    scale = _distance_scale(retained, sigma)
     adjacency = np.where(keep, np.exp(-np.square(distances / scale)), 0).astype(np.float32)
     return GraphStructure(num_nodes=coordinates.shape[0], adjacency=adjacency, node_coordinates=coordinates)
 
@@ -109,6 +105,16 @@ def _coordinates(values):
     if not np.all(np.isfinite(coordinates)):
         raise ValueError("coords must contain only finite values")
     return coordinates.astype(np.float32)
+
+
+def _distance_scale(distances, sigma):
+    if sigma is not None:
+        scale = float(sigma)
+        if not np.isfinite(scale) or scale <= 0:
+            raise ValueError("sigma must be finite and positive")
+        return scale
+    scale = float(np.std(distances)) if distances.size else 1.0
+    return scale if np.isfinite(scale) and scale > 0 else 1.0
 
 
 def _pairwise_distance(coordinates, metric):

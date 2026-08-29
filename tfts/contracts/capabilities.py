@@ -5,7 +5,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import FrozenSet, Mapping
 
-from .structure import SpatialLayout
+from .structure import SpatialArrangement, TopologyInput
 
 
 class OutputPort(str, Enum):
@@ -40,8 +40,8 @@ class ModelInputSpec:
     supports_static: bool = False
     supports_multivariate_target: bool = True
     accepted_dtypes_by_role: Mapping[str, FrozenSet[str]] = field(default_factory=dict)
-    accepted_layouts: FrozenSet[SpatialLayout] = frozenset({SpatialLayout.NONE})
-    requires_structure: bool = False
+    arrangement: SpatialArrangement = SpatialArrangement.NONE
+    accepted_topologies: FrozenSet[TopologyInput] = frozenset({TopologyInput.NONE})
     supports_dynamic_graph: bool = False
     supports_edge_features: bool = False
     supports_node_mask: bool = False
@@ -71,16 +71,21 @@ class ModelInputSpec:
         if not self.supports_categorical and any("categorical" in dtypes for dtypes in accepted_dtypes.values()):
             raise ValueError("categorical dtype constraints require supports_categorical=True")
         object.__setattr__(self, "accepted_dtypes_by_role", MappingProxyType(accepted_dtypes))
-        layouts = frozenset(SpatialLayout.normalize(layout) for layout in self.accepted_layouts)
-        if not layouts:
-            raise ValueError("accepted_layouts cannot be empty")
-        if self.requires_structure and layouts == {SpatialLayout.NONE}:
-            raise ValueError("requires_structure needs a spatial accepted_layout")
+        arrangement = SpatialArrangement.normalize(self.arrangement)
+        topologies = frozenset(TopologyInput.normalize(topology) for topology in self.accepted_topologies)
+        if not topologies:
+            raise ValueError("accepted_topologies cannot be empty")
         if (self.supports_dynamic_graph or self.supports_edge_features or self.supports_node_mask) and (
-            SpatialLayout.NODES not in layouts
+            arrangement != SpatialArrangement.SET
         ):
-            raise ValueError("graph capabilities require the nodes layout")
-        object.__setattr__(self, "accepted_layouts", layouts)
+            raise ValueError("graph capabilities require the set arrangement")
+        object.__setattr__(self, "arrangement", arrangement)
+        object.__setattr__(self, "accepted_topologies", topologies)
+
+    @property
+    def accepted_layouts(self):
+        """Compatibility view for callers that only inspect tensor arrangement."""
+        return frozenset({self.arrangement})
 
 
 @dataclass(frozen=True)

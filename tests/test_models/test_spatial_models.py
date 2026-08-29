@@ -29,6 +29,18 @@ class SpatialModelTest(unittest.TestCase):
         result = model(self.batch)
         self.assertEqual(result.shape, (2, 3, 4, 1))
 
+        structure_free = TimeSeriesBatch(self.values)
+        self.assertEqual(model(structure_free).shape, (2, 3, 4, 1))
+
+    def test_plain_batch_cannot_be_coerced_into_a_graph_model(self):
+        plain = TimeSeriesBatch(tf.zeros([2, 8, 1]))
+        for strategy, message in (("raise", "set arrangement"), ("per_node", "rank-4 set")):
+            with self.subTest(strategy=strategy), self.assertRaisesRegex(ValueError, message):
+                model = AutoModelForForecasting.from_config(
+                    AutoConfig.for_model("stgcn"), prediction_length=3, spatial_strategy=strategy
+                )
+                model(plain)
+
     def test_per_node_matches_independent_node_at_inference(self):
         model = AutoModelForForecasting.from_config(
             AutoConfig.for_model("dlinear"), prediction_length=3, spatial_strategy="per_node"

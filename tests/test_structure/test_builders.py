@@ -65,11 +65,14 @@ class StructureBuilderTest(unittest.TestCase):
         coordinates = [[49.28, -123.12], [49.25, -123.1], [49.0, -123.0]]
         knn = from_knn(coordinates, 1, metric="haversine", symmetric=True)
         np.testing.assert_allclose(knn.adjacency, np.asarray(knn.adjacency).T)
-        self.assertTrue(np.all(np.isfinite(from_knn([[0], [1]], 1, sigma=0).adjacency)))
+        with self.assertRaisesRegex(ValueError, "sigma"):
+            from_knn([[0], [1]], 1, sigma=0)
 
-        radius = from_radius([[0], [1], [4]], radius=1.5, sigma=-1)
+        radius = from_radius([[0], [1], [4]], radius=1.5)
         self.assertGreater(float(radius.adjacency[0, 1]), 0)
         self.assertEqual(float(radius.adjacency[0, 2]), 0)
+        with self.assertRaisesRegex(ValueError, "sigma"):
+            from_radius([[0], [1], [4]], radius=1.5, sigma=-1)
         with self.assertRaisesRegex(ValueError, "positive"):
             from_radius([[0], [1]], radius=0)
 

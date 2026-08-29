@@ -10,6 +10,37 @@ import tensorflow as tf
 from tfts.contracts import BackboneOutput, OutputPort, TimeSeriesBatch
 
 
+class SpatialAdapter:
+    """Bidirectional coercion between a batch arrangement and one backbone."""
+
+    def __init__(self, input_spec, model_type, strategy="raise"):
+        from tfts.layers.fold_layer import SpatialBatchTransform
+
+        if strategy not in {"raise", "per_node"}:
+            raise ValueError("spatial_strategy must be 'raise' or 'per_node'")
+        self.input_spec = input_spec
+        self.model_type = model_type
+        self.strategy = strategy
+        self.transform = SpatialBatchTransform(strategy) if strategy == "per_node" else None
+
+    def to_backbone(self, batch):
+        from tfts.models.registry import check_batch_support
+
+        if batch.arrangement == self.input_spec.arrangement:
+            check_batch_support(self.model_type, batch, spec=self.input_spec)
+            return batch, lambda value: value
+        if self.transform is None:
+            check_batch_support(self.model_type, batch, spec=self.input_spec)
+        transformed, restore = self.transform.apply(batch)
+        check_batch_support(self.model_type, transformed, spec=self.input_spec)
+        return transformed, restore
+
+    def from_backbone(self, value, restore):
+        if isinstance(value, dict):
+            return {name: self.from_backbone(item, restore) for name, item in value.items()}
+        return restore(value)
+
+
 class BackboneAdapter:
     """Invoke one backbone without leaking its historical input/output shape."""
 

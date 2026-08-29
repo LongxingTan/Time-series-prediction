@@ -48,8 +48,10 @@ class ModelMetadata:
                     role: sorted(dtypes)
                     for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
                 },
-                "accepted_layouts": sorted(layout.value for layout in self.capabilities.input_spec.accepted_layouts),
-                "requires_structure": self.capabilities.input_spec.requires_structure,
+                "arrangement": self.capabilities.input_spec.arrangement.value,
+                "accepted_topologies": sorted(
+                    topology.value for topology in self.capabilities.input_spec.accepted_topologies
+                ),
                 "supports_dynamic_graph": self.capabilities.input_spec.supports_dynamic_graph,
                 "supports_edge_features": self.capabilities.input_spec.supports_edge_features,
                 "supports_node_mask": self.capabilities.input_spec.supports_node_mask,
@@ -210,17 +212,20 @@ def get_model_capabilities(model_name: str) -> BackboneCapabilities:
         raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
 
 
-def check_batch_support(model_name: str, batch) -> None:
+def check_batch_support(model_name: str, batch, spec=None) -> None:
     """Raise a directive error when a backbone cannot consume a batch."""
-    spec = get_model_capabilities(model_name).input_spec
-    if batch.layout not in spec.accepted_layouts:
-        accepted = sorted(layout.value for layout in spec.accepted_layouts)
-        raise ValueError(
-            f"{model_name!r} accepts layouts {accepted}, but the batch is {batch.layout.value}. "
-            "Use spatial_strategy='per_node' or choose a spatial model."
+    from tfts.contracts import SpatialArrangement, TopologyInput
+
+    spec = spec or get_model_capabilities(model_name).input_spec
+    arrangement = getattr(batch, "arrangement", batch.layout)
+    if arrangement != spec.arrangement:
+        message = (
+            f"{model_name!r} requires the {spec.arrangement.value} arrangement, "
+            f"but past_values has the {arrangement.value} arrangement."
         )
-    if spec.requires_structure and batch.structure is None:
-        raise ValueError(f"{model_name!r} requires a spatial structure")
+        if arrangement != SpatialArrangement.NONE and spec.arrangement == SpatialArrangement.NONE:
+            message += " Use spatial_strategy='per_node' for independent spatial forecasts."
+        raise ValueError(message)
     structure = batch.structure
     if structure is not None and getattr(structure, "is_dynamic", False) and not spec.supports_dynamic_graph:
         raise ValueError(f"{model_name!r} does not support time-varying adjacency")
@@ -230,6 +235,12 @@ def check_batch_support(model_name: str, batch) -> None:
     if structure is not None and getattr(structure, "node_mask", None) is not None:
         if not spec.supports_node_mask:
             raise ValueError(f"{model_name!r} does not support masked nodes")
+    topologies = getattr(batch, "topology_inputs", frozenset())
+    accepted = spec.accepted_topologies
+    topology_optional = bool(accepted & {TopologyInput.NONE, TopologyInput.LEARNED})
+    if not topology_optional and not (topologies & accepted):
+        names = sorted(topology.value for topology in accepted)
+        raise ValueError(f"{model_name!r} requires one of topology inputs {names}")
 
 
 def resolve_model_features(

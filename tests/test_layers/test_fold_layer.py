@@ -54,23 +54,15 @@ class FoldLayerTest(unittest.TestCase):
         self.assertEqual(restore(tf.zeros([6, 2, 1])).shape, (2, 2, 3, 1))
         self.assertIsNone(restore(None))
 
-    def test_flatten_transform_flattens_spatial_features(self):
-        batch = TimeSeriesBatch(
-            tf.zeros([2, 4, 3, 2]),
-            past_time_features=tf.zeros([2, 4, 3]),
-            static_real_features=tf.zeros([2, 3, 2]),
-            static_categorical_features=tf.zeros([2, 1]),
-            labels=tf.ones([2, 1]),
-            structure=GraphStructure(3),
-        )
-        transformed, restore = SpatialBatchTransform("flatten").apply(batch)
-        self.assertEqual(transformed.past_values.shape, (2, 4, 6))
-        self.assertEqual(transformed.past_time_features.shape, (2, 4, 3))
-        self.assertEqual(transformed.static_real_features.shape, (2, 6))
-        self.assertEqual(transformed.static_categorical_features.shape, (2, 1))
-        self.assertEqual(transformed.labels.shape, (2, 1))
-        marker = tf.ones([2, 1, 1])
-        self.assertIs(restore(marker), marker)
+    def test_transform_preserves_metadata_and_rejects_missing_structure(self):
+        batch = TimeSeriesBatch(tf.zeros([2, 4, 3, 1]), metadata={"source": "traffic"}, structure=GraphStructure(3))
+        transformed, _ = SpatialBatchTransform("per_node").apply(batch)
+        self.assertEqual(transformed.metadata, {"source": "traffic"})
+        plain_set = TimeSeriesBatch(tf.zeros([2, 4, 3, 1]))
+        transformed, _ = SpatialBatchTransform("per_node").apply(plain_set)
+        self.assertEqual(transformed.past_values.shape, (6, 4, 1))
+        with self.assertRaisesRegex(ValueError, "rank-4 set"):
+            SpatialBatchTransform("per_node").apply(TimeSeriesBatch(tf.zeros([2, 4, 1])))
 
 
 if __name__ == "__main__":

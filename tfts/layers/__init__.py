@@ -17,7 +17,7 @@ from .embed_layer import DataEmbedding, TokenEmbedding
 
 # Graph layers
 from .fold_layer import FoldSpatialToBatch, UnfoldBatchToSpatial
-from .graph_layer import AdaptiveAdjacency, ChebConv, GraphAttention, GraphConv
+from .graph_layer import AdaptiveAdjacency, AdjacencyPolynomialConv, ChebConv, GraphAttention, GraphConv
 from .mask_layer import CausalMask, ProbMask
 
 # MoE layers
@@ -73,6 +73,7 @@ __all__ = [
     "GraphAttention",
     "GraphConv",
     "AdaptiveAdjacency",
+    "AdjacencyPolynomialConv",
     "ChebConv",
     "FoldSpatialToBatch",
     "UnfoldBatchToSpatial",

@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, GridStructure, SpatialLayout, TimeSeriesBatch
+from tfts.contracts import GraphStructure, GridStructure, SpatialArrangement, SpatialLayout, TimeSeriesBatch
 
 
 class BatchStructureTest(unittest.TestCase):
@@ -10,8 +10,9 @@ class BatchStructureTest(unittest.TestCase):
         batch = TimeSeriesBatch(tf.zeros([2, 8, 1]))
         self.assertEqual(batch.layout, SpatialLayout.NONE)
         self.assertEqual(batch.spatial_axes, ())
-        with self.assertRaisesRegex(ValueError, "none layout expects rank-3"):
-            TimeSeriesBatch(tf.zeros([2, 8, 3, 1]))
+        node_set = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]))
+        self.assertEqual(node_set.arrangement, SpatialArrangement.SET)
+        self.assertIsNone(node_set.structure)
 
     def test_graph_and_grid_dimensions_are_validated(self):
         graph = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]), structure=GraphStructure(3, adjacency=tf.eye(3)))

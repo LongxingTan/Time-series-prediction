@@ -27,15 +27,16 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
 
     def __init__(self, backbone, task_config, capabilities, spatial_strategy="raise", **kwargs):
         super().__init__(**kwargs)
-        from tfts.models.adapters import BackboneAdapter
+        from tfts.models.adapters import BackboneAdapter, SpatialAdapter
 
         self.backbone = backbone
         self.backbone_config = backbone.config
         self.task_config = task_config
         self.capabilities = capabilities
         self.adapter = BackboneAdapter(backbone, capabilities)
-        if spatial_strategy not in {"raise", "per_node", "flatten"}:
-            raise ValueError("spatial_strategy must be 'raise', 'per_node', or 'flatten'")
+        if self.task_name != "forecasting" and spatial_strategy != "raise":
+            raise ValueError("spatial_strategy is only supported for forecasting")
+        self.spatial_adapter = SpatialAdapter(capabilities.input_spec, self.adapter.model_type, spatial_strategy)
         self.spatial_strategy = spatial_strategy
 
     @property
@@ -56,22 +57,24 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def normalize_batch(self, inputs: Any) -> TimeSeriesBatch:
         batch = TimeSeriesBatch.from_inputs(inputs)
         batch.validate_for(self.task_name)
-        self._batch_build_shapes = {name: tuple(value.shape) for name, value in batch.as_tensor_dict().items()}
+        if not hasattr(self, "_batch_build_shapes"):
+            shared_names = set()
+            if batch.structure is not None:
+                from tfts.contracts import GraphStructure
+
+                prefix = "structure.graph." if isinstance(batch.structure, GraphStructure) else "structure.grid."
+                _, shared = batch.structure.split_tensor_dict(prefix)
+                shared_names = set(shared)
+            self._batch_build_shapes = {}
+            for name, value in batch.as_tensor_dict().items():
+                shape = tuple(value.shape)
+                self._batch_build_shapes[name] = shape if name in shared_names else (None,) + shape[1:]
         return batch
 
     def prepare_backbone_batch(self, batch):
         """Validate direct spatial support or apply the configured fallback."""
-        from tfts.layers.fold_layer import SpatialBatchTransform
-        from tfts.models.registry import check_batch_support
-
-        if batch.layout in self.capabilities.input_spec.accepted_layouts:
-            check_batch_support(self.backbone_config.model_type, batch)
-            return batch, lambda value: value
-        if self.spatial_strategy == "raise":
-            check_batch_support(self.backbone_config.model_type, batch)
-        transformed, restore = SpatialBatchTransform(self.spatial_strategy).apply(batch)
-        check_batch_support(self.backbone_config.model_type, transformed)
-        return transformed, restore
+        transformed, restore = self.spatial_adapter.to_backbone(batch)
+        return transformed, lambda value: self.spatial_adapter.from_backbone(value, restore)
 
     @abstractmethod
     def forward(self, inputs, training=None) -> ModelOutput:
@@ -183,7 +186,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         with open(os.path.join(save_directory, "task_config.json"), "w", encoding="utf-8") as file:
             json.dump(
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "task_config": task_values,
                     "spatial_strategy": self.spatial_strategy,
                 },

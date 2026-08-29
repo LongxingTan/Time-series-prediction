@@ -1,5 +1,13 @@
 # Release notes
 
+## v0.0.22
+
+- Add typed spatial arrangements and topology inputs to ``TimeSeriesBatch``.
+- Add experimental STGCN layers and forecasting support for shared or batched
+  dense graphs.
+- Preserve shared graph metadata across Keras/``tf.data`` boundaries without
+  copying static topology into every training window.
+
 
 ## v.0.0.15
 - fix classification/anomaly detection

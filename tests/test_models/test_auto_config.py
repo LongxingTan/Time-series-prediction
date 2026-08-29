@@ -6,7 +6,7 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import GraphStructure, SpatialLayout, TimeSeriesBatch
+from tfts.contracts import GraphStructure, ModelInputSpec, SpatialArrangement, TimeSeriesBatch, TopologyInput
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
 from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
 from tfts.models.base import BaseConfig
@@ -69,15 +69,22 @@ class TestAutoModel(unittest.TestCase):
                 self.assertEqual(get_model_class(model_name).__name__, info["class_name"])
 
     def test_registry_rejects_unsupported_graph_features(self):
-        with self.assertRaisesRegex(ValueError, "layouts"):
+        with self.assertRaisesRegex(ValueError, "arrangement"):
             check_batch_support("dlinear", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=GraphStructure(3)))
 
         class BatchStub:
-            layout = SpatialLayout.NODES
+            arrangement = SpatialArrangement.SET
+            layout = SpatialArrangement.SET
+            topology_inputs = frozenset()
             structure = None
 
-        with self.assertRaisesRegex(ValueError, "requires a spatial structure"):
+        with self.assertRaisesRegex(ValueError, "dense_adjacency"):
             check_batch_support("stgcn", BatchStub())
+
+        info = get_model_info("stgcn")["capabilities"]["input_spec"]
+        self.assertEqual(info["arrangement"], SpatialArrangement.SET.value)
+        self.assertEqual(info["accepted_topologies"], [TopologyInput.DENSE_ADJACENCY.value])
+        self.assertFalse(info["supports_multivariate_target"])
 
         for structure, message in (
             (GraphStructure(3, adjacency=tf.zeros([1, 2, 3, 3])), "time-varying"),
@@ -86,6 +93,26 @@ class TestAutoModel(unittest.TestCase):
         ):
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 check_batch_support("stgcn", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=structure))
+
+    def test_arrangement_and_learned_topology_are_independent(self):
+        learned = ModelInputSpec(
+            arrangement=SpatialArrangement.SET,
+            accepted_topologies={TopologyInput.LEARNED},
+        )
+        check_batch_support("adaptive-model", TimeSeriesBatch(tf.zeros([2, 4, 3, 1])), spec=learned)
+        dense = ModelInputSpec(
+            arrangement=SpatialArrangement.SET,
+            accepted_topologies={TopologyInput.DENSE_ADJACENCY},
+        )
+        with self.assertRaisesRegex(ValueError, "dense_adjacency"):
+            check_batch_support(
+                "dense-model",
+                TimeSeriesBatch(
+                    tf.zeros([2, 4, 3, 1]),
+                    structure=GraphStructure(3, edge_index=tf.constant([[0], [1]], tf.int32)),
+                ),
+                spec=dense,
+            )
 
     def test_every_registered_config_round_trips_through_json(self):
         for model_name in list_models():

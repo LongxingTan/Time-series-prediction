@@ -150,7 +150,7 @@ class AutoModel:
         config.update(architecture)
         with open(task_path, "r", encoding="utf-8") as file:
             artifact = json.load(file)
-        if artifact.get("schema_version") != 1:
+        if artifact.get("schema_version") not in {1, 2}:
             raise ValueError("Unsupported task artifact schema %r" % artifact.get("schema_version"))
         task_config = task_config_from_dict(artifact["task_config"])
         task_type = TaskType.normalize(task_config.task)

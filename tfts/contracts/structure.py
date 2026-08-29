@@ -4,17 +4,38 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from enum import Enum
-from typing import Dict, Mapping, Optional, Tuple
+from typing import ClassVar, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
 
 
-class SpatialLayout(str, Enum):
-    """Spatial axes present between time and feature dimensions."""
+class SpatialArrangement(str, Enum):
+    """Physical arrangement encoded by the rank of time-series values."""
 
     NONE = "none"
-    NODES = "nodes"
+    SET = "set"
+    NODES = "set"
     GRID = "grid"
+
+    @classmethod
+    def normalize(cls, value):
+        if isinstance(value, cls):
+            return value
+        normalized = str(value).lower()
+        return cls("set" if normalized == "nodes" else normalized)
+
+
+SpatialLayout = SpatialArrangement
+
+
+class TopologyInput(str, Enum):
+    """Relational information consumed by a spatial model."""
+
+    NONE = "none"
+    DENSE_ADJACENCY = "dense_adjacency"
+    EDGE_INDEX = "edge_index"
+    LEARNED = "learned"
+    COORDINATES = "coordinates"
 
     @classmethod
     def normalize(cls, value):
@@ -24,10 +45,12 @@ class SpatialLayout(str, Enum):
 
 
 EXPECTED_RANK = {
-    SpatialLayout.NONE: 3,
-    SpatialLayout.NODES: 4,
-    SpatialLayout.GRID: 5,
+    SpatialArrangement.NONE: 3,
+    SpatialArrangement.SET: 4,
+    SpatialArrangement.GRID: 5,
 }
+
+ARRANGEMENT_BY_RANK = {rank: arrangement for arrangement, rank in EXPECTED_RANK.items()}
 
 
 @dataclass(frozen=True)
@@ -38,9 +61,16 @@ class SpatialStructure:
     public Python contracts; model boundaries receive only their tensor fields.
     """
 
+    SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {}
+
     @property
-    def layout(self) -> SpatialLayout:
+    def arrangement(self) -> SpatialArrangement:
         raise NotImplementedError
+
+    @property
+    def layout(self) -> SpatialArrangement:
+        """Compatibility alias for :attr:`arrangement`."""
+        return self.arrangement
 
     @property
     def spatial_shape(self) -> Tuple[int, ...]:
@@ -64,10 +94,34 @@ class SpatialStructure:
             if (value := getattr(self, field.name)) is not None and tf.is_tensor(value)
         }
 
+    def split_tensor_dict(self, prefix: str = "structure."):
+        """Return ``(per_sample, shared)`` tensors using type-owned semantics."""
+        per_sample, shared = {}, {}
+        for name, value in self.to_tensor_dict(prefix).items():
+            field_name = name[len(prefix) :]
+            ranks = self.SHARED_FIELD_RANKS.get(field_name, ())
+            target = shared if value.shape.rank in ranks else per_sample
+            target[name] = value
+        return per_sample, shared
+
+    @property
+    def topology_inputs(self):
+        return frozenset()
+
 
 @dataclass(frozen=True)
 class GraphStructure(SpatialStructure):
     """Topology for node-set values shaped ``[B, T, N, C]``."""
+
+    SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {
+        "adjacency": (2,),
+        "edge_index": (2,),
+        "edge_weight": (1,),
+        "edge_features": (2,),
+        "node_features": (2,),
+        "node_coordinates": (2,),
+        "node_mask": (1,),
+    }
 
     num_nodes: int
     adjacency: Optional[tf.Tensor] = None
@@ -99,8 +153,8 @@ class GraphStructure(SpatialStructure):
             raise ValueError("node_ids length must equal num_nodes")
 
     @property
-    def layout(self):
-        return SpatialLayout.NODES
+    def arrangement(self):
+        return SpatialArrangement.SET
 
     @property
     def spatial_shape(self):
@@ -113,6 +167,17 @@ class GraphStructure(SpatialStructure):
     @property
     def is_dynamic(self):
         return self.adjacency is not None and self.adjacency.shape.rank == 4
+
+    @property
+    def topology_inputs(self):
+        inputs = set()
+        if self.adjacency is not None:
+            inputs.add(TopologyInput.DENSE_ADJACENCY)
+        if self.edge_index is not None:
+            inputs.add(TopologyInput.EDGE_INDEX)
+        if self.node_coordinates is not None:
+            inputs.add(TopologyInput.COORDINATES)
+        return frozenset(inputs)
 
     def validate(self, values):
         if values.shape.rank != 4:
@@ -139,9 +204,11 @@ class GraphStructure(SpatialStructure):
                 raise ValueError(f"{name} must be [N,F] or [B,N,F]")
 
     @classmethod
-    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor], prefix="structure.graph."):
+    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor], prefix="structure.graph.", num_nodes=None):
         kwargs = {key[len(prefix) :]: value for key, value in values.items() if key.startswith(prefix)}
-        if "num_nodes" not in kwargs:
+        if num_nodes is not None:
+            kwargs["num_nodes"] = num_nodes
+        elif "num_nodes" not in kwargs:
             candidate = kwargs.get("adjacency", kwargs.get("node_mask"))
             if candidate is None or candidate.shape[-1] is None:
                 raise ValueError("num_nodes cannot be inferred from structure tensors")
@@ -152,6 +219,11 @@ class GraphStructure(SpatialStructure):
 @dataclass(frozen=True)
 class GridStructure(SpatialStructure):
     """Geometry for grid values shaped ``[B, T, height, width, C]``."""
+
+    SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {
+        "coordinates": (3,),
+        "valid_mask": (2,),
+    }
 
     height: int
     width: int
@@ -172,12 +244,18 @@ class GridStructure(SpatialStructure):
         object.__setattr__(self, "periodic_axes", axes)
 
     @property
-    def layout(self):
-        return SpatialLayout.GRID
+    def arrangement(self):
+        return SpatialArrangement.GRID
 
     @property
     def spatial_shape(self):
         return (int(self.height), int(self.width))
+
+    @property
+    def topology_inputs(self):
+        if self.coordinates is None:
+            return frozenset()
+        return frozenset({TopologyInput.COORDINATES})
 
     def validate(self, values):
         if values.shape.rank != 5:

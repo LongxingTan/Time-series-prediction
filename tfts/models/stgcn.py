@@ -4,8 +4,8 @@ from typing import Optional
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort, SpatialLayout
-from tfts.layers import ChebConv
+from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort, SpatialArrangement, TopologyInput
+from tfts.layers import AdjacencyPolynomialConv
 
 from .base import BaseModel, CommonConfig
 from .registry import register_model
@@ -37,7 +37,7 @@ class _STGCNBlock(tf.keras.layers.Layer):
         self.temporal_gate = tf.keras.layers.Conv2D(
             self.hidden_size, (self.temporal_kernel, 1), padding="same", activation="sigmoid"
         )
-        self.graph = ChebConv(self.hidden_size, self.cheb_k, activation="relu")
+        self.graph = AdjacencyPolynomialConv(self.hidden_size, self.cheb_k, activation="relu")
         self.residual_projection = tf.keras.layers.Dense(self.hidden_size)
         self.norm = tf.keras.layers.LayerNormalization()
         self.dropout = tf.keras.layers.Dropout(self.dropout_rate)
@@ -75,13 +75,18 @@ class _STGCNBlock(tf.keras.layers.Layer):
     capabilities=BackboneCapabilities(
         output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
         input_spec=ModelInputSpec(
-            accepted_layouts=frozenset({SpatialLayout.NODES}),
-            requires_structure=True,
+            arrangement=SpatialArrangement.SET,
+            accepted_topologies=frozenset({TopologyInput.DENSE_ADJACENCY}),
+            supports_multivariate_target=False,
         ),
     ),
 )
 class STGCN(BaseModel):
-    """Direct graph forecast over dense shared or batch-specific topology."""
+    """Direct graph forecast over dense shared or batch-specific topology.
+
+    Temporal convolutions use same padding so the complete observed context is
+    retained; this differs from the valid-padding temporal blocks in the paper.
+    """
 
     def __init__(self, predict_sequence_length=1, config: Optional[STGCNConfig] = None):
         config = config or STGCNConfig()
@@ -99,7 +104,7 @@ class STGCN(BaseModel):
         self.horizon_projection = tf.keras.layers.Dense(self.predict_sequence_length)
 
     def adapt_batch(self, batch):
-        if batch.structure.adjacency is None:
+        if batch.structure is None or batch.structure.adjacency is None:
             raise ValueError("stgcn requires dense adjacency")
         return {"values": batch.past_values, "adjacency": batch.structure.adjacency}
 

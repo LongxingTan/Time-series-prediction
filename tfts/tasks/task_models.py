@@ -65,8 +65,8 @@ class ForecastingModel(TimeSeriesTaskModel):
             backbone_output = self.adapter.forward(model_batch, training=training)
             predictions = restore(backbone_output.native_forecast)
             distribution_params = backbone_output.distribution_params
-            if distribution_params is not None and self.spatial_strategy == "per_node":
-                distribution_params = {name: restore(value) for name, value in distribution_params.items()}
+            if distribution_params is not None:
+                distribution_params = restore(distribution_params)
             return ForecastOutput(
                 predictions=predictions,
                 distribution_params=distribution_params,
@@ -90,8 +90,7 @@ class ForecastingModel(TimeSeriesTaskModel):
                 backbone_output=backbone_output,
             )
         params = self.head(backbone_output.sequence_output)
-        if self.spatial_strategy == "per_node":
-            params = {name: restore(value) for name, value in params.items()}
+        params = restore(params)
         return ForecastOutput(
             predictions=self.output_distribution.mean(params),
             distribution_params=params,

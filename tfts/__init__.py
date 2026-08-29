@@ -11,10 +11,12 @@ from tfts.contracts import (
     GraphStructure,
     GridStructure,
     ImputationTaskConfig,
+    SpatialArrangement,
     SpatialLayout,
     SpatialStructure,
     TaskType,
     TimeSeriesBatch,
+    TopologyInput,
 )
 from tfts.data import (
     AutoPreprocessor,
@@ -125,7 +127,9 @@ __all__ = [
     "TaskType",
     "TimeSeriesBatch",
     "SpatialLayout",
+    "SpatialArrangement",
     "SpatialStructure",
+    "TopologyInput",
     "list_models",
     "list_supported_tasks",
     "resolve_model_features",

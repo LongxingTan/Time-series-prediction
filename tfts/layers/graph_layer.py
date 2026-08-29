@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Dropout, Layer
 
 
 @tf.keras.utils.register_keras_serializable(package="tfts")
-class ChebConv(Layer):
+class AdjacencyPolynomialConv(Layer):
     """K-order graph polynomial convolution for dense adjacency.
 
     Inputs are ``(features, adjacency)`` with features ``[B,N,C]`` and shared
@@ -55,6 +55,11 @@ class ChebConv(Layer):
             }
         )
         return config
+
+
+@tf.keras.utils.register_keras_serializable(package="tfts")
+class ChebConv(AdjacencyPolynomialConv):
+    """Compatibility name for :class:`AdjacencyPolynomialConv`."""
 
 
 @tf.keras.utils.register_keras_serializable(package="tfts")

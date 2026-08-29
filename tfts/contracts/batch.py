@@ -7,7 +7,14 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
 
-from .structure import EXPECTED_RANK, GraphStructure, GridStructure, SpatialLayout, SpatialStructure
+from .structure import (
+    ARRANGEMENT_BY_RANK,
+    EXPECTED_RANK,
+    GraphStructure,
+    GridStructure,
+    SpatialArrangement,
+    SpatialStructure,
+)
 
 
 @dataclass
@@ -37,12 +44,9 @@ class TimeSeriesBatch:
         if self.past_values is None:
             raise ValueError("past_values is required")
         self.past_values = tf.convert_to_tensor(self.past_values)
-        expected_rank = EXPECTED_RANK[self.layout]
-        if self.past_values.shape.rank != expected_rank:
-            raise ValueError(
-                f"{self.layout.value} layout expects rank-{expected_rank} past_values, "
-                f"got rank {self.past_values.shape.rank}"
-            )
+        rank = self.past_values.shape.rank
+        if rank not in ARRANGEMENT_BY_RANK:
+            raise ValueError("past_values must have rank 3 (sequence), 4 (set), or 5 (grid), " f"got rank {rank}")
         for name in (
             "future_values",
             "past_time_features",
@@ -82,7 +86,9 @@ class TimeSeriesBatch:
             for key in (*graph_values, *grid_values):
                 inputs.pop(key)
             if graph_values:
-                inputs["structure"] = GraphStructure.from_tensor_dict(graph_values)
+                values = inputs.get("past_values")
+                num_nodes = values.shape[2] if values is not None and values.shape.rank == 4 else None
+                inputs["structure"] = GraphStructure.from_tensor_dict(graph_values, num_nodes=num_nodes)
             elif grid_values:
                 inputs["structure"] = GridStructure.from_tensor_dict(grid_values)
             known = {field.name for field in fields(cls)}
@@ -106,17 +112,31 @@ class TimeSeriesBatch:
             field.name: getattr(self, field.name) for field in fields(self) if tf.is_tensor(getattr(self, field.name))
         }
         if include_structure and self.structure is not None:
-            prefix = "structure.graph." if self.layout == SpatialLayout.NODES else "structure.grid."
+            prefix = "structure.graph." if isinstance(self.structure, GraphStructure) else "structure.grid."
             values.update(self.structure.to_tensor_dict(prefix))
         return values
 
     @property
-    def layout(self) -> SpatialLayout:
-        return self.structure.layout if self.structure is not None else SpatialLayout.NONE
+    def arrangement(self) -> SpatialArrangement:
+        return ARRANGEMENT_BY_RANK[self.past_values.shape.rank]
+
+    @property
+    def layout(self) -> SpatialArrangement:
+        """Compatibility alias for :attr:`arrangement`."""
+        return self.arrangement
+
+    @property
+    def topology_inputs(self):
+        return self.structure.topology_inputs if self.structure is not None else frozenset()
 
     @property
     def spatial_shape(self) -> Tuple[int, ...]:
-        return self.structure.spatial_shape if self.structure is not None else ()
+        dimensions = self.past_values.shape[2:-1]
+        if any(dimension is None for dimension in dimensions):
+            if self.structure is None:
+                raise ValueError("spatial dimensions must be statically known when no structure is provided")
+            return self.structure.spatial_shape
+        return tuple(int(dimension) for dimension in dimensions)
 
     @property
     def spatial_axes(self) -> Tuple[int, ...]:
@@ -135,7 +155,7 @@ class TimeSeriesBatch:
         return tf.shape(self.past_values)[-1]
 
     def validate_for(self, task: str) -> None:
-        spatial_rank = EXPECTED_RANK[self.layout]
+        spatial_rank = EXPECTED_RANK[self.arrangement]
         temporal_fields = (
             ("past_time_features", self.past_time_features, self.context_length),
             ("past_categorical_features", self.past_categorical_features, self.context_length),
@@ -165,14 +185,19 @@ class TimeSeriesBatch:
             ("past_observed_mask", self.past_observed_mask, self.past_values),
             ("future_observed_mask", self.future_observed_mask, self.future_values),
         ):
-            if value is not None and reference is not None and value.shape != reference.shape:
-                raise ValueError(f"{name} must have the same shape as its values")
+            if value is not None and reference is not None:
+                tf.debugging.assert_equal(
+                    tf.shape(value), tf.shape(reference), message=f"{name} must have the same shape as its values"
+                )
 
         if task == "imputation":
             if self.past_observed_mask is None:
                 raise ValueError("imputation requires past_observed_mask")
-            if self.past_observed_mask.shape != self.past_values.shape:
-                raise ValueError("past_observed_mask must have the same shape as past_values")
+            tf.debugging.assert_equal(
+                tf.shape(self.past_observed_mask),
+                tf.shape(self.past_values),
+                message="past_observed_mask must have the same shape as past_values",
+            )
         elif task == "classification" and self.labels is not None:
             if self.labels.shape.rank not in (1, 2):
                 raise ValueError("classification labels must have rank 1 or 2")
