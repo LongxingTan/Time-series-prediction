@@ -23,7 +23,9 @@ class GraphLayerTest(unittest.TestCase):
 
     def test_adaptive_adjacency_is_stochastic_and_serializable(self):
         layer = AdaptiveAdjacency(4, embed_dim=3)
-        adjacency = layer()
+        # Keras 2 requires every Layer invocation to receive a first argument,
+        # even when the layer does not use an input tensor.
+        adjacency = layer(None)
         self.assertEqual(adjacency.shape, (4, 4))
         np.testing.assert_allclose(tf.reduce_sum(adjacency, axis=-1), np.ones(4), atol=1e-6)
         self.assertEqual(layer.get_config()["embed_dim"], 3)
