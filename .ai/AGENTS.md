@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Principles
+
+Do what is right for the long term. Do what is right for the long term. Do what is right for the long term.
+
+- Think long term and design for maintainability. Every new change should reduce future development costs; do not introduce technical debt.
+- Be alert to code that could create architectural forks. Follow best practices and converge on one coherent structure.
+- Maintain a single source of truth: provide one authoritative write path, and derive or reuse everything else from it.
+- Solve structural problems through refactoring. Do not bypass them with patches or special cases.
+- Follow the best practical, modern practices available.
+- Read the existing code before writing code. First look for code within the project that can be reused or extended.
+- Prefer iterative replacement over additive layering. Remove obsolete code after a rewrite or refactor.
+- Follow KISS. Choose the shortest path that is also best for the long term; if the architecture creates redundancy, simplify the architecture.
+- Use strong typing to the degree appropriate, and keep a single authoritative definition for each shared type.
+- Do not create cosmetic or misleading fixes. Changes must solve the real problem.
+- Do not trade solution quality for implementation convenience. AI implementation is not human labor; always choose the best solution.
+- Build deeply encapsulated components: keep complexity inside, expose only the few lifecycle hooks and APIs that callers need, and design for caller ergonomics.
+- Avoid short-term hacks and patches.
+- Make precise, surgical changes; do not add excessive fallback behavior.
+
 ## Useful commands
 
 TFTS is a TensorFlow/Keras project. Tests use Python's `unittest` framework, not pytest. The Makefile runs tools through the locked `uv`
