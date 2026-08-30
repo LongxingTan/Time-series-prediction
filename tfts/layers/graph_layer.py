@@ -7,6 +7,67 @@ from tensorflow.keras import activations, constraints, initializers, regularizer
 from tensorflow.keras.layers import Dropout, Layer
 
 
+@tf.keras.utils.register_keras_serializable(package="tfts")
+class AdjacencyPolynomialConv(Layer):
+    """K-order graph polynomial convolution for dense adjacency.
+
+    Inputs are ``(features, adjacency)`` with features ``[B,N,C]`` and shared
+    ``[N,N]`` or batched ``[B,N,N]`` adjacency. By default, non-negative
+    adjacency is symmetrized and degree-normalized so its spectrum lies in
+    ``[-1, 1]`` before the polynomial recursion.
+    """
+
+    def __init__(self, units, k=3, activation=None, use_bias=True, normalize=True, **kwargs):
+        super().__init__(**kwargs)
+        if int(k) < 1:
+            raise ValueError("k must be at least one")
+        self.units = int(units)
+        self.k = int(k)
+        self.activation = activations.get(activation)
+        self.use_bias = bool(use_bias)
+        self.normalize = bool(normalize)
+
+    def build(self, input_shape):
+        input_dim = input_shape[0][-1]
+        self.kernel = self.add_weight(
+            name="kernel", shape=(self.k, input_dim, self.units), initializer="glorot_uniform"
+        )
+        self.bias = self.add_weight(name="bias", shape=(self.units,), initializer="zeros") if self.use_bias else None
+        super().build(input_shape)
+
+    def call(self, inputs):
+        features, adjacency = inputs
+        adjacency = tf.cast(adjacency, features.dtype)
+        if self.normalize:
+            tf.debugging.assert_non_negative(adjacency, message="adjacency must be non-negative")
+            adjacency = 0.5 * (adjacency + tf.linalg.matrix_transpose(adjacency))
+            degree = tf.reduce_sum(adjacency, axis=-1)
+            inverse_root = tf.math.rsqrt(tf.maximum(degree, tf.keras.backend.epsilon()))
+            adjacency = inverse_root[..., :, None] * adjacency * inverse_root[..., None, :]
+        terms = [features]
+        if self.k > 1:
+            terms.append(tf.matmul(adjacency, features))
+        for _ in range(2, self.k):
+            terms.append(2.0 * tf.matmul(adjacency, terms[-1]) - terms[-2])
+        output = tf.add_n([tf.matmul(term, self.kernel[index]) for index, term in enumerate(terms)])
+        if self.bias is not None:
+            output = tf.nn.bias_add(output, self.bias)
+        return self.activation(output) if self.activation is not None else output
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "units": self.units,
+                "k": self.k,
+                "activation": activations.serialize(self.activation),
+                "use_bias": self.use_bias,
+                "normalize": self.normalize,
+            }
+        )
+        return config
+
+
 class GraphConv(Layer):
     """Basic Graph Convolution Layer.
 

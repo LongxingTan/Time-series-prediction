@@ -48,6 +48,12 @@ class ModelMetadata:
                     role: sorted(dtypes)
                     for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
                 },
+                "arrangement": self.capabilities.input_spec.arrangement.value,
+                "accepted_topologies": sorted(
+                    topology.value for topology in self.capabilities.input_spec.accepted_topologies
+                ),
+                "supports_dynamic_graph": self.capabilities.input_spec.supports_dynamic_graph,
+                "supports_node_mask": self.capabilities.input_spec.supports_node_mask,
             },
         }
         return {
@@ -203,6 +209,34 @@ def get_model_capabilities(model_name: str) -> BackboneCapabilities:
         return _ENTRIES[model_name].capabilities
     except KeyError as error:
         raise ValueError(f"Unknown model {model_name!r}. Available: {list_models()}") from error
+
+
+def check_batch_support(model_name: str, batch, spec=None) -> None:
+    """Raise a directive error when a backbone cannot consume a batch."""
+    from tfts.contracts import SpatialArrangement, TopologyInput
+
+    spec = spec or get_model_capabilities(model_name).input_spec
+    arrangement = batch.arrangement
+    if arrangement != spec.arrangement:
+        message = (
+            f"{model_name!r} requires the {spec.arrangement.value} arrangement, "
+            f"but past_values has the {arrangement.value} arrangement."
+        )
+        if arrangement != SpatialArrangement.NONE and spec.arrangement == SpatialArrangement.NONE:
+            message += " Use spatial_strategy='per_node' for independent spatial forecasts."
+        raise ValueError(message)
+    structure = batch.structure
+    if structure is not None and getattr(structure, "is_dynamic", False) and not spec.supports_dynamic_graph:
+        raise ValueError(f"{model_name!r} does not support time-varying adjacency")
+    if structure is not None and getattr(structure, "node_mask", None) is not None:
+        if not spec.supports_node_mask:
+            raise ValueError(f"{model_name!r} does not support masked nodes")
+    topologies = getattr(batch, "topology_inputs", frozenset())
+    accepted = spec.accepted_topologies
+    topology_optional = TopologyInput.NONE in accepted
+    if not topology_optional and not (topologies & accepted):
+        names = sorted(topology.value for topology in accepted)
+        raise ValueError(f"{model_name!r} requires one of topology inputs {names}")
 
 
 def resolve_model_features(

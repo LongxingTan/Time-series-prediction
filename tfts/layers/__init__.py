@@ -16,7 +16,8 @@ from .dense_layer import DenseTemp, FeedForwardNetwork, MoeMLP
 from .embed_layer import DataEmbedding, TokenEmbedding
 
 # Graph layers
-from .graph_layer import GraphAttention, GraphConv
+from .fold_layer import FoldSpatialToBatch, UnfoldBatchToSpatial
+from .graph_layer import AdjacencyPolynomialConv, GraphAttention, GraphConv
 from .mask_layer import CausalMask, ProbMask
 
 # MoE layers
@@ -71,6 +72,9 @@ __all__ = [
     # Graph
     "GraphAttention",
     "GraphConv",
+    "AdjacencyPolynomialConv",
+    "FoldSpatialToBatch",
+    "UnfoldBatchToSpatial",
     # NBeats
     "GenericBlock",
     "SeasonalityBlock",

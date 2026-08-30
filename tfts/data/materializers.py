@@ -227,15 +227,31 @@ class SequenceMaterializer:
         include_future_values: bool = True,
     ):
         """Convert a batch to Keras data, optionally retaining teacher-forcing values."""
-        inputs = batch.as_dict()
+        inputs = batch.as_tensor_dict(include_structure=False)
+        shared_structure = {}
+        if batch.structure is not None:
+            per_sample, shared_structure = batch.structure.split_tensor_dict()
+            inputs.update(per_sample)
         labels = inputs.pop("labels", None)
-        inputs.pop("metadata", None)
         if not include_future_values:
             inputs.pop("future_values", None)
         dataset = tf.data.Dataset.from_tensor_slices((inputs, labels) if labels is not None else inputs)
         if shuffle:
             dataset = dataset.shuffle(int(batch.past_values.shape[0]), seed=seed)
-        return dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        dataset = dataset.batch(batch_size)
+        if shared_structure:
+            if labels is None:
+
+                def attach_structure(values):
+                    return {**values, **shared_structure}
+
+            else:
+
+                def attach_structure(values, target):
+                    return {**values, **shared_structure}, target
+
+            dataset = dataset.map(attach_structure)
+        return dataset.prefetch(tf.data.AUTOTUNE)
 
 
 def _one_plan(prepared, selection, plan):

@@ -6,11 +6,18 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import TimeSeriesBatch
+from tfts.contracts import GraphStructure, ModelInputSpec, SpatialArrangement, TimeSeriesBatch, TopologyInput
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
 from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
 from tfts.models.base import BaseConfig
-from tfts.models.registry import MODEL_REGISTRY, get_config_class, get_model_class, get_model_info, list_models
+from tfts.models.registry import (
+    MODEL_REGISTRY,
+    check_batch_support,
+    get_config_class,
+    get_model_class,
+    get_model_info,
+    list_models,
+)
 
 
 class TestAutoModel(unittest.TestCase):
@@ -61,6 +68,50 @@ class TestAutoModel(unittest.TestCase):
                 self.assertTrue(issubclass(get_config_class(model_name), BaseConfig))
                 self.assertEqual(get_model_class(model_name).__name__, info["class_name"])
 
+    def test_registry_rejects_unsupported_graph_features(self):
+        with self.assertRaisesRegex(ValueError, "arrangement"):
+            check_batch_support("dlinear", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=GraphStructure(3)))
+
+        class BatchStub:
+            arrangement = SpatialArrangement.SET
+            topology_inputs = frozenset()
+            structure = None
+
+        with self.assertRaisesRegex(ValueError, "dense_adjacency"):
+            check_batch_support("stgcn", BatchStub())
+
+        info = get_model_info("stgcn")["capabilities"]["input_spec"]
+        self.assertEqual(info["arrangement"], SpatialArrangement.SET.value)
+        self.assertEqual(info["accepted_topologies"], [TopologyInput.DENSE_ADJACENCY.value])
+        self.assertFalse(info["supports_multivariate_target"])
+
+        for structure, message in (
+            (GraphStructure(3, adjacency=tf.zeros([1, 2, 3, 3])), "time-varying"),
+            (GraphStructure(3, node_mask=tf.ones([3])), "masked nodes"),
+        ):
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                check_batch_support("stgcn", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=structure))
+
+    def test_arrangement_and_topology_are_independent(self):
+        topology_free = ModelInputSpec(
+            arrangement=SpatialArrangement.SET,
+            accepted_topologies={TopologyInput.NONE},
+        )
+        check_batch_support("set-model", TimeSeriesBatch(tf.zeros([2, 4, 3, 1])), spec=topology_free)
+        dense = ModelInputSpec(
+            arrangement=SpatialArrangement.SET,
+            accepted_topologies={TopologyInput.DENSE_ADJACENCY},
+        )
+        with self.assertRaisesRegex(ValueError, "dense_adjacency"):
+            check_batch_support(
+                "dense-model",
+                TimeSeriesBatch(
+                    tf.zeros([2, 4, 3, 1]),
+                    structure=GraphStructure(3),
+                ),
+                spec=dense,
+            )
+
     def test_every_registered_config_round_trips_through_json(self):
         for model_name in list_models():
             with self.subTest(model_name=model_name):
@@ -89,7 +140,12 @@ class TestAutoModel(unittest.TestCase):
                     # real variable; keep its explicit variable count aligned.
                     config.encoder_real_dim = feature_count
                 model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
-                if model_name == "deep_ar":
+                if model_name == "stgcn":
+                    inputs = TimeSeriesBatch(
+                        past_values=tf.random.normal([1, 16, 3, 1]),
+                        structure=GraphStructure(3, adjacency=tf.eye(3)),
+                    )
+                elif model_name == "deep_ar":
                     inputs = TimeSeriesBatch(
                         past_values=tf.random.normal([1, 16, 1]),
                         future_values=tf.random.normal([1, predict_sequence_length, 1]),
@@ -99,7 +155,9 @@ class TestAutoModel(unittest.TestCase):
                     inputs = tf.random.normal([1, 16, feature_count])
                 output = model(inputs)
 
-                if model_name == "deep_ar":
+                if model_name == "stgcn":
+                    self.assertEqual(output.shape, (1, predict_sequence_length, 3, 1))
+                elif model_name == "deep_ar":
                     self.assertEqual(output.shape, (1, predict_sequence_length, 1))
                 elif model_name in multivariate_outputs:
                     self.assertEqual(output.shape, (1, predict_sequence_length, feature_count))

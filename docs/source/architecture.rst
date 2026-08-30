@@ -23,6 +23,20 @@ fields or a single tensor shorthand for ``past_values``; it deliberately does
 not infer positional inputs or architecture-specific field names.
 Masks consistently use ``1``/``True`` for observed or valid positions.
 
+Spatial inputs keep tensor arrangement and relational topology independent.
+The rank of ``past_values`` declares its ``SpatialArrangement``: rank 3 is a
+plain sequence, rank 4 is a set, and rank 5 is a grid.  An optional typed
+``SpatialStructure`` sidecar carries topology such as dense adjacency.  Models
+independently declare one arrangement and the
+``TopologyInput`` values they consume.
+
+Shared structure fields remain constants at the ``tf.data`` boundary.  They are
+attached after dataset batching rather than copied into every window.  The
+``per_node`` forecasting adapter is an explicit independent-series fallback for
+spatial values; it restores the spatial axes on every forecast output.  It is
+not available to graph models that require set-valued input, and there is no
+flattening fallback because flattening changes the target and output contracts.
+
 For TFT, historical targets are always included among the encoder real
 variables.  Therefore ``encoder_real_dim`` is the number of target channels
 plus ``past_time_features`` channels.  ``decoder_real_dim`` counts known
@@ -31,7 +45,9 @@ plus ``past_time_features`` channels.  ``decoder_real_dim`` counts known
 channel per configured cardinality.
 
 Backbones declare immutable ``BackboneCapabilities`` in the model registry.
-Task factories validate those capabilities before constructing a head.  A
+Task factories resolve those capabilities once while constructing a head.  The
+resulting adapter performs only batch-dependent arrangement and topology checks
+at execution time; it does not look the model up in the registry on each call. A
 backbone that exposes a temporal sequence can support reconstruction tasks; a
 native forecaster does not automatically qualify as a representation backbone.
 

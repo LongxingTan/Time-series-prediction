@@ -8,9 +8,13 @@ from tfts.contracts import (
     AnomalyDetectionTaskConfig,
     ClassificationTaskConfig,
     ForecastTaskConfig,
+    GraphStructure,
     ImputationTaskConfig,
+    SpatialArrangement,
+    SpatialStructure,
     TaskType,
     TimeSeriesBatch,
+    TopologyInput,
 )
 from tfts.data import (
     AutoPreprocessor,
@@ -32,6 +36,7 @@ from tfts.features import (
     TimeSeriesSchema,
 )
 from tfts.generation import ForecastGenerationConfig
+from tfts.graph import from_adjacency, from_correlation, from_grid, from_knn, from_radius
 from tfts.metrics import evaluate as evaluate_metrics
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import (
@@ -112,12 +117,21 @@ __all__ = [
     "AutoModelForAnomalyDetection",
     "AutoConfig",
     "ForecastTaskConfig",
+    "GraphStructure",
+    "from_adjacency",
+    "from_correlation",
+    "from_grid",
+    "from_knn",
+    "from_radius",
     "ClassificationTaskConfig",
     "ImputationTaskConfig",
     "AnomalyDetectionTaskConfig",
     "ForecastGenerationConfig",
     "TaskType",
     "TimeSeriesBatch",
+    "SpatialArrangement",
+    "SpatialStructure",
+    "TopologyInput",
     "list_models",
     "list_supported_tasks",
     "resolve_model_features",

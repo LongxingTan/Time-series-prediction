@@ -27,13 +27,15 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
 
     def __init__(self, backbone, task_config, capabilities, **kwargs):
         super().__init__(**kwargs)
-        from tfts.models.adapters import BackboneAdapter
+        from tfts.models.adapters import BackboneAdapter, SpatialAdapter
 
         self.backbone = backbone
         self.backbone_config = backbone.config
         self.task_config = task_config
         self.capabilities = capabilities
         self.adapter = BackboneAdapter(backbone, capabilities)
+        spatial_strategy = getattr(task_config, "spatial_strategy", "raise")
+        self.spatial_adapter = SpatialAdapter(capabilities.input_spec, self.adapter.model_type, spatial_strategy)
 
     @property
     def config(self):
@@ -53,7 +55,26 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def normalize_batch(self, inputs: Any) -> TimeSeriesBatch:
         batch = TimeSeriesBatch.from_inputs(inputs)
         batch.validate_for(self.task_name)
+        if not hasattr(self, "_batch_build_specs"):
+            shared_names = set()
+            if batch.structure is not None:
+                _, shared = batch.structure.split_tensor_dict()
+                shared_names = set(shared)
+            self._batch_build_specs = {}
+            for name, value in batch.as_tensor_dict().items():
+                shape = tuple(value.shape)
+                shape = shape if name in shared_names else (None,) + shape[1:]
+                spec = {"shape": shape, "dtype": value.dtype.name}
+                if name == "structure.graph.num_nodes":
+                    stored = tf.get_static_value(value)
+                    spec["value"] = stored.tolist() if hasattr(stored, "tolist") else stored
+                self._batch_build_specs[name] = spec
         return batch
+
+    def prepare_backbone_batch(self, batch):
+        """Validate direct spatial support or apply the configured fallback."""
+        transformed, restore = self.spatial_adapter.to_backbone(batch)
+        return transformed, lambda value: self.spatial_adapter.from_backbone(value, restore)
 
     @abstractmethod
     def forward(self, inputs, training=None) -> ModelOutput:
@@ -70,10 +91,18 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def build_from_config(self, config):
         """Build every child layer before Keras restores saved variables."""
 
-        def make_dummy(shape):
+        def make_dummy(spec):
+            if isinstance(spec, dict) and "shape" in spec:
+                shape, dtype = spec["shape"], spec["dtype"]
+                if "value" in spec:
+                    return tf.convert_to_tensor(spec["value"], dtype=dtype)
+            else:
+                shape, dtype = spec, self.compute_dtype
             shape = tf.TensorShape(shape).as_list()
             dimensions = [dimension if dimension is not None else 1 for dimension in shape]
-            return tf.zeros(dimensions, dtype=self.compute_dtype)
+            if tf.dtypes.as_dtype(dtype) == tf.string:
+                return tf.fill(dimensions, "")
+            return tf.zeros(dimensions, dtype=dtype)
 
         def make_inputs(shape):
             if isinstance(shape, dict):
@@ -82,9 +111,20 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
                 return [make_inputs(value) for value in shape]
             return make_dummy(shape)
 
+        batch_specs = config.get("batch_specs")
+        if batch_specs is not None:
+            self({name: make_dummy(spec) for name, spec in batch_specs.items()})
+            return
         input_shape = config.get("input_shape")
         if input_shape is not None:
             self(make_inputs(input_shape))
+
+    def get_build_config(self):
+        """Persist canonical batch shapes and dtypes for Keras restoration."""
+        batch_specs = getattr(self, "_batch_build_specs", None)
+        if batch_specs is not None:
+            return {"batch_specs": batch_specs}
+        return super().get_build_config()
 
     def save(self, filepath, *args, **kwargs):
         """Save while tolerating Keras 2 callbacks' empty native-save options."""
@@ -129,7 +169,11 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         backbone_config = AutoConfig.for_model(model_type)
         backbone_config.update(backbone_values)
 
-        model = build_task_model(backbone_config, task_config_from_dict(task_values), model_kwargs=config)
+        model = build_task_model(
+            backbone_config,
+            task_config_from_dict(task_values),
+            model_kwargs=config,
+        )
         if not isinstance(model, cls):
             raise ValueError("Serialized task config does not match %s" % cls.__name__)
         return model
@@ -145,7 +189,14 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         task_values = asdict(self.task_config)
         task_values["task"] = self.task_config.task.value
         with open(os.path.join(save_directory, "task_config.json"), "w", encoding="utf-8") as file:
-            json.dump({"schema_version": 1, "task_config": task_values}, file, indent=2)
+            json.dump(
+                {
+                    "schema_version": 1,
+                    "task_config": task_values,
+                },
+                file,
+                indent=2,
+            )
         self.save_weights(os.path.join(save_directory, TF2_WEIGHTS_NAME))
 
     @property

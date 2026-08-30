@@ -42,7 +42,12 @@ def build_task_model(config, task_config, model_kwargs=None):
     prediction_length = getattr(task_config, "prediction_length", 1)
     backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
     capabilities = get_model_capabilities(config.model_type)
-    return model_class(backbone, task_config, capabilities, **(model_kwargs or {}))
+    return model_class(
+        backbone,
+        task_config,
+        capabilities,
+        **(model_kwargs or {}),
+    )
 
 
 class AutoBackbone:

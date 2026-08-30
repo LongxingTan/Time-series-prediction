@@ -60,21 +60,26 @@ class ForecastingModel(TimeSeriesTaskModel):
 
     def forward(self, inputs, training=None):
         batch = self.normalize_batch(inputs)
+        model_batch, restore = self.prepare_backbone_batch(batch)
         if self.head is None:
-            backbone_output = self.adapter.forward(batch, training=training)
-            predictions = backbone_output.native_forecast
+            backbone_output = self.adapter.forward(model_batch, training=training)
+            predictions = restore(backbone_output.native_forecast)
+            distribution_params = backbone_output.distribution_params
+            if distribution_params is not None:
+                distribution_params = restore(distribution_params)
             return ForecastOutput(
                 predictions=predictions,
-                distribution_params=backbone_output.distribution_params,
+                distribution_params=distribution_params,
                 backbone_output=backbone_output,
             )
 
-        backbone_output = self.adapter.forward(batch, training=training, require=OutputPort.SEQUENCE)
+        backbone_output = self.adapter.forward(model_batch, training=training, require=OutputPort.SEQUENCE)
         if isinstance(self.head, PointForecastHead):
-            predictions = self.head(backbone_output.sequence_output, past_values=batch.past_values)
+            predictions = self.head(backbone_output.sequence_output, past_values=model_batch.past_values)
+            predictions = restore(predictions)
             return ForecastOutput(predictions=predictions, backbone_output=backbone_output)
         if isinstance(self.head, QuantileForecastHead):
-            values = self.head(backbone_output.sequence_output)
+            values = restore(self.head(backbone_output.sequence_output))
             median_index = min(
                 range(len(self.task_config.quantiles)), key=lambda i: abs(self.task_config.quantiles[i] - 0.5)
             )
@@ -85,6 +90,7 @@ class ForecastingModel(TimeSeriesTaskModel):
                 backbone_output=backbone_output,
             )
         params = self.head(backbone_output.sequence_output)
+        params = restore(params)
         return ForecastOutput(
             predictions=self.output_distribution.mean(params),
             distribution_params=params,

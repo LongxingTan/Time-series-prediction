@@ -40,6 +40,7 @@ class ForecastTaskConfig(TaskConfig):
     head: str = "auto"
     quantiles: Tuple[float, ...] = (0.1, 0.5, 0.9)
     residual: Optional[str] = None
+    spatial_strategy: str = "raise"
 
     def __post_init__(self):
         super().__post_init__()
@@ -55,6 +56,8 @@ class ForecastTaskConfig(TaskConfig):
                 raise ValueError("quantiles must lie strictly between 0 and 1")
         if self.residual not in {None, "last_value", "mean", "last_window"}:
             raise ValueError("Unknown residual %r" % self.residual)
+        if self.spatial_strategy not in {"raise", "per_node"}:
+            raise ValueError("spatial_strategy must be 'raise' or 'per_node'")
 
 
 @dataclass(frozen=True)
