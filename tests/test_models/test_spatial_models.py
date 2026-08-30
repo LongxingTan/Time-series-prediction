@@ -16,7 +16,8 @@ class SpatialModelTest(unittest.TestCase):
         self.values = tf.random.normal([2, 8, 4, 2])
         self.batch = TimeSeriesBatch(
             self.values,
-            structure=GraphStructure(4, adjacency=tf.eye(4)),
+            past_categorical_features=tf.zeros([2, 8, 1], tf.int32),
+            structure=GraphStructure(4, adjacency=tf.eye(4), node_ids=("a", "b", "c", "d")),
         )
 
     def test_plain_model_directive_and_per_node_fallback(self):
@@ -34,7 +35,7 @@ class SpatialModelTest(unittest.TestCase):
 
     def test_plain_batch_cannot_be_coerced_into_a_graph_model(self):
         plain = TimeSeriesBatch(tf.zeros([2, 8, 1]))
-        for strategy, message in (("raise", "set arrangement"), ("per_node", "rank-4 set")):
+        for strategy, message in (("raise", "set arrangement"), ("per_node", "spatial values")):
             with self.subTest(strategy=strategy), self.assertRaisesRegex(ValueError, message):
                 model = AutoModelForForecasting.from_config(
                     AutoConfig.for_model("stgcn"), prediction_length=3, spatial_strategy=strategy
@@ -117,6 +118,10 @@ class SpatialModelTest(unittest.TestCase):
     def test_spatial_keras_round_trip(self):
         model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), prediction_length=3)
         expected = model(self.batch)
+        specs = model.get_build_config()["batch_specs"]
+        self.assertEqual(specs["past_categorical_features"]["dtype"], "int32")
+        self.assertEqual(specs["structure.graph.num_nodes"]["dtype"], "int32")
+        self.assertEqual(specs["structure.graph.node_ids"]["dtype"], "string")
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "stgcn.keras")
             model.save(path)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from enum import Enum
-from typing import ClassVar, Dict, Mapping, Optional, Tuple
+from typing import ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import tensorflow as tf
 
@@ -14,18 +14,13 @@ class SpatialArrangement(str, Enum):
 
     NONE = "none"
     SET = "set"
-    NODES = "set"
     GRID = "grid"
 
     @classmethod
     def normalize(cls, value):
         if isinstance(value, cls):
             return value
-        normalized = str(value).lower()
-        return cls("set" if normalized == "nodes" else normalized)
-
-
-SpatialLayout = SpatialArrangement
+        return cls(str(value).lower())
 
 
 class TopologyInput(str, Enum):
@@ -33,9 +28,6 @@ class TopologyInput(str, Enum):
 
     NONE = "none"
     DENSE_ADJACENCY = "dense_adjacency"
-    EDGE_INDEX = "edge_index"
-    LEARNED = "learned"
-    COORDINATES = "coordinates"
 
     @classmethod
     def normalize(cls, value):
@@ -62,15 +54,18 @@ class SpatialStructure:
     """
 
     SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {}
+    TENSOR_PREFIX: ClassVar[str]
+    _TYPES: ClassVar[Dict[str, Type["SpatialStructure"]]] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        prefix = getattr(cls, "TENSOR_PREFIX", None)
+        if prefix:
+            SpatialStructure._TYPES[prefix] = cls
 
     @property
     def arrangement(self) -> SpatialArrangement:
         raise NotImplementedError
-
-    @property
-    def layout(self) -> SpatialArrangement:
-        """Compatibility alias for :attr:`arrangement`."""
-        return self.arrangement
 
     @property
     def spatial_shape(self) -> Tuple[int, ...]:
@@ -86,23 +81,36 @@ class SpatialStructure:
     def validate(self, values: tf.Tensor) -> None:
         raise NotImplementedError
 
-    def to_tensor_dict(self, prefix: str = "structure.") -> Dict[str, tf.Tensor]:
+    def to_tensor_dict(self) -> Dict[str, tf.Tensor]:
         """Return tensor fields only, suitable for tracing and model calls."""
         return {
-            prefix + field.name: tf.convert_to_tensor(value)
+            self.TENSOR_PREFIX + field.name: tf.convert_to_tensor(value)
             for field in fields(self)
             if (value := getattr(self, field.name)) is not None and tf.is_tensor(value)
         }
 
-    def split_tensor_dict(self, prefix: str = "structure."):
+    def split_tensor_dict(self):
         """Return ``(per_sample, shared)`` tensors using type-owned semantics."""
         per_sample, shared = {}, {}
-        for name, value in self.to_tensor_dict(prefix).items():
-            field_name = name[len(prefix) :]
+        for name, value in self.to_tensor_dict().items():
+            field_name = name[len(self.TENSOR_PREFIX) :]
             ranks = self.SHARED_FIELD_RANKS.get(field_name, ())
             target = shared if value.shape.rank in ranks else per_sample
             target[name] = value
         return per_sample, shared
+
+    @classmethod
+    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor]):
+        """Dispatch a flat tensor mapping to its declared structure type."""
+        matches = [
+            (prefix, structure_type)
+            for prefix, structure_type in cls._TYPES.items()
+            if any(key.startswith(prefix) for key in values)
+        ]
+        if len(matches) != 1:
+            raise ValueError("Structure tensors must use exactly one recognized prefix")
+        _, structure_type = matches[0]
+        return structure_type.from_tensor_dict(values)
 
     @property
     def topology_inputs(self):
@@ -113,23 +121,18 @@ class SpatialStructure:
 class GraphStructure(SpatialStructure):
     """Topology for node-set values shaped ``[B, T, N, C]``."""
 
+    TENSOR_PREFIX: ClassVar[str] = "structure.graph."
     SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {
+        "num_nodes": (0,),
         "adjacency": (2,),
-        "edge_index": (2,),
-        "edge_weight": (1,),
-        "edge_features": (2,),
         "node_features": (2,),
-        "node_coordinates": (2,),
         "node_mask": (1,),
+        "node_ids": (1,),
     }
 
     num_nodes: int
     adjacency: Optional[tf.Tensor] = None
-    edge_index: Optional[tf.Tensor] = None
-    edge_weight: Optional[tf.Tensor] = None
-    edge_features: Optional[tf.Tensor] = None
     node_features: Optional[tf.Tensor] = None
-    node_coordinates: Optional[tf.Tensor] = None
     node_mask: Optional[tf.Tensor] = None
     node_ids: Tuple[str, ...] = ()
 
@@ -138,11 +141,7 @@ class GraphStructure(SpatialStructure):
             raise ValueError("num_nodes must be positive")
         for name in (
             "adjacency",
-            "edge_index",
-            "edge_weight",
-            "edge_features",
             "node_features",
-            "node_coordinates",
             "node_mask",
         ):
             value = getattr(self, name)
@@ -173,10 +172,6 @@ class GraphStructure(SpatialStructure):
         inputs = set()
         if self.adjacency is not None:
             inputs.add(TopologyInput.DENSE_ADJACENCY)
-        if self.edge_index is not None:
-            inputs.add(TopologyInput.EDGE_INDEX)
-        if self.node_coordinates is not None:
-            inputs.add(TopologyInput.COORDINATES)
         return frozenset(inputs)
 
     def validate(self, values):
@@ -191,90 +186,41 @@ class GraphStructure(SpatialStructure):
             for dimension in self.adjacency.shape[-2:]:
                 if dimension is not None and dimension != self.num_nodes:
                     raise ValueError("adjacency trailing dimensions must equal num_nodes")
-        if self.edge_index is not None:
-            if self.edge_index.dtype not in (tf.int32, tf.int64):
-                raise ValueError("edge_index must use an integer dtype")
-            if self.edge_index.shape.rank not in (2, 3) or self.edge_index.shape[-2] != 2:
-                raise ValueError("edge_index must be [2,E] or [B,2,E]")
         if self.node_mask is not None and self.node_mask.shape.rank not in (1, 2, 3):
             raise ValueError("node_mask must be [N], [B,N], or [B,T,N]")
-        for name in ("node_features", "node_coordinates"):
+        for name in ("node_features",):
             value = getattr(self, name)
             if value is not None and value.shape.rank not in (2, 3):
                 raise ValueError(f"{name} must be [N,F] or [B,N,F]")
 
+    def to_tensor_dict(self):
+        values = super().to_tensor_dict()
+        values[self.TENSOR_PREFIX + "num_nodes"] = tf.convert_to_tensor(self.num_nodes, tf.int32)
+        if self.node_ids:
+            values[self.TENSOR_PREFIX + "node_ids"] = tf.convert_to_tensor(self.node_ids, tf.string)
+        return values
+
     @classmethod
-    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor], prefix="structure.graph.", num_nodes=None):
+    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor]):
+        prefix = cls.TENSOR_PREFIX
         kwargs = {key[len(prefix) :]: value for key, value in values.items() if key.startswith(prefix)}
-        if num_nodes is not None:
-            kwargs["num_nodes"] = num_nodes
-        elif "num_nodes" not in kwargs:
-            candidate = kwargs.get("adjacency", kwargs.get("node_mask"))
+        if "num_nodes" in kwargs:
+            stored_num_nodes = tf.get_static_value(kwargs["num_nodes"])
+            if stored_num_nodes is not None:
+                kwargs["num_nodes"] = int(stored_num_nodes)
+            else:
+                kwargs.pop("num_nodes")
+        if "num_nodes" not in kwargs:
+            candidate = kwargs.get("adjacency", kwargs.get("node_mask", kwargs.get("node_ids")))
             if candidate is None or candidate.shape[-1] is None:
                 raise ValueError("num_nodes cannot be inferred from structure tensors")
             kwargs["num_nodes"] = int(candidate.shape[-1])
-        return cls(**kwargs)
-
-
-@dataclass(frozen=True)
-class GridStructure(SpatialStructure):
-    """Geometry for grid values shaped ``[B, T, height, width, C]``."""
-
-    SHARED_FIELD_RANKS: ClassVar[Mapping[str, Tuple[int, ...]]] = {
-        "coordinates": (3,),
-        "valid_mask": (2,),
-    }
-
-    height: int
-    width: int
-    coordinates: Optional[tf.Tensor] = None
-    valid_mask: Optional[tf.Tensor] = None
-    periodic_axes: Tuple[str, ...] = ()
-
-    def __post_init__(self):
-        if int(self.height) <= 0 or int(self.width) <= 0:
-            raise ValueError("height and width must be positive")
-        for name in ("coordinates", "valid_mask"):
-            value = getattr(self, name)
-            if value is not None:
-                object.__setattr__(self, name, tf.convert_to_tensor(value))
-        axes = tuple(str(axis) for axis in self.periodic_axes)
-        if any(axis not in {"height", "width"} for axis in axes):
-            raise ValueError("periodic_axes entries must be 'height' or 'width'")
-        object.__setattr__(self, "periodic_axes", axes)
-
-    @property
-    def arrangement(self):
-        return SpatialArrangement.GRID
-
-    @property
-    def spatial_shape(self):
-        return (int(self.height), int(self.width))
-
-    @property
-    def topology_inputs(self):
-        if self.coordinates is None:
-            return frozenset()
-        return frozenset({TopologyInput.COORDINATES})
-
-    def validate(self, values):
-        if values.shape.rank != 5:
-            raise ValueError("grid layout expects past_values shaped [batch, time, height, width, feature]")
-        for axis, expected, name in ((2, self.height, "height"), (3, self.width, "width")):
-            actual = values.shape[axis]
-            if actual is not None and actual != expected:
-                raise ValueError(f"past_values {name}={actual} but structure declares {expected}")
-        if self.valid_mask is not None and self.valid_mask.shape.rank not in (2, 3):
-            raise ValueError("valid_mask must be [height,width] or [batch,height,width]")
-
-    @classmethod
-    def from_tensor_dict(cls, values: Mapping[str, tf.Tensor], prefix="structure.grid."):
-        kwargs = {key[len(prefix) :]: value for key, value in values.items() if key.startswith(prefix)}
-        mask = kwargs.get("valid_mask")
-        coordinates = kwargs.get("coordinates")
-        candidate = coordinates if coordinates is not None else mask
-        if candidate is None:
-            raise ValueError("grid dimensions cannot be inferred from structure tensors")
-        kwargs.setdefault("height", int(candidate.shape[-3] if coordinates is not None else candidate.shape[-2]))
-        kwargs.setdefault("width", int(candidate.shape[-2] if coordinates is not None else candidate.shape[-1]))
+        if "node_ids" in kwargs:
+            node_ids = tf.get_static_value(kwargs["node_ids"])
+            if node_ids is None:
+                kwargs["node_ids"] = ("",) * int(kwargs["node_ids"].shape[-1])
+            else:
+                kwargs["node_ids"] = tuple(
+                    value.decode() if isinstance(value, bytes) else str(value) for value in node_ids
+                )
         return cls(**kwargs)

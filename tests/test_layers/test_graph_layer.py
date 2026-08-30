@@ -3,35 +3,34 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.layers.graph_layer import AdaptiveAdjacency, ChebConv, GraphAttention, GraphConv
+from tfts.layers.graph_layer import AdjacencyPolynomialConv, GraphAttention, GraphConv
 
 
 class GraphLayerTest(unittest.TestCase):
     def test_chebyshev_convolution_orders_and_config(self):
         features = tf.ones([2, 3, 2])
         adjacency = tf.eye(3)
-        layer = ChebConv(4, k=3, activation="relu", use_bias=False)
+        layer = AdjacencyPolynomialConv(4, k=3, activation="relu", use_bias=False)
         output = layer((features, adjacency))
         self.assertEqual(output.shape, (2, 3, 4))
         self.assertEqual(layer.get_config()["k"], 3)
         self.assertFalse(layer.get_config()["use_bias"])
+        self.assertTrue(layer.get_config()["normalize"])
 
-        first_order = ChebConv(2, k=1)((features, adjacency))
+        first_order = AdjacencyPolynomialConv(2, k=1)((features, adjacency))
         self.assertEqual(first_order.shape, features.shape)
         with self.assertRaisesRegex(ValueError, "at least one"):
-            ChebConv(2, k=0)
+            AdjacencyPolynomialConv(2, k=0)
 
-    def test_adaptive_adjacency_is_stochastic_and_serializable(self):
-        layer = AdaptiveAdjacency(4, embed_dim=3)
-        # Keras 2 requires every Layer invocation to receive a first argument,
-        # even when the layer does not use an input tensor.
-        adjacency = layer(None)
-        self.assertEqual(adjacency.shape, (4, 4))
-        np.testing.assert_allclose(tf.reduce_sum(adjacency, axis=-1), np.ones(4), atol=1e-6)
-        self.assertEqual(layer.get_config()["embed_dim"], 3)
-        for nodes, dimension in ((0, 3), (4, 0)):
-            with self.subTest(nodes=nodes, dimension=dimension), self.assertRaisesRegex(ValueError, "positive"):
-                AdaptiveAdjacency(nodes, dimension)
+    def test_polynomial_convolution_normalizes_unnormalized_adjacency(self):
+        features = tf.ones([1, 3, 1])
+        adjacency = tf.constant([[0.0, 10.0, 0.0], [10.0, 0.0, 10.0], [0.0, 10.0, 0.0]])
+        layer = AdjacencyPolynomialConv(2, k=5, normalize=True)
+        output = layer((features, adjacency))
+        self.assertTrue(np.all(np.isfinite(output.numpy())))
+
+        with self.assertRaises(tf.errors.InvalidArgumentError):
+            layer((features, -tf.eye(3)))
 
     def test_graph_convolution_layer(self):
         units = 32

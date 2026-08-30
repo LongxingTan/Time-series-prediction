@@ -53,7 +53,6 @@ class ModelMetadata:
                     topology.value for topology in self.capabilities.input_spec.accepted_topologies
                 ),
                 "supports_dynamic_graph": self.capabilities.input_spec.supports_dynamic_graph,
-                "supports_edge_features": self.capabilities.input_spec.supports_edge_features,
                 "supports_node_mask": self.capabilities.input_spec.supports_node_mask,
             },
         }
@@ -217,7 +216,7 @@ def check_batch_support(model_name: str, batch, spec=None) -> None:
     from tfts.contracts import SpatialArrangement, TopologyInput
 
     spec = spec or get_model_capabilities(model_name).input_spec
-    arrangement = getattr(batch, "arrangement", batch.layout)
+    arrangement = batch.arrangement
     if arrangement != spec.arrangement:
         message = (
             f"{model_name!r} requires the {spec.arrangement.value} arrangement, "
@@ -229,15 +228,12 @@ def check_batch_support(model_name: str, batch, spec=None) -> None:
     structure = batch.structure
     if structure is not None and getattr(structure, "is_dynamic", False) and not spec.supports_dynamic_graph:
         raise ValueError(f"{model_name!r} does not support time-varying adjacency")
-    if structure is not None and getattr(structure, "edge_features", None) is not None:
-        if not spec.supports_edge_features:
-            raise ValueError(f"{model_name!r} does not support edge features")
     if structure is not None and getattr(structure, "node_mask", None) is not None:
         if not spec.supports_node_mask:
             raise ValueError(f"{model_name!r} does not support masked nodes")
     topologies = getattr(batch, "topology_inputs", frozenset())
     accepted = spec.accepted_topologies
-    topology_optional = bool(accepted & {TopologyInput.NONE, TopologyInput.LEARNED})
+    topology_optional = TopologyInput.NONE in accepted
     if not topology_optional and not (topologies & accepted):
         names = sorted(topology.value for topology in accepted)
         raise ValueError(f"{model_name!r} requires one of topology inputs {names}")

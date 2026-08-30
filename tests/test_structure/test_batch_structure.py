@@ -2,23 +2,23 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, GridStructure, SpatialArrangement, SpatialLayout, TimeSeriesBatch
+from tfts.contracts import GraphStructure, SpatialArrangement, TimeSeriesBatch
 
 
 class BatchStructureTest(unittest.TestCase):
-    def test_plain_batch_remains_rank_three(self):
+    def test_rank_declares_arrangement(self):
         batch = TimeSeriesBatch(tf.zeros([2, 8, 1]))
-        self.assertEqual(batch.layout, SpatialLayout.NONE)
+        self.assertEqual(batch.arrangement, SpatialArrangement.NONE)
         self.assertEqual(batch.spatial_axes, ())
         node_set = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]))
         self.assertEqual(node_set.arrangement, SpatialArrangement.SET)
-        self.assertIsNone(node_set.structure)
-
-    def test_graph_and_grid_dimensions_are_validated(self):
-        graph = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]), structure=GraphStructure(3, adjacency=tf.eye(3)))
-        grid = TimeSeriesBatch(tf.zeros([2, 8, 3, 5, 1]), structure=GridStructure(3, 5))
-        self.assertEqual(graph.spatial_axes, (2,))
+        grid = TimeSeriesBatch(tf.zeros([2, 8, 3, 5, 1]))
+        self.assertEqual(grid.arrangement, SpatialArrangement.GRID)
         self.assertEqual(grid.spatial_axes, (2, 3))
+
+    def test_graph_dimensions_are_validated(self):
+        graph = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]), structure=GraphStructure(3, adjacency=tf.eye(3)))
+        self.assertEqual(graph.spatial_axes, (2,))
         with self.assertRaisesRegex(ValueError, "declares 4"):
             TimeSeriesBatch(tf.zeros([2, 8, 3, 1]), structure=GraphStructure(4))
 
@@ -31,11 +31,15 @@ class BatchStructureTest(unittest.TestCase):
         )
         batch.validate_for("forecasting")
 
-    def test_tensor_dictionary_round_trip(self):
-        original = TimeSeriesBatch(tf.zeros([2, 8, 3, 1]), structure=GraphStructure(3, adjacency=tf.eye(3)))
+    def test_tensor_dictionary_round_trip_preserves_graph_metadata(self):
+        original = TimeSeriesBatch(
+            tf.zeros([2, 8, 3, 1]),
+            structure=GraphStructure(3, adjacency=tf.eye(3), node_ids=("a", "b", "c")),
+        )
         restored = TimeSeriesBatch.from_inputs(original.as_tensor_dict())
-        self.assertEqual(restored.layout, SpatialLayout.NODES)
+        self.assertEqual(restored.arrangement, SpatialArrangement.SET)
         self.assertEqual(restored.structure.num_nodes, 3)
+        self.assertEqual(restored.structure.node_ids, ("a", "b", "c"))
 
     def test_mapping_boundaries_and_properties(self):
         graph = GraphStructure(2, adjacency=tf.eye(2))
@@ -51,15 +55,10 @@ class BatchStructureTest(unittest.TestCase):
         self.assertIn("future_values", batch.as_dict(include_none=True))
         self.assertNotIn("structure.graph.adjacency", batch.as_tensor_dict(include_structure=False))
         self.assertIs(TimeSeriesBatch.from_inputs(batch), batch)
-        self.assertEqual(TimeSeriesBatch.from_inputs(tf.zeros([1, 2, 1])).layout, SpatialLayout.NONE)
 
-        with self.assertRaisesRegex(ValueError, "both graph and grid"):
+        with self.assertRaisesRegex(ValueError, "recognized prefix"):
             TimeSeriesBatch.from_inputs(
-                {
-                    "past_values": tf.zeros([1, 2, 2, 1]),
-                    "structure.graph.adjacency": tf.eye(2),
-                    "structure.grid.valid_mask": tf.ones([1, 2]),
-                }
+                {"past_values": tf.zeros([1, 2, 2, 1]), "structure.unknown.value": tf.ones([1])}
             )
         with self.assertRaisesRegex(ValueError, "Unknown"):
             TimeSeriesBatch.from_inputs({"past_values": tf.zeros([1, 2, 1]), "typo": tf.ones([1])})
@@ -67,15 +66,6 @@ class BatchStructureTest(unittest.TestCase):
             TimeSeriesBatch.from_inputs((tf.zeros([1, 2, 1]), tf.zeros([1, 1, 1])))
         with self.assertRaisesRegex(ValueError, "required"):
             TimeSeriesBatch(None)
-
-    def test_grid_tensor_dictionary_round_trip(self):
-        original = TimeSeriesBatch(
-            tf.zeros([2, 8, 3, 5, 1]),
-            structure=GridStructure(3, 5, valid_mask=tf.ones([3, 5])),
-        )
-        restored = TimeSeriesBatch.from_inputs(original.as_tensor_dict())
-        self.assertEqual(restored.layout, SpatialLayout.GRID)
-        self.assertEqual(restored.spatial_shape, (3, 5))
 
     def test_validate_for_rejects_misaligned_fields(self):
         graph = GraphStructure(3, adjacency=tf.eye(3))

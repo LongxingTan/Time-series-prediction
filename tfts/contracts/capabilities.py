@@ -43,7 +43,6 @@ class ModelInputSpec:
     arrangement: SpatialArrangement = SpatialArrangement.NONE
     accepted_topologies: FrozenSet[TopologyInput] = frozenset({TopologyInput.NONE})
     supports_dynamic_graph: bool = False
-    supports_edge_features: bool = False
     supports_node_mask: bool = False
 
     def __post_init__(self) -> None:
@@ -75,17 +74,10 @@ class ModelInputSpec:
         topologies = frozenset(TopologyInput.normalize(topology) for topology in self.accepted_topologies)
         if not topologies:
             raise ValueError("accepted_topologies cannot be empty")
-        if (self.supports_dynamic_graph or self.supports_edge_features or self.supports_node_mask) and (
-            arrangement != SpatialArrangement.SET
-        ):
+        if (self.supports_dynamic_graph or self.supports_node_mask) and (arrangement != SpatialArrangement.SET):
             raise ValueError("graph capabilities require the set arrangement")
         object.__setattr__(self, "arrangement", arrangement)
         object.__setattr__(self, "accepted_topologies", topologies)
-
-    @property
-    def accepted_layouts(self):
-        """Compatibility view for callers that only inspect tensor arrangement."""
-        return frozenset({self.arrangement})
 
 
 @dataclass(frozen=True)

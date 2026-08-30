@@ -10,19 +10,32 @@ from tfts.contracts.structure import GraphStructure
 
 
 def from_adjacency(matrix, node_ids: Optional[Sequence[str]] = None) -> GraphStructure:
+    """Build a graph from a finite, non-negative square adjacency matrix."""
     adjacency = np.asarray(matrix, dtype=np.float32)
     if adjacency.ndim != 2 or adjacency.shape[0] != adjacency.shape[1]:
         raise ValueError("adjacency must be a square matrix")
     if not np.all(np.isfinite(adjacency)) or np.any(adjacency < 0):
         raise ValueError("adjacency must contain finite non-negative values")
-    return GraphStructure(
-        num_nodes=adjacency.shape[0],
-        adjacency=adjacency,
-        node_ids=tuple(node_ids or ()),
-    )
+    return GraphStructure(num_nodes=adjacency.shape[0], adjacency=adjacency, node_ids=tuple(node_ids or ()))
 
 
-def from_knn(coords, k: int, sigma=None, symmetric=True, metric="euclidean") -> GraphStructure:
+def from_knn(
+    coords,
+    k: int,
+    sigma=None,
+    symmetric=True,
+    metric="euclidean",
+    kernel="gaussian",
+    epsilon=0.0,
+) -> GraphStructure:
+    """Build a k-nearest-neighbor graph from ``[node, coordinate]`` values.
+
+    ``kernel='gaussian'`` assigns ``exp(-(distance / sigma) ** 2)`` weights;
+    when ``sigma`` is omitted it is the standard deviation of retained
+    distances. ``kernel='binary'`` assigns weight one. Weights at or below
+    ``epsilon`` are removed. Distances are computed densely, so this builder is
+    intended for modest graph sizes.
+    """
     coordinates = _coordinates(coords)
     nodes = coordinates.shape[0]
     if not 0 < int(k) < nodes:
@@ -33,27 +46,34 @@ def from_knn(coords, k: int, sigma=None, symmetric=True, metric="euclidean") -> 
     rows = np.repeat(np.arange(nodes), int(k))
     columns = neighbors.reshape(-1)
     retained = distances[rows, columns]
-    scale = _distance_scale(retained, sigma)
     adjacency = np.zeros((nodes, nodes), dtype=np.float32)
-    adjacency[rows, columns] = np.exp(-np.square(retained / scale)).astype(np.float32)
+    adjacency[rows, columns] = _kernel_weights(retained, sigma, kernel)
+    adjacency[adjacency <= _epsilon(epsilon)] = 0.0
     if symmetric:
         adjacency = np.maximum(adjacency, adjacency.T)
-    return GraphStructure(num_nodes=nodes, adjacency=adjacency, node_coordinates=coordinates)
+    return GraphStructure(num_nodes=nodes, adjacency=adjacency)
 
 
-def from_radius(coords, radius: float, sigma=None, metric="euclidean") -> GraphStructure:
+def from_radius(coords, radius: float, sigma=None, metric="euclidean", kernel="gaussian", epsilon=0.0):
+    """Build a radius graph using the same configurable kernel as :func:`from_knn`.
+
+    Pairwise distances are materialized as an ``N x N`` array. Gaussian
+    ``sigma`` defaults to the standard deviation of distances within ``radius``.
+    Weights at or below ``epsilon`` are removed.
+    """
     coordinates = _coordinates(coords)
     if radius <= 0:
         raise ValueError("radius must be positive")
     distances = _pairwise_distance(coordinates, metric)
     keep = (distances <= radius) & (distances > 0)
-    retained = distances[keep]
-    scale = _distance_scale(retained, sigma)
-    adjacency = np.where(keep, np.exp(-np.square(distances / scale)), 0).astype(np.float32)
-    return GraphStructure(num_nodes=coordinates.shape[0], adjacency=adjacency, node_coordinates=coordinates)
+    adjacency = np.zeros_like(distances, dtype=np.float32)
+    adjacency[keep] = _kernel_weights(distances[keep], sigma, kernel)
+    adjacency[adjacency <= _epsilon(epsilon)] = 0.0
+    return GraphStructure(num_nodes=coordinates.shape[0], adjacency=adjacency)
 
 
 def from_correlation(values, threshold=0.3) -> GraphStructure:
+    """Build an absolute-correlation graph from ``[time, node]`` observations."""
     observations = np.asarray(values, dtype=np.float64)
     if observations.ndim != 2:
         raise ValueError("values must be [time, node]")
@@ -66,6 +86,12 @@ def from_correlation(values, threshold=0.3) -> GraphStructure:
 
 
 def from_grid(height: int, width: int, connectivity=4, periodic_axes=()) -> GraphStructure:
+    """Build an unweighted 4- or 8-neighbor graph for a rectangular grid.
+
+    Nodes use row-major order. ``periodic_axes`` may contain ``'height'`` or
+    ``'width'`` to wrap neighbors across that boundary. The dense construction
+    uses ``O((height * width) ** 2)`` memory and is intended for small grids.
+    """
     if height <= 0 or width <= 0:
         raise ValueError("height and width must be positive")
     if connectivity not in {4, 8}:
@@ -90,12 +116,7 @@ def from_grid(height: int, width: int, connectivity=4, periodic_axes=()) -> Grap
                     target = target_row * width + target_column
                     if target != source:
                         adjacency[source, target] = 1.0
-    coordinates = np.stack(np.meshgrid(np.arange(height), np.arange(width), indexing="ij"), axis=-1)
-    return GraphStructure(
-        num_nodes=height * width,
-        adjacency=adjacency,
-        node_coordinates=coordinates.reshape(-1, 2),
-    )
+    return GraphStructure(num_nodes=height * width, adjacency=adjacency)
 
 
 def _coordinates(values):
@@ -105,6 +126,22 @@ def _coordinates(values):
     if not np.all(np.isfinite(coordinates)):
         raise ValueError("coords must contain only finite values")
     return coordinates.astype(np.float32)
+
+
+def _kernel_weights(distances, sigma, kernel):
+    if kernel == "binary":
+        return np.ones_like(distances, dtype=np.float32)
+    if kernel != "gaussian":
+        raise ValueError("kernel must be 'gaussian' or 'binary'")
+    scale = _distance_scale(distances, sigma)
+    return np.exp(-np.square(distances / scale)).astype(np.float32)
+
+
+def _epsilon(value):
+    value = float(value)
+    if not np.isfinite(value) or value < 0:
+        raise ValueError("epsilon must be finite and non-negative")
+    return value
 
 
 def _distance_scale(distances, sigma):

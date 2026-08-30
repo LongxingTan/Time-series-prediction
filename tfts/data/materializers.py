@@ -230,10 +230,7 @@ class SequenceMaterializer:
         inputs = batch.as_tensor_dict(include_structure=False)
         shared_structure = {}
         if batch.structure is not None:
-            from tfts.contracts import GraphStructure
-
-            prefix = "structure.graph." if isinstance(batch.structure, GraphStructure) else "structure.grid."
-            per_sample, shared_structure = batch.structure.split_tensor_dict(prefix)
+            per_sample, shared_structure = batch.structure.split_tensor_dict()
             inputs.update(per_sample)
         labels = inputs.pop("labels", None)
         if not include_future_values:

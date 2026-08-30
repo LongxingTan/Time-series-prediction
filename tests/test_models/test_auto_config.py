@@ -74,7 +74,6 @@ class TestAutoModel(unittest.TestCase):
 
         class BatchStub:
             arrangement = SpatialArrangement.SET
-            layout = SpatialArrangement.SET
             topology_inputs = frozenset()
             structure = None
 
@@ -88,18 +87,17 @@ class TestAutoModel(unittest.TestCase):
 
         for structure, message in (
             (GraphStructure(3, adjacency=tf.zeros([1, 2, 3, 3])), "time-varying"),
-            (GraphStructure(3, edge_features=tf.ones([2, 1])), "edge features"),
             (GraphStructure(3, node_mask=tf.ones([3])), "masked nodes"),
         ):
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 check_batch_support("stgcn", TimeSeriesBatch(tf.zeros([1, 2, 3, 1]), structure=structure))
 
-    def test_arrangement_and_learned_topology_are_independent(self):
-        learned = ModelInputSpec(
+    def test_arrangement_and_topology_are_independent(self):
+        topology_free = ModelInputSpec(
             arrangement=SpatialArrangement.SET,
-            accepted_topologies={TopologyInput.LEARNED},
+            accepted_topologies={TopologyInput.NONE},
         )
-        check_batch_support("adaptive-model", TimeSeriesBatch(tf.zeros([2, 4, 3, 1])), spec=learned)
+        check_batch_support("set-model", TimeSeriesBatch(tf.zeros([2, 4, 3, 1])), spec=topology_free)
         dense = ModelInputSpec(
             arrangement=SpatialArrangement.SET,
             accepted_topologies={TopologyInput.DENSE_ADJACENCY},
@@ -109,7 +107,7 @@ class TestAutoModel(unittest.TestCase):
                 "dense-model",
                 TimeSeriesBatch(
                     tf.zeros([2, 4, 3, 1]),
-                    structure=GraphStructure(3, edge_index=tf.constant([[0], [1]], tf.int32)),
+                    structure=GraphStructure(3),
                 ),
                 spec=dense,
             )

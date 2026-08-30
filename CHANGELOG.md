@@ -7,6 +7,7 @@
   dense graphs.
 - Preserve shared graph metadata across Keras/``tf.data`` boundaries without
   copying static topology into every training window.
+- Add documented graph builders and a runnable spatial forecasting example.
 
 
 ## v.0.0.15

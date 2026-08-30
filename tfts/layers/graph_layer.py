@@ -12,10 +12,12 @@ class AdjacencyPolynomialConv(Layer):
     """K-order graph polynomial convolution for dense adjacency.
 
     Inputs are ``(features, adjacency)`` with features ``[B,N,C]`` and shared
-    ``[N,N]`` or batched ``[B,N,N]`` adjacency. Normalize adjacency before use.
+    ``[N,N]`` or batched ``[B,N,N]`` adjacency. By default, non-negative
+    adjacency is symmetrized and degree-normalized so its spectrum lies in
+    ``[-1, 1]`` before the polynomial recursion.
     """
 
-    def __init__(self, units, k=3, activation=None, use_bias=True, **kwargs):
+    def __init__(self, units, k=3, activation=None, use_bias=True, normalize=True, **kwargs):
         super().__init__(**kwargs)
         if int(k) < 1:
             raise ValueError("k must be at least one")
@@ -23,6 +25,7 @@ class AdjacencyPolynomialConv(Layer):
         self.k = int(k)
         self.activation = activations.get(activation)
         self.use_bias = bool(use_bias)
+        self.normalize = bool(normalize)
 
     def build(self, input_shape):
         input_dim = input_shape[0][-1]
@@ -34,6 +37,13 @@ class AdjacencyPolynomialConv(Layer):
 
     def call(self, inputs):
         features, adjacency = inputs
+        adjacency = tf.cast(adjacency, features.dtype)
+        if self.normalize:
+            tf.debugging.assert_non_negative(adjacency, message="adjacency must be non-negative")
+            adjacency = 0.5 * (adjacency + tf.linalg.matrix_transpose(adjacency))
+            degree = tf.reduce_sum(adjacency, axis=-1)
+            inverse_root = tf.math.rsqrt(tf.maximum(degree, tf.keras.backend.epsilon()))
+            adjacency = inverse_root[..., :, None] * adjacency * inverse_root[..., None, :]
         terms = [features]
         if self.k > 1:
             terms.append(tf.matmul(adjacency, features))
@@ -52,47 +62,9 @@ class AdjacencyPolynomialConv(Layer):
                 "k": self.k,
                 "activation": activations.serialize(self.activation),
                 "use_bias": self.use_bias,
+                "normalize": self.normalize,
             }
         )
-        return config
-
-
-@tf.keras.utils.register_keras_serializable(package="tfts")
-class ChebConv(AdjacencyPolynomialConv):
-    """Compatibility name for :class:`AdjacencyPolynomialConv`."""
-
-
-@tf.keras.utils.register_keras_serializable(package="tfts")
-class AdaptiveAdjacency(Layer):
-    """Learn a dense directed adjacency from two node embedding tables."""
-
-    def __init__(self, num_nodes, embed_dim=10, **kwargs):
-        super().__init__(**kwargs)
-        if int(num_nodes) <= 0 or int(embed_dim) <= 0:
-            raise ValueError("num_nodes and embed_dim must be positive")
-        self.num_nodes = int(num_nodes)
-        self.embed_dim = int(embed_dim)
-
-    def build(self, input_shape=None):
-        self.source_embeddings = self.add_weight(
-            name="source_embeddings",
-            shape=(self.num_nodes, self.embed_dim),
-            initializer="glorot_uniform",
-        )
-        self.target_embeddings = self.add_weight(
-            name="target_embeddings",
-            shape=(self.embed_dim, self.num_nodes),
-            initializer="glorot_uniform",
-        )
-        super().build(input_shape)
-
-    def call(self, inputs=None):
-        scores = tf.nn.relu(tf.matmul(self.source_embeddings, self.target_embeddings))
-        return tf.nn.softmax(scores, axis=-1)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({"num_nodes": self.num_nodes, "embed_dim": self.embed_dim})
         return config
 
 

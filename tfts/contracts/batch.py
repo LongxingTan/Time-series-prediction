@@ -7,14 +7,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
 
-from .structure import (
-    ARRANGEMENT_BY_RANK,
-    EXPECTED_RANK,
-    GraphStructure,
-    GridStructure,
-    SpatialArrangement,
-    SpatialStructure,
-)
+from .structure import ARRANGEMENT_BY_RANK, EXPECTED_RANK, SpatialArrangement, SpatialStructure
 
 
 @dataclass
@@ -79,18 +72,11 @@ class TimeSeriesBatch:
             return inputs
         if isinstance(inputs, Mapping):
             inputs = dict(inputs)
-            graph_values = {key: value for key, value in inputs.items() if key.startswith("structure.graph.")}
-            grid_values = {key: value for key, value in inputs.items() if key.startswith("structure.grid.")}
-            if graph_values and grid_values:
-                raise ValueError("A batch cannot contain both graph and grid structure tensors")
-            for key in (*graph_values, *grid_values):
+            structure_values = {key: value for key, value in inputs.items() if key.startswith("structure.")}
+            for key in structure_values:
                 inputs.pop(key)
-            if graph_values:
-                values = inputs.get("past_values")
-                num_nodes = values.shape[2] if values is not None and values.shape.rank == 4 else None
-                inputs["structure"] = GraphStructure.from_tensor_dict(graph_values, num_nodes=num_nodes)
-            elif grid_values:
-                inputs["structure"] = GridStructure.from_tensor_dict(grid_values)
+            if structure_values:
+                inputs["structure"] = SpatialStructure.from_tensor_dict(structure_values)
             known = {field.name for field in fields(cls)}
             unknown = set(inputs) - known
             if unknown:
@@ -112,18 +98,12 @@ class TimeSeriesBatch:
             field.name: getattr(self, field.name) for field in fields(self) if tf.is_tensor(getattr(self, field.name))
         }
         if include_structure and self.structure is not None:
-            prefix = "structure.graph." if isinstance(self.structure, GraphStructure) else "structure.grid."
-            values.update(self.structure.to_tensor_dict(prefix))
+            values.update(self.structure.to_tensor_dict())
         return values
 
     @property
     def arrangement(self) -> SpatialArrangement:
         return ARRANGEMENT_BY_RANK[self.past_values.shape.rank]
-
-    @property
-    def layout(self) -> SpatialArrangement:
-        """Compatibility alias for :attr:`arrangement`."""
-        return self.arrangement
 
     @property
     def topology_inputs(self):

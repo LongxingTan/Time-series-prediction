@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from tfts.structure import (
+from tfts.graph import (
     add_self_loops,
     from_adjacency,
     from_correlation,
@@ -87,7 +87,6 @@ class StructureBuilderTest(unittest.TestCase):
     def test_grid_options_and_all_transforms(self):
         graph = from_grid(2, 3, connectivity=8, periodic_axes=("height", "width"))
         self.assertEqual(graph.adjacency.shape, (6, 6))
-        self.assertEqual(graph.node_coordinates.shape, (6, 2))
         for args, message in (((0, 2), "positive"), ((2, 2, 6), "4 or 8")):
             with self.subTest(args=args), self.assertRaisesRegex(ValueError, message):
                 from_grid(*args)
@@ -106,6 +105,16 @@ class StructureBuilderTest(unittest.TestCase):
         batched = type(isolated)(2, adjacency=np.zeros((1, 2, 2)))
         with self.assertRaisesRegex(ValueError, "shared"):
             symmetric_normalize(batched)
+
+    def test_distance_kernel_and_threshold_are_configurable(self):
+        binary = from_knn([[0], [1], [3]], 1, kernel="binary", symmetric=False)
+        np.testing.assert_array_equal(np.asarray(binary.adjacency)[np.asarray(binary.adjacency) > 0], 1.0)
+        thresholded = from_radius([[0], [1], [2]], radius=2, sigma=1, epsilon=0.4)
+        self.assertEqual(float(thresholded.adjacency[0, 2]), 0.0)
+        with self.assertRaisesRegex(ValueError, "kernel"):
+            from_knn([[0], [1]], 1, kernel="linear")
+        with self.assertRaisesRegex(ValueError, "epsilon"):
+            from_radius([[0], [1]], radius=2, epsilon=-1)
 
 
 if __name__ == "__main__":

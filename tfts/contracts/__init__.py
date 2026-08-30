@@ -10,7 +10,7 @@ from .outputs import (
     ImputationOutput,
     ModelOutput,
 )
-from .structure import GraphStructure, GridStructure, SpatialArrangement, SpatialLayout, SpatialStructure, TopologyInput
+from .structure import GraphStructure, SpatialArrangement, SpatialStructure, TopologyInput
 from .task import (
     AnomalyDetectionTaskConfig,
     ClassificationTaskConfig,
@@ -31,14 +31,12 @@ __all__ = [
     "ForecastOutput",
     "ForecastTaskConfig",
     "GraphStructure",
-    "GridStructure",
     "ImputationOutput",
     "ImputationTaskConfig",
     "InputLayout",
     "ModelOutput",
     "ModelInputSpec",
     "OutputPort",
-    "SpatialLayout",
     "SpatialArrangement",
     "SpatialStructure",
     "TopologyInput",

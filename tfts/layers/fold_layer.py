@@ -1,11 +1,6 @@
 """Weight-free spatial reshape layers and batch transformations."""
 
-from dataclasses import fields
-from typing import Callable
-
 import tensorflow as tf
-
-from tfts.contracts.batch import TimeSeriesBatch
 
 
 def _fold_spatial_to_batch(inputs):
@@ -63,66 +58,3 @@ class UnfoldBatchToSpatial(tf.keras.layers.Layer):
         config = super().get_config()
         config["spatial_shape"] = self.spatial_shape
         return config
-
-
-class SpatialBatchTransform:
-    """Apply a spatial fallback consistently to every aligned batch field."""
-
-    _TEMPORAL = {
-        "past_values",
-        "future_values",
-        "past_time_features",
-        "future_time_features",
-        "past_categorical_features",
-        "future_categorical_features",
-        "past_observed_mask",
-        "future_observed_mask",
-    }
-    _STATIC = {"static_real_features", "static_categorical_features"}
-
-    def __init__(self, strategy: str):
-        if strategy != "per_node":
-            raise ValueError("spatial_strategy must be 'per_node'")
-        self.strategy = strategy
-
-    def apply(self, batch: TimeSeriesBatch):
-        spatial_rank = len(batch.spatial_shape)
-        if not batch.spatial_shape:
-            raise ValueError("per_node requires rank-4 set or rank-5 grid values")
-        set_size = 1
-        for dimension in batch.spatial_shape:
-            set_size *= dimension
-        values = {}
-        for field in fields(batch):
-            name, value = field.name, getattr(batch, field.name)
-            if name == "structure" or value is None:
-                continue
-            if not tf.is_tensor(value):
-                values[name] = value
-            elif name in self._TEMPORAL:
-                values[name] = self._temporal(value, spatial_rank, set_size)
-            elif name in self._STATIC:
-                values[name] = self._static(value, spatial_rank, set_size)
-            elif name in {"padding_mask", "labels"}:
-                values[name] = tf.repeat(value, set_size, axis=0)
-            else:
-                values[name] = value
-        return TimeSeriesBatch(**values), self._restore(batch)
-
-    def _temporal(self, value, spatial_rank, set_size):
-        if value.shape.rank == 3:
-            return tf.repeat(value, set_size, axis=0)
-        return _fold_spatial_to_batch(value)
-
-    def _static(self, value, spatial_rank, set_size):
-        if value.shape.rank == 2:
-            return tf.repeat(value, set_size, axis=0)
-        shape = tf.shape(value)
-        return tf.reshape(value, [-1, shape[-1]])
-
-    def _restore(self, original: TimeSeriesBatch) -> Callable[[tf.Tensor], tf.Tensor]:
-        return lambda value: (
-            None
-            if value is None
-            else _unfold_batch_to_spatial(value, original.spatial_shape, batch_size=original.batch_size)
-        )

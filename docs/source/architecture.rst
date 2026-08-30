@@ -26,10 +26,9 @@ Masks consistently use ``1``/``True`` for observed or valid positions.
 Spatial inputs keep tensor arrangement and relational topology independent.
 The rank of ``past_values`` declares its ``SpatialArrangement``: rank 3 is a
 plain sequence, rank 4 is a set, and rank 5 is a grid.  An optional typed
-``SpatialStructure`` sidecar carries topology such as dense adjacency, sparse
-``edge_index``, or coordinates.  Models independently declare one arrangement
-and the ``TopologyInput`` values they consume; learned-topology models therefore
-accept rank-4 sets without requiring an input graph.
+``SpatialStructure`` sidecar carries topology such as dense adjacency.  Models
+independently declare one arrangement and the
+``TopologyInput`` values they consume.
 
 Shared structure fields remain constants at the ``tf.data`` boundary.  They are
 attached after dataset batching rather than copied into every window.  The
