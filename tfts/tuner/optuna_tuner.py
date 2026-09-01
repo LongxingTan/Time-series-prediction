@@ -13,7 +13,7 @@ import numpy as np
 
 from ..models.auto_config import AutoConfig
 from ..models.auto_model import AutoModel
-from ..trainer import Trainer
+from ..training import Trainer
 from ..training.runtime import create_adamw
 
 logger = logging.getLogger(__name__)

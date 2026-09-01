@@ -13,5 +13,5 @@ API
    layers
    models
    losses
-   trainer
+   training
    tasks

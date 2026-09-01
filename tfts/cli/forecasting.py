@@ -16,7 +16,7 @@ from ..data import get_data
 from ..data.processor import DataProcessor
 from ..models.auto_config import AutoConfig
 from ..models.auto_model import AutoModel
-from ..trainer import Trainer, set_seed
+from ..training import Trainer, set_seed
 
 logger = logging.getLogger(__name__)
 

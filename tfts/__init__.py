@@ -52,10 +52,8 @@ from tfts.models.auto_model import (
     AutoModelForTimeSeriesClassification,
 )
 from tfts.models.registry import list_models, list_supported_tasks, resolve_model_features
-from tfts.saving import load_model
 from tfts.tasks.pipeline import Pipeline, TaskPipeline
-from tfts.trainer import EagerTrainer, KerasTrainer, Trainer, set_seed
-from tfts.training_args import TrainingArguments
+from tfts.training import EagerTrainer, KerasTrainer, Trainer, TrainingArguments, load_model, set_seed
 from tfts.tuner import OptunaTuner
 
 try:

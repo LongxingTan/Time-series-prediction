@@ -16,7 +16,7 @@ from tfts import (
 )
 from tfts.models.dlinear import DLinear, DLinearConfig
 from tfts.models.tcn import Encoder
-from tfts.saving import get_custom_objects, load_model
+from tfts.training.saving import get_custom_objects, load_model
 
 
 class TestKerasModelLoading(unittest.TestCase):

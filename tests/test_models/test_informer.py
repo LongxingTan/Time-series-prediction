@@ -11,7 +11,7 @@ import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.models.informer import Decoder, DecoderLayer, DistilConv, Encoder, EncoderLayer, Informer
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 # Smoke test pinning a single-device strategy so it runs identically on CI and
 # any multi-GPU host.

@@ -8,9 +8,9 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, AutoModelForTimeSeriesClassification
-from tfts.trainer import BaseTrainer, EagerTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
+from tfts.training import TrainingArguments
 from tfts.training.runtime import configure_precision, create_distribution_strategy
-from tfts.training_args import TrainingArguments
+from tfts.training.trainer import BaseTrainer, EagerTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
 
 
 def _gpu_count() -> int:
