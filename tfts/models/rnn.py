@@ -119,14 +119,18 @@ class Encoder(tf.keras.layers.Layer):
             return_state = self.return_state if i == self.num_stacked_layers - 1 and not self.bi_direction else False
 
             rnn_class = GRU if self.rnn_type == "gru" else LSTM
-            rnn = rnn_class(
+            rnn_kwargs = dict(
                 units=self.rnn_size,
                 activation="tanh",
                 return_sequences=True,
                 return_state=return_state,
-                reset_after=False,
                 dropout=self.rnn_dropout if self.rnn_dropout > 0 else 0.0,
             )
+            # ``reset_after`` is a GRU-only argument in current Keras.  Passing
+            # it to LSTM worked in older releases but now raises at call time.
+            if rnn_class is GRU:
+                rnn_kwargs["reset_after"] = False
+            rnn = rnn_class(**rnn_kwargs)
 
             if self.bi_direction:
                 rnn = Bidirectional(rnn)

@@ -7,7 +7,7 @@ import tensorflow as tf
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer, Trainer
 from tfts.models.tcn import TCN, TCNConfig
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 # Smoke test pinning a single-device strategy so it runs identically on CI and
 # any multi-GPU host.

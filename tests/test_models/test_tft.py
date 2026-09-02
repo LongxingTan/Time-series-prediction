@@ -10,7 +10,7 @@ from tfts import AutoConfig, AutoModel, KerasTrainer, TimeSeriesBatch
 from tfts.data import SequenceMaterializer, TimeSeriesSequence, WindowIndexer, WindowSpec, get_data
 from tfts.features import FeatureDType, FeaturePipeline, FeatureRole, FeatureSpec, TimeSeriesSchema
 from tfts.models.tft import TFTransformer, TFTransformerConfig
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 # Smoke test pinning a single-device strategy so it runs identically on CI and
 # any multi-GPU host.

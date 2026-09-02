@@ -12,9 +12,16 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Input
 
-from .constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME, TFTS_HOME, TFTS_HUB_CACHE
-from .models.base import BaseModel
-from .training.runtime import configure_precision, create_adamw, create_distribution_strategy
+from ..constants import (
+    CONFIG_NAME,
+    TF2_WEIGHTS_INDEX_NAME,
+    TF2_WEIGHTS_NAME,
+    TF_WEIGHTS_NAME,
+    TFTS_HOME,
+    TFTS_HUB_CACHE,
+)
+from ..models.base import BaseModel
+from .runtime import configure_precision, create_adamw, create_distribution_strategy
 from .training_args import TrainingArguments
 
 __all__ = ["Trainer", "KerasTrainer", "EagerTrainer", "Seq2seqKerasTrainer", "set_seed"]
@@ -382,7 +389,7 @@ class Trainer(BaseTrainer):
                 result = self.model.evaluate(dataset, return_dict=True, verbose=0)
             return {name: float(value) for name, value in result.items()}
 
-        from .metrics import evaluate as compute_metrics
+        from ..metrics import evaluate as compute_metrics
 
         if isinstance(dataset, (list, tuple)):
             x, y_true = dataset

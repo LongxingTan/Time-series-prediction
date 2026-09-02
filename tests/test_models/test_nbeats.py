@@ -8,7 +8,7 @@ import tensorflow as tf
 from tfts import AutoConfig, AutoModel, KerasTrainer
 from tfts.data import TimeSeriesSequence, get_data
 from tfts.models.nbeats import NBeats
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 # Smoke test pinning a single-device strategy so it runs identically on CI and
 # any multi-GPU host.

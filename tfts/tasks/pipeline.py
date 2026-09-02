@@ -5,7 +5,7 @@ from typing import Any, Callable, Optional
 from tfts.contracts import TaskType
 from tfts.models.auto_config import AutoConfig
 from tfts.models.auto_model import AutoModel
-from tfts.trainer import Trainer
+from tfts.training import Trainer
 
 
 class TaskPipeline:

@@ -1,3 +1,5 @@
+"""Configuration for TFTS trainers."""
+
 from dataclasses import dataclass, field, fields
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Union

@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForForecasting, GraphStructure, TimeSeriesBatch
 from tfts.models.stgcn import STGCN, STGCNConfig, _STGCNBlock
-from tfts.saving import load_model
+from tfts.training import load_model
 
 
 class SpatialModelTest(unittest.TestCase):

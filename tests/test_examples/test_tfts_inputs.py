@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 logger = logging.getLogger(__name__)
 

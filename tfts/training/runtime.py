@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import tensorflow as tf
 
-from ..training_args import TrainingArguments
+from .training_args import TrainingArguments
 
 logger = logging.getLogger(__name__)
 

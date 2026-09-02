@@ -8,7 +8,7 @@ import tensorflow as tf
 
 import tfts
 from tfts import AutoConfig, AutoModel, KerasTrainer as Trainer
-from tfts.training_args import TrainingArguments
+from tfts.training import TrainingArguments
 
 # Smoke tests validate end-to-end training, not device distribution, so they pin a
 # single-device strategy. This keeps them deterministic on CI (no GPU) and on local
