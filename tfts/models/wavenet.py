@@ -278,7 +278,7 @@ class DecoderV1(tf.keras.layers.Layer):
                 if dilation > encoder_outputs[i].shape[1]:
                     logger.warning(
                         f"Dilation {dilation} exceeds context length {encoder_outputs[i].shape[1]}. "
-                        "Using {safe_dilation} instead."
+                        f"Using {safe_dilation} instead."
                     )
                     dilation = safe_dilation
 
