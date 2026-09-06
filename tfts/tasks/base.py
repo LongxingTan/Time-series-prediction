@@ -167,6 +167,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
             raise ValueError("Serialized task model config is missing backbone model_type")
 
         backbone_config = AutoConfig.for_model(model_type)
+        backbone_config.validate_checkpoint_config(backbone_values)
         backbone_config.update(backbone_values)
 
         model = build_task_model(

@@ -89,6 +89,7 @@ class BackboneCapabilities:
     supports_future_covariates: bool = False
     supports_missing_mask: bool = False
     supports_variable_length: bool = False
+    supports_parallel_teacher_forcing: bool = False
     input_spec: ModelInputSpec = ModelInputSpec()
 
     def has_port(self, port: OutputPort) -> bool:

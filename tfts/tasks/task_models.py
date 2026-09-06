@@ -4,8 +4,16 @@ from dataclasses import replace
 
 import tensorflow as tf
 
-from tfts.contracts import AnomalyDetectionOutput, ClassificationOutput, ForecastOutput, ImputationOutput, OutputPort
+from tfts.contracts import (
+    AnomalyDetectionOutput,
+    ClassificationOutput,
+    ForecastMode,
+    ForecastOutput,
+    ImputationOutput,
+    OutputPort,
+)
 from tfts.distributions import NormalOutput
+from tfts.generation.policy import DecodePolicy
 
 from .anomaly import QuantileCalibrator, make_anomaly_scorer
 from .auto_task import (
@@ -50,6 +58,12 @@ class ForecastingModel(TimeSeriesTaskModel):
                 self._require_sequence()
                 self.output_distribution = NormalOutput(target_dim=task_config.target_dim)
                 self.head = DistributionForecastHead(self.output_distribution, task_config.prediction_length)
+        self.generation_probabilistic = self.output_distribution is not None
+        self._decode_policy = (
+            DecodePolicy(backbone, capabilities, task_config)
+            if self.head is None and ForecastMode.AUTOREGRESSIVE in capabilities.forecast_modes
+            else None
+        )
         if self.output_distribution is not None:
             self._loss_tracker = tf.keras.metrics.Mean(name="loss")
 
@@ -64,9 +78,7 @@ class ForecastingModel(TimeSeriesTaskModel):
         batch = self.normalize_batch(inputs)
         model_batch, restore = self.prepare_backbone_batch(batch)
         if self.head is None:
-            if hasattr(self.backbone, "initialize_decode"):
-                from tfts.generation.decoding import decode
-
+            if self._decode_policy is not None:
                 probability = teacher_probability
                 if probability is None:
                     probability = (
@@ -75,25 +87,7 @@ class ForecastingModel(TimeSeriesTaskModel):
                 # Likelihood evaluation explicitly conditions on observed targets.
                 if self.output_distribution is not None and model_batch.future_values is not None and not training:
                     probability = 1.0 if teacher_probability is None else teacher_probability
-                fast = getattr(self.backbone, "decode_teacher_forced", None)
-                if (
-                    isinstance(probability, (float, int))
-                    and probability == 1.0
-                    and fast is not None
-                    and model_batch.future_observed_mask is None
-                ):
-                    result = fast(model_batch, training=training)
-                    return ForecastOutput(
-                        predictions=restore(result.predictions), distribution_params=restore(result.distribution_params)
-                    )
-                result = decode(
-                    self.backbone,
-                    model_batch,
-                    self.task_config.prediction_length,
-                    training=training,
-                    teacher_probability=probability,
-                    sampler=self.task_config.feedback_sampler if training else "mean",
-                )
+                result = self._decode_policy.run(model_batch, training=training, probability=probability)
                 return ForecastOutput(
                     predictions=restore(result.predictions), distribution_params=restore(result.distribution_params)
                 )
@@ -171,7 +165,7 @@ class ForecastingModel(TimeSeriesTaskModel):
 
     def train_step(self, data):
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        if hasattr(self.backbone, "initialize_decode") and y is not None:
+        if self._decode_policy is not None and y is not None:
             batch = self.normalize_batch(x)
             x = replace(batch, future_values=y).as_tensor_dict()
             data = (x, y, sample_weight) if sample_weight is not None else (x, y)
@@ -213,7 +207,8 @@ class ForecastingModel(TimeSeriesTaskModel):
         config = self.task_config
         if not config.teacher_decay_steps:
             return config.teacher_probability
-        step = tf.cast(self.optimizer.iterations, tf.float32)
+        optimizer = getattr(self, "optimizer", None)
+        step = tf.cast(optimizer.iterations if optimizer is not None else 0, tf.float32)
         fraction = tf.minimum(step / config.teacher_decay_steps, 1.0)
         return config.teacher_probability + fraction * (config.teacher_final_probability - config.teacher_probability)
 

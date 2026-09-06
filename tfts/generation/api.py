@@ -8,7 +8,7 @@ from tfts.contracts import TimeSeriesBatch
 from tfts.data.sequence_utils import pad_sequences
 
 from .configuration import ForecastGenerationConfig
-from .rollout import resolve_rollout_strategy
+from .rollout import SampleAggregator, resolve_rollout_strategy
 
 
 def prepare_generation_batch(
@@ -41,7 +41,17 @@ def prepare_generation_batch(
     return TimeSeriesBatch(past_values=values, **fields)
 
 
-def generate(model, inputs, generation_config=None, *, strategy=None, sampler=None, processors=None, **kwargs):
+def generate(
+    model,
+    inputs,
+    generation_config=None,
+    *,
+    strategy=None,
+    sampler=None,
+    processors=None,
+    stopping_criteria=None,
+    **kwargs,
+):
     config = ForecastGenerationConfig.from_args(generation_config, **kwargs)
     rollout = resolve_rollout_strategy(
         model,
@@ -53,14 +63,23 @@ def generate(model, inputs, generation_config=None, *, strategy=None, sampler=No
     if not batch.past_values.dtype.is_floating:
         batch = replace(batch, past_values=tf.cast(batch.past_values, tf.float32))
     if batch.padding_mask is not None:
-        supports_padding = bool(getattr(model.backbone, "supports_padding_mask", False))
+        supports_padding = model.capabilities.supports_variable_length
         if not supports_padding:
             tf.debugging.assert_equal(
                 tf.reduce_all(batch.padding_mask),
                 True,
                 message=(
                     "This forecasting backbone does not support padded histories. "
-                    "Use equal-length histories or a backbone that declares supports_padding_mask=True."
+                    "Use equal-length histories or a backbone that declares supports_variable_length=True."
                 ),
             )
-    return rollout.run(model, batch, config, sampler=sampler, processors=processors)
+    horizon = config.prediction_length if config.prediction_length is not None else model.task_config.prediction_length
+    return SampleAggregator(rollout).run(
+        model,
+        batch,
+        config,
+        horizon=horizon,
+        sampler=sampler,
+        processors=processors,
+        stopping_criteria=stopping_criteria,
+    )

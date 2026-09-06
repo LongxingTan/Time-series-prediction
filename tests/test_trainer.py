@@ -559,6 +559,26 @@ class KerasTrainerTest(unittest.TestCase):
         history = trainer.fit(train_dataset=(x_train, y_train), epochs=1, batch_size=1)
         self.assertIsNotNone(history)
 
+    def test_trainer_builds_nested_sequential_before_counting_parameters(self):
+        """Lazy Keras 2 models must train before their weights are inspected."""
+
+        class LazySequentialModel(tf.keras.Model):
+            def __init__(self):
+                super().__init__()
+                self.network = tf.keras.Sequential([tf.keras.layers.Dense(1)])
+
+            def call(self, inputs):
+                return self.network(inputs)
+
+        x_train = np.ones((2, 3), dtype=np.float32)
+        y_train = np.ones((2, 1), dtype=np.float32)
+        model = LazySequentialModel()
+
+        history = _tfts_trainer(model).train((x_train, y_train), epochs=1, verbose=0)
+
+        self.assertIn("loss", history.history)
+        self.assertEqual(model.count_params(), 4)
+
     def test_trainer_with_string_optimizer(self):
         """Test training with optimizer specified as string."""
         x_train = np.random.random((2, 10, 1))

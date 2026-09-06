@@ -112,6 +112,7 @@ def register_model(
         ):
             raise ValueError(f"Model name {name!r} is already registered by {existing.model_class.__name__}")
         _ENTRIES[name] = entry
+        model_class.capabilities = entry.capabilities
         return model_class
 
     return decorator

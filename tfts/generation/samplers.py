@@ -6,46 +6,46 @@ from typing import Any, Callable, Dict, Optional
 
 import tensorflow as tf
 
+from .state import Distribution, GenStep
+
 
 @dataclass
 class StepOutput:
     prediction: tf.Tensor
     state: Any = None
-    distribution: Any = None
+    distribution: Optional[Distribution] = None
     parameters: Optional[Dict[str, tf.Tensor]] = None
-
-
-@dataclass
-class SamplingResult:
-    value: tf.Tensor
-    state: Any = None
+    quantile_values: Optional[tf.Tensor] = None
 
 
 class ValueSampler(ABC):
+    stochastic: bool = False
+
     @abstractmethod
-    def sample(self, step_output: StepOutput, *, step: int, seed=None) -> SamplingResult:
+    def __call__(self, step: GenStep, *, seed=None) -> tf.Tensor:
         raise NotImplementedError
 
 
-class MeanSampler(ValueSampler):
-    def sample(self, step_output, *, step, seed=None):
-        return SamplingResult(step_output.prediction)
+class PointSampler(ValueSampler):
+    def __call__(self, step, *, seed=None):
+        return step.prediction
 
 
 class DistributionSampler(ValueSampler):
-    def sample(self, step_output, *, step, seed=None):
-        if step_output.distribution is None or step_output.parameters is None:
+    stochastic = True
+
+    def __call__(self, step, *, seed=None):
+        if step.distribution is None or step.parameters is None:
             raise ValueError("DistributionSampler requires distribution parameters")
-        return SamplingResult(step_output.distribution.sample(step_output.parameters, seed=seed))
+        return step.distribution.sample(step.parameters, seed=seed)
 
 
 class CallableSampler(ValueSampler):
     def __init__(self, fn: Callable[..., Any]):
         self.fn = fn
 
-    def sample(self, step_output, *, step, seed=None):
-        result = self.fn(step_output, step=step, seed=seed)
-        return result if isinstance(result, SamplingResult) else SamplingResult(result)
+    def __call__(self, step, *, seed=None):
+        return self.fn(step, seed=seed)
 
 
 def resolve_value_sampler(sampler, probabilistic=False) -> ValueSampler:
@@ -53,18 +53,17 @@ def resolve_value_sampler(sampler, probabilistic=False) -> ValueSampler:
 
     ``auto`` samples probabilistic outputs and uses predictions otherwise.
     """
+    mapping = {"point": PointSampler, "sample": DistributionSampler}
     if sampler is None or sampler == "auto":
-        return DistributionSampler() if probabilistic else MeanSampler()
-    if isinstance(sampler, ValueSampler):
-        if isinstance(sampler, DistributionSampler) and not probabilistic:
-            raise ValueError("sampler='sample' requires a model output distribution")
-        return sampler
-    if callable(sampler) and not isinstance(sampler, str):
-        return CallableSampler(sampler)
-    mapping = {"mean": MeanSampler, "sample": DistributionSampler}
-    if sampler == "sample" and not probabilistic:
+        resolved = DistributionSampler() if probabilistic else PointSampler()
+    elif isinstance(sampler, ValueSampler):
+        resolved = sampler
+    elif callable(sampler):
+        resolved = CallableSampler(sampler)
+    elif sampler in mapping:
+        resolved = mapping[sampler]()
+    else:
+        raise ValueError("Unknown sampler %r. Available: %s" % (sampler, sorted(mapping)))
+    if isinstance(resolved, DistributionSampler) and not probabilistic:
         raise ValueError("sampler='sample' requires a model output distribution")
-    try:
-        return mapping[sampler]()
-    except KeyError as error:
-        raise ValueError("Unknown sampler %r. Available: %s" % (sampler, sorted(mapping))) from error
+    return resolved

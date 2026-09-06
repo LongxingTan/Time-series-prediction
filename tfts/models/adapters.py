@@ -110,11 +110,11 @@ class BackboneAdapter:
         self.capabilities = capabilities
         self.model_type = getattr(backbone.config, "model_type", type(backbone).__name__.lower())
         self._call_parameters = set(inspect.signature(backbone.call).parameters)
+        self._adapt_batch = getattr(backbone, "adapt_batch", None)
 
     def prepare_inputs(self, batch: TimeSeriesBatch):
-        adapt_batch = getattr(self.backbone, "adapt_batch", None)
-        if adapt_batch is not None:
-            return adapt_batch(batch)
+        if self._adapt_batch is not None:
+            return self._adapt_batch(batch)
 
         if batch.structure is not None:
             raise ValueError(f"{self.model_type} has no spatial batch adapter for {batch.arrangement.value} inputs")

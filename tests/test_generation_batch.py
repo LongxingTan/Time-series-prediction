@@ -3,15 +3,20 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.contracts import ForecastOutput, TimeSeriesBatch
+from tfts import AutoConfig, AutoModelForForecasting
+from tfts.contracts import BackboneCapabilities, ForecastOutput, TimeSeriesBatch
 from tfts.distributions import NormalOutput
 from tfts.generation import ForecastGenerationConfig, RecursiveRollout, generate, prepare_generation_batch
+from tfts.generation.rollout import SampleAggregator
 
 
 class _RecordingRecursiveModel:
     def __init__(self):
         self.task_config = type("TaskConfig", (), {"prediction_length": 2})()
         self.calls = []
+        self.capabilities = BackboneCapabilities()
+        self.output_distribution = None
+        self.generation_probabilistic = False
 
     def forward(self, batch, training=False):
         self.calls.append(batch)
@@ -23,6 +28,7 @@ class _DistributionRecursiveModel(_RecordingRecursiveModel):
     def __init__(self):
         super().__init__()
         self.output_distribution = NormalOutput()
+        self.generation_probabilistic = True
 
     def forward(self, batch, training=False):
         loc = tf.repeat(batch.past_values[:, -1:, :] + 1.0, 2, axis=1)
@@ -62,7 +68,7 @@ class GenerationBatchTest(unittest.TestCase):
         )
         model = _RecordingRecursiveModel()
 
-        output = RecursiveRollout().run(model, batch, ForecastGenerationConfig(prediction_length=2))
+        output = RecursiveRollout().run(model, batch, ForecastGenerationConfig(), horizon=2)
 
         np.testing.assert_array_equal(output.predictions.numpy()[0, :, 0], [4.0, 5.0])
         second_batch = model.calls[1]
@@ -79,7 +85,7 @@ class GenerationBatchTest(unittest.TestCase):
         model = _DistributionRecursiveModel()
         batch = TimeSeriesBatch(past_values=tf.constant([[[1.0], [2.0]]]))
 
-        output = RecursiveRollout().run(
+        output = SampleAggregator(RecursiveRollout()).run(
             model,
             batch,
             ForecastGenerationConfig(
@@ -90,6 +96,7 @@ class GenerationBatchTest(unittest.TestCase):
                 return_samples=True,
                 seed=7,
             ),
+            horizon=3,
         )
 
         self.assertEqual(output.predictions.shape, (1, 3, 1))
@@ -109,18 +116,27 @@ class GenerationBatchTest(unittest.TestCase):
         )
         model = _RecordingRecursiveModel()
 
-        RecursiveRollout().run(model, batch, ForecastGenerationConfig(prediction_length=2))
+        RecursiveRollout().run(model, batch, ForecastGenerationConfig(), horizon=2)
 
         np.testing.assert_allclose(model.calls[1].past_time_features.numpy()[0, -1], [11.0, 200.0])
 
     def test_generation_rejects_padding_for_an_unsupported_backbone(self):
         model = _RecordingRecursiveModel()
         model.backbone = object()
-        model.capabilities = type("Capabilities", (), {"forecast_modes": ()})()
+        model.capabilities = BackboneCapabilities()
         batch = prepare_generation_batch([[1.0, 2.0], [3.0]], sequence_length=2, padding_side="left")
 
         with self.assertRaisesRegex(tf.errors.InvalidArgumentError, "does not support padded histories"):
             generate(model, batch, strategy="recursive", prediction_length=1)
+
+    def test_declared_rnn_padding_matches_unpadded_history(self):
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("rnn"), prediction_length=2)
+        for side in ("left", "right"):
+            batch = prepare_generation_batch([[1.0, 2.0], [3.0]], padding_side=side)
+            result = model.generate(batch).predictions
+            for index, history in enumerate(([[[1.0], [2.0]]], [[[3.0]]])):
+                expected = model.generate(tf.constant(history)).predictions
+                np.testing.assert_allclose(result[index : index + 1], expected, atol=1e-6)
 
 
 if __name__ == "__main__":

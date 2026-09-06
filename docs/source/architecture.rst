@@ -1,6 +1,11 @@
 Architecture
 ============
 
+A strategy decides how the horizon is covered. A decoder decides what one step
+looks like. A sampler decides which value. Processors transform parameter space
+before sampling and constrain value space afterwards. Every user hook receives
+one typed ``GenStep``; decoder context and state remain private.
+
 TFTS separates model architecture from task and inference policy.  The public
 composition is:
 
@@ -85,20 +90,51 @@ Generation
 
 Generation is an inference policy, not a model mixin.  ``model.generate``
 selects one rollout strategy: direct, recursive-window, or a backbone's native
-autoregressive decoder.  A sampler selects values from probabilistic outputs,
-then processors enforce continuous-value constraints before feedback.
+autoregressive decoder. Each strategy uses the same ``TimeAxisEngine`` pipeline:
+prediction, parameter processors, sampling, value processors, stopping criteria,
+teacher selection, and decoder-owned next-input construction.
 
 ``ForecastGenerationConfig`` contains only serializable policy.  Custom
 samplers and processors are runtime dependencies passed to ``generate`` rather
 than embedded in saved configuration.
+Custom ``RolloutStrategy`` instances are also runtime dependencies; serialized
+strategy names are limited to ``auto``, ``direct``, ``recursive``, and
+``autoregressive``. Diffusion is not implemented by this time-axis engine.
+Strategies receive an explicit ``horizon`` rather than reading task configuration.
 
 All rollout strategies resolve samplers through the same value-selection API:
 ``sampler="auto"`` draws from a distribution when the model exposes one and
-otherwise uses its predictions. Use ``sampler="mean"`` explicitly for
+otherwise uses its predictions. Use ``sampler="point"`` explicitly for
 deterministic feedback from a probabilistic model. Direct forecasts also honor
-custom samplers, ``num_samples``, aggregation, and ``return_samples``; processors
-run on selected trajectories before aggregation. Explicit distribution sampling
+custom samplers, ``num_samples``, aggregation, and ``return_samples`` through the
+shared ``SampleAggregator`` decorator. Samplers declare ``stochastic=True`` to
+request independent trajectories. Processors run before aggregation. Explicit distribution sampling
 without a distribution raises an error.
+
+``GenStep`` contains ``offset``, conditioning ``past_values``, previously emitted
+``generated`` values, the raw ``prediction`` block, optional ``distribution`` and
+``parameters``, optional ``quantile_values``, and the selected ``value``.
+Implement ``ValueSampler.__call__(step, seed=None) -> Tensor`` or
+``ForecastProcessor.__call__(step) -> GenStep``. Processors declare
+``stage="parameters"`` or ``stage="values"`` and use ``dataclasses.replace`` to
+return updated state. Parameter processors run before the draw, so changes to
+variance or distribution family affect sampling. A value clip clamps an existing
+draw; it does not sample from a truncated distribution.
+
+``distribution_params`` describes the distribution used for sampling after
+parameter processing. It does not describe subsequent value constraints or
+aggregation. ``values_processed`` explicitly records value processing. With
+multiple samples, parameters and quantile vectors retain a sample axis; with one
+trajectory they have the usual batch/time axes. They are retained by every
+strategy when supplied by the model. Generation config has no quantile override;
+quantile levels belong to the task head.
+
+Stopping criteria receive the same ``GenStep`` after value processing.
+``MaxHorizon`` is always present. Custom criteria can shorten the rectangular
+batch horizon; a vector criterion requests a batch stop when all examples agree.
+Imputation and anomaly detection remain single-pass tasks in this release.
+``GenerationOutput`` leaves room for future generation tasks, while
+``ForecastGenerationOutput`` identifies forecasting results.
 
 Data window selection is independent of forecast sampling.
 ``tfts.data.window_sampling`` owns ``sampled_windows`` and ``final_windows``;
@@ -109,23 +145,32 @@ aliases. Synthetic dataset creation and padding also belong to ``data``.
 Incremental decoding and training
 --------------------------------
 
-Seq2seq, WaveNet, Transformer, and DeepAR implement two hooks:
+Seq2seq, WaveNet, Transformer, and DeepAR implement three hooks:
 ``initialize_decode(batch, horizon=..., training=...)`` returns a
 ``DecodeSession(context, state, previous)``; ``decode_step(previous, state,
 context, offset=..., training=...)`` returns a ``StepOutput``. Context is fixed
 conditioning, while state is a nest of tensors. RNNs carry recurrent states,
 WaveNet carries bounded delay buffers, and Transformer carries projected
 self-attention keys and values. Initialization encodes the history once.
+``next_input(value, context, offset=...)`` constructs the next decoder input.
+Opaque tensor state is a design guarantee, as is block-wise decoding; neither
+the engine nor user components inspect architecture-specific cache fields.
 
-``GenerationEngine`` owns the TensorFlow loop. A decoder can emit one timestep
+``TimeAxisEngine`` owns the TensorFlow loop. A decoder can emit one timestep
 or a block; the loop advances by that block's time dimension and crops the last
 block to the requested horizon. Each block has shape
 ``[batch, block_length, ..., target_dim]``. Distribution parameters must use the
 same leading batch and time dimensions. ``RolloutOutput.predictions`` and
-``distribution_params`` retain raw model outputs for losses, whereas ``values``
+``distribution_params`` retain sampling parameters (raw during unprocessed training), whereas ``values``
 contains sampled and processed predictions.
 
-``FeedbackPolicy`` is separate from ``ValueSampler``. It chooses between a
+Capability declarations are resolved when task models are built: no execution-time
+hook sniffing. Native autoregression and parallel teacher forcing are independent
+declared capabilities. Runtime teacher probability and missing-target masks choose
+between the already resolved execution paths. The schedule starts at step zero
+when a model has not yet been compiled.
+
+``TeacherForcingPolicy`` is separate from ``ValueSampler``. It chooses between a
 teacher block and the selected model block, only after that block has been
 predicted. Probability one means teacher forcing; zero means model feedback.
 The Bernoulli choice is per example and block, shared across target channels.
@@ -155,7 +200,7 @@ training. The schedule is stored in the task config and evaluated using
        teacher_probability=1.0,
        teacher_final_probability=0.2,
        teacher_decay_steps=10000,
-       feedback_sampler="mean",
+       feedback_sampler="point",
    )
    model.compile(optimizer="adam", loss="mse")
    # x: [batch, context, 2]; y: [batch, 24, 2]

@@ -82,7 +82,7 @@ class GenerationStrategyTest(unittest.TestCase):
 
     def test_direct_distribution_parameters_match_requested_horizon(self):
         model = AutoModelForForecasting.from_config(AutoConfig.for_model("deep_ar"), prediction_length=2)
-        output = model.generate(self.inputs, strategy="direct", prediction_length=1, sampler="mean")
+        output = model.generate(self.inputs, strategy="direct", prediction_length=1, sampler="point")
         self.assertEqual(output.predictions.shape, (2, 1, 1))
         for parameter in output.distribution_params.values():
             self.assertEqual(parameter.shape, (2, 1, 1))

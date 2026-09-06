@@ -9,9 +9,9 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
-from tfts.generation import GenerationEngine, MeanSampler, StepOutput
+from tfts.generation import PointSampler, StepOutput, TimeAxisEngine
 from tfts.generation.decoding import DecodeSession
-from tfts.generation.feedback import FeedbackPolicy
+from tfts.generation.feedback import TeacherForcingPolicy
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
@@ -229,14 +229,14 @@ class Decoder(tf.keras.layers.Layer):
             return self.step(previous, state, decoder_features[:, offset, :])
 
         return (
-            GenerationEngine(MeanSampler())
+            TimeAxisEngine(PointSampler())
             .run(
                 step,
                 decoder_init_input[:, None, :],
                 self.initialize_state(encoder_outputs),
                 self.predict_sequence_length,
                 teacher=teacher,
-                feedback_policy=FeedbackPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
+                teacher_forcing_policy=TeacherForcingPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
             )
             .predictions
         )

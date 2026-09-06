@@ -7,34 +7,20 @@ import tensorflow as tf
 
 from tfts.contracts import ForecastMode
 
-from .engine import GenerationEngine
+from .decoding import decode
+from .engine import TimeAxisEngine
 from .outputs import ForecastGenerationOutput
 from .processors import resolve_forecast_processors
-from .samplers import DistributionSampler, SamplingResult, StepOutput, resolve_value_sampler
-
-
-def _process_values(values, processors, horizon):
-    if not processors:
-        return values
-    history = None
-    selected = []
-    for step in range(int(horizon)):
-        result = SamplingResult(values[:, step : step + 1, :])
-        result = processors(history, result, step=step, step_output=StepOutput(result.value))
-        selected.append(result.value)
-        history = tf.concat(selected, axis=1)
-    return tf.concat(selected, axis=1)
+from .samplers import StepOutput, resolve_value_sampler
+from .steps import StepDecoder
 
 
 def _future_step(values, step):
-    """Return one future timestep, clamping when the covariate horizon is short."""
-    if values is None or values.shape[1] == 0:
+    """Return a validated future timestep without extrapolating covariates."""
+    if values is None:
         return None
-    if values.shape[1] is not None:
-        index = tf.minimum(tf.cast(step, tf.int32), int(values.shape[1]) - 1)
-    else:
-        index = tf.minimum(tf.cast(step, tf.int32), tf.shape(values)[1] - 1)
-    return tf.expand_dims(tf.gather(values, index, axis=1), axis=1)
+    tf.debugging.assert_less(step, tf.shape(values)[1], message="future covariates are too short")
+    return tf.expand_dims(tf.gather(values, step, axis=1), axis=1)
 
 
 def _feature_names(batch, name):
@@ -50,8 +36,6 @@ def _shift_past_field(current, future, step, context_length, *, past_names=(), f
     if future_row is None:
         next_row = current[:, -1:, ...]
     elif past_names or future_names:
-        if len(past_names) != current.shape[-1] or len(future_names) != future.shape[-1]:
-            raise ValueError(f"{name} metadata does not match its tensor width")
         unknown = set(future_names) - set(past_names)
         if unknown:
             raise ValueError(f"future {name} are absent from the past layout: {sorted(unknown)}")
@@ -139,7 +123,7 @@ def _shift_recursive_batch(current, source, value, step):
 def _resolve_sampler(model, sampler, config):
     return resolve_value_sampler(
         sampler if sampler is not None else config.sampler,
-        probabilistic=getattr(model, "output_distribution", None) is not None,
+        probabilistic=model.generation_probabilistic,
     )
 
 
@@ -154,7 +138,12 @@ def _repeat_batch(batch, repeats):
     for field in fields(batch):
         value = getattr(batch, field.name)
         values[field.name] = tf.repeat(value, repeats, axis=0) if tf.is_tensor(value) else value
-    return type(batch)(**values)
+    if batch.structure is not None:
+        per_sample, shared = batch.structure.split_tensor_dict()
+        if per_sample:
+            tensors = {**shared, **{name: tf.repeat(value, repeats, axis=0) for name, value in per_sample.items()}}
+            values["structure"] = type(batch.structure).from_tensor_dict(tensors)
+    return replace(batch, **values)
 
 
 def _aggregate_trajectories(trajectories, aggregation):
@@ -162,7 +151,7 @@ def _aggregate_trajectories(trajectories, aggregation):
         return tf.reduce_mean(trajectories, axis=1)
     if aggregation == "median":
         ordered = tf.sort(trajectories, axis=1)
-        count = trajectories.shape[1]
+        count = tf.shape(trajectories)[1]
         lower = ordered[:, (count - 1) // 2, ...]
         upper = ordered[:, count // 2, ...]
         return (lower + upper) / 2.0
@@ -182,63 +171,104 @@ def _validate_future_horizon(batch, horizon):
 
 class RolloutStrategy(ABC):
     @abstractmethod
-    def run(self, model, batch, config, sampler=None, processors=None):
+    def run(self, model, batch, config, *, horizon, sampler=None, processors=None, stopping_criteria=None):
         raise NotImplementedError
 
 
+class SampleAggregator(RolloutStrategy):
+    """Apply sample breadth and aggregation uniformly around any rollout."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    def run(self, model, batch, config, *, horizon, sampler=None, processors=None, stopping_criteria=None):
+        active_sampler = _resolve_sampler(model, sampler, config)
+        count = config.num_samples if active_sampler.stochastic else 1
+        source = _repeat_batch(batch, count) if count > 1 else batch
+        output = self.inner.run(
+            model,
+            source,
+            config,
+            horizon=horizon,
+            sampler=active_sampler,
+            processors=processors,
+            stopping_criteria=stopping_criteria,
+        )
+
+        def trajectories(value):
+            return tf.reshape(value, tf.concat([[batch.batch_size, count], tf.shape(value)[1:]], axis=0))
+
+        samples = trajectories(output.predictions)
+        parameters = (
+            None
+            if output.distribution_params is None
+            else {
+                name: trajectories(value) if count > 1 else value for name, value in output.distribution_params.items()
+            }
+        )
+        return ForecastGenerationOutput(
+            predictions=_aggregate_trajectories(samples, config.aggregation),
+            samples=samples if config.return_samples else None,
+            distribution_params=parameters,
+            quantile_values=(
+                None
+                if output.quantile_values is None
+                else (trajectories(output.quantile_values) if count > 1 else output.quantile_values)
+            ),
+            values_processed=any(p.stage == "values" for p in resolve_forecast_processors(processors)),
+        )
+
+
 class DirectRollout(RolloutStrategy):
-    def run(self, model, batch, config, sampler=None, processors=None):
+    def run(self, model, batch, config, *, horizon, sampler=None, processors=None, stopping_criteria=None):
         active_sampler = _resolve_sampler(model, sampler, config)
         batch = replace(batch, future_values=None, future_observed_mask=None, labels=None)
         output = model.forward(batch, training=False)
-        values = output.predictions
-        horizon = config.prediction_length or model.task_config.prediction_length
         tf.debugging.assert_greater_equal(
-            tf.shape(values)[1],
+            tf.shape(output.predictions)[1],
             horizon,
             message="Direct forecast is shorter than prediction_length; use strategy='recursive'",
         )
-        values = values[:, :horizon, :]
-        parameters = tf.nest.map_structure(lambda value: value[:, :horizon, ...], output.distribution_params or {})
-        sample_count = config.num_samples if isinstance(active_sampler, DistributionSampler) else 1
-        selected = active_sampler.sample(
-            StepOutput(
-                tf.repeat(values, sample_count, axis=0),
-                distribution=getattr(model, "output_distribution", None),
-                parameters=tf.nest.map_structure(lambda value: tf.repeat(value, sample_count, axis=0), parameters),
+
+        def step_fn(previous, state, offset):
+            return StepOutput(
+                output.predictions[:, offset : offset + 1, ...],
+                parameters=tf.nest.map_structure(
+                    lambda value: value[:, offset : offset + 1, ...], output.distribution_params or {}
+                ),
+                distribution=model.output_distribution,
+                quantile_values=(
+                    None if output.quantile_values is None else output.quantile_values[:, offset : offset + 1, ...]
+                ),
+            )
+
+        result = TimeAxisEngine(active_sampler, processors=processors, stopping_criteria=stopping_criteria).run(
+            step_fn,
+            batch.past_values[:, -1:, ...],
+            None,
+            horizon,
+            past_values=batch.past_values,
+            seed_for_step=lambda offset: (
+                None if config.seed is None else tf.stack([tf.cast(config.seed, tf.int32), offset])
             ),
-            step=0,
-            seed=config.seed,
-        ).value
-        tf.debugging.assert_equal(
-            tf.shape(selected),
-            tf.concat([[tf.shape(values)[0] * sample_count], tf.shape(values)[1:]], axis=0),
-            message="sampler must preserve the forecast block shape",
-        )
-        selected = _process_values(selected, resolve_forecast_processors(processors), horizon)
-        trajectories = tf.reshape(
-            selected, tf.concat([[tf.shape(values)[0], sample_count], tf.shape(values)[1:]], axis=0)
         )
         return ForecastGenerationOutput(
-            predictions=_aggregate_trajectories(trajectories, config.aggregation),
-            samples=trajectories if config.return_samples else None,
-            distribution_params=parameters or None,
-            quantile_values=(None if output.quantile_values is None else output.quantile_values[:, :horizon, ...]),
+            predictions=result.values,
+            distribution_params=result.distribution_params,
+            quantile_values=result.quantile_values,
         )
 
 
 class RecursiveRollout(RolloutStrategy):
-    def run(self, model, batch, config, sampler=None, processors=None):
-        horizon = config.prediction_length or model.task_config.prediction_length
+    def run(self, model, batch, config, *, horizon, sampler=None, processors=None, stopping_criteria=None):
         active_sampler = _resolve_sampler(model, sampler, config)
-        sample_count = config.num_samples if isinstance(active_sampler, DistributionSampler) else 1
         _validate_future_horizon(batch, horizon)
         batch = replace(batch, future_values=None, future_observed_mask=None, labels=None)
-        source = _repeat_batch(batch, sample_count) if sample_count > 1 else batch
+        source = batch
 
-        def feedback(current, result, step, context):
-            current = replace(context, **current)
-            return _shift_recursive_batch(current, context, result.value, step).as_tensor_dict(include_structure=False)
+        def next_input(current, value, *, offset):
+            current = replace(source, **current)
+            return _shift_recursive_batch(current, source, value, offset).as_tensor_dict(include_structure=False)
 
         def step_fn(current, model_state, step):
             current_batch = replace(source, **current)
@@ -254,8 +284,9 @@ class RecursiveRollout(RolloutStrategy):
                 message="recursive model output must contain at least one timestep",
             )
             return StepOutput(
-                prediction=output.predictions[:, :1, :],
-                distribution=getattr(model, "output_distribution", None),
+                prediction=output.predictions[:, :1, ...],
+                distribution=model.output_distribution,
+                quantile_values=None if output.quantile_values is None else output.quantile_values[:, :1, ...],
                 parameters=_one_step_parameters(output.distribution_params),
                 state=model_state,
             )
@@ -263,47 +294,43 @@ class RecursiveRollout(RolloutStrategy):
         def seed_for_step(step):
             return None if config.seed is None else tf.stack([tf.cast(config.seed, tf.int32), tf.cast(step, tf.int32)])
 
-        rollout = GenerationEngine(active_sampler, feedback, processors).run(
-            step_fn,
+        rollout = TimeAxisEngine(active_sampler, processors=processors, stopping_criteria=stopping_criteria).run(
+            StepDecoder(step_fn, next_input),
             replace(source, future_values=None, future_observed_mask=None, labels=None).as_tensor_dict(
                 include_structure=False
             ),
             None,
             horizon,
-            context=source,
+            past_values=batch.past_values,
             seed_for_step=seed_for_step,
         )
-        batch_size = tf.shape(batch.past_values)[0]
-        target_dim = tf.shape(rollout.values)[-1]
-        trajectories = tf.reshape(rollout.values, [batch_size, sample_count, horizon, target_dim])
-        predictions = _aggregate_trajectories(trajectories, config.aggregation)
         return ForecastGenerationOutput(
-            predictions=predictions,
-            samples=trajectories if config.return_samples else None,
+            predictions=rollout.values,
+            distribution_params=rollout.distribution_params,
+            quantile_values=rollout.quantile_values,
         )
 
 
 class AutoregressiveRollout(RolloutStrategy):
-    def run(self, model, batch, config, sampler=None, processors=None):
-        from .decoding import decode
-
-        if not hasattr(model.backbone, "initialize_decode"):
-            raise ValueError("This backbone does not implement incremental decoding")
-        horizon = config.prediction_length or model.task_config.prediction_length
-        active_sampler = _resolve_sampler(model.backbone, sampler, config)
-        sample_count = config.num_samples if isinstance(active_sampler, DistributionSampler) else 1
+    def run(self, model, batch, config, *, horizon, sampler=None, processors=None, stopping_criteria=None):
+        if ForecastMode.AUTOREGRESSIVE not in model.capabilities.forecast_modes:
+            raise ValueError("This backbone does not declare incremental decoding")
+        active_sampler = _resolve_sampler(model, sampler, config)
         batch = replace(batch, future_values=None, future_observed_mask=None, labels=None)
         model_batch, restore = model.prepare_backbone_batch(batch)
-        source = _repeat_batch(model_batch, sample_count) if sample_count > 1 else model_batch
         output = decode(
-            model.backbone, source, horizon, sampler=active_sampler, processors=processors, seed=config.seed
+            model.backbone,
+            model_batch,
+            horizon,
+            sampler=active_sampler,
+            processors=processors,
+            seed=config.seed,
+            stopping_criteria=stopping_criteria,
         )
-        # Restore spatial axes for each trajectory before aggregating samples.
-        trajectories = tf.reshape(output.values, [model_batch.batch_size, sample_count, horizon, -1])
-        restored = tf.stack([restore(trajectories[:, index, ...]) for index in range(sample_count)], axis=1)
         return ForecastGenerationOutput(
-            predictions=_aggregate_trajectories(restored, config.aggregation),
-            samples=restored if config.return_samples else None,
+            predictions=restore(output.values),
+            distribution_params=None if output.distribution_params is None else restore(output.distribution_params),
+            quantile_values=None if output.quantile_values is None else restore(output.quantile_values),
         )
 
 

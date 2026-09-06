@@ -6,7 +6,7 @@ import tensorflow as tf
 
 
 @dataclass(frozen=True)
-class FeedbackPolicy:
+class TeacherForcingPolicy:
     """Choose teacher blocks with a per-example Bernoulli decision.
 
     Teachers are selected only *after* the corresponding prediction is made.
@@ -17,12 +17,18 @@ class FeedbackPolicy:
     teacher_probability: object = 0.0
     detach_predictions: bool = True
 
+    def __post_init__(self):
+        if isinstance(self.teacher_probability, (float, int)) and not 0 <= self.teacher_probability <= 1:
+            raise ValueError("teacher_probability must be in [0, 1]")
+
     def select(self, prediction, teacher=None, observed_mask=None, *, offset=0, seed=None):
         probability = tf.cast(self.teacher_probability, tf.float32)
         tf.debugging.assert_greater_equal(probability, 0.0)
         tf.debugging.assert_less_equal(probability, 1.0)
         value = tf.stop_gradient(prediction) if self.detach_predictions else prediction
         if teacher is None:
+            if isinstance(self.teacher_probability, (float, int)) and self.teacher_probability != 0:
+                raise ValueError("teacher_probability requires teacher targets")
             tf.debugging.assert_equal(probability, 0.0, message="teacher_probability requires teacher targets")
             return value
         width = tf.shape(value)[1]

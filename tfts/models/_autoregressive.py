@@ -1,5 +1,7 @@
 """Shared input boundary for native continuous autoregressive backbones."""
 
+import warnings
+
 import tensorflow as tf
 
 from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, TimeSeriesBatch
@@ -33,6 +35,9 @@ def encoder_features(batch):
 class AutoregressiveModel(BaseModel):
     """Legacy tensor calls and canonical generation share the same decoder."""
 
+    def next_input(self, value, context, *, offset):
+        return value
+
     def decoder_seed(self, batch):
         """Seed feedback with target channels, retaining all inputs for encoding.
 
@@ -51,6 +56,11 @@ class AutoregressiveModel(BaseModel):
         if isinstance(inputs, dict) and "past_values" in inputs:
             batch = TimeSeriesBatch.from_inputs(inputs)
         else:
+            warnings.warn(
+                "Legacy positional autoregressive inputs are deprecated; use TimeSeriesBatch fields.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             x, encoder, future = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
             target_dim = self.config.target_dim
             batch = TimeSeriesBatch(

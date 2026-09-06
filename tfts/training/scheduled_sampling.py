@@ -67,7 +67,7 @@ def scheduled_sampling_decode(
         tf.shape(y_true)[1],
         training=True,
         teacher_probability=teacher_prob,
-        sampler="sample" if stochastic else "mean",
+        sampler="sample" if stochastic else "point",
         seed=seed,
     )
     return result.distribution_params if result.distribution_params is not None else result.predictions

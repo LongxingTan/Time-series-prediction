@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForForecasting
 from tfts.contracts import TimeSeriesBatch
-from tfts.generation import FeedbackPolicy, GenerationEngine, MeanSampler, StepOutput, decode
+from tfts.generation import PointSampler, StepOutput, TeacherForcingPolicy, TimeAxisEngine, decode
 
 
 def model_for(name, **task):
@@ -29,14 +29,14 @@ def model_for(name, **task):
 class FeedbackTest(unittest.TestCase):
     def run_decode(self, probability, seed=12):
         return (
-            GenerationEngine(MeanSampler())
+            TimeAxisEngine(PointSampler())
             .run(
                 lambda previous, state, step: StepOutput(previous + 1, state=state),
                 tf.ones([8, 1, 2]),
                 (),
                 3,
                 teacher=tf.ones([8, 3, 2]) * 10,
-                feedback_policy=FeedbackPolicy(probability),
+                teacher_forcing_policy=TeacherForcingPolicy(probability),
                 seed_for_step=lambda step: tf.stack([seed, step]),
             )
             .values
@@ -54,7 +54,7 @@ class FeedbackTest(unittest.TestCase):
         self.assertGreater(len(np.unique(eager[:, 1, 0])), 1)
 
     def test_missing_teacher_elements_use_prediction(self):
-        value = FeedbackPolicy(1.0).select(
+        value = TeacherForcingPolicy(1.0).select(
             tf.constant([[[2.0, 3.0]]]),
             tf.constant([[[10.0, float("nan")]]]),
             tf.constant([[[True, False]]]),
@@ -67,7 +67,7 @@ class FeedbackTest(unittest.TestCase):
                 last = previous[:, -1:, :]
                 return StepOutput(tf.concat([last + 1, last + 2], axis=1), state=state)
 
-            return GenerationEngine(MeanSampler()).run(step, tf.zeros([2, 1, 1]), (), horizon).values
+            return TimeAxisEngine(PointSampler()).run(step, tf.zeros([2, 1, 1]), (), horizon).values
 
         np.testing.assert_array_equal(tf.function(run)(tf.constant(5))[0, :, 0], [1, 2, 3, 4, 5])
 

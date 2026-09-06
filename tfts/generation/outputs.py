@@ -8,7 +8,7 @@ import tensorflow as tf
 
 
 @dataclass
-class ForecastGenerationOutput:
+class GenerationOutput:
     """Result of a ``generate(...)`` call.
 
     Shapes (assuming a scalar target, ``target_dim == 1``):
@@ -27,6 +27,7 @@ class ForecastGenerationOutput:
     scale: Optional[Union[tf.Tensor, np.ndarray]] = None
     distribution_params: Optional[Mapping[str, tf.Tensor]] = None
     quantile_values: Optional[Union[tf.Tensor, np.ndarray]] = None
+    values_processed: bool = False
 
     def numpy(self) -> "ForecastGenerationOutput":
         """Return a copy with all tensors converted via ``.numpy()`` (eager only)."""
@@ -37,11 +38,21 @@ class ForecastGenerationOutput:
             return t.numpy() if isinstance(t, tf.Tensor) else t
 
         assert self.predictions is not None
-        return ForecastGenerationOutput(
+        return type(self)(
             predictions=_to(self.predictions),
             samples=_to(self.samples),
             loc=_to(self.loc),
             scale=_to(self.scale),
-            distribution_params=self.distribution_params,
+            distribution_params=(
+                None
+                if self.distribution_params is None
+                else {name: _to(value) for name, value in self.distribution_params.items()}
+            ),
             quantile_values=_to(self.quantile_values),
+            values_processed=self.values_processed,
         )
+
+
+@dataclass
+class ForecastGenerationOutput(GenerationOutput):
+    """Forecast-specific specialization of the generic generation result."""

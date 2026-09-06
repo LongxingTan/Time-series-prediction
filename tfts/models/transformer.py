@@ -3,6 +3,7 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
+from dataclasses import replace
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -10,9 +11,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.contracts import ForecastOutput
-from tfts.generation import GenerationEngine, MeanSampler, StepOutput
+from tfts.generation import PointSampler, StepOutput, TimeAxisEngine
 from tfts.generation.decoding import DecodeSession
-from tfts.generation.feedback import FeedbackPolicy
+from tfts.generation.feedback import TeacherForcingPolicy
 from tfts.layers.attention_layer import SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -74,6 +75,8 @@ class TransformerConfig(CommonConfig):
         """
         super(TransformerConfig, self).__init__()
 
+        self.decoder_format_version = 2
+
         self.target_dim = target_dim
         self.hidden_size: int = hidden_size
         self.num_layers: int = num_layers
@@ -93,6 +96,14 @@ class TransformerConfig(CommonConfig):
         self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
 
+    @staticmethod
+    def validate_checkpoint_config(values):
+        if values.get("decoder_format_version") != 2:
+            raise ValueError(
+                "Incompatible Transformer decoder checkpoint: causal decoding requires format 2 "
+                "(TFTS >= 0.1.0). Legacy decoder weights require migration or retraining."
+            )
+
 
 @register_model(
     "transformer",
@@ -100,7 +111,7 @@ class TransformerConfig(CommonConfig):
     paper="https://arxiv.org/abs/1706.03762",
     tags=("attention", "encoder-decoder"),
     tier="core",
-    capabilities=AUTOREGRESSIVE_CAPABILITIES,
+    capabilities=replace(AUTOREGRESSIVE_CAPABILITIES, supports_parallel_teacher_forcing=True),
 )
 class Transformer(AutoregressiveModel):
     """Transformer model"""
@@ -392,14 +403,14 @@ class Decoder(tf.keras.layers.Layer):
             )
 
         return (
-            GenerationEngine(MeanSampler())
+            TimeAxisEngine(PointSampler())
             .run(
                 step,
                 init_input,
                 self.initialize_state(decoder_features, self.predict_sequence_length),
                 self.predict_sequence_length,
                 teacher=teacher,
-                feedback_policy=FeedbackPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
+                teacher_forcing_policy=TeacherForcingPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
             )
             .predictions
         )

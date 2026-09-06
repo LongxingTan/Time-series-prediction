@@ -58,6 +58,20 @@ class TimeSeriesBatch:
                 setattr(self, name, tf.convert_to_tensor(value))
         if self.structure is not None:
             self.structure.validate(self.past_values)
+        names = (self.metadata or {}).get("feature_names", {})
+        for past_key, future_key, past, future in (
+            ("past_real", "future_real", self.past_time_features, self.future_time_features),
+            (
+                "past_categorical",
+                "future_categorical",
+                self.past_categorical_features,
+                self.future_categorical_features,
+            ),
+        ):
+            for key, value in ((past_key, past), (future_key, future)):
+                if key in names and value is not None:
+                    if value.shape[-1] is not None and len(names[key]) != value.shape[-1]:
+                        raise ValueError(f"{key} metadata does not match its tensor width")
 
     @classmethod
     def from_inputs(cls, inputs: Any) -> "TimeSeriesBatch":

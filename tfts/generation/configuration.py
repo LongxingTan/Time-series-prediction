@@ -1,7 +1,7 @@
 """Serializable controls for forecast generation."""
 
 from dataclasses import asdict, dataclass, fields
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=True)
@@ -12,15 +12,14 @@ class ForecastGenerationConfig:
     num_samples: int = 100
     aggregation: str = "mean"
     return_samples: bool = False
-    quantiles: Tuple[float, ...] = ()
     seed: Optional[int] = None
 
     def __post_init__(self):
         if self.prediction_length is not None and self.prediction_length <= 0:
             raise ValueError("prediction_length must be positive")
-        if self.strategy not in {"auto", "direct", "recursive", "autoregressive", "diffusion"}:
+        if self.strategy not in {"auto", "direct", "recursive", "autoregressive"}:
             raise ValueError("Unknown generation strategy %r" % self.strategy)
-        if self.sampler not in {"auto", "mean", "sample"}:
+        if self.sampler not in {"auto", "point", "sample"}:
             raise ValueError("Unknown generation sampler %r" % self.sampler)
         if self.num_samples <= 0:
             raise ValueError("num_samples must be positive")

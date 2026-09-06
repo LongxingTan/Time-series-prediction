@@ -92,6 +92,7 @@ class DeepAREncoder(tf.keras.layers.Layer):
     tags=("probabilistic", "recurrent", "uncertainty"),
     tier="core",
     capabilities=BackboneCapabilities(
+        supports_parallel_teacher_forcing=True,
         output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
         forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
         input_spec=ModelInputSpec(
@@ -112,6 +113,9 @@ class DeepAR(BaseModel):
     - ``forecast = model.generate({"x": x, "static": static}, generation_config=...)``
       -> ``ForecastGenerationOutput`` (optional, sampled)
     """
+
+    def next_input(self, value, context, *, offset):
+        return value
 
     def __init__(
         self,

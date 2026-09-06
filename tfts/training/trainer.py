@@ -320,9 +320,6 @@ class Trainer(BaseTrainer):
                 compile_kwargs["jit_compile"] = True
             self.model.compile(**compile_kwargs)
 
-            trainable_params = int(np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights]))
-            logger.info(f"Trainable parameters: {trainable_params:,}")
-
             # Normalize raw numpy/list inputs to a globally-batched tf.data.Dataset.
             # Feeding numpy arrays to `model.fit` under a real distribution strategy
             # triggers "Mixing different tf.distribute.Strategy objects" in Keras 3,
@@ -362,6 +359,13 @@ class Trainer(BaseTrainer):
                 verbose=verbose,
                 callbacks=callbacks,
             )
+            # Subclassed models create their variables on the first concrete
+            # call.  In Keras 2, inspecting ``trainable_weights`` before that
+            # call raises when a child is an unbuilt ``Sequential`` model.
+            # ``fit`` has built the complete model, so parameter reporting is
+            # reliable across both Keras 2 and Keras 3 here.
+            trainable_params = int(np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights]))
+            logger.info(f"Trainable parameters: {trainable_params:,}")
         return history
 
     def fit(self, **params):

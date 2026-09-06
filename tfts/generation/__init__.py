@@ -3,9 +3,9 @@
 from .api import generate, prepare_generation_batch
 from .configuration import ForecastGenerationConfig
 from .decoding import DecodeSession, IncrementalDecoder, decode
-from .engine import GenerationEngine, RolloutOutput
-from .feedback import FeedbackPolicy
-from .outputs import ForecastGenerationOutput
+from .engine import RolloutOutput, TimeAxisEngine
+from .feedback import TeacherForcingPolicy
+from .outputs import ForecastGenerationOutput, GenerationOutput
 from .processors import (
     CallableForecastProcessor,
     DifferenceClipProcessor,
@@ -14,13 +14,23 @@ from .processors import (
     RemoveInvalidValuesProcessor,
     ValueClipProcessor,
 )
-from .rollout import AutoregressiveRollout, DirectRollout, RecursiveRollout, RolloutStrategy
-from .samplers import CallableSampler, DistributionSampler, MeanSampler, SamplingResult, StepOutput, ValueSampler
+from .rollout import AutoregressiveRollout, DirectRollout, RecursiveRollout, RolloutStrategy, SampleAggregator
+from .samplers import CallableSampler, DistributionSampler, PointSampler, StepOutput, ValueSampler
+from .state import GenStep
+from .stopping import MaxHorizon, StoppingCriteriaList, StoppingCriterion
 
 __all__ = [
+    "GenStep",
+    "GenerationOutput",
+    "TimeAxisEngine",
+    "MaxHorizon",
+    "StoppingCriteriaList",
+    "StoppingCriterion",
+    "SampleAggregator",
+    "PointSampler",
+    "TeacherForcingPolicy",
     "DecodeSession",
     "IncrementalDecoder",
-    "FeedbackPolicy",
     "decode",
     "AutoregressiveRollout",
     "CallableForecastProcessor",
@@ -32,13 +42,10 @@ __all__ = [
     "ForecastGenerationOutput",
     "ForecastProcessor",
     "ForecastProcessorList",
-    "GenerationEngine",
-    "MeanSampler",
     "RecursiveRollout",
     "RemoveInvalidValuesProcessor",
     "RolloutOutput",
     "RolloutStrategy",
-    "SamplingResult",
     "StepOutput",
     "ValueClipProcessor",
     "ValueSampler",

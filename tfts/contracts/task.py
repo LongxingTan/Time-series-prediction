@@ -44,7 +44,7 @@ class ForecastTaskConfig(TaskConfig):
     teacher_probability: float = 1.0
     teacher_final_probability: float = 0.0
     teacher_decay_steps: int = 0
-    feedback_sampler: str = "mean"
+    feedback_sampler: str = "point"
 
     def __post_init__(self):
         super().__post_init__()
@@ -52,8 +52,8 @@ class ForecastTaskConfig(TaskConfig):
             raise ValueError("teacher probabilities must lie in [0, 1]")
         if self.teacher_decay_steps < 0:
             raise ValueError("teacher_decay_steps must be non-negative")
-        if self.feedback_sampler not in {"mean", "sample"}:
-            raise ValueError("feedback_sampler must be 'mean' or 'sample'")
+        if self.feedback_sampler not in {"point", "sample"}:
+            raise ValueError("feedback_sampler must be 'point' or 'sample'")
         object.__setattr__(self, "quantiles", tuple(float(q) for q in self.quantiles))
         if self.prediction_length <= 0 or self.target_dim <= 0:
             raise ValueError("prediction_length and target_dim must be positive")
