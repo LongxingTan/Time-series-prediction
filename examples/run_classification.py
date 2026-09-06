@@ -93,13 +93,13 @@ def run_train(args):
     # note that tfts model summary only work during training process
     print(trainer.model.summary())
 
-    val_logits = restored_model(x_val, training=False).numpy()
+    val_logits = restored_model(x_val, training=False).logits.numpy()
     y_pred_classes = np.argmax(val_logits, axis=1)
 
     cm = confusion_matrix(y_val, y_pred_classes)
     print(cm)
     val_accuracy = np.mean(y_pred_classes == y_val)
-    test_logits = restored_model(x_test, training=False).numpy()
+    test_logits = restored_model(x_test, training=False).logits.numpy()
     test_predictions = np.argmax(test_logits, axis=1)
     test_accuracy = np.mean(test_predictions == y_test)
     print(f"Loaded model inference accuracy — validation: {val_accuracy:.3f}, test: {test_accuracy:.3f}")

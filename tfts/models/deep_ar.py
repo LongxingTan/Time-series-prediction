@@ -14,8 +14,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
 from tfts.contracts import BackboneCapabilities, ForecastMode, ForecastOutput, ModelInputSpec, OutputPort
-from tfts.generation.decoding import DecodeSession
-from tfts.generation.samplers import StepOutput
+from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
 
 from ..distributions import NormalOutput
 from .base import BaseModel, CommonConfig
@@ -212,6 +211,9 @@ class DeepAR(BaseModel):
     # ------------------------------------------- generation hooks (eager path)
     def initialize_generation_state(self, x: tf.Tensor, static: tf.Tensor, training=False) -> list:
         """Encode the window and return the per-layer LSTM final state."""
+        for cell in self.encoder.lstm_cells:
+            cell.reset_dropout_mask()
+            cell.reset_recurrent_dropout_mask()
         if x.shape[1] is None:
             raise ValueError("DeepAR generation requires a statically known encoder length.")
         enc_len = int(x.shape[1])

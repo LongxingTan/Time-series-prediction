@@ -1,6 +1,24 @@
 """Epoch schedules for training feedback; independent of decoder execution."""
 
-__all__ = ["teacher_forcing_decay", "annealed_noise_std"]
+import tensorflow as tf
+
+__all__ = ["TeacherForcingSchedule", "teacher_forcing_decay", "annealed_noise_std"]
+
+
+class TeacherForcingSchedule(tf.keras.callbacks.Callback):
+    """Update a task model's teacher probability outside its forward pass."""
+
+    def __init__(self, initial, final, decay_steps):
+        super().__init__()
+        self.initial = float(initial)
+        self.final = float(final)
+        self.decay_steps = max(1, int(decay_steps))
+
+    def on_train_batch_begin(self, batch, logs=None):
+        step = tf.cast(self.model.optimizer.iterations, tf.float32)
+        fraction = tf.minimum(step / self.decay_steps, 1.0)
+        value = self.initial + fraction * (self.final - self.initial)
+        self.model.teacher_probability.assign(value)
 
 
 def _linear_schedule(epoch, warmup_epochs, total_epochs, start, end):

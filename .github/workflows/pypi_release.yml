@@ -36,6 +36,7 @@ jobs:
           expected_version="${RELEASE_TAG#v}"
           actual_version="$(uv run --no-sync hatchling version)"
           test "$actual_version" = "$expected_version"
+          echo "Building tfts $actual_version"
 
       - name: Build
         run: |

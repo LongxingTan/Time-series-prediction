@@ -39,7 +39,7 @@ from tfts.features import (
     FeatureSpec,
     TimeSeriesSchema,
 )
-from tfts.generation import ForecastGenerationConfig, prepare_generation_batch
+from tfts.generation import GenerationConfig, prepare_generation_batch
 from tfts.graph import from_adjacency, from_correlation, from_grid, from_knn, from_radius
 from tfts.metrics import evaluate as evaluate_metrics
 from tfts.models.auto_config import AutoConfig
@@ -132,7 +132,7 @@ __all__ = [
     "ClassificationTaskConfig",
     "ImputationTaskConfig",
     "AnomalyDetectionTaskConfig",
-    "ForecastGenerationConfig",
+    "GenerationConfig",
     "prepare_generation_batch",
     "TaskType",
     "TimeSeriesBatch",

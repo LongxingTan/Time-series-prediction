@@ -23,41 +23,41 @@ class SpatialModelTest(unittest.TestCase):
     def test_plain_model_directive_and_per_node_fallback(self):
         config = AutoConfig.for_model("dlinear")
         with self.assertRaisesRegex(ValueError, "spatial_strategy='per_node'"):
-            AutoModelForForecasting.from_config(config, prediction_length=3)(self.batch)
+            AutoModelForForecasting.from_config(config, output_chunk_length=3)(self.batch)
         model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("dlinear"), prediction_length=3, spatial_strategy="per_node"
+            AutoConfig.for_model("dlinear"), output_chunk_length=3, spatial_strategy="per_node"
         )
-        result = model(self.batch)
+        result = model(self.batch).predictions
         self.assertEqual(result.shape, (2, 3, 4, 1))
 
         structure_free = TimeSeriesBatch(self.values)
-        self.assertEqual(model(structure_free).shape, (2, 3, 4, 1))
+        self.assertEqual(model(structure_free).predictions.shape, (2, 3, 4, 1))
 
     def test_plain_batch_cannot_be_coerced_into_a_graph_model(self):
         plain = TimeSeriesBatch(tf.zeros([2, 8, 1]))
         for strategy, message in (("raise", "set arrangement"), ("per_node", "spatial values")):
             with self.subTest(strategy=strategy), self.assertRaisesRegex(ValueError, message):
                 model = AutoModelForForecasting.from_config(
-                    AutoConfig.for_model("stgcn"), prediction_length=3, spatial_strategy=strategy
+                    AutoConfig.for_model("stgcn"), output_chunk_length=3, spatial_strategy=strategy
                 )
                 model(plain)
 
     def test_per_node_matches_independent_node_at_inference(self):
         model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("dlinear"), prediction_length=3, spatial_strategy="per_node"
+            AutoConfig.for_model("dlinear"), output_chunk_length=3, spatial_strategy="per_node"
         )
-        combined = model(self.batch, training=False)
+        combined = model(self.batch, training=False).predictions
         node = TimeSeriesBatch(self.values[:, :, 1, :])
         independent = model.backbone(node.past_values)
         np.testing.assert_allclose(combined[:, :, 1, :].numpy(), independent.numpy(), atol=1e-6)
 
     def test_stgcn_eager_and_traced_shapes(self):
-        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), prediction_length=3)
-        self.assertEqual(model(self.batch).shape, (2, 3, 4, 1))
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
+        self.assertEqual(model(self.batch).predictions.shape, (2, 3, 4, 1))
 
         @tf.function
         def run(inputs):
-            return model(inputs)
+            return model(inputs).predictions
 
         self.assertEqual(run(self.batch.as_tensor_dict()).shape, (2, 3, 4, 1))
 
@@ -66,8 +66,8 @@ class SpatialModelTest(unittest.TestCase):
             self.values,
             structure=GraphStructure(4, adjacency=tf.repeat(tf.eye(4)[None], 2, axis=0)),
         )
-        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), prediction_length=2)
-        self.assertEqual(model(batch).shape, (2, 2, 4, 1))
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=2)
+        self.assertEqual(model(batch).predictions.shape, (2, 2, 4, 1))
 
         block = _STGCNBlock(8, 2, 3, 0.2)
         self.assertEqual(block.get_config()["temporal_kernel"], 3)
@@ -91,11 +91,11 @@ class SpatialModelTest(unittest.TestCase):
         config.num_attention_heads = 1
         for head, expected in (("point", (2, 3, 4, 1)), ("quantile", (2, 3, 4, 1, 3)), ("distribution", (2, 3, 4, 1))):
             with self.subTest(head=head):
-                kwargs = {"prediction_length": 3, "head": head, "spatial_strategy": "per_node"}
+                kwargs = {"output_chunk_length": 3, "head": head, "spatial_strategy": "per_node"}
                 if head == "quantile":
                     kwargs["quantiles"] = (0.1, 0.5, 0.9)
                 model = AutoModelForForecasting.from_config(config, **kwargs)
-                output = model(self.batch, return_dict=True)
+                output = model(self.batch)
                 primary = output.quantile_values if head == "quantile" else output.predictions
                 self.assertEqual(primary.shape, expected)
                 if head == "distribution":
@@ -109,15 +109,15 @@ class SpatialModelTest(unittest.TestCase):
             structure=GraphStructure(4, adjacency=tf.eye(4)),
         )
         model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("deep_ar"), prediction_length=3, spatial_strategy="per_node"
+            AutoConfig.for_model("deep_ar"), output_chunk_length=3, spatial_strategy="per_node"
         )
-        output = model(batch, return_dict=True)
+        output = model(batch)
         self.assertEqual(output.predictions.shape, (2, 3, 4, 1))
         self.assertEqual(output.distribution_params["loc"].shape, (2, 3, 4, 1))
 
     def test_spatial_keras_round_trip(self):
-        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), prediction_length=3)
-        expected = model(self.batch)
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
+        expected = model(self.batch).predictions
         specs = model.get_build_config()["batch_specs"]
         self.assertEqual(specs["past_categorical_features"]["dtype"], "int32")
         self.assertEqual(specs["structure.graph.num_nodes"]["dtype"], "int32")
@@ -126,7 +126,7 @@ class SpatialModelTest(unittest.TestCase):
             path = os.path.join(directory, "stgcn.keras")
             model.save(path)
             restored = load_model(path, compile=False)
-            actual = restored(self.batch)
+            actual = restored(self.batch).predictions
         np.testing.assert_allclose(actual.numpy(), expected.numpy(), rtol=1e-5, atol=1e-5)
 
 

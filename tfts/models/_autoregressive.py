@@ -1,11 +1,8 @@
 """Shared input boundary for native continuous autoregressive backbones."""
 
-import warnings
-
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, TimeSeriesBatch
-from tfts.generation.decoding import decode
+from tfts.contracts import BackboneCapabilities, BackboneOutput, ForecastMode, ModelInputSpec, TimeSeriesBatch
 
 from .base import BaseModel
 
@@ -33,7 +30,14 @@ def encoder_features(batch):
 
 
 class AutoregressiveModel(BaseModel):
-    """Legacy tensor calls and canonical generation share the same decoder."""
+    """Base for backbones with a native incremental decoder."""
+
+    def __call__(self, batch, *args, **kwargs):
+        # Expose tensor shapes to Keras before it builds the backbone. A batch
+        # dataclass itself has no shape and cannot serve as a Keras build spec.
+        if isinstance(batch, TimeSeriesBatch):
+            batch = batch.as_tensor_dict()
+        return super().__call__(batch, *args, **kwargs)
 
     def next_input(self, value, context, *, offset):
         return value
@@ -50,28 +54,30 @@ class AutoregressiveModel(BaseModel):
         )
         return batch.past_values[:, -1:, :target_dim]
 
-    def call(
-        self, inputs, teacher=None, training=None, teacher_probability=None, output_hidden_states=None, return_dict=None
-    ):
-        if isinstance(inputs, dict) and "past_values" in inputs:
-            batch = TimeSeriesBatch.from_inputs(inputs)
-        else:
-            warnings.warn(
-                "Legacy positional autoregressive inputs are deprecated; use TimeSeriesBatch fields.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            x, encoder, future = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
-            target_dim = self.config.target_dim
-            batch = TimeSeriesBatch(
-                past_values=x[..., :target_dim],
-                past_time_features=encoder[..., target_dim:],
-                future_time_features=future,
-                future_values=teacher,
-            )
-        if teacher_probability is None:
-            teacher_probability = 1.0 - self.config.scheduled_sampling if teacher is not None else 0.0
-        output = decode(
-            self, batch, self.predict_sequence_length, training=training, teacher_probability=teacher_probability
+    def call(self, batch: TimeSeriesBatch, training=None):
+        from tfts.generation.decoders import NativeDecoder
+        from tfts.generation.loop import run
+        from tfts.generation.processors import Mean, StepProcessorList
+
+        batch = TimeSeriesBatch.from_inputs(batch)
+
+        class _TaskView:
+            head = None
+            backbone = self
+            output_distribution = getattr(self, "output_distribution", None)
+
+            @staticmethod
+            def prepare_backbone_batch(value):
+                return value, lambda tensor: tensor
+
+        trajectory = run(
+            NativeDecoder(_TaskView()),
+            batch,
+            horizon=self.predict_sequence_length,
+            processors=StepProcessorList([Mean(getattr(self, "output_distribution", None))]),
+            training=training,
         )
-        return output.predictions
+        return BackboneOutput(
+            native_forecast=trajectory.predictions,
+            distribution_params=trajectory.distribution_params,
+        )

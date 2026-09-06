@@ -26,7 +26,7 @@ class TCNTest(unittest.TestCase):
     def test_train(self):
         train, valid = tfts.get_data("sine", test_size=0.1)
         config = AutoConfig.for_model("tcn")
-        model = AutoModel.from_config(config=config, predict_sequence_length=8)
+        model = AutoModel.from_config(config=config, output_chunk_length=8)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
         y_test = trainer.predict(valid[0])

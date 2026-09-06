@@ -11,9 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.contracts import ForecastOutput
-from tfts.generation import PointSampler, StepOutput, TimeAxisEngine
-from tfts.generation.decoding import DecodeSession
-from tfts.generation.feedback import TeacherForcingPolicy
+from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
 from tfts.layers.attention_layer import SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -390,30 +388,6 @@ class Decoder(tf.keras.layers.Layer):
             x, cache = block(x, memory, cache=cache, offset=offset, training=training)
             caches.append(cache)
         return StepOutput(self.projection(x), state=tuple(caches))
-
-    def call(self, decoder_features, init_input, encoder_memory, teacher=None, scheduled_sampling=0.0, training=None):
-        def step(previous, state, offset):
-            return self.step(
-                previous,
-                state,
-                decoder_features[:, offset : offset + 1, :],
-                encoder_memory,
-                offset=offset,
-                training=training,
-            )
-
-        return (
-            TimeAxisEngine(PointSampler())
-            .run(
-                step,
-                init_input,
-                self.initialize_state(decoder_features, self.predict_sequence_length),
-                self.predict_sequence_length,
-                teacher=teacher,
-                teacher_forcing_policy=TeacherForcingPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
-            )
-            .predictions
-        )
 
     def get_config(self):
         config = super().get_config()

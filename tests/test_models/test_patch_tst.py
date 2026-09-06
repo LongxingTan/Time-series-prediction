@@ -46,13 +46,13 @@ class PatchTSTTest(unittest.TestCase):
         config.num_layers = 1
         config.patch_size = 8
 
-        model = AutoModel.from_config(config, predict_sequence_length=8)
+        model = AutoModel.from_config(config, output_chunk_length=8)
         self.assertIsNotNone(model)
 
         # Test forward pass
         x = tf.random.normal([2, 32, 3])
         y = model(x)
-        self.assertEqual(y.shape, (2, 8, 1))
+        self.assertEqual(y.predictions.shape, (2, 8, 1))
 
     # def test_train(self):
     #     """Test training loop."""

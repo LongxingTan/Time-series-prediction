@@ -51,7 +51,7 @@ class TaskPipeline:
             return self.model.generate(model_inputs, generation_config, **kwargs)
         if self.task == TaskType.ANOMALY_DETECTION and kwargs.pop("detect", False):
             return self.model.detect(model_inputs)
-        return self.model(model_inputs, return_dict=True, training=False)
+        return self.model(model_inputs, training=False)
 
     def postprocess(self, output):
         if self.processor is None or not hasattr(self.processor, "inverse_transform"):

@@ -113,7 +113,7 @@ Here's a minimal example to get started with TFTS:
 
    # 2. Choose and configure a model
    config = AutoConfig.for_model('transformer')
-   model = AutoModelForForecasting.from_config(config, prediction_length=predict_length)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=predict_length)
 
    # 3. Train the model
    # strategy="default" keeps a single, portable device (see the tutorials page
@@ -227,7 +227,7 @@ Advanced Examples
    config = AutoConfig.for_model('informer')
    config.hidden_size = 32
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
    # Input: (batch, sequence_length, num_features)
    x = tf.random.normal([32, 96, 10])
@@ -242,17 +242,17 @@ samples at inference time for confidence intervals:
 .. code-block:: python
 
    import tensorflow as tf
-   from tfts import AutoConfig, AutoModelForForecasting, ForecastGenerationConfig
+   from tfts import AutoConfig, AutoModelForForecasting, GenerationConfig
 
-   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), prediction_length=24)
+   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), output_chunk_length=24)
 
    out = model.generate(
        {
            "past_values": tf.random.normal([4, 96, 1]),
            "static_categorical_features": tf.constant([[1], [2], [3], [4]]),
        },
-       generation_config=ForecastGenerationConfig(
-           prediction_length=24, num_samples=100, aggregation="mean",
+       config=GenerationConfig(
+           horizon=24, num_samples=100,
        ),
    )
    predictions = out.predictions  # point forecast

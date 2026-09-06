@@ -13,7 +13,7 @@ def main():
         past_values=tf.random.normal([2, 24, 4, 1]),
         structure=GraphStructure(num_nodes=4, adjacency=graph.adjacency, node_ids=("nw", "ne", "sw", "se")),
     )
-    model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), prediction_length=6)
+    model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=6)
     forecast = model(batch)
     print(forecast.shape)
 

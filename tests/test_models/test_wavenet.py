@@ -2,7 +2,8 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.models.wavenet import DecoderV1, DecoderV2, Encoder, WaveNet, WaveNetConfig
+from tfts.contracts import TimeSeriesBatch
+from tfts.models.wavenet import Decoder, Encoder, WaveNet, WaveNetConfig
 
 
 class WaveNetTest(unittest.TestCase):
@@ -23,33 +24,20 @@ class WaveNetTest(unittest.TestCase):
         self.assertEqual(y1.shape, (2, 7, 1))
         self.assertEqual(y2[0].shape, (2, 7, filters))
 
-    def test_decoder1(self):
+    def test_decoder_step(self):
         filters = 32
         dilation_rates = [2]
         dense_hidden_size = 64
         predict_sequence_length = 3
-        layer = DecoderV1(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
+        layer = Decoder(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
 
         x = tf.random.normal([2, 7, 1])
         init = tf.random.normal([2, 1])
-        memory = [tf.random.normal([2, 7, 32]), tf.random.normal([2, 7, 32])]
+        memory = [tf.random.normal([2, 7, 32])]
 
-        y = layer(x, init, memory)
-        self.assertEqual(y.shape, (2, predict_sequence_length, 1))
-
-    def test_decoder2(self):
-        filters = 32
-        dilation_rates = [2]
-        dense_hidden_size = 32
-        predict_sequence_length = 3
-        layer = DecoderV2(filters, dilation_rates, dense_hidden_size, predict_sequence_length)
-
-        x = tf.random.normal([2, 7, 1])
-        init = tf.random.normal([2, 1])
-        memory = [tf.random.normal([2, 7, 32]), tf.random.normal([2, 7, 32])]
-
-        y = layer(x, init, memory)
-        self.assertEqual(y.shape, (2, predict_sequence_length, 1))
+        layer.build(x.shape)
+        output = layer.step(init[:, None, :], tuple(memory), x[:, 0, :])
+        self.assertEqual(output.prediction.shape, (2, 1, 1))
 
     def test_decoder3(self):
         pass
@@ -59,8 +47,8 @@ class WaveNetTest(unittest.TestCase):
         model = WaveNet(predict_sequence_length=predict_sequence_length)
 
         x = tf.random.normal([2, 16, 3])
-        y = model(x)
-        self.assertEqual(y.shape, (2, predict_sequence_length, 1), "incorrect output shape")
+        y = model(batch=TimeSeriesBatch(x))
+        self.assertEqual(y.native_forecast.shape, (2, predict_sequence_length, 1))
 
     def test_train(self):
         pass

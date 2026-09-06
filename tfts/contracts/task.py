@@ -35,7 +35,7 @@ class TaskConfig:
 @dataclass(frozen=True)
 class ForecastTaskConfig(TaskConfig):
     task: TaskType = TaskType.FORECASTING
-    prediction_length: int = 1
+    output_chunk_length: int = 1
     target_dim: int = 1
     head: str = "auto"
     quantiles: Tuple[float, ...] = (0.1, 0.5, 0.9)
@@ -55,8 +55,8 @@ class ForecastTaskConfig(TaskConfig):
         if self.feedback_sampler not in {"point", "sample"}:
             raise ValueError("feedback_sampler must be 'point' or 'sample'")
         object.__setattr__(self, "quantiles", tuple(float(q) for q in self.quantiles))
-        if self.prediction_length <= 0 or self.target_dim <= 0:
-            raise ValueError("prediction_length and target_dim must be positive")
+        if self.output_chunk_length <= 0 or self.target_dim <= 0:
+            raise ValueError("output_chunk_length and target_dim must be positive")
         if self.head not in {"auto", "point", "quantile", "distribution", "native"}:
             raise ValueError("Unknown forecast head %r" % self.head)
         if self.head == "quantile":

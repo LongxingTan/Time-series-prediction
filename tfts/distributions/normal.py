@@ -62,6 +62,11 @@ class NormalOutput(DistributionOutput):
             noise = tf.random.stateless_normal(tf.shape(loc), seed=stateless_seed, dtype=loc.dtype)
         return loc + scale * noise
 
+    def quantile(self, parameters: Dict[str, tf.Tensor], q: float) -> tf.Tensor:
+        q = tf.cast(q, parameters["loc"].dtype)
+        z = tf.sqrt(tf.cast(2.0, q.dtype)) * tf.math.erfinv(2.0 * q - 1.0)
+        return parameters["loc"] + parameters["scale"] * z
+
     def loss(self, y_true: tf.Tensor, parameters: Dict[str, tf.Tensor], reduction: str = "mean") -> tf.Tensor:
         """Gaussian negative log-likelihood aggregating the last two axes (batch x hidden x target)."""
         loc = parameters["loc"]

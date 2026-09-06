@@ -268,11 +268,11 @@ class MaterializerTest(unittest.TestCase):
             ),
         )
         inputs, labels = next(iter(SequenceMaterializer.as_tf_dataset(batch, batch_size=2)))
-        model = AutoModelForForecasting.from_config(AutoConfig.for_model("deep_ar"), prediction_length=2)
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("deep_ar"), output_chunk_length=2)
 
         output = model(inputs, training=True)
 
-        self.assertEqual(output.shape, (2, 2, 1))
+        self.assertEqual(output.predictions.shape, (2, 2, 1))
         np.testing.assert_allclose(inputs["future_values"].numpy(), labels.numpy())
 
         inputs_without_future, _ = next(

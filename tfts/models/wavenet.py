@@ -9,9 +9,7 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
-from tfts.generation import PointSampler, StepOutput, TimeAxisEngine
-from tfts.generation.decoding import DecodeSession
-from tfts.generation.feedback import TeacherForcingPolicy
+from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
@@ -222,25 +220,6 @@ class Decoder(tf.keras.layers.Layer):
         value = self.dense6(self.dense5(tf.nn.relu(tf.concat(skips, axis=-1))))
         return StepOutput(value[:, None, :], state=tuple(buffers))
 
-    def call(
-        self, decoder_features, decoder_init_input, encoder_outputs, teacher=None, scheduled_sampling=0.0, training=None
-    ):
-        def step(previous, state, offset):
-            return self.step(previous, state, decoder_features[:, offset, :])
-
-        return (
-            TimeAxisEngine(PointSampler())
-            .run(
-                step,
-                decoder_init_input[:, None, :],
-                self.initialize_state(encoder_outputs),
-                self.predict_sequence_length,
-                teacher=teacher,
-                teacher_forcing_policy=TeacherForcingPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
-            )
-            .predictions
-        )
-
     def get_config(self):
         config = super().get_config()
         config.update(
@@ -256,7 +235,3 @@ class Decoder(tf.keras.layers.Layer):
             }
         )
         return config
-
-
-DecoderV1 = Decoder
-DecoderV2 = Decoder

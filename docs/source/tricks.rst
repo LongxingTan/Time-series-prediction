@@ -69,17 +69,17 @@ several steps at inference time with the generation policy:
 
     # forecast several steps ahead with the configured generation policy
     import tensorflow as tf
-    from tfts import AutoConfig, AutoModelForForecasting, ForecastGenerationConfig
+    from tfts import AutoConfig, AutoModelForForecasting, GenerationConfig
 
     model = AutoModelForForecasting.from_config(
-        AutoConfig.for_model("dlinear"), prediction_length=8
+        AutoConfig.for_model("dlinear"), output_chunk_length=8
     )
     # input window: (batch, lookback, n_features)
     window = tf.random.normal([1, 24, 1])
 
     out = model.generate(
         window,
-        generation_config=ForecastGenerationConfig(prediction_length=8),
+        config=GenerationConfig(horizon=8),
     )
     print(out.predictions.shape)   # (1, 8, 1)
 

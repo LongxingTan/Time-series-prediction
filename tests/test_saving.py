@@ -26,13 +26,19 @@ class TestKerasModelLoading(unittest.TestCase):
         model = model_factory(config)
         if expected_class == "ImputationModel":
             sample = {"past_values": sample, "past_observed_mask": np.ones_like(sample)}
-        expected = model(sample).numpy()
+        output_field = {
+            "ForecastingModel": "predictions",
+            "ClassificationModel": "logits",
+            "ImputationModel": "imputed_values",
+            "AnomalyDetectionModel": "scores",
+        }[expected_class]
+        expected = getattr(model(sample), output_field).numpy()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = os.path.join(tmpdir, "task.keras")
             model.save(model_path)
             restored = load_model(model_path, compile=False)
-            actual = restored(sample).numpy()
+            actual = getattr(restored(sample), output_field).numpy()
 
         self.assertEqual(type(restored).__name__, expected_class)
         np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=1e-5)
@@ -40,7 +46,7 @@ class TestKerasModelLoading(unittest.TestCase):
     def test_all_task_models_round_trip_without_custom_objects(self):
         sample = np.random.default_rng(11).normal(size=(2, 8, 1)).astype(np.float32)
         cases = (
-            (lambda config: AutoModelForForecasting.from_config(config, prediction_length=2), "ForecastingModel"),
+            (lambda config: AutoModelForForecasting.from_config(config, output_chunk_length=2), "ForecastingModel"),
             (
                 lambda config: AutoModelForTimeSeriesClassification.from_config(config, num_labels=3),
                 "ClassificationModel",

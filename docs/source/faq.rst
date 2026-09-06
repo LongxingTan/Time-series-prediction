@@ -250,7 +250,7 @@ My model isn't learning. What should I do?
 
    # Start with RNN or DLinear
    config = AutoConfig.for_model('rnn')
-   model = AutoModelForForecasting.from_config(config, prediction_length=8)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=8)
 
 4. **Adjust learning rate:**
 
@@ -507,7 +507,7 @@ Can I customize model architectures?
    from tfts import AutoBackbone, AutoConfig
 
    config = AutoConfig.for_model('seq2seq')
-   backbone = AutoBackbone.from_config(config, prediction_length=24)
+   backbone = AutoBackbone.from_config(config, output_chunk_length=24)
 
    # Wrap the TFTS backbone with your own Keras head
    inputs = tf.keras.Input(shape=(24, 1))
@@ -526,7 +526,7 @@ Can I customize model architectures?
        def __init__(self):
            super().__init__()
            self.backbone = AutoBackbone.from_config(
-               AutoConfig.for_model('transformer'), prediction_length=24
+               AutoConfig.for_model('transformer'), output_chunk_length=24
            )
            self.custom_layers = tf.keras.Sequential([
                tf.keras.layers.Dense(128, activation='relu'),
@@ -565,20 +565,18 @@ point forecast while ``samples`` lets you build confidence intervals:
 
    import numpy as np
    import tensorflow as tf
-   from tfts import AutoConfig, AutoModelForForecasting, ForecastGenerationConfig
+   from tfts import AutoConfig, AutoModelForForecasting, GenerationConfig
 
-   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), prediction_length=24)
+   model = AutoModelForForecasting.from_config(AutoConfig.for_model('deep_ar'), output_chunk_length=24)
 
    out = model.generate(
        {
            "past_values": tf.random.normal([4, 96, 1]),      # (batch, lookback, features)
            "static_categorical_features": tf.constant([[1], [2], [3], [4]]),  # series ids
        },
-       generation_config=ForecastGenerationConfig(
-           prediction_length=24,
+       config=GenerationConfig(
+           horizon=24,
            num_samples=100,          # ancestral MC paths
-           aggregation="mean",       # collapse samples -> point forecast
-           return_samples=True,      # keep the raw samples for intervals
        ),
    )
    point = out.predictions                     # (batch, 24, 1)

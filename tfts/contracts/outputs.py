@@ -2,47 +2,28 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
-from dataclasses import dataclass, fields
-from typing import Any, Mapping, Optional, Tuple
+from dataclasses import dataclass, fields, replace
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
 
 
-class ModelOutput(OrderedDict):
-    """Dataclass mapping that supports named and positional access."""
+@dataclass(frozen=True)
+class ModelOutput:
+    """Immutable base for every task and backbone output."""
 
-    def __post_init__(self) -> None:
-        OrderedDict.__init__(self)
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if value is not None:
-                self[field.name] = value
+    loss: Optional[tf.Tensor] = None
 
-    def __getitem__(self, key):
-        if isinstance(key, (int, slice)):
-            return self.to_tuple()[key]
-        return super().__getitem__(key)
+    def replace(self, **changes):
+        return replace(self, **changes)
 
-    def __setattr__(self, name, value):
-        object.__setattr__(self, name, value)
-        # Keep attribute and mapping access coherent after dataclass construction.
-        # ``OrderedDict`` is not initialized while dataclass ``__init__`` runs.
-        try:
-            dataclass_field = name in {field.name for field in fields(self)}
-            if dataclass_field:
-                if value is None:
-                    OrderedDict.pop(self, name, None)
-                else:
-                    OrderedDict.__setitem__(self, name, value)
-        except TypeError:
-            pass
-
-    def to_tuple(self) -> Tuple[Any, ...]:
-        return tuple(self.values())
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            field.name: getattr(self, field.name) for field in fields(self) if getattr(self, field.name) is not None
+        }
 
 
-@dataclass
+@dataclass(frozen=True)
 class BackboneOutput(ModelOutput):
     sequence_output: Optional[tf.Tensor] = None
     pooled_output: Optional[tf.Tensor] = None
@@ -53,39 +34,35 @@ class BackboneOutput(ModelOutput):
     attentions: Optional[Tuple[tf.Tensor, ...]] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ForecastOutput(ModelOutput):
     predictions: Optional[tf.Tensor] = None
     distribution_params: Optional[Mapping[str, tf.Tensor]] = None
     quantile_values: Optional[tf.Tensor] = None
     quantiles: Optional[Tuple[float, ...]] = None
     samples: Optional[tf.Tensor] = None
-    loss: Optional[tf.Tensor] = None
     backbone_output: Optional[BackboneOutput] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ClassificationOutput(ModelOutput):
     logits: Optional[tf.Tensor] = None
     probabilities: Optional[tf.Tensor] = None
-    loss: Optional[tf.Tensor] = None
     backbone_output: Optional[BackboneOutput] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImputationOutput(ModelOutput):
     reconstructed_values: Optional[tf.Tensor] = None
     imputed_values: Optional[tf.Tensor] = None
     mask: Optional[tf.Tensor] = None
-    loss: Optional[tf.Tensor] = None
     backbone_output: Optional[BackboneOutput] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class AnomalyDetectionOutput(ModelOutput):
     reconstruction: Optional[tf.Tensor] = None
     scores: Optional[tf.Tensor] = None
     labels: Optional[tf.Tensor] = None
     threshold: Optional[tf.Tensor] = None
-    loss: Optional[tf.Tensor] = None
     backbone_output: Optional[BackboneOutput] = None

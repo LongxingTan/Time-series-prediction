@@ -5,14 +5,14 @@ import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForForecasting
 from tfts.contracts import ForecastOutput, TimeSeriesBatch
-from tfts.generation import ForecastGenerationConfig
+from tfts.generation import GenerationConfig, MedianSamples
 
 
 class DeepARTest(unittest.TestCase):
     def setUp(self):
         self.prediction_length = 5
         self.model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("deep_ar"), prediction_length=self.prediction_length
+            AutoConfig.for_model("deep_ar"), output_chunk_length=self.prediction_length
         )
         self.batch = TimeSeriesBatch(
             past_values=tf.random.normal([2, 12, 1]),
@@ -21,7 +21,7 @@ class DeepARTest(unittest.TestCase):
         )
 
     def test_probabilistic_forward_contract(self):
-        output = self.model(self.batch, return_dict=True)
+        output = self.model(self.batch)
 
         self.assertIsInstance(output, ForecastOutput)
         self.assertEqual(output.predictions.shape, (2, self.prediction_length, 1))
@@ -29,9 +29,9 @@ class DeepARTest(unittest.TestCase):
         self.assertTrue(bool(tf.reduce_all(output.distribution_params["scale"] > 0)))
 
     def test_sampled_autoregressive_generation_is_reproducible(self):
-        config = ForecastGenerationConfig(num_samples=4, return_samples=True, seed=7, aggregation="median")
-        first = self.model.generate(self.batch, config)
-        second = self.model.generate(self.batch, config)
+        config = GenerationConfig(num_samples=4, seed=7, trajectory=())
+        first = MedianSamples()(self.model.generate(self.batch, config))
+        second = MedianSamples()(self.model.generate(self.batch, config))
 
         self.assertEqual(first.predictions.shape, (2, self.prediction_length, 1))
         self.assertEqual(first.samples.shape, (2, 4, self.prediction_length, 1))

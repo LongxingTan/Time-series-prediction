@@ -9,9 +9,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Dense, GRUCell, LSTMCell
 
-from tfts.generation import PointSampler, StepOutput, TimeAxisEngine
-from tfts.generation.decoding import DecodeSession
-from tfts.generation.feedback import TeacherForcingPolicy
+from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
 from tfts.layers.attention_layer import Attention
 
 from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features
@@ -235,37 +233,6 @@ class Decoder(tf.keras.layers.Layer):
         hidden, state = self.rnn_cell(tf.concat(inputs, axis=-1), state, training=training)
         return StepOutput(self.dense(hidden)[:, None, :], state=tuple(state))
 
-    def call(
-        self,
-        decoder_features,
-        decoder_init_input,
-        init_state,
-        teacher=None,
-        scheduled_sampling=0,
-        training=None,
-        **kwargs,
-    ):
-        state = (init_state,) if tf.is_tensor(init_state) else tuple(init_state)
-
-        def step(previous, state, offset):
-            return self.step(
-                previous, state, decoder_features[:, offset, :], kwargs.get("encoder_output"), training=training
-            )
-
-        probability = 1.0 - scheduled_sampling if teacher is not None else 0.0
-        return (
-            TimeAxisEngine(PointSampler())
-            .run(
-                step,
-                decoder_init_input[:, None, :],
-                state,
-                self.predict_sequence_length,
-                teacher=teacher,
-                teacher_forcing_policy=TeacherForcingPolicy(probability),
-            )
-            .predictions
-        )
-
     def get_config(self):
         config = super().get_config()
         config.update(
@@ -284,8 +251,3 @@ class Decoder(tf.keras.layers.Layer):
             }
         )
         return config
-
-
-# Import compatibility only: there is one implementation and one decoding loop.
-DecoderV1 = Decoder
-DecoderV2 = Decoder

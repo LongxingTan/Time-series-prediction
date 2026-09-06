@@ -44,6 +44,6 @@ class NBeatsTest(unittest.TestCase):
 
         config = AutoConfig.for_model("tft")
 
-        model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+        model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(ts_sequence, epochs=1)

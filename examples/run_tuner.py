@@ -68,7 +68,7 @@ class AutoTuner(object):
         config.rnn_hidden_size = hidden_units
         config.num_stacked_layers = num_layers
 
-        model = AutoModel.from_config(config, predict_sequence_length=self.predict_sequence_length)
+        model = AutoModel.from_config(config, output_chunk_length=self.predict_sequence_length)
         trainer = KerasTrainer(model)
 
         trainer.train(
@@ -126,5 +126,5 @@ if __name__ == "__main__":
 
     study = tuner.run(n_trials=args.n_trials, direction="minimize")
     restored_model = tuner.load_best_model(study)
-    predictions = restored_model(x_valid, training=False).numpy()
+    predictions = restored_model(x_valid, training=False).predictions.numpy()
     print(f"Loaded best trial model, inference shape: {predictions.shape}")

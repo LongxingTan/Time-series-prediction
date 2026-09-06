@@ -65,7 +65,7 @@ predict_sequence_length = 8
 
 model_name_or_path = 'seq2seq'  # 'wavenet', 'transformer', 'rnn', 'tcn', 'bert', 'dlinear', 'nbeats', 'informer', 'autoformer'
 config = AutoConfig.for_model(model_name_or_path)
-model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(
     (x_train, y_train),
@@ -80,7 +80,7 @@ trainer.save_model(model_dir)
 
 # Load the model
 restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
-pred = restored_model(x_valid, training=False).numpy()
+pred = restored_model(x_valid, training=False).predictions.numpy()
 trainer.plot(history=x_valid, true=y_valid, pred=pred)
 plt.show()
 ```
@@ -109,14 +109,14 @@ x_valid = np.random.rand(1, train_length, n_feature)
 y_valid = np.random.rand(1, predict_sequence_length, 1)
 
 config = AutoConfig.for_model('rnn')
-model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=(x_train, y_train), valid_dataset=(x_valid, y_valid), epochs=1)
 
 model_dir = "./outputs/encoder_only"
 trainer.save_model(model_dir)
 restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid[:1])
-inference = restored_model(x_valid[:1], training=False).numpy()
+inference = restored_model(x_valid[:1], training=False).predictions.numpy()
 print(inference.shape)
 ```
 
@@ -147,14 +147,14 @@ x_valid = {
 y_valid = np.random.rand(1, predict_sequence_length, 1)
 
 config = AutoConfig.for_model("seq2seq")
-model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 
 model_dir = "./outputs/encoder_decoder"
 trainer.save_model(model_dir)
 restored_model = AutoModel.from_pretrained(model_dir, sample_batch=x_valid)
-inference = restored_model(x_valid, training=False).numpy()
+inference = restored_model(x_valid, training=False).predictions.numpy()
 print(inference.shape)
 ```
 
@@ -203,7 +203,7 @@ valid_loader = tf.data.Dataset.from_generator(
 valid_loader = valid_loader.batch(batch_size=1)
 
 config = AutoConfig.for_model("seq2seq")
-model = AutoModelForForecasting.from_config(config, prediction_length=predict_sequence_length)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=predict_sequence_length)
 trainer = KerasTrainer(model)
 trainer.train(train_dataset=train_loader, valid_dataset=valid_loader, epochs=1)
 
@@ -211,7 +211,7 @@ model_dir = "./outputs/encoder_decoder_tfdata"
 trainer.save_model(model_dir)
 inference_inputs = next(iter(valid_loader.take(1)))[0]
 restored_model = AutoModel.from_pretrained(model_dir, sample_batch=inference_inputs)
-inference = restored_model(inference_inputs, training=False).numpy()
+inference = restored_model(inference_inputs, training=False).predictions.numpy()
 print(inference.shape)
 ```
 
@@ -224,7 +224,7 @@ config = AutoConfig.for_model('rnn')
 print(config)
 config.rnn_hidden_size = 128
 
-model = AutoModelForForecasting.from_config(config, prediction_length=7)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=7)
 ```
 
 **Build your own model**
@@ -259,12 +259,18 @@ num_train_features = 15
 predict_sequence_length = 8
 
 def build_model():
-    inputs = Input([train_length, num_train_features])
-    config = AutoConfig.for_model("seq2seq")
-    backbone = AutoBackbone.from_config(config, prediction_length=predict_sequence_length)
-    outputs = backbone(inputs)
-    outputs = Dense(1, activation="sigmoid")(outputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    class CustomForecaster(tf.keras.Model):
+        def __init__(self):
+            super().__init__()
+            config = AutoConfig.for_model("seq2seq")
+            self.backbone = AutoBackbone.from_config(config, output_chunk_length=predict_sequence_length)
+            self.projection = Dense(1, activation="sigmoid")
+
+        def call(self, inputs, training=None):
+            output = self.backbone(inputs, training=training)
+            return self.projection(output.native_forecast)
+
+    model = CustomForecaster()
     model.compile(loss="mse", optimizer="rmsprop")
     return model
 ```

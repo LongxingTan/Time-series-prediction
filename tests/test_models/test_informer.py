@@ -148,6 +148,6 @@ class InformerTest(unittest.TestCase):
         y_valid = np.random.rand(batch_size, predict_sequence_length, 1)
 
         config = AutoConfig.for_model("informer")
-        model = AutoModel.from_config(config, prediction_length=predict_sequence_length)
+        model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)

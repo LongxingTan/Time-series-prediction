@@ -1,36 +1,30 @@
-"""Stopping hooks evaluated after each accepted forecast block."""
+"""Stopping criteria evaluated between emitted chunks."""
 
 from typing import Protocol
 
 import tensorflow as tf
 
-from .state import GenStep
+from .chunk import Chunk
 
 
-class StoppingCriterion(Protocol):
-    def __call__(self, step: GenStep) -> tf.Tensor:
-        """Return a scalar or per-example boolean stop request."""
-        ...
-
-
-class MaxHorizon:
-    def __init__(self, horizon):
-        self.horizon = horizon
-
-    def __call__(self, step):
-        return step.offset + tf.shape(step.value)[1] >= self.horizon
+class Stop(Protocol):
+    def __call__(self, chunk: Chunk) -> tf.Tensor:
+        """Return a scalar boolean stop request."""
 
 
 class StoppingCriteriaList(list):
-    """Stop when any criterion requests termination for the whole batch.
+    def __init__(self, criteria=()):
+        if any(not callable(item) for item in criteria):
+            raise TypeError("every stopping criterion must be callable")
+        super().__init__(criteria)
 
-    A per-example criterion terminates the batch when all examples agree.
-    The returned horizon is rectangular; individual sequence lengths are not
-    currently represented.
-    """
-
-    def __call__(self, step):
-        result = tf.constant(False)
+    def __call__(self, chunk):
+        stopped = tf.constant(False)
         for criterion in self:
-            result = result | tf.reduce_all(tf.cast(criterion(step), tf.bool))
-        return result
+            result = tf.convert_to_tensor(criterion(chunk))
+            tf.debugging.assert_rank(result, 0, message="stopping criteria must return a scalar boolean")
+            stopped = stopped | tf.cast(result, tf.bool)
+        return stopped
+
+
+__all__ = ["Stop", "StoppingCriteriaList"]

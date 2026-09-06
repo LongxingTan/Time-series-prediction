@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 import json
 import os
-from typing import Any, Tuple
+from typing import Any
 
 import tensorflow as tf
 
 from tfts.contracts import ModelOutput, TimeSeriesBatch
+from tfts.registry import build
 
 
 class BaseHead(tf.keras.layers.Layer, ABC):
@@ -24,6 +25,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
 
     task_name = None
     required_output_port = None
+    default_objective = None
 
     def __init__(self, backbone, task_config, capabilities, **kwargs):
         super().__init__(**kwargs)
@@ -36,6 +38,8 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         self.adapter = BackboneAdapter(backbone, capabilities)
         spatial_strategy = getattr(task_config, "spatial_strategy", "raise")
         self.spatial_adapter = SpatialAdapter(capabilities.input_spec, self.adapter.model_type, spatial_strategy)
+        self.objective = None
+        self._loss_tracker = tf.keras.metrics.Mean(name="loss")
 
     @property
     def config(self):
@@ -43,7 +47,11 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
 
     @property
     def predict_sequence_length(self):
-        return getattr(self.task_config, "prediction_length", 1)
+        return self.output_chunk_length
+
+    @property
+    def output_chunk_length(self):
+        return getattr(self.task_config, "output_chunk_length", 1)
 
     def __call__(self, inputs=None, *args, **kwargs):
         # Keras rejects non-tensor positional values before reaching ``call``.
@@ -53,7 +61,22 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         return super().__call__(inputs, *args, **kwargs)
 
     def normalize_batch(self, inputs: Any) -> TimeSeriesBatch:
+        from dataclasses import replace
+
         batch = TimeSeriesBatch.from_inputs(inputs)
+        casts = {}
+        for name in (
+            "past_values",
+            "future_values",
+            "past_time_features",
+            "future_time_features",
+            "static_real_features",
+        ):
+            value = getattr(batch, name)
+            if value is not None and value.dtype.is_floating and value.dtype != self.compute_dtype:
+                casts[name] = tf.cast(value, self.compute_dtype)
+        if casts:
+            batch = replace(batch, **casts)
         batch.validate_for(self.task_name)
         if not hasattr(self, "_batch_build_specs"):
             shared_names = set()
@@ -80,13 +103,72 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def forward(self, inputs, training=None) -> ModelOutput:
         raise NotImplementedError
 
-    @abstractmethod
-    def primary_output(self, output: ModelOutput) -> tf.Tensor:
-        raise NotImplementedError
+    def configure_objective(self, objective=None, **context):
+        component = self.default_objective if objective is None else objective
+        self.objective = None if component is None else build("objective", component, **context)
 
-    def call(self, inputs, training=None, return_dict=False):
+    def call(self, inputs, training=None):
         output = self.forward(inputs, training=training)
-        return output if return_dict else self.primary_output(output)
+        batch = self.normalize_batch(inputs)
+        if self.objective is not None and self.has_targets(batch):
+            output = output.replace(loss=self.objective(batch, output))
+        return output
+
+    def has_targets(self, batch):
+        if self.task_name == "forecasting":
+            return batch.future_values is not None
+        if self.task_name == "classification":
+            return batch.labels is not None
+        if self.task_name == "imputation":
+            return batch.labels is not None
+        if self.task_name == "anomaly_detection":
+            return batch.labels is not None
+        return batch.labels is not None or batch.future_values is not None
+
+    def _batch_from_keras(self, data):
+        from dataclasses import replace
+
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        if sample_weight is not None:
+            raise ValueError("sample_weight is not supported by batch-aware Objectives")
+        batch = self.normalize_batch(x)
+        if y is None:
+            if self.task_name == "anomaly_detection" and batch.labels is None:
+                batch = replace(batch, labels=batch.past_values)
+            return batch
+        field = "future_values" if self.task_name == "forecasting" else "labels"
+        target = tf.convert_to_tensor(y)
+        if target.dtype.is_floating:
+            target = tf.cast(target, self.compute_dtype)
+        return replace(batch, **{field: target})
+
+    @property
+    def metrics(self):
+        return [self._loss_tracker]
+
+    def train_step(self, data):
+        batch = self._batch_from_keras(data)
+        with tf.GradientTape() as tape:
+            output = self(batch, training=True)
+            if output.loss is None:
+                raise ValueError(f"{self.task_name} training requires targets and an Objective")
+            loss = output.loss + (tf.add_n(self.losses) if self.losses else 0.0)
+        gradients = tape.gradient(loss, self.trainable_variables)
+        pairs = [(g, v) for g, v in zip(gradients, self.trainable_variables) if g is not None]
+        if not pairs:
+            raise ValueError("Objective produced no gradients for trainable variables")
+        self.optimizer.apply_gradients(pairs)
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
+
+    def test_step(self, data):
+        batch = self._batch_from_keras(data)
+        output = self(batch, training=False)
+        if output.loss is None:
+            raise ValueError(f"{self.task_name} evaluation requires targets and an Objective")
+        loss = output.loss + (tf.add_n(self.losses) if self.losses else 0.0)
+        self._loss_tracker.update_state(loss)
+        return {"loss": self._loss_tracker.result()}
 
     def build_from_config(self, config):
         """Build every child layer before Keras restores saved variables."""
@@ -199,15 +281,6 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
                 indent=2,
             )
         self.save_weights(os.path.join(save_directory, TF2_WEIGHTS_NAME))
-
-    @property
-    @abstractmethod
-    def default_loss(self):
-        raise NotImplementedError
-
-    @property
-    def default_metrics(self) -> Tuple[Any, ...]:
-        return ()
 
 
 class BaseTask(ABC):

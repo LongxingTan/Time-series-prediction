@@ -49,11 +49,12 @@ class TestTaskHeads(unittest.TestCase):
         second_logits = head(second, padding_mask=mask)
         np.testing.assert_allclose(first_logits.numpy(), second_logits.numpy(), atol=1e-6)
 
-    def test_model_output_attribute_and_mapping_views_stay_coherent(self):
+    def test_model_output_is_frozen_and_replaceable(self):
         output = ForecastOutput(predictions=tf.ones([1, 2, 1]))
-        output.samples = tf.zeros([1, 3, 2, 1])
-        self.assertIs(output.samples, output["samples"])
-        self.assertIs(output[0], output.predictions)
+        updated = output.replace(samples=tf.zeros([1, 3, 2, 1]))
+        self.assertIsNone(output.samples)
+        self.assertEqual(updated.samples.shape, (1, 3, 2, 1))
+        self.assertIn("predictions", updated.to_dict())
 
 
 class TestAnomalyServices(unittest.TestCase):

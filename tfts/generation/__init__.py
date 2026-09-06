@@ -1,54 +1,72 @@
-"""Forecast rollout, sampling, and continuous-value processing."""
+"""Chunked generation and its user extension points."""
 
 from .api import generate, prepare_generation_batch
-from .configuration import ForecastGenerationConfig
-from .decoding import DecodeSession, IncrementalDecoder, decode
-from .engine import RolloutOutput, TimeAxisEngine
-from .feedback import TeacherForcingPolicy
-from .outputs import ForecastGenerationOutput, GenerationOutput
+from .chunk import Chunk, State
+from .config import GenerationConfig
+from .decoders import Decoder, DirectDecoder, NativeDecoder, RecursiveDecoder, decoder_for
+from .loop import run
 from .processors import (
-    CallableForecastProcessor,
-    DifferenceClipProcessor,
-    ForecastProcessor,
-    ForecastProcessorList,
-    RemoveInvalidValuesProcessor,
-    ValueClipProcessor,
+    Clip,
+    DifferenceClip,
+    Feedback,
+    Mean,
+    Median,
+    NoiseInjection,
+    NonNegative,
+    Quantile,
+    RemoveInvalid,
+    Sample,
+    Selector,
+    StepProcessor,
+    StepProcessorList,
+    TeacherForcing,
 )
-from .rollout import AutoregressiveRollout, DirectRollout, RecursiveRollout, RolloutStrategy, SampleAggregator
-from .samplers import CallableSampler, DistributionSampler, PointSampler, StepOutput, ValueSampler
-from .state import GenStep
-from .stopping import MaxHorizon, StoppingCriteriaList, StoppingCriterion
+from .stopping import Stop, StoppingCriteriaList
+from .trajectory import (
+    ConformalCalibrate,
+    InverseScale,
+    MeanSamples,
+    MedianSamples,
+    ReconcileHierarchy,
+    RepairQuantileCrossing,
+    Trajectory,
+    TrajectoryTransform,
+)
 
 __all__ = [
-    "GenStep",
-    "GenerationOutput",
-    "TimeAxisEngine",
-    "MaxHorizon",
+    "Chunk",
+    "Clip",
+    "ConformalCalibrate",
+    "Decoder",
+    "DifferenceClip",
+    "DirectDecoder",
+    "Feedback",
+    "GenerationConfig",
+    "InverseScale",
+    "Mean",
+    "MeanSamples",
+    "Median",
+    "MedianSamples",
+    "NativeDecoder",
+    "NoiseInjection",
+    "NonNegative",
+    "Quantile",
+    "ReconcileHierarchy",
+    "RecursiveDecoder",
+    "RemoveInvalid",
+    "RepairQuantileCrossing",
+    "Sample",
+    "Selector",
+    "State",
+    "StepProcessor",
+    "StepProcessorList",
+    "Stop",
     "StoppingCriteriaList",
-    "StoppingCriterion",
-    "SampleAggregator",
-    "PointSampler",
-    "TeacherForcingPolicy",
-    "DecodeSession",
-    "IncrementalDecoder",
-    "decode",
-    "AutoregressiveRollout",
-    "CallableForecastProcessor",
-    "CallableSampler",
-    "DifferenceClipProcessor",
-    "DirectRollout",
-    "DistributionSampler",
-    "ForecastGenerationConfig",
-    "ForecastGenerationOutput",
-    "ForecastProcessor",
-    "ForecastProcessorList",
-    "RecursiveRollout",
-    "RemoveInvalidValuesProcessor",
-    "RolloutOutput",
-    "RolloutStrategy",
-    "StepOutput",
-    "ValueClipProcessor",
-    "ValueSampler",
+    "TeacherForcing",
+    "Trajectory",
+    "TrajectoryTransform",
+    "decoder_for",
     "generate",
     "prepare_generation_batch",
+    "run",
 ]

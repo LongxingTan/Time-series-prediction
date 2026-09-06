@@ -112,9 +112,9 @@ class Bert(BaseModel):
         Configuration object containing model hyperparameters
     predict_sequence_length : int
         Number of future time steps to predict
-    encoder_embedding : DataEmbedding
+    encoder_embedding : tfts.layers.embed_layer.DataEmbedding
         Embedding layer for encoder inputs
-    encoder : Encoder
+    encoder : tfts.models.transformer.Encoder
         Transformer encoder module
     dense_layers : List[Dense]
         List of dense layers for final projection

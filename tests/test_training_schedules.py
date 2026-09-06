@@ -1,6 +1,6 @@
 import unittest
 
-from tfts.training import exposure_bias, scheduled_sampling
+from tfts.training import exposure_bias
 from tfts.training.schedules import annealed_noise_std, teacher_forcing_decay
 
 
@@ -11,6 +11,5 @@ class TrainingSchedulesTest(unittest.TestCase):
                 self.assertAlmostEqual(teacher_forcing_decay(epoch, total_epochs=7), teacher)
                 self.assertAlmostEqual(annealed_noise_std(epoch, total_epochs=7), noise)
 
-    def test_old_imports_reuse_canonical_schedules(self):
+    def test_exposure_bias_reuses_canonical_schedule(self):
         self.assertIs(exposure_bias.annealed_noise_std, annealed_noise_std)
-        self.assertIs(scheduled_sampling.teacher_forcing_decay, teacher_forcing_decay)
