@@ -61,10 +61,19 @@ class RNN(BaseModel):
     """tfts RNN model"""
 
     def adapt_batch(self, batch):
+        # Time features and padding masks are optional RNN inputs.  Without
+        # them the public contract stays a plain (batch, time, features)
+        # tensor so the persisted ``input_shape`` remains the flat
+        # user-facing shape; fabricating a zero-width ``encoder_feature``
+        # here would leak an internal input into the saved config and break
+        # ``AutoModel.from_pretrained`` shape-based restoration.
+        if batch.past_time_features is None and batch.padding_mask is None:
+            return batch.past_values
         values = {"x": batch.past_values}
-        values["encoder_feature"] = tf.zeros_like(batch.past_values[..., :0])
         if batch.past_time_features is not None:
             values["encoder_feature"] = batch.past_time_features
+        else:
+            values["encoder_feature"] = tf.zeros_like(batch.past_values[..., :0])
         if batch.padding_mask is not None:
             values["padding_mask"] = batch.padding_mask
         return values

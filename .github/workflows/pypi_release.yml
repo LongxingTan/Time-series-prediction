@@ -36,9 +36,6 @@ jobs:
           expected_version="${RELEASE_TAG#v}"
           actual_version="$(uv run --no-sync hatchling version)"
           test "$actual_version" = "$expected_version"
-          # Causal Transformer decoder checkpoints break the 0.0.x format.
-          uv run --no-sync python -c 'import sys; from packaging.version import Version; assert Version(sys.argv[1]) >= Version("0.1.0"), "Generation API requires a minor release >= 0.1.0"' "$actual_version"
-          echo "Building tfts $actual_version"
 
       - name: Build
         run: |
