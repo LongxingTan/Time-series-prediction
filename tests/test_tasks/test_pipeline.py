@@ -15,10 +15,10 @@ class TestTaskPipeline(unittest.TestCase):
         self.assertEqual(output.logits.shape, (2, 3))
 
     def test_generation_is_only_exposed_for_forecasting(self):
-        pipeline = TaskPipeline("forecasting", "dlinear", prediction_length=2)
+        pipeline = TaskPipeline("forecasting", "dlinear", output_chunk_length=2)
         output = pipeline(
             tf.random.normal([2, 8, 1]),
-            generation_config={"prediction_length": 4, "strategy": "recursive"},
+            generation_config={"horizon": 4, "mode": "recursive"},
         )
         self.assertEqual(output.predictions.shape, (2, 4, 1))
 

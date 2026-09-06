@@ -46,7 +46,9 @@ class TimeSeriesBatchTest(unittest.TestCase):
 
 class TaskConfigTest(unittest.TestCase):
     def test_configs_are_validated_and_json_friendly(self):
-        config = ForecastTaskConfig(task="forecasting", prediction_length=4, head="quantile", quantiles=[0.1, 0.5, 0.9])
+        config = ForecastTaskConfig(
+            task="forecasting", output_chunk_length=4, head="quantile", quantiles=[0.1, 0.5, 0.9]
+        )
         self.assertEqual(config.task, TaskType.FORECASTING)
         self.assertEqual(config.quantiles, (0.1, 0.5, 0.9))
         self.assertEqual(config.to_dict()["task"], "forecasting")

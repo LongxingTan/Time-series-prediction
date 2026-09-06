@@ -21,6 +21,7 @@ from ..features import (
     add_roll_feature,
     add_transform_feature,
 )
+from .sequence_utils import generate_sequence_windows
 
 logger = logging.getLogger(__name__)
 
@@ -197,42 +198,20 @@ class TimeSeriesSequence(Sequence):
             time_values = time_values.astype("datetime64[s]").astype(np.int64)  # Convert to whole seconds
 
         sequences = []
-        if self.mode == "inference":
-            max_start_idx = len(group) - self.train_sequence_length + 1
-        else:
-            max_start_idx = len(group) - self.train_sequence_length - self.predict_sequence_length + 1
-
-        for i in range(0, max(0, max_start_idx), self.stride):
-            # Get indices for encoder sequence
-            encoder_start = i
-            encoder_end = i + self.train_sequence_length
-            encoder_indices = np.arange(encoder_start, encoder_end)
-
-            # Get indices for decoder sequence
+        for encoder_indices, decoder_indices in generate_sequence_windows(
+            len(group),
+            context_length=self.train_sequence_length,
+            prediction_length=self.predict_sequence_length,
+            stride=self.stride,
+            mode=self.mode,
+            time_values=time_values,
+        ):
+            encoder_sequence = input_values[encoder_indices]
             if self.mode == "inference":
-                decoder_indices = np.array([], dtype=int)
-                window_indices = encoder_indices
+                decoder_sequence = np.zeros((self.predict_sequence_length, len(self.target)), dtype=np.float32)
             else:
-                decoder_start = encoder_end
-                decoder_end = decoder_start + self.predict_sequence_length
-                decoder_indices = np.arange(decoder_start, decoder_end)
-                window_indices = np.concatenate([encoder_indices, decoder_indices])
-
-            # Check the entire encoder/decoder window, including their boundary.
-            time_diffs = np.diff(time_values[window_indices])
-            is_continuous = len(time_diffs) == 0 or np.all(time_diffs == time_diffs[0])
-
-            if (
-                len(encoder_indices) == self.train_sequence_length
-                and (self.mode == "inference" or len(decoder_indices) == self.predict_sequence_length)
-                and is_continuous
-            ):
-                encoder_sequence = input_values[encoder_indices]
-                if self.mode == "inference":
-                    decoder_sequence = np.zeros((self.predict_sequence_length, len(self.target)), dtype=np.float32)
-                else:
-                    decoder_sequence = target_values[decoder_indices]
-                sequences.append((encoder_sequence, decoder_sequence))
+                decoder_sequence = target_values[decoder_indices]
+            sequences.append((encoder_sequence, decoder_sequence))
 
         return sequences
 

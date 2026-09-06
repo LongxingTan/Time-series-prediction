@@ -8,6 +8,8 @@ from typing import Dict, Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, AveragePooling1D, Bidirectional, Concatenate, Dense, Reshape
 
+from tfts.contracts import BackboneCapabilities
+
 from .base import BaseConfig, BaseModel, CommonConfig
 from .registry import register_model
 
@@ -48,9 +50,33 @@ class RNNConfig(CommonConfig):
         self.use_attention: bool = use_attention
 
 
-@register_model("rnn", config=RNNConfig, tags=("baseline", "recurrent"), tier="core")
+@register_model(
+    "rnn",
+    config=RNNConfig,
+    tags=("baseline", "recurrent"),
+    tier="core",
+    capabilities=BackboneCapabilities(supports_variable_length=True),
+)
 class RNN(BaseModel):
     """tfts RNN model"""
+
+    def adapt_batch(self, batch):
+        # Time features and padding masks are optional RNN inputs.  Without
+        # them the public contract stays a plain (batch, time, features)
+        # tensor so the persisted ``input_shape`` remains the flat
+        # user-facing shape; fabricating a zero-width ``encoder_feature``
+        # here would leak an internal input into the saved config and break
+        # ``AutoModel.from_pretrained`` shape-based restoration.
+        if batch.past_time_features is None and batch.padding_mask is None:
+            return batch.past_values
+        values = {"x": batch.past_values}
+        if batch.past_time_features is not None:
+            values["encoder_feature"] = batch.past_time_features
+        else:
+            values["encoder_feature"] = tf.zeros_like(batch.past_values[..., :0])
+        if batch.padding_mask is not None:
+            values["padding_mask"] = batch.padding_mask
+        return values
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[RNNConfig] = None):
         super().__init__()
@@ -82,7 +108,8 @@ class RNN(BaseModel):
             Model output.
         """
         x, encoder_feature, _ = self._prepare_3d_inputs(inputs)
-        encoder_outputs, encoder_state = self.encoder(encoder_feature)
+        mask = inputs.get("padding_mask") if isinstance(inputs, dict) else None
+        encoder_outputs, encoder_state = self.encoder(encoder_feature, mask=mask)
 
         encoder_out = self.dense1(encoder_state)
         encoder_out = self.dense2(encoder_out)
@@ -141,7 +168,7 @@ class Encoder(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
-    def call(self, inputs: tf.Tensor):
+    def call(self, inputs: tf.Tensor, mask=None):
         """RNN encoder call
 
         Parameters
@@ -168,7 +195,7 @@ class Encoder(tf.keras.layers.Layer):
         for i, layer in enumerate(self.rnn_layers):
             is_last_layer = i == len(self.rnn_layers) - 1
             if is_last_layer and self.return_state:
-                outputs = layer(x)
+                outputs = layer(x, mask=mask)
 
                 if self.bi_direction:
                     output = outputs[0]
@@ -191,7 +218,7 @@ class Encoder(tf.keras.layers.Layer):
                         x, state = outputs
                     return x, state
             else:
-                x = layer(x)
+                x = layer(x, mask=mask)
         return x
 
     def get_config(self):

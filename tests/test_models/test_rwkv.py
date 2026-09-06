@@ -40,13 +40,13 @@ class RWKVTest(unittest.TestCase):
         config.hidden_size = 32
         config.num_layers = 1
 
-        model = AutoModel.from_config(config, predict_sequence_length=8)
+        model = AutoModel.from_config(config, output_chunk_length=8)
         self.assertIsNotNone(model)
 
         # Test forward pass
         x = tf.random.normal([2, 10, 3])
         y = model(x)
-        self.assertEqual(y.shape, (2, 8, 1))
+        self.assertEqual(y.predictions.shape, (2, 8, 1))
 
     # def test_train(self):
     #     """Test training loop."""

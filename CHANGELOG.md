@@ -1,5 +1,6 @@
 # Release notes
 
+
 ## v0.0.22
 
 - Add typed spatial arrangements and topology inputs to ``TimeSeriesBatch``.
@@ -8,6 +9,18 @@
 - Preserve shared graph metadata across Keras/``tf.data`` boundaries without
   copying static topology into every training window.
 - Add documented graph builders and a runnable spatial forecasting example.
+- Introduce a shared time-axis generation pipeline, typed `GenStep` hooks,
+  parameter and value processors, stopping criteria, and sample aggregation.
+- Resolve decoder capabilities when task models are built. RNN forecasts now
+  honor declared padding masks for variable-length histories.
+- **Checkpoint break:** Transformer causal cached decoding uses decoder format 2.
+  Legacy decoder checkpoints require migration or retraining; config-based
+  loaders reject missing or incompatible format markers before loading weights.
+  This change must ship as a minor release (at least 0.1.0).
+- Custom rollout strategies are runtime instances; serialized configs support
+  only the implemented built-in strategies. Remove unused generation quantiles.
+- Use `PointSampler` (`sampler="point"`), `TeacherForcingPolicy`, and
+  `TimeAxisEngine`.
 
 
 ## v.0.0.15

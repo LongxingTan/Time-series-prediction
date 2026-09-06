@@ -65,7 +65,7 @@ class ClassificationExampleTest(unittest.TestCase):
             metrics=["sparse_categorical_accuracy"],
             verbose=0,
         )
-        y_pred = model(x_val)
+        y_pred = model(x_val).logits
         acc = float(np.mean(np.argmax(y_pred, axis=1) == y_val))
         self.assertGreater(acc, 0.6)
 

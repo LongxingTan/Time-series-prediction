@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 import tensorflow as tf
@@ -10,7 +10,7 @@ import tensorflow as tf
 from .structure import ARRANGEMENT_BY_RANK, EXPECTED_RANK, SpatialArrangement, SpatialStructure
 
 
-@dataclass
+@dataclass(frozen=True)
 class TimeSeriesBatch:
     """Named time-series tensors shared by forecasting and representation tasks.
 
@@ -36,7 +36,7 @@ class TimeSeriesBatch:
     def __post_init__(self) -> None:
         if self.past_values is None:
             raise ValueError("past_values is required")
-        self.past_values = tf.convert_to_tensor(self.past_values)
+        object.__setattr__(self, "past_values", tf.convert_to_tensor(self.past_values))
         rank = self.past_values.shape.rank
         if rank not in ARRANGEMENT_BY_RANK:
             raise ValueError("past_values must have rank 3 (sequence), 4 (set), or 5 (grid), " f"got rank {rank}")
@@ -55,9 +55,23 @@ class TimeSeriesBatch:
         ):
             value = getattr(self, name)
             if value is not None:
-                setattr(self, name, tf.convert_to_tensor(value))
+                object.__setattr__(self, name, tf.convert_to_tensor(value))
         if self.structure is not None:
             self.structure.validate(self.past_values)
+        names = (self.metadata or {}).get("feature_names", {})
+        for past_key, future_key, past, future in (
+            ("past_real", "future_real", self.past_time_features, self.future_time_features),
+            (
+                "past_categorical",
+                "future_categorical",
+                self.past_categorical_features,
+                self.future_categorical_features,
+            ),
+        ):
+            for key, value in ((past_key, past), (future_key, future)):
+                if key in names and value is not None:
+                    if value.shape[-1] is not None and len(names[key]) != value.shape[-1]:
+                        raise ValueError(f"{key} metadata does not match its tensor width")
 
     @classmethod
     def from_inputs(cls, inputs: Any) -> "TimeSeriesBatch":
@@ -170,6 +184,15 @@ class TimeSeriesBatch:
                     tf.shape(value), tf.shape(reference), message=f"{name} must have the same shape as its values"
                 )
 
+        if self.padding_mask is not None:
+            if self.padding_mask.shape.rank != 2:
+                raise ValueError("padding_mask must have shape (batch, time)")
+            tf.debugging.assert_equal(
+                tf.shape(self.padding_mask),
+                tf.shape(self.past_values)[:2],
+                message="padding_mask must match the past batch and time dimensions",
+            )
+
         if task == "imputation":
             if self.past_observed_mask is None:
                 raise ValueError("imputation requires past_observed_mask")
@@ -181,3 +204,93 @@ class TimeSeriesBatch:
         elif task == "classification" and self.labels is not None:
             if self.labels.shape.rank not in (1, 2):
                 raise ValueError("classification labels must have rank 1 or 2")
+
+    def advance(self, value: tf.Tensor, *, offset: tf.Tensor) -> "TimeSeriesBatch":
+        """Roll the context forward and consume matching known-future features."""
+
+        value = tf.convert_to_tensor(value)
+        tf.debugging.assert_rank_at_least(value, 3)
+        tf.debugging.assert_equal(tf.shape(value)[0], self.batch_size, message="feedback batch size mismatch")
+        tf.debugging.assert_equal(tf.shape(value)[-1], self.target_dim, message="feedback target dimension mismatch")
+        tf.debugging.assert_non_negative(offset, message="offset must be non-negative")
+        width = tf.shape(value)[1]
+        tf.debugging.assert_positive(width, message="feedback chunk must not be empty")
+
+        def roll(current, appended):
+            joined = tf.concat([current, tf.cast(appended, current.dtype)], axis=1)
+            return joined[:, -tf.shape(current)[1] :, ...]
+
+        names = (self.metadata or {}).get("feature_names", {})
+
+        def advance_features(current, future, past_key, future_key, field_name):
+            if current is None:
+                return None
+            if future is None:
+                appended = tf.repeat(current[:, -1:, ...], width, axis=1)
+            else:
+                tf.debugging.assert_greater_equal(
+                    tf.shape(future)[1], width, message=f"{field_name} do not cover feedback chunk"
+                )
+                appended = future[:, :width, ...]
+                past_names = tuple(names.get(past_key, ()))
+                future_names = tuple(names.get(future_key, ()))
+                if past_names or future_names:
+                    unknown = set(future_names) - set(past_names)
+                    if unknown:
+                        raise ValueError(f"future {field_name} are absent from the past layout: {sorted(unknown)}")
+                    positions = {name: index for index, name in enumerate(future_names)}
+                    columns = []
+                    for index, name in enumerate(past_names):
+                        if name in positions:
+                            position = positions[name]
+                            columns.append(appended[..., position : position + 1])
+                        else:
+                            columns.append(tf.repeat(current[:, -1:, ..., index : index + 1], width, axis=1))
+                    appended = tf.concat(columns, axis=-1)
+                else:
+                    tf.debugging.assert_equal(
+                        tf.shape(current)[-1],
+                        tf.shape(appended)[-1],
+                        message=f"{field_name} layouts differ. Provide feature_names metadata",
+                    )
+            return roll(current, appended)
+
+        past_observed_mask = None
+        if self.past_observed_mask is not None:
+            generated_mask = tf.zeros_like(value, dtype=self.past_observed_mask.dtype)
+            past_observed_mask = roll(self.past_observed_mask, generated_mask)
+
+        padding_mask = None
+        if self.padding_mask is not None:
+            generated_padding = tf.ones([self.batch_size, width], dtype=self.padding_mask.dtype)
+            padding_mask = roll(self.padding_mask, generated_padding)
+
+        return replace(
+            self,
+            past_values=roll(self.past_values, value),
+            past_time_features=advance_features(
+                self.past_time_features,
+                self.future_time_features,
+                "past_real",
+                "future_real",
+                "real features",
+            ),
+            past_categorical_features=advance_features(
+                self.past_categorical_features,
+                self.future_categorical_features,
+                "past_categorical",
+                "future_categorical",
+                "categorical features",
+            ),
+            past_observed_mask=past_observed_mask,
+            padding_mask=padding_mask,
+            future_values=None,
+            future_observed_mask=None,
+            labels=None,
+            future_time_features=(
+                None if self.future_time_features is None else self.future_time_features[:, width:, ...]
+            ),
+            future_categorical_features=(
+                None if self.future_categorical_features is None else self.future_categorical_features[:, width:, ...]
+            ),
+        )

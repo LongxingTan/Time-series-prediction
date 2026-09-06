@@ -168,7 +168,7 @@ loss:
 
    # 2. Backbone config + model. The task head ("quantile") adds prediction_length outputs.
    config = AutoConfig.for_model("dlinear")
-   model = AutoModelForForecasting.from_config(config, prediction_length=8)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=8)
 
    # 3. Loss and optimizer
    loss_fn = tf.keras.losses.MeanSquaredError()
@@ -229,7 +229,7 @@ Models accept batches of shape ``(batch, lookback, n_features)`` and produce
    from tfts import AutoConfig, AutoModelForForecasting
 
    model = AutoModelForForecasting.from_config(
-       AutoConfig.for_model("transformer"), prediction_length=7
+       AutoConfig.for_model("transformer"), output_chunk_length=7
    )
    x = tf.random.normal([4, 14, 10])      # 4 series, 14 lookback steps, 10 features
    out = model(x)                         # (4, 7, 1)
@@ -246,7 +246,7 @@ also ``tf.keras.Model`` objects:
    from tfts import AutoConfig, AutoModelForForecasting
 
    model = AutoModelForForecasting.from_config(
-       AutoConfig.for_model("seq2seq"), prediction_length=8
+       AutoConfig.for_model("seq2seq"), output_chunk_length=8
    )
    model.compile(loss="mse", optimizer="rmsprop")
 
@@ -263,10 +263,10 @@ Saving, reloading and inference
 
    import tensorflow as tf
    from tfts import AutoConfig, AutoModelForForecasting, AutoModel
-   from tfts import ForecastGenerationConfig
+   from tfts import GenerationConfig
 
    model = AutoModelForForecasting.from_config(
-       AutoConfig.for_model("dlinear"), prediction_length=8
+       AutoConfig.for_model("dlinear"), output_chunk_length=8
    )
    _ = model(tf.zeros([1, 24, 1]))   # build the model (needed before saving)
    model.save_pretrained("./my_model")
@@ -277,7 +277,7 @@ Saving, reloading and inference
    # Autoregressive / multi-step generation at inference time
    out = restored.generate(
        tf.random.normal([4, 24, 1]),
-       generation_config=ForecastGenerationConfig(prediction_length=8),
+       config=GenerationConfig(horizon=8),
    )
    print(out.predictions.shape)
 
@@ -351,7 +351,7 @@ with TensorFlow Serving:
 
    import tfts
 
-   model = tfts.AutoModelForForecasting.from_config(tfts.AutoConfig.for_model("dlinear"), prediction_length=8)
+   model = tfts.AutoModelForForecasting.from_config(tfts.AutoConfig.for_model("dlinear"), output_chunk_length=8)
    model.save_pretrained("./my_model")
 
    # Alternatively, export a single Keras archive for inference

@@ -60,16 +60,14 @@ class BaseModel(tf.keras.Model, ABC):
             else:
                 self.config.input_shape = tuple(tf.TensorShape(input_shape)[1:])
 
-        if nested_input:
-            # TensorFlow 2.13's Model.build() passes nested TensorShape values
-            # to the placeholder helper as if they were dimensions. The
-            # resulting ``Dimension value must be integer`` error only affects
-            # nested inputs; the normal model call can build child layers
-            # correctly once the outer layer is marked built.
-            self._build_input_shape = input_shape
-            tf.keras.layers.Layer.build(self, input_shape)
-        else:
-            super().build(input_shape)
+        # These are subclassed models whose child layers are built by the first
+        # real call.  Keras 2's ``Model.build`` instead calls the model with
+        # symbolic placeholders: nested shapes fail in placeholder creation,
+        # while manually-built RNN cells inherit a callable caching device that
+        # eager ``tf.device`` rejects.  Record the shape and mark only the outer
+        # layer built; the concrete call already in progress builds children.
+        self._build_input_shape = input_shape
+        tf.keras.layers.Layer.build(self, input_shape)
 
     def build_from_config(self, config):
         """Create child variables before Keras restores their saved values.
@@ -151,6 +149,7 @@ class BaseModel(tf.keras.Model, ABC):
             raise ValueError(f"Missing 'model_type' in {os.path.join(model_dir, CONFIG_NAME)}")
 
         config = AutoConfig.for_model(model_type)
+        config.validate_checkpoint_config(base_config.to_dict())
         config.update(base_config.to_dict())
         prediction_length = predict_sequence_length or getattr(config, "predict_sequence_length", 1)
         model = cls(config=config, predict_sequence_length=prediction_length)
@@ -291,6 +290,7 @@ class BaseModel(tf.keras.Model, ABC):
             if model_type is None:
                 raise ValueError("Serialized TFTS model config is missing `model_type`.")
             restored_config = AutoConfig.for_model(model_type)
+            restored_config.validate_checkpoint_config(model_config)
             restored_config.update(model_config)
             config["config"] = restored_config
         return cls(**config)
@@ -301,6 +301,10 @@ class BaseConfig(ABC):
 
     attribute_map: Dict[str, str] = {}
     model_type: str
+
+    @staticmethod
+    def validate_checkpoint_config(values):
+        """Validate persisted architecture versions before constructing layers."""
 
     def __init_subclass__(cls, **kwargs):
         """Validate concrete configs once their complete constructor returns."""

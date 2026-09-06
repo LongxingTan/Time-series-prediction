@@ -1,40 +1,72 @@
-"""Forecast rollout, sampling, and continuous-value processing."""
+"""Chunked generation and its user extension points."""
 
-from .api import generate
-from .configuration import ForecastGenerationConfig
-from .engine import GenerationEngine, RolloutOutput
-from .outputs import ForecastGenerationOutput
+from .api import generate, prepare_generation_batch
+from .chunk import Chunk, State
+from .config import GenerationConfig
+from .decoders import Decoder, DirectDecoder, NativeDecoder, RecursiveDecoder, decoder_for
+from .loop import run
 from .processors import (
-    CallableForecastProcessor,
-    DifferenceClipProcessor,
-    ForecastProcessor,
-    ForecastProcessorList,
-    RemoveInvalidValuesProcessor,
-    ValueClipProcessor,
+    Clip,
+    DifferenceClip,
+    Feedback,
+    Mean,
+    Median,
+    NoiseInjection,
+    NonNegative,
+    Quantile,
+    RemoveInvalid,
+    Sample,
+    Selector,
+    StepProcessor,
+    StepProcessorList,
+    TeacherForcing,
 )
-from .rollout import AutoregressiveRollout, DirectRollout, RecursiveRollout, RolloutStrategy
-from .samplers import CallableSampler, DistributionSampler, MeanSampler, SamplingResult, StepOutput, ValueSampler
+from .stopping import Stop, StoppingCriteriaList
+from .trajectory import (
+    ConformalCalibrate,
+    InverseScale,
+    MeanSamples,
+    MedianSamples,
+    ReconcileHierarchy,
+    RepairQuantileCrossing,
+    Trajectory,
+    TrajectoryTransform,
+)
 
 __all__ = [
-    "AutoregressiveRollout",
-    "CallableForecastProcessor",
-    "CallableSampler",
-    "DifferenceClipProcessor",
-    "DirectRollout",
-    "DistributionSampler",
-    "ForecastGenerationConfig",
-    "ForecastGenerationOutput",
-    "ForecastProcessor",
-    "ForecastProcessorList",
-    "GenerationEngine",
-    "MeanSampler",
-    "RecursiveRollout",
-    "RemoveInvalidValuesProcessor",
-    "RolloutOutput",
-    "RolloutStrategy",
-    "SamplingResult",
-    "StepOutput",
-    "ValueClipProcessor",
-    "ValueSampler",
+    "Chunk",
+    "Clip",
+    "ConformalCalibrate",
+    "Decoder",
+    "DifferenceClip",
+    "DirectDecoder",
+    "Feedback",
+    "GenerationConfig",
+    "InverseScale",
+    "Mean",
+    "MeanSamples",
+    "Median",
+    "MedianSamples",
+    "NativeDecoder",
+    "NoiseInjection",
+    "NonNegative",
+    "Quantile",
+    "ReconcileHierarchy",
+    "RecursiveDecoder",
+    "RemoveInvalid",
+    "RepairQuantileCrossing",
+    "Sample",
+    "Selector",
+    "State",
+    "StepProcessor",
+    "StepProcessorList",
+    "Stop",
+    "StoppingCriteriaList",
+    "TeacherForcing",
+    "Trajectory",
+    "TrajectoryTransform",
+    "decoder_for",
     "generate",
+    "prepare_generation_batch",
+    "run",
 ]

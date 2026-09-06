@@ -9,6 +9,7 @@ from .auto_task import (
     ReconstructionHead,
 )
 from .base import BaseHead, BaseTask, ModelOutput, TimeSeriesTaskModel
+from .objectives import Objective
 from .task_models import AnomalyDetectionModel, ClassificationModel, ForecastingModel, ImputationModel
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "ForecastingModel",
     "ImputationModel",
     "ModelOutput",
+    "Objective",
     "PointForecastHead",
     "QuantileCalibrator",
     "QuantileForecastHead",

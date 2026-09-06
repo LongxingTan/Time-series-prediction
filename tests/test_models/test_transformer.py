@@ -56,8 +56,14 @@ class TransformerTest(unittest.TestCase):
         x = tf.random.normal([2, 16, hidden_size])
         init = tf.random.normal([2, 1, 1])
         memory = tf.random.normal([2, 16, hidden_size])
-        y = layer(x, init, memory)
-        self.assertEqual(y.shape, (2, predict_sequence_length, 1))
+        features = x[:, :predict_sequence_length]
+        state = layer.initialize_state(features, predict_sequence_length)
+        outputs = []
+        for offset in range(predict_sequence_length):
+            output = layer.step(init, state, features[:, offset : offset + 1], memory, offset=offset)
+            init, state = output.prediction, output.state
+            outputs.append(output.prediction)
+        self.assertEqual(tf.concat(outputs, axis=1).shape, (2, predict_sequence_length, 1))
 
     def test_decoder2(self):
         pass
@@ -67,12 +73,12 @@ class TransformerTest(unittest.TestCase):
         model = Transformer(predict_sequence_length=predict_sequence_length)
         x = tf.random.normal([16, 160, 36])
         y = model(x)
-        self.assertEqual(y.shape, (16, predict_sequence_length, 1), "incorrect output shape")
+        self.assertEqual(y.native_forecast.shape, (16, predict_sequence_length, 1), "incorrect output shape")
 
     def test_train(self):
         train, valid = tfts.get_data("sine", test_size=0.1)
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=8)
+        model = AutoModel.from_config(config, output_chunk_length=8)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
         y_test = trainer.predict(valid[0])

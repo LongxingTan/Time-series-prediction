@@ -40,7 +40,7 @@ class TestAutoModel(unittest.TestCase):
         for model_name in list_models():
             with self.subTest(model_name=model_name):
                 config = AutoConfig.for_model(model_name)
-                model = AutoModel.from_config(config, predict_sequence_length=2)
+                model = AutoModel.from_config(config, output_chunk_length=2)
                 self.assertEqual(model.config.model_type, model_name)
 
     def test_registry_metadata_matches_auto_dispatch(self):
@@ -50,7 +50,7 @@ class TestAutoModel(unittest.TestCase):
             with self.subTest(model_name=model_name):
                 info = get_model_info(model_name)
                 config = AutoConfig.for_model(model_name)
-                model = AutoModel.from_config(config, predict_sequence_length=2)
+                model = AutoModel.from_config(config, output_chunk_length=2)
 
                 self.assertEqual(type(config).__name__, info["config_class"])
                 self.assertEqual(type(model.backbone).__name__, info["class_name"])
@@ -139,7 +139,7 @@ class TestAutoModel(unittest.TestCase):
                     # TFT treats every historical target channel as an encoder
                     # real variable; keep its explicit variable count aligned.
                     config.encoder_real_dim = feature_count
-                model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+                model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
                 if model_name == "stgcn":
                     inputs = TimeSeriesBatch(
                         past_values=tf.random.normal([1, 16, 3, 1]),
@@ -156,10 +156,8 @@ class TestAutoModel(unittest.TestCase):
                 output = model(inputs)
 
                 if model_name == "stgcn":
-                    self.assertEqual(output.shape, (1, predict_sequence_length, 3, 1))
-                elif model_name == "deep_ar":
-                    self.assertEqual(output.shape, (1, predict_sequence_length, 1))
+                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 3, 1))
                 elif model_name in multivariate_outputs:
-                    self.assertEqual(output.shape, (1, predict_sequence_length, feature_count))
+                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, feature_count))
                 else:
-                    self.assertEqual(output.shape, (1, predict_sequence_length, 1))
+                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 1))

@@ -138,7 +138,7 @@ Classic encoder-decoder architecture with attention mechanism.
    config.rnn_hidden_size = 64
    config.attention_size = 64
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **Key Parameters:**
    - ``rnn_type``: Choose between 'lstm' or 'gru'
@@ -176,14 +176,14 @@ Probabilistic forecasting model using autoregressive RNN.
    config.hidden_size = 64
    config.rnn_layers = 2
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
    # Ancestral sampling at inference time (e.g. 100 MC paths):
-   from tfts import ForecastGenerationConfig
+   from tfts import GenerationConfig
    out = model.generate(
        x,
-       generation_config=ForecastGenerationConfig(
-           prediction_length=24, num_samples=100, aggregation="mean",
+       config=GenerationConfig(
+           horizon=24, num_samples=100,
        ),
    )
    print(out.predictions.shape)
@@ -222,7 +222,7 @@ Dilated causal convolutions for sequence modeling.
    config.num_layers = 3
    config.dropout = 0.1
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **Key Parameters:**
    - ``filters``: Number of convolutional filters
@@ -260,7 +260,7 @@ Deep generative model with dilated causal convolutions.
    config.num_layers = 4
    config.kernel_sizes = [3]
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **References:**
    - van den Oord et al. "WaveNet: A Generative Model for Raw Audio" (2016)
@@ -297,7 +297,7 @@ Standard Transformer architecture adapted for time series.
    config.num_attention_heads = 8
    config.attention_probs_dropout_prob = 0.1
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **Key Parameters:**
    - ``hidden_size``: Model dimension
@@ -336,7 +336,7 @@ Efficient Transformer for long sequence time series forecasting.
    config.num_attention_heads = 4
    config.prob_attention = True  # enable ProbSparse attention
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **Key Parameters:**
    - ``prob_attention``: Use ProbSparse attention (True/False)
@@ -372,7 +372,7 @@ Transformer with Auto-Correlation mechanism and decomposition.
    config.num_layers = 2
    config.kernel_size = 25  # Window for the moving-average decomposition
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **References:**
    - Wu et al. "Autoformer: Decomposition Transformers with Auto-Correlation" (NeurIPS 2021)
@@ -404,7 +404,7 @@ Attention-based model with interpretable multi-horizon forecasting.
    config.hidden_size = 160
    config.num_attention_heads = 4
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **References:**
    - Lim et al. "Temporal Fusion Transformers for Interpretable Multi-horizon Time Series Forecasting" (2021)
@@ -436,7 +436,7 @@ Patch-based Transformer for efficient time series modeling.
    config.hidden_size = 128
    config.num_layers = 3
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=96)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=96)
 
 **References:**
    - Nie et al. "A Time Series is Worth 64 Words: Long-term Forecasting with Transformers" (ICLR 2023)
@@ -467,7 +467,7 @@ Inverted Transformer treating variates as tokens.
    config.hidden_size = 128
    config.num_layers = 3
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=96)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=96)
 
 **References:**
    - Liu et al. "iTransformer: Inverted Transformers Are Effective for Time Series Forecasting" (2023)
@@ -503,7 +503,7 @@ Neural Basis Expansion Analysis for interpretable forecasting.
    config.stack_types = ['trend', 'seasonality']  # interpretable stacks
    config.num_block_layers = [3, 3]    # layers per block
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **References:**
    - Oreshkin et al. "N-BEATS: Neural Basis Expansion Analysis for Interpretable Time Series Forecasting" (ICLR 2020)
@@ -534,7 +534,7 @@ Simple linear model with seasonal-trend decomposition.
    config.kernel_size = 25  # Window for the moving-average decomposition
    config.channels = 1  # Number of features
 
-   model = AutoModelForForecasting.from_config(config, prediction_length=24)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **References:**
    - Zeng et al. "Are Transformers Effective for Time Series Forecasting?" (AAAI 2023)
@@ -586,7 +586,7 @@ Most models share these common parameters:
    - ``epochs``: Number of training epochs
 
 **Input/Output:**
-   - ``prediction_length``: Output forecast horizon (set on the task model)
+   - ``output_chunk_length``: Trained output length (set on the task model)
 
 
 Model Comparison
@@ -693,7 +693,7 @@ You can create custom models by combining TFTS components:
            super().__init__()
            # Use TFTS backbone
            config = AutoConfig.for_model('transformer')
-           self.backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
+           self.backbone = AutoBackbone.from_config(config, output_chunk_length=prediction_length)
 
            # Add custom head
            self.custom_head = tf.keras.Sequential([

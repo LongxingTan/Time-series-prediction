@@ -27,6 +27,8 @@ from typing import Optional
 import numpy as np
 import tensorflow as tf
 
+from .schedules import annealed_noise_std
+
 __all__ = [
     "position_ramp",
     "add_exposure_bias_noise",
@@ -104,24 +106,3 @@ def add_exposure_bias_noise_np(
     rng = rng if rng is not None else np.random.default_rng()
     noise = rng.normal(0.0, 1.0, size=df.shape).astype(np.float32) * mask[None, :, None]
     return df + float(noise_std) * noise
-
-
-def annealed_noise_std(
-    epoch: int,
-    warmup_epochs: int = 3,
-    total_epochs: int = 40,
-    start: float = 0.05,
-    end: float = 0.5,
-) -> float:
-    """Linear anneal of ``noise_std`` from ``start`` (during warmup) to ``end``.
-
-    Epochs 1..``warmup_epochs`` stay at ``start`` (the model first learns the clean
-    one-step conditional); afterwards the injected noise grows linearly so that the
-    final epoch noise is ``end``. This matches the schedule that produced the best
-    DeepAR generative result in this repo.
-    """
-    epoch = max(1, int(epoch))
-    if epoch <= int(warmup_epochs):
-        return float(start)
-    frac = min(1.0, max(0.0, (epoch - int(warmup_epochs)) / max(1, int(total_epochs) - int(warmup_epochs))))
-    return float(start) + (float(end) - float(start)) * frac

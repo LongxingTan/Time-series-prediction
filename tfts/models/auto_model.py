@@ -1,5 +1,6 @@
 """Task-aware model factories built on explicit backbone capabilities."""
 
+import copy
 import json
 import os
 from typing import Optional
@@ -39,8 +40,11 @@ def build_task_model(config, task_config, model_kwargs=None):
     """Build a task model through the single task-to-model registry."""
     task_type = TaskType.normalize(task_config.task)
     _, model_class = _TASK_MODEL_SPECS[task_type]
-    prediction_length = getattr(task_config, "prediction_length", 1)
-    backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
+    output_chunk_length = getattr(task_config, "output_chunk_length", 1)
+    if hasattr(config, "target_dim") and task_type == TaskType.FORECASTING:
+        config = copy.deepcopy(config)
+        config.target_dim = task_config.target_dim
+    backbone = AutoBackbone.from_config(config, output_chunk_length=output_chunk_length)
     capabilities = get_model_capabilities(config.model_type)
     return model_class(
         backbone,
@@ -57,12 +61,12 @@ class AutoBackbone:
         raise TypeError("AutoBackbone must be constructed with from_config()")
 
     @classmethod
-    def from_config(cls, config, prediction_length: int = 1):
+    def from_config(cls, config, output_chunk_length: int = 1):
         try:
             backbone_class = get_model_class(config.model_type)
         except (AttributeError, ValueError) as error:
             raise ValueError("Unknown backbone config %r" % type(config).__name__) from error
-        return backbone_class(config=config, predict_sequence_length=prediction_length)
+        return backbone_class(config=config, predict_sequence_length=output_chunk_length)
 
 
 class _BaseAutoTaskModel:
@@ -76,10 +80,6 @@ class _BaseAutoTaskModel:
     def from_config(cls, config, task_config=None, **task_kwargs):
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
-        if "predict_sequence_length" in task_kwargs:
-            if "prediction_length" in task_kwargs:
-                raise ValueError("Use only prediction_length")
-            task_kwargs["prediction_length"] = task_kwargs.pop("predict_sequence_length")
         task_config = task_config or cls.task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != cls.task_type:
             raise ValueError("Expected task %s, got %s" % (cls.task_type.value, task_config.task.value))
@@ -121,10 +121,6 @@ class AutoModel:
         task_type = TaskType.normalize(task)
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
-        if "predict_sequence_length" in task_kwargs:
-            if "prediction_length" in task_kwargs:
-                raise ValueError("Use only prediction_length")
-            task_kwargs["prediction_length"] = task_kwargs.pop("predict_sequence_length")
         task_config_class, _ = _TASK_MODEL_SPECS[task_type]
         task_config = task_config or task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != task_type:

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 import numpy as np
 import tensorflow as tf
 
-from tfts import AutoConfig, AutoModel, AutoModelForTimeSeriesClassification
+from tfts import AutoConfig, AutoModel, AutoModelForClassification
 from tfts.training import TrainingArguments
 from tfts.training.runtime import configure_precision, create_distribution_strategy
 from tfts.training.trainer import BaseTrainer, EagerTrainer, KerasTrainer, Seq2seqKerasTrainer, Trainer, set_seed
@@ -75,7 +75,7 @@ class BaseTrainerTest(unittest.TestCase):
 
     def setUp(self):
         self.config = AutoConfig.for_model("rnn")
-        self.model = AutoModel.from_config(self.config, predict_sequence_length=2)
+        self.model = AutoModel.from_config(self.config, output_chunk_length=2)
 
     def test_initialization_with_defaults(self):
         """Test BaseTrainer initialization with default arguments."""
@@ -315,7 +315,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_basic(self):
         # 1gpu, no dist
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(
             model,
         )
@@ -331,7 +331,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_fit_alias(self):
         """Test that fit() is an alias for train()."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         # fit should work the same as train
@@ -345,7 +345,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_without_validation(self):
         """Test training without validation data."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         trainer.train(
@@ -355,7 +355,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_with_lr_scheduler(self):
         """Test trainer with learning rate scheduler."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
@@ -369,7 +369,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_with_ema(self):
         """Test trainer with exponential moving average."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, use_ema=True, epochs=1)
@@ -377,7 +377,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_with_multiple_metrics(self):
         """Test trainer with multiple evaluation metrics."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         metrics = [
@@ -390,7 +390,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_early_stopping(self):
         """Test early stopping functionality."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         trainer.train(
@@ -404,7 +404,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_gradient_clipping(self):
         """Test gradient clipping with custom max_grad_norm."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         trainer.train(train_loader=self.train_loader, valid_loader=self.valid_loader, max_grad_norm=1.0, epochs=1)
@@ -412,7 +412,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_custom_loss(self):
         """Test trainer with custom loss function."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         custom_loss = tf.keras.losses.MeanAbsoluteError()
@@ -423,7 +423,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_2gpu(self):
         strategy = tf.distribute.MirroredStrategy()
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model, strategy=strategy)
         self.assertGreater(strategy.num_replicas_in_sync, 1)
         trainer.train(self.train_loader, self.valid_loader, **self.fit_config)
@@ -442,7 +442,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_gradient_accumulation(self):
         """Test gradient accumulation matches a normal update in terms of step count."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model)
 
         # 2 micro-batches, accumulate over 2 steps -> a single optimizer step.
@@ -462,7 +462,7 @@ class EagerTrainerTest(unittest.TestCase):
         tf.keras.mixed_precision.set_global_policy("mixed_float16")
         try:
             config = AutoConfig.for_model("rnn")
-            model = AutoModel.from_config(config, predict_sequence_length=2)
+            model = AutoModel.from_config(config, output_chunk_length=2)
             trainer = EagerTrainer(model)
             trainer.train(
                 train_loader=self.train_loader,
@@ -483,7 +483,7 @@ class EagerTrainerTest(unittest.TestCase):
         tf.keras.mixed_precision.set_global_policy("mixed_bfloat16")
         try:
             config = AutoConfig.for_model("rnn")
-            model = AutoModel.from_config(config, predict_sequence_length=2)
+            model = AutoModel.from_config(config, output_chunk_length=2)
             trainer = EagerTrainer(model)
             trainer.train(
                 train_loader=self.train_loader,
@@ -498,7 +498,7 @@ class EagerTrainerTest(unittest.TestCase):
     def test_trainer_kwargs(self):
         """Test that custom kwargs are set as attributes."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = EagerTrainer(model, custom_param="test_value", another_param=42)
 
         self.assertEqual(trainer.custom_param, "test_value")
@@ -522,7 +522,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_valid = np.random.random((1, 10, 1))
         y_valid = np.random.randint(0, 2, (1, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
 
         trainer = _tfts_trainer(model)
         trainer.train(
@@ -543,7 +543,7 @@ class KerasTrainerTest(unittest.TestCase):
         valid_loader = tf.data.Dataset.from_tensor_slices((x_valid, y_valid)).batch(1)
 
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
         trainer.train(train_loader, valid_loader, optimizer=tf.keras.optimizers.Adam(0.003), **self.fit_config)
         trainer.save_model("./weights")
@@ -553,18 +553,38 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         history = trainer.fit(train_dataset=(x_train, y_train), epochs=1, batch_size=1)
         self.assertIsNotNone(history)
+
+    def test_trainer_builds_nested_sequential_before_counting_parameters(self):
+        """Lazy Keras 2 models must train before their weights are inspected."""
+
+        class LazySequentialModel(tf.keras.Model):
+            def __init__(self):
+                super().__init__()
+                self.network = tf.keras.Sequential([tf.keras.layers.Dense(1)])
+
+            def call(self, inputs):
+                return self.network(inputs)
+
+        x_train = np.ones((2, 3), dtype=np.float32)
+        y_train = np.ones((2, 1), dtype=np.float32)
+        model = LazySequentialModel()
+
+        history = _tfts_trainer(model).train((x_train, y_train), epochs=1, verbose=0)
+
+        self.assertIn("loss", history.history)
+        self.assertEqual(model.count_params(), 4)
 
     def test_trainer_with_string_optimizer(self):
         """Test training with optimizer specified as string."""
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), optimizer="adam", epochs=1, batch_size=1)
@@ -574,7 +594,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(
@@ -589,7 +609,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), loss_fn="mae", epochs=1, batch_size=1)
@@ -599,7 +619,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), metrics=["mae", "mse"], epochs=1, batch_size=1)
@@ -609,7 +629,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         early_stopping = tf.keras.callbacks.EarlyStopping(patience=1)
@@ -623,7 +643,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_valid = np.random.random((1, 10, 1)).astype(np.float32)
         y_valid = np.random.random((1, 2, 1)).astype(np.float32)
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -646,7 +666,9 @@ class KerasTrainerTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(checkpoint_path))
             restored = tf.keras.models.load_model(checkpoint_path, compile=False)
 
-        np.testing.assert_allclose(restored(x_valid).numpy(), model(x_valid).numpy(), rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(
+            restored(x_valid).predictions.numpy(), model(x_valid).predictions.numpy(), rtol=1e-5, atol=1e-5
+        )
 
     def test_trainer_with_steps_per_epoch(self):
         """Test training with custom steps_per_epoch."""
@@ -655,7 +677,7 @@ class KerasTrainerTest(unittest.TestCase):
         train_loader = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(2)
 
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=train_loader, steps_per_epoch=2, epochs=1)
@@ -665,7 +687,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         trainer.train(train_dataset=(x_train, y_train), run_eagerly=True, epochs=1, batch_size=1)
@@ -675,7 +697,7 @@ class KerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
 
         for verbose in [0, 1, 2]:
             trainer = _tfts_trainer(model)
@@ -684,7 +706,7 @@ class KerasTrainerTest(unittest.TestCase):
     def test_get_model(self):
         """Test get_model() returns the correct model."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         x_train = np.random.random((2, 10, 1))
@@ -712,7 +734,7 @@ class KerasTrainerTest(unittest.TestCase):
         self.assertIsInstance(trainer._default_loss(), tf.keras.losses.MeanSquaredError)
         self.assertEqual(trainer._default_metrics(), ["mae"])
 
-        classifier = AutoModelForTimeSeriesClassification.from_config(AutoConfig.for_model("bert"), num_labels=3)
+        classifier = AutoModelForClassification.from_config(AutoConfig.for_model("bert"), num_labels=3)
         classification_trainer = _tfts_trainer(classifier)
         self.assertIsInstance(
             classification_trainer._default_loss(),
@@ -735,7 +757,7 @@ class KerasTrainerTest(unittest.TestCase):
     def test_plot(self):
         """Test plot functionality."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model)
 
         history = np.random.random((5, 10, 1))
@@ -761,7 +783,7 @@ class KerasTrainerTest(unittest.TestCase):
     def test_trainer_kwargs(self):
         """Test that custom kwargs are set as attributes."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = KerasTrainer(model, custom_attr="test", number_attr=123)
 
         self.assertEqual(trainer.custom_attr, "test")
@@ -770,7 +792,7 @@ class KerasTrainerTest(unittest.TestCase):
     def test_save_model_distributed(self):
         """Test that non-chief workers don't save in distributed training."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
 
         # Mock a distributed strategy with non-chief task
         mock_resolver = Mock()
@@ -796,7 +818,7 @@ class Seq2seqKerasTrainerTest(unittest.TestCase):
     def test_inheritance(self):
         """Test that Seq2seqKerasTrainer inherits from KerasTrainer."""
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
         trainer = _tfts_trainer(model, cls=Seq2seqKerasTrainer)
 
         self.assertIsInstance(trainer, KerasTrainer)
@@ -806,7 +828,7 @@ class Seq2seqKerasTrainerTest(unittest.TestCase):
         x_train = np.random.random((2, 10, 1))
         y_train = np.random.randint(0, 2, (2, 2, 1))
         config = AutoConfig.for_model("rnn")
-        model = AutoModel.from_config(config, predict_sequence_length=2)
+        model = AutoModel.from_config(config, output_chunk_length=2)
 
         trainer = _tfts_trainer(model, cls=Seq2seqKerasTrainer)
         trainer.train(train_dataset=(x_train, y_train), epochs=1, batch_size=1)

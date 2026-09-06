@@ -30,7 +30,7 @@ class DLinearTest(unittest.TestCase):
         config = AutoConfig.for_model("dlinear")
         config.channels = 1  # number of features
 
-        model = AutoModel.from_config(config, predict_sequence_length=8)
+        model = AutoModel.from_config(config, output_chunk_length=8)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
 
         trainer.train(train, valid, optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)

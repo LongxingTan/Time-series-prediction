@@ -24,10 +24,10 @@ from tfts.contracts import (
 class TestAutoModel(unittest.TestCase):
     def test_factory_returns_a_task_model_with_structured_output(self):
         config = AutoConfig.for_model("dlinear")
-        model = AutoModelForForecasting.from_config(config, prediction_length=3)
+        model = AutoModelForForecasting.from_config(config, output_chunk_length=3)
         batch = TimeSeriesBatch(tf.random.normal([2, 12, 2]))
 
-        output = model(batch, return_dict=True)
+        output = model(batch)
 
         self.assertIsInstance(output, ForecastOutput)
         self.assertEqual(output.predictions.shape, (2, 3, 1))
@@ -36,7 +36,7 @@ class TestAutoModel(unittest.TestCase):
     def test_task_dispatch_and_capability_validation(self):
         config = AutoConfig.for_model("bert")
         classifier = AutoModel.from_config(config, task="classification", num_labels=3)
-        output = classifier(tf.random.normal([2, 10, 4]), return_dict=True)
+        output = classifier(tf.random.normal([2, 10, 4]))
 
         self.assertIsInstance(classifier, AutoModelForTimeSeriesClassification.model_class)
         self.assertIsInstance(output, ClassificationOutput)
@@ -50,7 +50,7 @@ class TestAutoModel(unittest.TestCase):
         model = AutoModelForImputation.from_config(AutoConfig.for_model("bert"), target_dim=2)
         values = tf.random.normal([2, 8, 2])
         mask = tf.constant([[[1.0, 0.0]] * 8] * 2)
-        output = model(TimeSeriesBatch(past_values=values, past_observed_mask=mask), return_dict=True)
+        output = model(TimeSeriesBatch(past_values=values, past_observed_mask=mask))
 
         self.assertIsInstance(output, ImputationOutput)
         np.testing.assert_allclose((output.imputed_values * mask).numpy(), (values * mask).numpy(), atol=1e-6)
@@ -67,7 +67,7 @@ class TestAutoModel(unittest.TestCase):
 
     def test_task_artifact_round_trip(self):
         config = AutoConfig.for_model("rnn")
-        model = AutoModelForForecasting.from_config(config, prediction_length=3)
+        model = AutoModelForForecasting.from_config(config, output_chunk_length=3)
         sample = tf.random.normal([2, 8, 2])
         expected = model(sample)
 
@@ -76,8 +76,8 @@ class TestAutoModel(unittest.TestCase):
             restored = AutoModel.from_pretrained(directory)
             actual = restored(sample)
 
-        self.assertEqual(restored.task_config.prediction_length, 3)
-        np.testing.assert_allclose(actual.numpy(), expected.numpy(), rtol=1e-5, atol=1e-5)
+        self.assertEqual(restored.task_config.output_chunk_length, 3)
+        np.testing.assert_allclose(actual.predictions.numpy(), expected.predictions.numpy(), rtol=1e-5, atol=1e-5)
 
 
 if __name__ == "__main__":

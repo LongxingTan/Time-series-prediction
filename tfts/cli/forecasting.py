@@ -83,7 +83,7 @@ class ForecastingPipeline:
         if isinstance(model, str):
             self.config = config or AutoConfig.for_model(model)
             self.config.update(kwargs)
-            self._model = AutoModel.from_config(self.config, prediction_length=horizon)
+            self._model = AutoModel.from_config(self.config, output_chunk_length=horizon)
         else:
             self._model = model
             self.config = getattr(model, "config", config)
@@ -187,7 +187,7 @@ class ForecastingPipeline:
                     generated.append(
                         self._model.generate(
                             model_inputs,
-                            prediction_length=steps,
+                            output_chunk_length=steps,
                             strategy="recursive",
                         ).predictions
                     )
@@ -287,7 +287,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     config = AutoConfig.for_model(args.model)
-    model = AutoModel.from_config(config, prediction_length=args.horizon)
+    model = AutoModel.from_config(config, output_chunk_length=args.horizon)
     trainer = Trainer(model)
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 

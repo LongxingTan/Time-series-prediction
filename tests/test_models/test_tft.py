@@ -75,7 +75,7 @@ class TFTransformerTest(unittest.TestCase):
             hidden_size=16,
             num_attention_heads=4,
         )
-        model = AutoModel.from_config(config, prediction_length=4)
+        model = AutoModel.from_config(config, output_chunk_length=4)
         batch = TimeSeriesBatch(
             past_values=tf.random.normal([2, 8, 1]),
             past_time_features=tf.random.normal([2, 8, 2]),
@@ -88,13 +88,13 @@ class TFTransformerTest(unittest.TestCase):
 
         output = model(batch)
 
-        self.assertEqual(output.shape, (2, 4, 1))
+        self.assertEqual(output.predictions.shape, (2, 4, 1))
         self.assertEqual(model.backbone.last_selection_weights["encoder"].shape, (2, 8, 5))
         self.assertEqual(model.backbone.last_selection_weights["decoder"].shape, (2, 4, 4))
 
     def test_canonical_batch_rejects_mismatched_tft_config(self):
         config = TFTransformerConfig(encoder_real_dim=2)
-        model = AutoModel.from_config(config, prediction_length=4)
+        model = AutoModel.from_config(config, output_chunk_length=4)
         batch = TimeSeriesBatch(
             past_values=tf.zeros([1, 8, 1]),
             past_time_features=tf.zeros([1, 8, 2]),
@@ -132,9 +132,9 @@ class TFTransformerTest(unittest.TestCase):
             num_attention_heads=4,
         )
 
-        output = AutoModel.from_config(config, prediction_length=2)(batch)
+        output = AutoModel.from_config(config, output_chunk_length=2)(batch)
 
-        self.assertEqual(output.shape, (len(windows), 2, 1))
+        self.assertEqual(output.predictions.shape, (len(windows), 2, 1))
 
     def test_train(self):
         data = get_data(name="ar", seasonality=10.0, timesteps=40, n_series=10, seed=42)
@@ -157,7 +157,7 @@ class TFTransformerTest(unittest.TestCase):
         config = AutoConfig.for_model("tft")
         config.encoder_input_dim = ts_sequence[0][0].shape[-1]
 
-        model = AutoModel.from_config(config, predict_sequence_length=predict_sequence_length)
+        model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
         trainer.train(ts_sequence, epochs=1)
 

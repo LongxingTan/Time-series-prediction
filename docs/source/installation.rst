@@ -365,7 +365,7 @@ Run a quick training test:
    # Create and train model (strategy="default" keeps a single device,
    # so this works on CPU, a single GPU, or many GPUs without NCCL)
    config = AutoConfig.for_model('seq2seq')
-   model = AutoModelForForecasting.from_config(config, prediction_length=8)
+   model = AutoModelForForecasting.from_config(config, output_chunk_length=8)
    trainer = Trainer(model, args=TrainingArguments(output_dir="./output", strategy="default"))
    trainer.train(train, valid, epochs=2)
 

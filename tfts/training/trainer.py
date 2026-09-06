@@ -30,6 +30,20 @@ __all__ = ["Trainer", "KerasTrainer", "EagerTrainer", "Seq2seqKerasTrainer", "se
 logger = logging.getLogger(__name__)
 
 
+def _output_tensor(output):
+    from tfts.contracts import AnomalyDetectionOutput, ClassificationOutput, ForecastOutput, ImputationOutput
+
+    if isinstance(output, ForecastOutput):
+        return output.predictions
+    if isinstance(output, ClassificationOutput):
+        return output.logits
+    if isinstance(output, ImputationOutput):
+        return output.imputed_values
+    if isinstance(output, AnomalyDetectionOutput):
+        return output.scores
+    return output
+
+
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -197,7 +211,7 @@ class Trainer(BaseTrainer):
     Examples:
         >>> from tfts import AutoModel, AutoConfig, Trainer
         >>> config = AutoConfig.for_model("transformer")
-        >>> model = AutoModel.from_config(config, prediction_length=12)
+        >>> model = AutoModel.from_config(config, output_chunk_length=12)
         >>> trainer = Trainer(model)
         >>> trainer.train(train_dataset, valid_dataset, epochs=50)
     """
@@ -320,9 +334,6 @@ class Trainer(BaseTrainer):
                 compile_kwargs["jit_compile"] = True
             self.model.compile(**compile_kwargs)
 
-            trainable_params = int(np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights]))
-            logger.info(f"Trainable parameters: {trainable_params:,}")
-
             # Normalize raw numpy/list inputs to a globally-batched tf.data.Dataset.
             # Feeding numpy arrays to `model.fit` under a real distribution strategy
             # triggers "Mixing different tf.distribute.Strategy objects" in Keras 3,
@@ -362,6 +373,13 @@ class Trainer(BaseTrainer):
                 verbose=verbose,
                 callbacks=callbacks,
             )
+            # Subclassed models create their variables on the first concrete
+            # call.  In Keras 2, inspecting ``trainable_weights`` before that
+            # call raises when a child is an unbuilt ``Sequential`` model.
+            # ``fit`` has built the complete model, so parameter reporting is
+            # reliable across both Keras 2 and Keras 3 here.
+            trainable_params = int(np.sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights]))
+            logger.info(f"Trainable parameters: {trainable_params:,}")
         return history
 
     def fit(self, **params):
@@ -393,11 +411,11 @@ class Trainer(BaseTrainer):
 
         if isinstance(dataset, (list, tuple)):
             x, y_true = dataset
-            y_pred = self.model(x, training=False)
+            y_pred = _output_tensor(self.model(x, training=False))
         elif isinstance(dataset, tf.data.Dataset):
             y_true_list, y_pred_list = [], []
             for x_batch, y_batch in dataset:
-                y_pred_list.append(self.model(x_batch, training=False))
+                y_pred_list.append(_output_tensor(self.model(x_batch, training=False)))
                 y_true_list.append(y_batch)
             y_true = tf.concat(y_true_list, axis=0)
             y_pred = tf.concat(y_pred_list, axis=0)
@@ -415,13 +433,14 @@ class Trainer(BaseTrainer):
         Returns:
             Numpy array of predictions.
         """
+
         if isinstance(x, tf.data.Dataset):
             preds = []
             for batch in x:
                 inp = batch[0] if isinstance(batch, (tuple, list)) else batch
-                preds.append(self.model(inp, training=False))
+                preds.append(_output_tensor(self.model(inp, training=False)))
             return tf.concat(preds, axis=0).numpy()
-        return self.model(x, training=False).numpy()
+        return _output_tensor(self.model(x, training=False)).numpy()
 
     def get_model(self) -> tf.keras.Model:
         """Return the underlying Keras model."""
@@ -455,6 +474,8 @@ class Trainer(BaseTrainer):
 
     def _default_loss(self) -> tf.keras.losses.Loss:
         """Return a sensible default loss for the current task."""
+        if getattr(self.model, "task_name", None) == "classification":
+            return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         model_loss = getattr(self.model, "default_loss", None)
         if model_loss is not None:
             return model_loss
@@ -466,6 +487,8 @@ class Trainer(BaseTrainer):
 
     def _default_metrics(self) -> List[str]:
         """Return default metrics for monitoring."""
+        if getattr(self.model, "task_name", None) == "classification":
+            return [tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy")]
         model_metrics = getattr(self.model, "default_metrics", None)
         if model_metrics is not None:
             return list(model_metrics)
@@ -630,7 +653,7 @@ class EagerTrainer(object):
 
         for step, (x_train, y_train) in enumerate(train_loader):
             with tf.GradientTape() as tape:
-                y_pred = self.model(x_train, training=True)
+                y_pred = _output_tensor(self.model(x_train, training=True))
                 loss = self.loss_fn(y_train, y_pred)
             grads = tape.gradient(loss, self.model.trainable_variables)
 
@@ -695,14 +718,14 @@ class EagerTrainer(object):
         return valid_loss / (valid_step + 1), valid_scores
 
     def _valid_step(self, x_valid: tf.Tensor, y_valid: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
-        y_valid_pred = self.model(x_valid, training=False)
+        y_valid_pred = _output_tensor(self.model(x_valid, training=False))
         valid_loss = self.loss_fn(y_valid, y_valid_pred)
         return y_valid_pred, valid_loss
 
     def predict(self, test_loader: Any) -> tuple[tf.Tensor, tf.Tensor]:
         y_test_trues, y_test_preds = [], []
         for x_test, y_test in test_loader:
-            y_test_pred = self.model(x_test, training=False)
+            y_test_pred = _output_tensor(self.model(x_test, training=False))
             y_test_preds.append(y_test_pred)
             y_test_trues.append(y_test)
         y_test_trues = tf.concat(y_test_trues, axis=0)

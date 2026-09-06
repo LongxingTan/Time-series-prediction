@@ -52,7 +52,7 @@ def _output_dir(args):
 def load_and_predict(model_dir, inputs):
     """Restore a saved forecasting model and run a small inference batch."""
     restored_model = tfts.AutoModel.from_pretrained(model_dir, sample_batch=inputs[:1])
-    predictions = restored_model(inputs, training=False).numpy()
+    predictions = restored_model(inputs, training=False).predictions.numpy()
     print(f"Loaded model from {model_dir}, inference shape: {predictions.shape}")
     return predictions
 
@@ -119,7 +119,7 @@ def run_manual(args):
     optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 
     config = tfts.AutoConfig.for_model(args.use_model)
-    model = tfts.AutoModelForForecasting.from_config(config, prediction_length=args.predict_sequence_length)
+    model = tfts.AutoModelForForecasting.from_config(config, output_chunk_length=args.predict_sequence_length)
 
     trainer = tfts.Trainer(
         model,

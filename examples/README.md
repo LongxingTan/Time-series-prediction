@@ -43,7 +43,7 @@ predict_sequence_length = 8
 )
 
 config = AutoConfig.for_model("rnn")
-model = AutoModelForForecasting.from_config(config, prediction_length=8)
+model = AutoModelForForecasting.from_config(config, output_chunk_length=8)
 trainer = KerasTrainer(model)
 trainer.train((x_train, y_train), (x_valid, y_valid), epochs=1)
 trainer.save_model("./outputs/forecasting_model")
@@ -52,7 +52,7 @@ restored_model = AutoModel.from_pretrained(
     "./outputs/forecasting_model",
     sample_batch=x_valid[:1],
 )
-predictions = restored_model(x_valid, training=False).numpy()
+predictions = restored_model(x_valid, training=False).predictions.numpy()
 print(predictions.shape)
 ```
 

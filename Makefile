@@ -1,4 +1,4 @@
-.PHONY: style test test-warnings docs pre-release help
+.PHONY: style test test-coverage test-warnings docs pre-release help
 
 # Directories to run style checks on
 CHECK_DIRS := tfts examples tests
@@ -20,6 +20,10 @@ TEST_ENV := TF_ENABLE_ONEDNN_OPTS=0 TF_CPP_MIN_LOG_LEVEL=3 PYTHONWARNINGS=ignore
 ## Run all unit tests
 test:  ## Run unit tests without routine TensorFlow/Python warnings
 	$(TEST_ENV) $(UV_RUN) python -m unittest discover
+
+test-coverage:  ## Run unit tests and report branch coverage for the package
+	$(TEST_ENV) $(UV_RUN) coverage run --branch --source=tfts -m unittest discover
+	$(UV_RUN) coverage report -m
 
 test-warnings:  ## Run unit tests with all warnings and TensorFlow info logs
 	$(UV_RUN) python -m unittest discover

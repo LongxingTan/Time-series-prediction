@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
 
 from tfts.features.pipeline import PreparedTimeSeries
+
+from ._window_geometry import is_regular, sliding_bounds
 
 
 @dataclass(frozen=True)
@@ -89,9 +91,9 @@ class WindowIndexer:
         windows = []
         # Generated lag/rolling columns use the leading rows as warm-up. A
         # materialized encoder must begin after that warm-up boundary.
-        for start in range(required_history, len(group) - width + 1, spec.stride):
-            local = positions[start : start + width]
-            if spec.require_regular and not _is_regular(frame.iloc[local][schema.time_col]):
+        for start, stop in sliding_bounds(len(group), width, spec.stride, required_history):
+            local = positions[start:stop]
+            if spec.require_regular and not is_regular(frame.iloc[local][schema.time_col]):
                 continue
             decoder = local[spec.context_length :]
             if frame.iloc[decoder][list(schema.target_cols)].isna().any(axis=None):
@@ -116,7 +118,7 @@ class WindowIndexer:
             return None
         decoder_local = np.arange(cutoff + 1, min(len(group), cutoff + 1 + spec.prediction_length))
         combined = np.concatenate([encoder_local, decoder_local])
-        if spec.require_regular and not _is_regular(group.iloc[combined][schema.time_col]):
+        if spec.require_regular and not is_regular(group.iloc[combined][schema.time_col]):
             return None
         return Window(
             key,
@@ -127,15 +129,3 @@ class WindowIndexer:
 
 def _as_tuple(value) -> Tuple[Any, ...]:
     return value if isinstance(value, tuple) else (value,)
-
-
-def _is_regular(values: Iterable[Any]) -> bool:
-    values = pd.Series(values)
-    if len(values) < 3:
-        return True
-    if pd.api.types.is_datetime64_any_dtype(values):
-        numeric = values.astype("datetime64[ns]").astype("int64").to_numpy()
-    else:
-        numeric = values.to_numpy()
-    differences = np.diff(numeric)
-    return bool(len(differences) == 0 or np.all(differences == differences[0]))
