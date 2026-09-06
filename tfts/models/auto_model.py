@@ -1,5 +1,6 @@
 """Task-aware model factories built on explicit backbone capabilities."""
 
+import copy
 import json
 import os
 from typing import Optional
@@ -40,6 +41,9 @@ def build_task_model(config, task_config, model_kwargs=None):
     task_type = TaskType.normalize(task_config.task)
     _, model_class = _TASK_MODEL_SPECS[task_type]
     prediction_length = getattr(task_config, "prediction_length", 1)
+    if hasattr(config, "target_dim") and task_type == TaskType.FORECASTING:
+        config = copy.deepcopy(config)
+        config.target_dim = task_config.target_dim
     backbone = AutoBackbone.from_config(config, prediction_length=prediction_length)
     capabilities = get_model_capabilities(config.model_type)
     return model_class(

@@ -92,6 +92,103 @@ then processors enforce continuous-value constraints before feedback.
 samplers and processors are runtime dependencies passed to ``generate`` rather
 than embedded in saved configuration.
 
+All rollout strategies resolve samplers through the same value-selection API:
+``sampler="auto"`` draws from a distribution when the model exposes one and
+otherwise uses its predictions. Use ``sampler="mean"`` explicitly for
+deterministic feedback from a probabilistic model. Direct forecasts also honor
+custom samplers, ``num_samples``, aggregation, and ``return_samples``; processors
+run on selected trajectories before aggregation. Explicit distribution sampling
+without a distribution raises an error.
+
+Data window selection is independent of forecast sampling.
+``tfts.data.window_sampling`` owns ``sampled_windows`` and ``final_windows``;
+``WindowedTrainer`` uses these helpers to prepare each epoch's examples.
+The historical imports from ``tfts.training`` and ``window_trainer`` remain
+aliases. Synthetic dataset creation and padding also belong to ``data``.
+
+Incremental decoding and training
+--------------------------------
+
+Seq2seq, WaveNet, Transformer, and DeepAR implement two hooks:
+``initialize_decode(batch, horizon=..., training=...)`` returns a
+``DecodeSession(context, state, previous)``; ``decode_step(previous, state,
+context, offset=..., training=...)`` returns a ``StepOutput``. Context is fixed
+conditioning, while state is a nest of tensors. RNNs carry recurrent states,
+WaveNet carries bounded delay buffers, and Transformer carries projected
+self-attention keys and values. Initialization encodes the history once.
+
+``GenerationEngine`` owns the TensorFlow loop. A decoder can emit one timestep
+or a block; the loop advances by that block's time dimension and crops the last
+block to the requested horizon. Each block has shape
+``[batch, block_length, ..., target_dim]``. Distribution parameters must use the
+same leading batch and time dimensions. ``RolloutOutput.predictions`` and
+``distribution_params`` retain raw model outputs for losses, whereas ``values``
+contains sampled and processed predictions.
+
+``FeedbackPolicy`` is separate from ``ValueSampler``. It chooses between a
+teacher block and the selected model block, only after that block has been
+predicted. Probability one means teacher forcing; zero means model feedback.
+The Bernoulli choice is per example and block, shared across target channels.
+Missing teacher elements use model feedback. Model feedback is detached by
+default; advanced callers of ``decode`` can set ``detach_feedback=False``.
+Seeded teacher choices and forecast samples use separate random streams.
+
+Epoch-based teacher-probability and noise-strength schedules live in
+``tfts.training.schedules``. Their historical module imports remain aliases.
+``scheduled_sampling_decode`` is a compatibility adapter; new custom training
+loops should call ``tfts.generation.decode`` with a ``TimeSeriesBatch`` and an
+explicit ``teacher_probability``. Exposure-bias noise helpers remain training
+input augmentation in ``training.exposure_bias``: they do not modify returned
+forecasts and are not forecast processors.
+
+The forecasting task routes Keras ``(x, y)`` targets to this policy during
+training. The schedule is stored in the task config and evaluated using
+``optimizer.iterations``:
+
+.. code-block:: python
+
+   config = AutoConfig.for_model("seq2seq")
+   model = AutoModelForForecasting.from_config(
+       config,
+       prediction_length=24,
+       target_dim=2,
+       teacher_probability=1.0,
+       teacher_final_probability=0.2,
+       teacher_decay_steps=10000,
+       feedback_sampler="mean",
+   )
+   model.compile(optimizer="adam", loss="mse")
+   # x: [batch, context, 2]; y: [batch, 24, 2]
+   model.fit(x, y)
+   forecast = model.generate(x, prediction_length=48)
+
+Without a decay duration the teacher probability stays constant. A value of
+zero trains with predictions as feedback. ``feedback_sampler="sample"``
+requires a probabilistic output head. Teacher selection is independent of
+dropout: ``model.forward(batch, training=False, teacher_probability=1.0)``
+explicitly evaluates teacher-conditioned predictions. Distribution likelihood
+evaluation uses teachers when targets are supplied. ``generate`` always clears
+targets and uses model feedback.
+
+An optional ``decode_teacher_forced`` hook provides fast full-teacher execution
+with the same weights. Transformer uses shifted targets with causal attention;
+DeepAR uses its shared recurrent cells. Missing teachers and mixed feedback use
+the incremental path. Transformer supports ``use_cache=False`` as an equivalent
+full-prefix reference path. WaveNet's history encoder kernels are separate from
+its kernel-two incremental decoder transitions.
+
+The historical ``DecoderV1`` and ``DecoderV2`` imports are aliases for a single
+decoder implementation. Legacy backbone ``scheduled_sampling`` settings are
+accepted for direct backbone calls; task-model training uses the explicit task
+policy above. Transformer decoder weights changed with causal cached decoding;
+old decoder checkpoints require migration or retraining. New task-model
+checkpoints round-trip through the normal Keras save/load API.
+
+Direct models continue to bypass the autoregressive loop. Diffusion, flow, or
+tokenized models can implement a specialized ``RolloutStrategy`` without
+changing the canonical batch or forecast result. The time-axis engine does not
+pretend that denoising iterations are forecast timesteps.
+
 Extension rules
 ---------------
 

@@ -4,16 +4,19 @@
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
+from tfts.generation import GenerationEngine, MeanSampler, StepOutput
+from tfts.generation.decoding import DecodeSession
+from tfts.generation.feedback import FeedbackPolicy
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-from .base import BaseModel, CommonConfig
+from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features
+from .base import CommonConfig
 from .registry import register_model
 
 logger = logging.getLogger(__name__)
@@ -33,6 +36,7 @@ class WaveNetConfig(CommonConfig):
         attention_size: int = 64,
         num_attention_heads: int = 2,
         attention_probs_dropout_prob: float = 0.0,
+        target_dim: int = 1,
         **kwargs,
     ) -> None:
         """
@@ -51,6 +55,7 @@ class WaveNetConfig(CommonConfig):
         """
         super(WaveNetConfig, self).__init__()
 
+        self.target_dim = target_dim
         self.dilation_rates: List[int] = dilation_rates or [2**i for i in range(4)]
         self.kernel_sizes: List[int] = kernel_sizes or [2] * 4
         self.filters: int = filters
@@ -63,9 +68,13 @@ class WaveNetConfig(CommonConfig):
 
 
 @register_model(
-    "wavenet", config=WaveNetConfig, paper="https://arxiv.org/abs/1609.03499", tags=("convolutional", "long-range")
+    "wavenet",
+    config=WaveNetConfig,
+    paper="https://arxiv.org/abs/1609.03499",
+    tags=("convolutional", "long-range"),
+    capabilities=AUTOREGRESSIVE_CAPABILITIES,
 )
-class WaveNet(BaseModel):
+class WaveNet(AutoregressiveModel):
     """WaveNet model for time series"""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[WaveNetConfig] = None) -> None:
@@ -85,42 +94,23 @@ class WaveNet(BaseModel):
             filters=self.config.filters,
             dense_hidden_size=self.config.dense_hidden_size,
         )
-        self.decoder = DecoderV1(
+        self.decoder = Decoder(
+            target_dim=self.config.target_dim,
             filters=self.config.filters,
             dilation_rates=self.config.dilation_rates,
             dense_hidden_size=self.config.dense_hidden_size,
             predict_sequence_length=self.predict_sequence_length,
         )
 
-    def call(
-        self,
-        inputs: tf.Tensor,
-        teacher: Optional[tf.Tensor] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ):
-        """
-        Forward pass for the WaveNet model.
+    def initialize_decode(self, batch, *, horizon, training=False):
+        features = decoder_features(batch, horizon)
+        _, memory = self.encoder(encoder_features(batch))
+        if not self.decoder.built:
+            self.decoder.build(features.shape)
+        return DecodeSession(features, self.decoder.initialize_state(memory), self.decoder_seed(batch))
 
-        Args:
-            inputs: Input tensor for the model.
-            teacher: Teacher tensor used for scheduled sampling.
-            output_hidden_states: Flag to output the hidden statues
-            return_dict: Flag to control the return type.
-
-        Returns:
-            Tensor containing the model output.
-        """
-        x, encoder_feature, decoder_feature = self._prepare_3d_inputs(inputs, ignore_decoder_inputs=False)
-        encoder_state, encoder_outputs = self.encoder(encoder_feature)
-        decoder_outputs = self.decoder(
-            decoder_features=decoder_feature,
-            # imagine the first dim is the predict
-            decoder_init_input=x[:, -1, 0:1],
-            teacher=teacher,
-            encoder_outputs=encoder_outputs,
-        )
-        return decoder_outputs
+    def decode_step(self, previous, state, context, *, offset, training=False):
+        return self.decoder.step(previous, state, context[:, offset, :])
 
 
 class Encoder(tf.keras.layers.Layer):
@@ -178,246 +168,95 @@ class Encoder(tf.keras.layers.Layer):
         return y_hat, conv_inputs[:-1]
 
 
-class DecoderV1(tf.keras.layers.Layer):
-    """Decoder block for WaveNet V1."""
+class Decoder(tf.keras.layers.Layer):
+    """Kernel-two decoder with bounded, explicit per-layer delay buffers.
 
-    def __init__(
-        self,
-        filters: int,
-        dilation_rates: List[int],
-        dense_hidden_size: int,
-        predict_sequence_length: int = 24,
-        **kwargs,
-    ) -> None:
-        """
-        Initializes the decoder block.
+    Encoder kernels describe the history encoder. Decoder transitions retain
+    their own weights and consume exactly one delayed activation per layer.
+    """
 
-        Args:
-            filters: Number of filters for convolutional layers.
-            dilation_rates: Dilation rates for convolutions.
-            dense_hidden_size: Size of the dense hidden layer.
-            predict_sequence_length: Length of the predicted sequence.
-        """
+    def __init__(self, filters, dilation_rates, dense_hidden_size, predict_sequence_length=24, target_dim=1, **kwargs):
         super().__init__(**kwargs)
-        self.filters: int = filters
-        self.predict_sequence_length = predict_sequence_length
-        self.dilation_rates = dilation_rates
+        if not dilation_rates or any(d <= 0 for d in dilation_rates):
+            raise ValueError("dilation_rates must contain positive integers")
+        self.filters = filters
+        self.dilation_rates = list(dilation_rates)
         self.dense_hidden_size = dense_hidden_size
+        self.predict_sequence_length = predict_sequence_length
+        self.target_dim = target_dim
+        self.dense1 = Dense(filters, activation="tanh")
+        self.dense2 = Dense(2 * filters, use_bias=True)
+        self.dense3 = Dense(2 * filters, use_bias=False)
+        self.dense4 = Dense(2 * filters)
+        self.dense5 = Dense(dense_hidden_size, activation="relu")
+        self.dense6 = Dense(target_dim)
 
-    def build(self, input_shape, **kwargs):
-        batch_size = input_shape[0]
-        decoder_input_size = input_shape[-1] + 1
-
-        self.dense1 = Dense(self.filters, activation="tanh")
-        self.dense1.build([batch_size, decoder_input_size])
-
-        self.dense2 = Dense(2 * self.filters, use_bias=True)
-        self.dense2.build([batch_size, self.filters])
-
-        self.dense3 = Dense(2 * self.filters, use_bias=False)
-        self.dense3.build([batch_size, self.filters])
-
-        self.dense4 = Dense(2 * self.filters)
-        self.dense4.build([batch_size, self.filters])
-
-        total_skips = self.filters * len(self.dilation_rates)
-        self.dense5 = Dense(self.dense_hidden_size, activation="relu")
-        self.dense5.build([batch_size, total_skips])
-
-        self.dense6 = Dense(1)
-        self.dense6.build([batch_size, self.dense_hidden_size])
-
+    def build(self, input_shape):
+        batch = input_shape[0]
+        self.dense1.build([batch, input_shape[-1] + self.target_dim])
+        for layer in (self.dense2, self.dense3, self.dense4):
+            layer.build([batch, self.filters])
+        self.dense5.build([batch, self.filters * len(self.dilation_rates)])
+        self.dense6.build([batch, self.dense_hidden_size])
         super().build(input_shape)
 
+    def initialize_state(self, memory):
+        if len(memory) < len(self.dilation_rates):
+            raise ValueError("one encoder buffer is required per decoder layer")
+        buffers = []
+        for values, dilation in zip(memory, self.dilation_rates):
+            padding = tf.maximum(0, dilation - tf.shape(values)[1])
+            buffers.append(tf.pad(values, [[0, 0], [padding, 0], [0, 0]])[:, -dilation:, :])
+        return tuple(buffers)
+
+    def step(self, previous, state, features):
+        x = self.dense1(tf.concat([previous[:, 0, :], features], axis=-1))
+        skips, buffers = [], []
+        for buffer in state:
+            filtered, gate = tf.split(self.dense2(buffer[:, 0, :]) + self.dense3(x), 2, axis=-1)
+            skip, residual = tf.split(self.dense4(tf.tanh(filtered) * tf.sigmoid(gate)), 2, axis=-1)
+            # Store this layer's input, not the next layer's residual output.
+            buffers.append(tf.concat([buffer[:, 1:, :], x[:, None, :]], axis=1))
+            x = x + residual
+            skips.append(skip)
+        value = self.dense6(self.dense5(tf.nn.relu(tf.concat(skips, axis=-1))))
+        return StepOutput(value[:, None, :], state=tuple(buffers))
+
     def call(
-        self,
-        decoder_features,
-        decoder_init_input,
-        encoder_outputs,
-        teacher: Optional[tf.Tensor] = None,
-        scheduled_sampling: float = 0.0,
-        training: Optional[bool] = None,
-        **kwargs: Dict,
+        self, decoder_features, decoder_init_input, encoder_outputs, teacher=None, scheduled_sampling=0.0, training=None
     ):
-        """
-        Forward pass for the decoder block.
+        def step(previous, state, offset):
+            return self.step(previous, state, decoder_features[:, offset, :])
 
-        Args:
-            decoder_features: Tensor containing decoder features.
-            decoder_init_input: Initial input for the decoder.
-            encoder_outputs: List of encoder outputs.
-            teacher: Optional tensor for teacher forcing.
-            scheduled_sampling: Probability of using teacher forcing.
-            training: Whether the model is in training mode.
-
-        Returns:
-            Decoder output tensor.
-        """
-        decoder_outputs = []
-        prev_output = decoder_init_input  # the initial input for decoder
-
-        for i in range(self.predict_sequence_length):
-            if training:
-                p = np.random.uniform(low=0, high=1, size=1)[0]
-                if teacher is not None and p > scheduled_sampling:
-                    this_input = teacher[:, i : i + 1]
-                else:
-                    this_input = prev_output
-            else:
-                this_input = prev_output
-
-            if decoder_features is not None:
-                # this_input = tf.concat([this_input, decoder_features[:, i]], axis=-1)
-                this_input = Concatenate(axis=-1)([this_input, decoder_features[:, i]])
-
-            x = self.dense1(this_input)
-            skip_outputs = []
-
-            for i, dilation in enumerate(self.dilation_rates):
-                safe_dilation = min(dilation, encoder_outputs[i].shape[1])
-                if dilation > encoder_outputs[i].shape[1]:
-                    logger.warning(
-                        f"Dilation {dilation} exceeds context length {encoder_outputs[i].shape[1]}. "
-                        f"Using {safe_dilation} instead."
-                    )
-                    dilation = safe_dilation
-
-                state = encoder_outputs[i][:, -dilation, :]
-
-                # use 2 dense layer to calculate a kernel=2 convolution
-                dilated_conv = self.dense2(state) + self.dense3(x)
-                # conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
-                split_layer = Lambda(lambda x: tf.split(x, 2, axis=1))
-                conv_filter, conv_gate = split_layer(dilated_conv)
-                # dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
-                dilated_conv = Lambda(lambda x: tf.nn.tanh(x[0]) * tf.nn.sigmoid(x[1]))([conv_filter, conv_gate])
-
-                out = self.dense4(dilated_conv)
-                # skip, residual = tf.split(out, 2, axis=1)
-                split_layer = Lambda(lambda x: tf.split(x, [self.filters, self.filters], axis=1))
-                skips, residuals = split_layer(out)
-                x += residuals
-                # encoder_outputs[i] = tf.concat([encoder_outputs[i], tf.expand_dims(x, 1)], axis=1)
-                expand = Lambda(lambda t: tf.expand_dims(t, axis=1))
-                encoder_outputs[i] = Concatenate(1)([encoder_outputs[i], expand(x)])
-                skip_outputs.append(skips)
-
-            # skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
-            concatenated = Concatenate(axis=1)(skip_outputs)
-            skip_outputs = ReLU()(concatenated)
-
-            skip_outputs = self.dense5(skip_outputs)
-            this_output = self.dense6(skip_outputs)
-            decoder_outputs.append(this_output)
-
-        # decoder_outputs = tf.concat(decoder_outputs, axis=1)
-        decoder_outputs = Concatenate(1)(decoder_outputs)
-        expand = Lambda(lambda t: tf.expand_dims(t, axis=-1))
-        return expand(decoder_outputs)
+        return (
+            GenerationEngine(MeanSampler())
+            .run(
+                step,
+                decoder_init_input[:, None, :],
+                self.initialize_state(encoder_outputs),
+                self.predict_sequence_length,
+                teacher=teacher,
+                feedback_policy=FeedbackPolicy(1.0 - scheduled_sampling if teacher is not None else 0.0),
+            )
+            .predictions
+        )
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
-                "filters": self.filters,
-                "dilation_rates": self.dilation_rates,
-                "dense_hidden_size": self.dense_hidden_size,
-                "predict_sequence_length": self.predict_sequence_length,
+                name: getattr(self, name)
+                for name in (
+                    "filters",
+                    "dilation_rates",
+                    "dense_hidden_size",
+                    "predict_sequence_length",
+                    "target_dim",
+                )
             }
         )
         return config
 
-    def compute_output_shape(self, input_shape):
-        batch_size = input_shape[0]
-        return (batch_size, self.predict_sequence_length, 1)
 
-
-class DecoderV2(tf.keras.layers.Layer):
-    """Decoder need avoid future data leaks"""
-
-    def __init__(
-        self,
-        filters: int,
-        dilation_rates: List[int],
-        dense_hidden_size: int,
-        predict_sequence_length: int = 24,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.filters = filters
-        self.dilation_rates = dilation_rates
-        self.predict_sequence_length = predict_sequence_length
-        self.dense_hidden_size = dense_hidden_size
-
-    def build(self, input_shape):
-        super().build(input_shape)
-        self.dense_1 = Dense(self.filters, activation="tanh", name="decoder_dense_1")
-        self.dense_2 = Dense(2 * self.filters, name="decoder_dense_2")
-        self.dense_3 = Dense(2 * self.filters, use_bias=False, name="decoder_dense_3")
-        self.dense_4 = Dense(2 * self.filters, name="decoder_dense_4")
-        self.dense_5 = Dense(self.dense_hidden_size, activation="relu", name="decoder_dense_5")
-        self.dense_6 = Dense(1, name="decoder_dense_6")
-
-    def call(
-        self,
-        decoder_features: tf.Tensor,
-        decoder_init_input: tf.Tensor,
-        encoder_states: tf.Tensor,
-        teacher: Optional[tf.Tensor] = None,
-    ):
-        """
-        Forward pass for the decoder block v2.
-
-        Args:
-            decoder_features: Tensor containing decoder features.
-            decoder_init_input: Initial input for the decoder.
-            encoder_states: List of encoder outputs.
-            teacher: Optional tensor for teacher forcing.
-
-        Returns:
-            Decoder output tensor.
-        """
-
-        def cond_fn(time, prev_output, decoder_output_ta):
-            return time < self.predict_sequence_length
-
-        def body(time, prev_output, decoder_output_ta):
-            if time == 0 or teacher is None:
-                current_input = prev_output
-            else:
-                current_input = teacher[:, time - 1, :]
-
-            if decoder_features is not None:
-                current_feature = decoder_features[:, time, :]
-                current_input = tf.concat([current_input, current_feature], axis=1)
-
-            inputs = self.dense_1(current_input)
-
-            skip_outputs = []
-            for i, dilation in enumerate(self.dilation_rates):
-                state = encoder_states[i][:, -dilation, :]
-
-                dilated_conv = self.dense_2(state) + self.dense_3(inputs)
-                conv_filter, conv_gate = tf.split(dilated_conv, 2, axis=1)
-                dilated_conv = tf.nn.tanh(conv_filter) * tf.nn.sigmoid(conv_gate)
-                outputs = self.dense_4(dilated_conv)
-                skips, residuals = tf.split(outputs, [self.filters, self.filters], axis=1)
-                inputs += residuals
-                encoder_states[i] = tf.concat([encoder_states[i], tf.expand_dims(inputs, 1)], axis=1)
-                skip_outputs.append(skips)
-
-            skip_outputs = tf.nn.relu(tf.concat(skip_outputs, axis=1))
-            h = self.dense_5(skip_outputs)
-            y_hat = self.dense_6(h)
-            decoder_output_ta = decoder_output_ta.write(time, y_hat)
-            return time + 1, y_hat, decoder_output_ta
-
-        loop_init = [
-            tf.constant(0, dtype=tf.int32),
-            decoder_init_input,
-            tf.TensorArray(dtype=tf.float32, size=self.predict_sequence_length),
-        ]
-        _, _, decoder_outputs_ta = tf.while_loop(cond=cond_fn, body=body, loop_vars=loop_init)
-        decoder_outputs = decoder_outputs_ta.stack()
-        decoder_outputs = tf.transpose(decoder_outputs, [1, 0, 2])
-        return decoder_outputs
+DecoderV1 = Decoder
+DecoderV2 = Decoder

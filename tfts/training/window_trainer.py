@@ -16,11 +16,12 @@ Fully self-contained — it does not depend on any ``exps/`` code.
 from __future__ import annotations
 
 import tempfile
-from typing import List, Sequence, Tuple
+from typing import List, Sequence
 
 import numpy as np
 import tensorflow as tf
 
+from ..data.window_sampling import final_windows, sampled_windows
 from ..losses.loss import smape_loss as _smape_loss_fn
 from ..models.base import BaseModel
 
@@ -30,60 +31,6 @@ __all__ = ["WindowedTrainer", "final_windows", "sampled_windows", "smape_score"]
 def _loss(y_true, y_pred):
     """2-arg Keras-compilable SMAPE (no extra signature params)."""
     return _smape_loss_fn(y_true, y_pred)
-
-
-# ---------------------------------------------------------------------------
-# Window helpers (generic)
-# ---------------------------------------------------------------------------
-def final_windows(
-    histories: Sequence[np.ndarray], seq_len: int = 26, num_features: int = 1
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Last ``seq_len`` window of every series (the held-out test).
-
-    Returns ``(values, mask)`` each of shape ``(n_series, seq_len, num_features)``.
-    Series shorter than ``seq_len`` are right-padded and masked.
-    """
-    values = np.zeros((len(histories), seq_len, num_features), np.float32)
-    mask = np.zeros_like(values)
-    for index, series in enumerate(histories):
-        window = np.asarray(series[-seq_len:])
-        if window.ndim == 1:  # single-channel series -> add the feature axis
-            window = window[:, None]
-        else:
-            window = window[..., :num_features]
-        values[index, -len(window) :, :] = window
-        mask[index, -len(window) :, :] = 1.0
-    return values, mask
-
-
-def sampled_windows(
-    histories: Sequence[np.ndarray],
-    rng: np.random.Generator,
-    seq_len: int = 26,
-    pred_len: int = 13,
-    history_size: int = 10,
-    num_features: int = 1,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """One random lookback/forecast window per series, drawn from ``rng``.
-
-    Returns ``(x, y, y_mask)`` of shapes ``(n, seq_len, f)``, ``(n, pred_len, f)``,
-    ``(n, pred_len, f)`` (mask marks the valid/non-padded forecast steps).
-    """
-    x = np.zeros((len(histories), seq_len, num_features), np.float32)
-    y = np.zeros((len(histories), pred_len, num_features), np.float32)
-    y_mask = np.zeros_like(y)
-    for index, series in enumerate(histories):
-        cutoff = int(rng.integers(max(1, len(series) - history_size * pred_len), len(series)))
-        before = np.asarray(series[max(0, cutoff - seq_len) : cutoff])
-        after = np.asarray(series[cutoff : min(len(series), cutoff + pred_len)])
-        if before.ndim == 1:  # single-channel series -> add the feature axis
-            before, after = before[:, None], after[:, None]
-        else:
-            before, after = before[..., :num_features], after[..., :num_features]
-        x[index, -len(before) :, :] = before
-        y[index, : len(after), :] = after
-        y_mask[index, : len(after), :] = 1.0
-    return x, y, y_mask
 
 
 def smape_score(pred: np.ndarray, true: np.ndarray) -> float:

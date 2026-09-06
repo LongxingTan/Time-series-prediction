@@ -41,9 +41,19 @@ class ForecastTaskConfig(TaskConfig):
     quantiles: Tuple[float, ...] = (0.1, 0.5, 0.9)
     residual: Optional[str] = None
     spatial_strategy: str = "raise"
+    teacher_probability: float = 1.0
+    teacher_final_probability: float = 0.0
+    teacher_decay_steps: int = 0
+    feedback_sampler: str = "mean"
 
     def __post_init__(self):
         super().__post_init__()
+        if not 0 <= self.teacher_probability <= 1 or not 0 <= self.teacher_final_probability <= 1:
+            raise ValueError("teacher probabilities must lie in [0, 1]")
+        if self.teacher_decay_steps < 0:
+            raise ValueError("teacher_decay_steps must be non-negative")
+        if self.feedback_sampler not in {"mean", "sample"}:
+            raise ValueError("feedback_sampler must be 'mean' or 'sample'")
         object.__setattr__(self, "quantiles", tuple(float(q) for q in self.quantiles))
         if self.prediction_length <= 0 or self.target_dim <= 0:
             raise ValueError("prediction_length and target_dim must be positive")

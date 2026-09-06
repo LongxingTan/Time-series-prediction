@@ -13,7 +13,9 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, ModelInputSpec, OutputPort
+from tfts.contracts import BackboneCapabilities, ForecastMode, ForecastOutput, ModelInputSpec, OutputPort
+from tfts.generation.decoding import DecodeSession
+from tfts.generation.samplers import StepOutput
 
 from ..distributions import NormalOutput
 from .base import BaseModel, CommonConfig
@@ -204,7 +206,7 @@ class DeepAR(BaseModel):
         return params if return_dict else params
 
     # ------------------------------------------- generation hooks (eager path)
-    def initialize_generation_state(self, x: tf.Tensor, static: tf.Tensor) -> list:
+    def initialize_generation_state(self, x: tf.Tensor, static: tf.Tensor, training=False) -> list:
         """Encode the window and return the per-layer LSTM final state."""
         if x.shape[1] is None:
             raise ValueError("DeepAR generation requires a statically known encoder length.")
@@ -215,12 +217,12 @@ class DeepAR(BaseModel):
         h = enc_in
         states = []
         for layer in self.encoder.lstm_layers:
-            out, hh, cc = layer(h, training=False)
+            out, hh, cc = layer(h, training=training)
             states.append((hh, cc))
             h = out
         return states
 
-    def decode_step(
+    def _decode_target(
         self,
         previous_target: tf.Tensor,
         static: tf.Tensor,
@@ -239,3 +241,23 @@ class DeepAR(BaseModel):
             h = tf.expand_dims(out, axis=1)  # (B, 1, hidden)
         params = self.output_distribution.parameters(h)
         return params, new_states
+
+    def initialize_decode(self, batch, *, horizon, training=False):
+        static = batch.static_categorical_features
+        if static is None:
+            static = tf.zeros([batch.batch_size, 1], tf.int32)
+        state = self.initialize_generation_state(batch.past_values, static, training=training)
+        return DecodeSession(static, tuple(tuple(s) for s in state), batch.past_values[:, -1:, :])
+
+    def decode_step(self, previous, state, context, *, offset, training=False):
+        params, state = self._decode_target(previous, context, state, training=training)
+        return StepOutput(
+            self.output_distribution.mean(params),
+            state=tuple(tuple(s) for s in state),
+            distribution=self.output_distribution,
+            parameters=params,
+        )
+
+    def decode_teacher_forced(self, batch, *, training=False):
+        params = self(self.adapt_batch(batch), training=training)
+        return ForecastOutput(predictions=self.output_distribution.mean(params), distribution_params=params)

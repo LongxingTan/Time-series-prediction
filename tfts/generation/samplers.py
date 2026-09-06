@@ -49,13 +49,21 @@ class CallableSampler(ValueSampler):
 
 
 def resolve_value_sampler(sampler, probabilistic=False) -> ValueSampler:
+    """Resolve value selection consistently for every decoding strategy.
+
+    ``auto`` samples probabilistic outputs and uses predictions otherwise.
+    """
     if sampler is None or sampler == "auto":
         return DistributionSampler() if probabilistic else MeanSampler()
     if isinstance(sampler, ValueSampler):
+        if isinstance(sampler, DistributionSampler) and not probabilistic:
+            raise ValueError("sampler='sample' requires a model output distribution")
         return sampler
     if callable(sampler) and not isinstance(sampler, str):
         return CallableSampler(sampler)
     mapping = {"mean": MeanSampler, "sample": DistributionSampler}
+    if sampler == "sample" and not probabilistic:
+        raise ValueError("sampler='sample' requires a model output distribution")
     try:
         return mapping[sampler]()
     except KeyError as error:

@@ -170,6 +170,15 @@ class TimeSeriesBatch:
                     tf.shape(value), tf.shape(reference), message=f"{name} must have the same shape as its values"
                 )
 
+        if self.padding_mask is not None:
+            if self.padding_mask.shape.rank != 2:
+                raise ValueError("padding_mask must have shape (batch, time)")
+            tf.debugging.assert_equal(
+                tf.shape(self.padding_mask),
+                tf.shape(self.past_values)[:2],
+                message="padding_mask must match the past batch and time dimensions",
+            )
+
         if task == "imputation":
             if self.past_observed_mask is None:
                 raise ValueError("imputation requires past_observed_mask")

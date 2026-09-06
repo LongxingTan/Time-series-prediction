@@ -1,5 +1,7 @@
 """Task models compose backbones with small, typed task heads."""
 
+from dataclasses import replace
+
 import tensorflow as tf
 
 from tfts.contracts import AnomalyDetectionOutput, ClassificationOutput, ForecastOutput, ImputationOutput, OutputPort
@@ -58,10 +60,43 @@ class ForecastingModel(TimeSeriesTaskModel):
                 % self.backbone_config.model_type
             )
 
-    def forward(self, inputs, training=None):
+    def forward(self, inputs, training=None, teacher_probability=None):
         batch = self.normalize_batch(inputs)
         model_batch, restore = self.prepare_backbone_batch(batch)
         if self.head is None:
+            if hasattr(self.backbone, "initialize_decode"):
+                from tfts.generation.decoding import decode
+
+                probability = teacher_probability
+                if probability is None:
+                    probability = (
+                        self._teacher_probability() if training and model_batch.future_values is not None else 0.0
+                    )
+                # Likelihood evaluation explicitly conditions on observed targets.
+                if self.output_distribution is not None and model_batch.future_values is not None and not training:
+                    probability = 1.0 if teacher_probability is None else teacher_probability
+                fast = getattr(self.backbone, "decode_teacher_forced", None)
+                if (
+                    isinstance(probability, (float, int))
+                    and probability == 1.0
+                    and fast is not None
+                    and model_batch.future_observed_mask is None
+                ):
+                    result = fast(model_batch, training=training)
+                    return ForecastOutput(
+                        predictions=restore(result.predictions), distribution_params=restore(result.distribution_params)
+                    )
+                result = decode(
+                    self.backbone,
+                    model_batch,
+                    self.task_config.prediction_length,
+                    training=training,
+                    teacher_probability=probability,
+                    sampler=self.task_config.feedback_sampler if training else "mean",
+                )
+                return ForecastOutput(
+                    predictions=restore(result.predictions), distribution_params=restore(result.distribution_params)
+                )
             backbone_output = self.adapter.forward(model_batch, training=training)
             predictions = restore(backbone_output.native_forecast)
             distribution_params = backbone_output.distribution_params
@@ -135,6 +170,11 @@ class ForecastingModel(TimeSeriesTaskModel):
         return tf.math.divide_no_nan(tf.reduce_sum(losses * mask), tf.reduce_sum(mask))
 
     def train_step(self, data):
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        if hasattr(self.backbone, "initialize_decode") and y is not None:
+            batch = self.normalize_batch(x)
+            x = replace(batch, future_values=y).as_tensor_dict()
+            data = (x, y, sample_weight) if sample_weight is not None else (x, y)
         if self.output_distribution is None:
             return super().train_step(data)
         x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
@@ -168,6 +208,14 @@ class ForecastingModel(TimeSeriesTaskModel):
         from tfts.generation import generate
 
         return generate(self, inputs, generation_config=generation_config, **kwargs)
+
+    def _teacher_probability(self):
+        config = self.task_config
+        if not config.teacher_decay_steps:
+            return config.teacher_probability
+        step = tf.cast(self.optimizer.iterations, tf.float32)
+        fraction = tf.minimum(step / config.teacher_decay_steps, 1.0)
+        return config.teacher_probability + fraction * (config.teacher_final_probability - config.teacher_probability)
 
 
 @tf.keras.utils.register_keras_serializable(package="tfts")
