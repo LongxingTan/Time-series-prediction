@@ -35,14 +35,14 @@ class DocumentationTest(unittest.TestCase):
 
     def test_readme_quickstarts(self):
         for path in ("README.md", "README_CN.md"):
-            source = (ROOT / path).read_text()
+            source = (ROOT / path).read_text(encoding="utf-8")
             blocks = re.findall(r"```python\s*\n(.*?)```", source, re.DOTALL)
             self.assertTrue(blocks)
             self.execute_blocks(path, blocks)
 
     def test_architecture_examples(self):
         path = "docs/source/architecture.rst"
-        source = (ROOT / path).read_text()
+        source = (ROOT / path).read_text(encoding="utf-8")
         blocks = re.findall(r"\.\. code-block:: python\n\n((?:(?:   [^\n]*|)\n)+)", source)
         self.assertEqual(len(blocks), 2)
         self.execute_blocks(path, blocks)
