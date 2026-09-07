@@ -164,6 +164,24 @@ class Transformer(AutoregressiveModel):
         features = decoder_features(batch, horizon)
         previous = tf.concat([self.decoder_seed(batch), batch.future_values[:, :-1, :]], axis=1)
         memory = self.encoder(self.encoder_embedding(encoder_features(batch)), training=training)
+        # Full and one-token GPU matmuls can use different reduction kernels.
+        # Sharing the cached inference path keeps the two public executions
+        # within their numerical equivalence contract.
+        if training is False:
+            state = self.decoder.initialize_state(features, horizon)
+            predictions = []
+            for offset in range(batch.future_values.shape[1]):
+                step = self.decoder.step(
+                    previous[:, offset : offset + 1, :],
+                    state,
+                    features[:, offset : offset + 1, :],
+                    memory,
+                    offset=offset,
+                    training=False,
+                )
+                predictions.append(step.prediction)
+                state = step.state
+            return ForecastOutput(predictions=tf.concat(predictions, axis=1))
         return ForecastOutput(predictions=self.decoder.sequence(previous, features, memory, training=training))
 
 

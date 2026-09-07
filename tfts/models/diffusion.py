@@ -129,13 +129,22 @@ class Diffusion(BaseModel):
         self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
-        # Initialize the projection layer here once
+        # Kept for compatibility with callers that inspect this layer.
         self.output_projection = Dense(1)
 
-        # Forecast head: map the contextualized encoding to the future window.
+        # The forecast head is sized for the input channel count in build().
         # (The base implementation returned a reconstruction of the *input tail*,
         #  which is not a forecast of the held-out future; this head fixes that.)
-        self.forecast_projection = Dense(self.predict_sequence_length)
+        self.forecast_projection = None
+
+    def build(self, input_shape):
+        """Create a channel-aware forecast projection from the input contract."""
+        _, encoder_shape = self._input_shapes(input_shape)
+        channels = encoder_shape[-1]
+        if channels is None:
+            raise ValueError("Diffusion requires a statically known input channel count")
+        self.forecast_projection = Dense(self.predict_sequence_length * int(channels))
+        super().build(input_shape)
 
     def call(self, x, training=None, **kwargs):
         """Diffusion model forward pass logic."""
@@ -169,11 +178,12 @@ class Diffusion(BaseModel):
             x = block(x)
 
         # 6. Forecast the future window from the contextualized encoding.
-        forecast = self.forecast_projection(x)  # (batch, seq, pred)
+        forecast = self.forecast_projection(x)  # (batch, seq, pred * channels)
         # Use the *last* (most recent) history token's forecast; mean-pooling over all
         # 24 time steps smoothed the output toward a constant and destroyed dynamic range.
-        forecast = forecast[:, -1, :]  # (batch, pred)
-        return tf.expand_dims(forecast, axis=-1)  # (batch, pred, 1)
+        forecast = forecast[:, -1, :]  # (batch, pred * channels)
+        channels = tf.shape(encoder_feature)[-1]
+        return tf.reshape(forecast, [tf.shape(forecast)[0], self.predict_sequence_length, channels])
 
 
 class TransformerBlock(tf.keras.layers.Layer):
