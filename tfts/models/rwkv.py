@@ -26,7 +26,7 @@ class RWKVConfig(CommonConfig):
         dropout: float = 0.0,
         max_position_embeddings: int = 512,
         initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-12,
+        layer_norm_eps: float = 1e-5,
         pad_token_id: int = 0,
         **kwargs,
     ) -> None:
@@ -80,13 +80,18 @@ class RWKV(BaseModel):
     def init_state(self, batch_size: int):
         states = []
         for _ in range(self.config.num_layers):
-            # States for attention
-            att_states = [
-                tf.zeros((batch_size, self.config.hidden_size)),  # last_x
-                tf.zeros((batch_size, self.config.hidden_size)),  # aa
-                tf.zeros((batch_size, self.config.hidden_size)),  # bb
-                tf.zeros((batch_size, self.config.hidden_size)) - 1e30,  # pp
-            ]
+            # Attention state as a SINGLE stacked tensor (4, batch, hidden) so the layer
+            # becomes AutoGraph/graph-mode compatible (a Python list of tensors passed as a
+            # tf.function argument is not supported).
+            att_states = tf.stack(
+                [
+                    tf.zeros((batch_size, self.config.hidden_size)),  # last_x
+                    tf.zeros((batch_size, self.config.hidden_size)),  # aa
+                    tf.zeros((batch_size, self.config.hidden_size)),  # bb
+                    tf.zeros((batch_size, self.config.hidden_size)) - 1e30,  # pp
+                ],
+                axis=0,
+            )
             # State for FFN
             ffn_state = tf.zeros((batch_size, self.config.hidden_size))
             states.append((att_states, ffn_state))

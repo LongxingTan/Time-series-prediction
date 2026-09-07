@@ -101,9 +101,6 @@ class AutoFormer(BaseModel):
         )
 
         self.drop1 = Dropout(self.config.hidden_dropout_prob)
-        self.dense1 = Dense(512, activation="relu")
-        self.drop2 = Dropout(self.config.hidden_dropout_prob)
-        self.dense2 = Dense(1024, activation="relu")
         self.project1 = Dense(1, activation=None)
 
     def call(
@@ -134,8 +131,9 @@ class AutoFormer(BaseModel):
 
         # Encoder
         encoder_output = self.encoder(encoder_feature)
-        encoder_output = self.dense1(encoder_output)
-        encoder_output = self.dense2(encoder_output)
+        # (batch, seq, hidden_size) - decoder cross-attends this directly at d_model,
+        # like the reference Autoformer. (The old 512/1024 expansion here both diverged
+        # from the reference and broke tf.function tracing of the decoder.)
 
         # Decoder
         decoder_output = self.decoder(decoder_feature, encoder_output)

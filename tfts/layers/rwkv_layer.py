@@ -31,16 +31,17 @@ class TimeMixing(tf.keras.layers.Layer):
         x : tf.Tensor
             The input tensor of shape (batch_size, seq_length, embed_dim).
         """
-        # state = [last_x, aa, bb, pp]
-        last_x, aa, bb, pp = state
+        # state = stacked (4, batch, hidden): [last_x, aa, bb, pp]
+        last_x, aa, bb, pp = tf.unstack(state, num=4)
 
         # Shifted x for mixing
         last_x_expanded = tf.expand_dims(last_x, 1)
         # x shape: (Batch, Seq, Hidden)
-        if tf.shape(x)[1] > 1:
-            xx = tf.concat([last_x_expanded, x[:, :-1, :]], axis=1)
-        else:
-            xx = last_x_expanded
+        xx = tf.cond(
+            tf.shape(x)[1] > 1,
+            lambda: tf.concat([last_x_expanded, x[:, :-1, :]], axis=1),
+            lambda: last_x_expanded,
+        )
 
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
@@ -50,38 +51,43 @@ class TimeMixing(tf.keras.layers.Layer):
         k = self.key(xk)
         v = self.value(xv)
 
-        # WKV calculation (recursive)
-        # For simplicity/correctness in RNN form, we process along the time dimension
+        # WKV calculation (recursive), processed along the time dimension with tf.while_loop
+        # so it is graph-mode/AutoGraph compatible.
         seq_len = tf.shape(x)[1]
 
-        outputs = tf.TensorArray(tf.float32, size=seq_len)
+        def _cond(carry, idx):
+            return idx < seq_len
 
-        curr_aa, curr_bb, curr_pp = aa, bb, pp
-
-        for t in range(seq_len):
-            kt = k[:, t, :]
-            vt = v[:, t, :]
-
+        def _body(carry, idx):
+            ca, cb, cp, tarray = carry
+            kt = k[:, idx, :]
+            vt = v[:, idx, :]
             # WKV calculation
             ww = self.time_first + kt
-            qq = tf.maximum(curr_pp, ww)
-            e1 = tf.exp(curr_pp - qq)
+            qq = tf.maximum(cp, ww)
+            e1 = tf.exp(cp - qq)
             e2 = tf.exp(ww - qq)
-            wkv = (e1 * curr_aa + e2 * vt) / (e1 * curr_bb + e2)
-            outputs = outputs.write(t, wkv)
-
+            wkv = (e1 * ca + e2 * vt) / (e1 * cb + e2)
+            tarray = tarray.write(idx, wkv)
             # Update state
-            ww = curr_pp + self.time_decay
+            ww = cp + self.time_decay
             qq = tf.maximum(ww, kt)
             e1 = tf.exp(ww - qq)
             e2 = tf.exp(kt - qq)
-            curr_aa = e1 * curr_aa + e2 * vt
-            curr_bb = e1 * curr_bb + e2
-            curr_pp = qq
+            ca = e1 * ca + e2 * vt
+            cb = e1 * cb + e2
+            cp = qq
+            return ((ca, cb, cp, tarray), idx + 1)
 
-        wkv_all = tf.transpose(outputs.stack(), [1, 0, 2])  # [B, T, C]
+        outputs_ta = tf.TensorArray(tf.float32, size=seq_len)
+        ((curr_aa, curr_bb, curr_pp, outputs_ta), _) = tf.while_loop(
+            _cond,
+            _body,
+            ((aa, bb, pp, outputs_ta), tf.constant(0)),
+        )
+        wkv_all = tf.transpose(outputs_ta.stack(), [1, 0, 2])  # [B, T, C]
 
-        new_state = [x[:, -1, :], curr_aa, curr_bb, curr_pp]
+        new_state = tf.stack([x[:, -1, :], curr_aa, curr_bb, curr_pp], axis=0)
         return self.output_layer(r * wkv_all), new_state
 
 
@@ -116,10 +122,11 @@ class ChannelMixing(tf.keras.layers.Layer):
 
         last_x_expanded = tf.expand_dims(last_x, 1)
 
-        if tf.shape(x)[1] > 1:
-            xx = tf.concat([last_x_expanded, x[:, :-1, :]], axis=1)
-        else:
-            xx = last_x_expanded
+        xx = tf.cond(
+            tf.shape(x)[1] > 1,
+            lambda: tf.concat([last_x_expanded, x[:, :-1, :]], axis=1),
+            lambda: last_x_expanded,
+        )
 
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)

@@ -30,7 +30,7 @@ class ITransformerConfig(CommonConfig):
         ffn_intermediate_size: int = 256,
         max_position_embeddings: int = 512,
         initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-12,
+        layer_norm_eps: float = 1e-5,
         pad_token_id: int = 0,
         **kwargs,
     ) -> None:
@@ -93,9 +93,17 @@ class ITransformer(BaseModel):
         # x shape: (batch, seq_len, n_vars)
         x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
+        # 0. Instance normalization (RevIN, from the reference THUML iTransformer).
+        #    Normalize each instance (over the seq dim) so the encoder sees unit variance;
+        #    predictions are de-normalized at the end. Makes the inverted embedding stable
+        #    for strongly seasonal/heteroscedastic series.
+        mean = tf.reduce_mean(encoder_feature, axis=1, keepdims=True)  # (b,1,n_vars)
+        stdev = tf.sqrt(tf.reduce_mean(tf.square(encoder_feature - mean), axis=1, keepdims=True) + 1e-5)
+        x = (encoder_feature - mean) / stdev
+
         # 1. Inversion: (batch, seq_len, n_vars) -> (batch, n_vars, seq_len)
         # Each variate becomes a "token"
-        x = tf.transpose(encoder_feature, perm=[0, 2, 1])
+        x = tf.transpose(x, perm=[0, 2, 1])
 
         # 2. Embedding: Map the whole history of each variate to hidden_size
         # (batch, n_vars, hidden_size)
@@ -111,6 +119,9 @@ class ITransformer(BaseModel):
 
         # 5. Reverse Inversion: (batch, predict_len, n_vars)
         x = tf.transpose(x, perm=[0, 2, 1])
+
+        # 6. De-normalize back to original scale
+        x = x * stdev + mean
 
         return x
 

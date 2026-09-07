@@ -29,7 +29,7 @@ class DiffusionConfig(CommonConfig):
         ffn_intermediate_size: int = 256,
         max_position_embeddings: int = 512,
         initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-12,
+        layer_norm_eps: float = 1e-5,
         pad_token_id: int = 0,
         num_diffusion_steps: int = 1000,
         beta_start: float = 1e-4,
@@ -132,21 +132,32 @@ class Diffusion(BaseModel):
         # Initialize the projection layer here once
         self.output_projection = Dense(1)
 
+        # Forecast head: map the contextualized encoding to the future window.
+        # (The base implementation returned a reconstruction of the *input tail*,
+        #  which is not a forecast of the held-out future; this head fixes that.)
+        self.forecast_projection = Dense(self.predict_sequence_length)
+
     def call(self, x, training=None, **kwargs):
         """Diffusion model forward pass logic."""
         # 1. Prepare inputs (using BaseModel helper)
         # Note: ignore_decoder_inputs=True because diffusion usually denoises the encoder path
         x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
-        # 2. Generate random timesteps
+        # 2. Generate random timesteps (training only).
         batch_size = tf.shape(encoder_feature)[0]
-        t = tf.random.uniform(shape=[batch_size], minval=0, maxval=self.config.num_diffusion_steps, dtype=tf.int32)
-
-        # 3. Add noise to input
-        noisy_x, noise = self.noise_scheduler.add_noise(encoder_feature, t)
+        if training:
+            t = tf.random.uniform(shape=[batch_size], minval=0, maxval=self.config.num_diffusion_steps, dtype=tf.int32)
+            # 3. Add noise to input (diffusion forward process) during training.
+            noisy_x, _ = self.noise_scheduler.add_noise(encoder_feature, t)
+            t_float = tf.cast(t, tf.float32)
+        else:
+            # Inference: condition on the CLEAN history at t=0 (no noise), matching the
+            # standard diffusion-forecasting protocol. Random noise at inference produced
+            # degenerate, stochastic forecasts (near-constant output).
+            noisy_x = encoder_feature
+            t_float = tf.zeros([batch_size], dtype=tf.float32)
 
         # 4. Time embedding (batch, 1) -> (batch, 1, hidden)
-        t_float = tf.cast(t, tf.float32)
         t_emb = self.time_embedding(tf.expand_dims(t_float, axis=-1))
         t_emb = tf.expand_dims(t_emb, axis=1)
 
@@ -157,12 +168,12 @@ class Diffusion(BaseModel):
         for block in self.blocks:
             x = block(x)
 
-        # 6. Predict noise and reconstruct
-        predicted_noise = self.output_projection(x)
-        denoised_x = self.noise_scheduler.remove_noise(noisy_x, predicted_noise, t)
-
-        # 7. Return prediction window
-        return denoised_x[:, -self.predict_sequence_length :, :]
+        # 6. Forecast the future window from the contextualized encoding.
+        forecast = self.forecast_projection(x)  # (batch, seq, pred)
+        # Use the *last* (most recent) history token's forecast; mean-pooling over all
+        # 24 time steps smoothed the output toward a constant and destroyed dynamic range.
+        forecast = forecast[:, -1, :]  # (batch, pred)
+        return tf.expand_dims(forecast, axis=-1)  # (batch, pred, 1)
 
 
 class TransformerBlock(tf.keras.layers.Layer):

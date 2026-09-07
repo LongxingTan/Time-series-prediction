@@ -151,9 +151,8 @@ class AutoCorrelation(tf.keras.layers.Layer):
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
         init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.hidden_size, 1])
 
-        # Use a fixed number of top correlations instead of dynamic calculation
-        # This avoids the issue with symbolic tensors in range()
-        top_k = 8  # A reasonable default value based on typical sequence lengths
+        # Use a fixed number of top correlations but never more than the sequence length
+        top_k = tf.cast(tf.minimum(8, time_steps), tf.int32)
 
         # Get top-k values and their indices
         weights, indices = tf.math.top_k(R_qk, k=top_k)
@@ -161,8 +160,11 @@ class AutoCorrelation(tf.keras.layers.Layer):
         # Apply softmax to get attention weights
         tmp_corr = tf.nn.softmax(weights, axis=-1)
 
-        # Prepare values tensor with concatenated repetition for circular handling
-        tmp_values = tf.tile(tf.transpose(q, perm=[0, 1, 3, 2]), [1, 1, 1, 2])
+        # Prepare values tensor with concatenated repetition for circular handling.
+        # NOTE(bugfix): aggregate over the *value* projection (v), not the query (q).
+        # The original port aggregated over q, which disconnected the value projection
+        # (wv) from the loss and produced degenerate forecasts.
+        tmp_values = tf.tile(tf.transpose(v, perm=[0, 1, 3, 2]), [1, 1, 1, 2])
         delays_agg = tf.zeros_like(tf.transpose(q, perm=[0, 1, 3, 2]))
 
         # Aggregate values based on top-k correlations using tf.map_fn instead of Python loop
@@ -252,7 +254,14 @@ class AutoCorrelation(tf.keras.layers.Layer):
         delays_agg = tf.transpose(delays_agg, [0, 3, 1, 2])
 
         # Reshape and project to output dimension
-        concat_delays_agg = tf.reshape(delays_agg, (batch_size, -1, self.d_model))
+        # Use explicit dynamic dims instead of `-1` so graph-mode gradient replay
+        # does not collapse the feature axis.
+        batch_size_f = tf.shape(delays_agg)[0]
+        t_len = tf.shape(delays_agg)[1]
+        concat_delays_agg = tf.reshape(
+            delays_agg,
+            (batch_size_f, t_len, self.num_attention_heads * self.hidden_size),
+        )
         output = self.dense(concat_delays_agg)
 
         return output
