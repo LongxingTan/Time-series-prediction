@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Optional, Tuple
+import warnings
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
@@ -21,15 +22,10 @@ class DiffusionConfig(CommonConfig):
 
     def __init__(
         self,
-        hidden_size: int = 64,
         num_layers: int = 3,
         num_attention_heads: int = 8,
         attention_probs_dropout_prob: float = 0.1,
-        hidden_dropout_prob: float = 0.1,
-        ffn_intermediate_size: int = 256,
         max_position_embeddings: int = 512,
-        initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-5,
         pad_token_id: int = 0,
         num_diffusion_steps: int = 1000,
         beta_start: float = 1e-4,
@@ -56,15 +52,10 @@ class DiffusionConfig(CommonConfig):
         """
         super().__init__()
 
-        self.hidden_size: int = hidden_size
         self.num_layers: int = num_layers
         self.num_attention_heads: int = num_attention_heads
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
-        self.hidden_dropout_prob: float = hidden_dropout_prob
-        self.ffn_intermediate_size: int = ffn_intermediate_size
         self.max_position_embeddings: int = max_position_embeddings
-        self.initializer_range: float = initializer_range
-        self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
         self.num_diffusion_steps: int = num_diffusion_steps
         self.beta_start: float = beta_start
@@ -116,10 +107,16 @@ class NoiseScheduler:
     tags=("generative", "diffusion", "probabilistic"),
 )
 class Diffusion(BaseModel):
-    """TensorFlow Diffusion model for time series forecasting"""
+    """Deprecated experimental denoiser; not a conditional diffusion forecaster."""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[DiffusionConfig] = None):
         super().__init__()
+        warnings.warn(
+            "Diffusion is deprecated: its reconstruction objective does not implement conditional forecasting. "
+            "A noise-prediction objective and reverse sampler require a separate design.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.config = config or DiffusionConfig()
         self.predict_sequence_length = predict_sequence_length
         self.noise_scheduler = NoiseScheduler(self.config)
@@ -129,22 +126,8 @@ class Diffusion(BaseModel):
         self.embedding = DataEmbedding(self.config.hidden_size, positional_type="positional encoding")
         self.blocks = [TransformerBlock(self.config) for _ in range(self.config.num_layers)]
 
-        # Kept for compatibility with callers that inspect this layer.
+        # Initialize the projection layer here once
         self.output_projection = Dense(1)
-
-        # The forecast head is sized for the input channel count in build().
-        # (The base implementation returned a reconstruction of the *input tail*,
-        #  which is not a forecast of the held-out future; this head fixes that.)
-        self.forecast_projection = None
-
-    def build(self, input_shape):
-        """Create a channel-aware forecast projection from the input contract."""
-        _, encoder_shape = self._input_shapes(input_shape)
-        channels = encoder_shape[-1]
-        if channels is None:
-            raise ValueError("Diffusion requires a statically known input channel count")
-        self.forecast_projection = Dense(self.predict_sequence_length * int(channels))
-        super().build(input_shape)
 
     def call(self, x, training=None, **kwargs):
         """Diffusion model forward pass logic."""
@@ -152,21 +135,15 @@ class Diffusion(BaseModel):
         # Note: ignore_decoder_inputs=True because diffusion usually denoises the encoder path
         x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
-        # 2. Generate random timesteps (training only).
+        # 2. Generate random timesteps
         batch_size = tf.shape(encoder_feature)[0]
-        if training:
-            t = tf.random.uniform(shape=[batch_size], minval=0, maxval=self.config.num_diffusion_steps, dtype=tf.int32)
-            # 3. Add noise to input (diffusion forward process) during training.
-            noisy_x, _ = self.noise_scheduler.add_noise(encoder_feature, t)
-            t_float = tf.cast(t, tf.float32)
-        else:
-            # Inference: condition on the CLEAN history at t=0 (no noise), matching the
-            # standard diffusion-forecasting protocol. Random noise at inference produced
-            # degenerate, stochastic forecasts (near-constant output).
-            noisy_x = encoder_feature
-            t_float = tf.zeros([batch_size], dtype=tf.float32)
+        t = tf.random.uniform(shape=[batch_size], minval=0, maxval=self.config.num_diffusion_steps, dtype=tf.int32)
+
+        # 3. Add noise to input
+        noisy_x, noise = self.noise_scheduler.add_noise(encoder_feature, t)
 
         # 4. Time embedding (batch, 1) -> (batch, 1, hidden)
+        t_float = tf.cast(t, tf.float32)
         t_emb = self.time_embedding(tf.expand_dims(t_float, axis=-1))
         t_emb = tf.expand_dims(t_emb, axis=1)
 
@@ -177,13 +154,12 @@ class Diffusion(BaseModel):
         for block in self.blocks:
             x = block(x)
 
-        # 6. Forecast the future window from the contextualized encoding.
-        forecast = self.forecast_projection(x)  # (batch, seq, pred * channels)
-        # Use the *last* (most recent) history token's forecast; mean-pooling over all
-        # 24 time steps smoothed the output toward a constant and destroyed dynamic range.
-        forecast = forecast[:, -1, :]  # (batch, pred * channels)
-        channels = tf.shape(encoder_feature)[-1]
-        return tf.reshape(forecast, [tf.shape(forecast)[0], self.predict_sequence_length, channels])
+        # 6. Predict noise and reconstruct
+        predicted_noise = self.output_projection(x)
+        denoised_x = self.noise_scheduler.remove_noise(noisy_x, predicted_noise, t)
+
+        # 7. Return prediction window
+        return denoised_x[:, -self.predict_sequence_length :, :]
 
 
 class TransformerBlock(tf.keras.layers.Layer):

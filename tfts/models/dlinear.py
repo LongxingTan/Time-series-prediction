@@ -23,16 +23,16 @@ class DLinearConfig(CommonConfig):
         channels: int = 3,
         individual: bool = False,
         dropout_rate: float = 0.0,
-        target_dim: int = 1,
+        **kwargs,
     ):
         super().__init__()
         self.kernel_size = kernel_size
         self.channels = channels  # number of input features
         self.individual = individual
         self.dropout_rate = dropout_rate
-        self.target_dim = target_dim
         self.activation: Optional[str] = None
         self.initializer: str = "glorot_uniform"
+        self.update(kwargs)
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -67,7 +67,7 @@ class DLinear(BaseModel):
         super(DLinear, self).__init__()
         self.config = config or DLinearConfig()
         self.predict_sequence_length = predict_sequence_length
-        self.target_dim = getattr(self.config, "target_dim", 1)
+        self.target_dim = self.config.target_dim
 
         self.decomposition = SeriesDecomp(self.config.kernel_size)
         if self.config.individual:
@@ -82,6 +82,10 @@ class DLinear(BaseModel):
         else:
             self.linear_seasonal = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
             self.linear_trend = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
+
+    def build(self, input_shape):
+        self._validate_target_shape(input_shape)
+        super().build(input_shape)
 
     def call(self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
         """DLinear model forward pass.

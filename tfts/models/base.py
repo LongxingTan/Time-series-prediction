@@ -201,13 +201,28 @@ class BaseModel(tf.keras.Model, ABC):
                 decoder_feature = CreateDecoderFeature(self.predict_sequence_length)(encoder_feature)
         return x, encoder_feature, decoder_feature
 
+    def _validate_target_shape(self, input_shape):
+        """Validate models that forecast the leading target channels at build time."""
+        value_shape, _ = self._input_shapes(input_shape)
+        if value_shape[-1] is not None and value_shape[-1] < self.config.target_dim:
+            raise ValueError("Input has fewer channels than target_dim")
+
+    def _split_targets(self, x):
+        """Return leading target channels and remaining observed covariates.
+
+        Models using this convention call _validate_target_shape from build().
+        """
+        return x[..., : self.config.target_dim], x[..., self.config.target_dim :]
+
     @staticmethod
     def _input_shapes(input_shape):
         """Return ``(value_shape, encoder_shape)`` for supported input nests."""
         if isinstance(input_shape, dict):
             value_shape = tf.TensorShape(input_shape["x"])
             feature_shape = tf.TensorShape(input_shape["encoder_feature"])
-            return value_shape, value_shape[:-1].concatenate(value_shape[-1] + feature_shape[-1])
+            return value_shape, value_shape[:-1].concatenate(
+                None if value_shape[-1] is None or feature_shape[-1] is None else value_shape[-1] + feature_shape[-1]
+            )
         if (
             isinstance(input_shape, (list, tuple))
             and input_shape
@@ -215,7 +230,9 @@ class BaseModel(tf.keras.Model, ABC):
         ):
             value_shape = tf.TensorShape(input_shape[0])
             feature_shape = tf.TensorShape(input_shape[1])
-            return value_shape, value_shape[:-1].concatenate(value_shape[-1] + feature_shape[-1])
+            return value_shape, value_shape[:-1].concatenate(
+                None if value_shape[-1] is None or feature_shape[-1] is None else value_shape[-1] + feature_shape[-1]
+            )
         shape = tf.TensorShape(input_shape)
         return shape, shape
 
@@ -359,7 +376,7 @@ class BaseConfig(ABC):
 
     def validate(self) -> None:
         """Validate common fields and any model-specific ``__post_init__``."""
-        for field in ("hidden_size", "num_layers", "num_attention_heads", "intermediate_size"):
+        for field in ("hidden_size", "num_layers", "num_attention_heads", "intermediate_size", "target_dim"):
             value = getattr(self, field, None)
             if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
                 raise ValueError(f"{field} must be a positive integer, got {value!r}")
@@ -455,6 +472,7 @@ class CommonConfig(BaseConfig):
         dropout: float = 0.1,
         layer_norm_eps: float = 1e-5,
         initializer_range: float = 0.02,
+        target_dim: int = 1,
         **kwargs,
     ):
         self.hidden_size = hidden_size
@@ -464,6 +482,7 @@ class CommonConfig(BaseConfig):
         self.dropout = dropout
         self.layer_norm_eps = layer_norm_eps
         self.initializer_range = initializer_range
+        self.target_dim = target_dim
         super().__init__(**kwargs)
 
 

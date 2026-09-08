@@ -1,0 +1,98 @@
+[
+  {
+    "model": "autoformer",
+    "seed": 11,
+    "mse": 0.08258074522018433,
+    "mae": 0.22553837299346924,
+    "inference_ms": 4.9518268497195095,
+    "parameters": 5570
+  },
+  {
+    "model": "autoformer",
+    "seed": 29,
+    "mse": 0.15432757139205933,
+    "mae": 0.31754615902900696,
+    "inference_ms": 5.010782150202431,
+    "parameters": 5570
+  },
+  {
+    "model": "autoformer",
+    "seed": 47,
+    "mse": 0.6461712121963501,
+    "mae": 0.6730165481567383,
+    "inference_ms": 4.980787500971928,
+    "parameters": 5570
+  },
+  {
+    "model": "tide",
+    "seed": 11,
+    "mse": 0.32864320278167725,
+    "mae": 0.36130309104919434,
+    "inference_ms": 0.6797454989282414,
+    "parameters": 4372
+  },
+  {
+    "model": "tide",
+    "seed": 29,
+    "mse": 0.13165786862373352,
+    "mae": 0.2531294822692871,
+    "inference_ms": 0.6889994023367763,
+    "parameters": 4372
+  },
+  {
+    "model": "tide",
+    "seed": 47,
+    "mse": 0.7059115171432495,
+    "mae": 0.655903697013855,
+    "inference_ms": 0.6806089979363605,
+    "parameters": 4372
+  },
+  {
+    "model": "itransformer",
+    "seed": 11,
+    "mse": 0.02665668912231922,
+    "mae": 0.12111008912324905,
+    "inference_ms": 0.41126444994006306,
+    "parameters": 2712
+  },
+  {
+    "model": "itransformer",
+    "seed": 29,
+    "mse": 0.006231541279703379,
+    "mae": 0.06168550252914429,
+    "inference_ms": 0.3827027976512909,
+    "parameters": 2712
+  },
+  {
+    "model": "itransformer",
+    "seed": 47,
+    "mse": 0.050635430961847305,
+    "mae": 0.16684827208518982,
+    "inference_ms": 0.4170169006101787,
+    "parameters": 2712
+  },
+  {
+    "model": "dlinear",
+    "seed": 11,
+    "mse": 0.07340788841247559,
+    "mae": 0.2202032059431076,
+    "inference_ms": 0.4241852991981432,
+    "parameters": 400
+  },
+  {
+    "model": "dlinear",
+    "seed": 29,
+    "mse": 0.06450244784355164,
+    "mae": 0.21823307871818542,
+    "inference_ms": 0.3864297003019601,
+    "parameters": 400
+  },
+  {
+    "model": "dlinear",
+    "seed": 47,
+    "mse": 0.10022392868995667,
+    "mae": 0.26264533400535583,
+    "inference_ms": 0.3804777981713414,
+    "parameters": 400
+  }
+]

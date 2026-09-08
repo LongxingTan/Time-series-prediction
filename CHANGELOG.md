@@ -1,5 +1,20 @@
 # Release notes
 
+## v0.0.23
+
+- Fix AutoCorrelation aggregation over value projections and odd-length FFT reconstruction.
+- Preserve independent parallel transformer teacher forcing; test equivalence in full float32.
+- Centralize target dimensions and shared config defaults; add reusable RevIN.
+- Use named RWKV tensor states with graph-compatible recurrence.
+- Restore AutoFormer encoder/decoder wrappers and serializable layer configs.
+- Wire TiDE to supplied history/future covariates and remove zero-feature compute.
+  Correct its temporal output head; covariate-free inputs use `feature_dim=0`.
+- Deprecate the experimental Diffusion reconstruction model pending a conditional
+  diffusion design; remove the unrelated direct forecast-head rewrite.
+- Add registry-wide forecast shape/fit/predict checks and Keras forecast tensor output.
+- AutoFormer private layer constructors and TiDE weight shapes change; retrain
+  affected checkpoints. See `docs/review/model-review.md` for measurements and split details.
+
 
 ## v0.0.22
 

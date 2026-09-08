@@ -9,7 +9,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import GRU, Dense, LayerNormalization
 
 from tfts.layers.embed_layer import DataEmbedding
-from tfts.layers.rwkv_layer import ChannelMixing, TimeMixing
+from tfts.layers.rwkv_layer import ChannelMixing, RWKVState, TimeMixing, TimeMixState
 
 from .base import BaseModel, CommonConfig
 from .registry import register_model
@@ -21,12 +21,9 @@ class RWKVConfig(CommonConfig):
     def __init__(
         self,
         num_layers: int = 3,
-        hidden_size: int = 64,
         dense_hidden_size: int = 32,
         dropout: float = 0.0,
         max_position_embeddings: int = 512,
-        initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-5,
         pad_token_id: int = 0,
         **kwargs,
     ) -> None:
@@ -46,12 +43,9 @@ class RWKVConfig(CommonConfig):
         super().__init__()
 
         self.num_layers: int = num_layers
-        self.hidden_size: int = hidden_size
         self.dense_hidden_size: int = dense_hidden_size
         self.dropout: float = dropout
         self.max_position_embeddings: int = max_position_embeddings
-        self.initializer_range: float = initializer_range
-        self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
         self.update(kwargs)
 
@@ -78,24 +72,13 @@ class RWKV(BaseModel):
         self.output_projection = Dense(1)
 
     def init_state(self, batch_size: int):
-        states = []
-        for _ in range(self.config.num_layers):
-            # Attention state as a SINGLE stacked tensor (4, batch, hidden) so the layer
-            # becomes AutoGraph/graph-mode compatible (a Python list of tensors passed as a
-            # tf.function argument is not supported).
-            att_states = tf.stack(
-                [
-                    tf.zeros((batch_size, self.config.hidden_size)),  # last_x
-                    tf.zeros((batch_size, self.config.hidden_size)),  # aa
-                    tf.zeros((batch_size, self.config.hidden_size)),  # bb
-                    tf.zeros((batch_size, self.config.hidden_size)) - 1e30,  # pp
-                ],
-                axis=0,
-            )
-            # State for FFN
-            ffn_state = tf.zeros((batch_size, self.config.hidden_size))
-            states.append((att_states, ffn_state))
-        return states
+        def zeros():
+            return tf.zeros((batch_size, self.config.hidden_size), dtype=self.compute_dtype)
+
+        return tuple(
+            RWKVState(TimeMixState(zeros(), zeros(), zeros(), zeros() - 1e30), zeros())
+            for _ in range(self.config.num_layers)
+        )
 
     def call(
         self,
@@ -194,4 +177,4 @@ class RWKVBlock(tf.keras.layers.Layer):
         h, new_ffn_state = self.feed_forward(self.ln2(x), ffn_state)
         x = x + h
 
-        return x, (new_att_states, new_ffn_state)
+        return x, RWKVState(new_att_states, new_ffn_state)

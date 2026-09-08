@@ -1,7 +1,19 @@
-from typing import Dict, Optional, Tuple
+from typing import NamedTuple
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
+
+
+class TimeMixState(NamedTuple):
+    last_x: tf.Tensor
+    numerator: tf.Tensor
+    denominator: tf.Tensor
+    log_scale: tf.Tensor
+
+
+class RWKVState(NamedTuple):
+    attention: TimeMixState
+    channel: tf.Tensor
 
 
 class TimeMixing(tf.keras.layers.Layer):
@@ -31,17 +43,13 @@ class TimeMixing(tf.keras.layers.Layer):
         x : tf.Tensor
             The input tensor of shape (batch_size, seq_length, embed_dim).
         """
-        # state = stacked (4, batch, hidden): [last_x, aa, bb, pp]
-        last_x, aa, bb, pp = tf.unstack(state, num=4)
+        # Named tensor fields remain a stable tf.nest structure under tracing.
+        last_x, aa, bb, pp = state
 
         # Shifted x for mixing
         last_x_expanded = tf.expand_dims(last_x, 1)
         # x shape: (Batch, Seq, Hidden)
-        xx = tf.cond(
-            tf.shape(x)[1] > 1,
-            lambda: tf.concat([last_x_expanded, x[:, :-1, :]], axis=1),
-            lambda: last_x_expanded,
-        )
+        xx = tf.concat([last_x_expanded, x[:, :-1, :]], axis=1)
 
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
@@ -79,7 +87,7 @@ class TimeMixing(tf.keras.layers.Layer):
             cp = qq
             return ((ca, cb, cp, tarray), idx + 1)
 
-        outputs_ta = tf.TensorArray(tf.float32, size=seq_len)
+        outputs_ta = tf.TensorArray(x.dtype, size=seq_len)
         ((curr_aa, curr_bb, curr_pp, outputs_ta), _) = tf.while_loop(
             _cond,
             _body,
@@ -87,7 +95,7 @@ class TimeMixing(tf.keras.layers.Layer):
         )
         wkv_all = tf.transpose(outputs_ta.stack(), [1, 0, 2])  # [B, T, C]
 
-        new_state = tf.stack([x[:, -1, :], curr_aa, curr_bb, curr_pp], axis=0)
+        new_state = TimeMixState(x[:, -1, :], curr_aa, curr_bb, curr_pp)
         return self.output_layer(r * wkv_all), new_state
 
 
@@ -122,11 +130,7 @@ class ChannelMixing(tf.keras.layers.Layer):
 
         last_x_expanded = tf.expand_dims(last_x, 1)
 
-        xx = tf.cond(
-            tf.shape(x)[1] > 1,
-            lambda: tf.concat([last_x_expanded, x[:, :-1, :]], axis=1),
-            lambda: last_x_expanded,
-        )
+        xx = tf.concat([last_x_expanded, x[:, :-1, :]], axis=1)
 
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)

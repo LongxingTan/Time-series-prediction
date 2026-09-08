@@ -74,6 +74,14 @@ class ForecastingModel(TimeSeriesTaskModel):
                 objective = self.default_objective
         self.configure_objective(objective)
 
+    def predict_step(self, data):
+        """Expose forecast tensors to Keras predict's graph/NumPy adapter.
+
+        call() retains the richer ForecastOutput contract for direct callers.
+        """
+        inputs, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        return self(inputs, training=False).predictions
+
     def _require_sequence(self):
         if not self.capabilities.has_port(OutputPort.SEQUENCE):
             raise ValueError(
