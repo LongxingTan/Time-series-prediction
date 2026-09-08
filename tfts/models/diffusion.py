@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Optional, Tuple
+import warnings
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
@@ -21,15 +22,10 @@ class DiffusionConfig(CommonConfig):
 
     def __init__(
         self,
-        hidden_size: int = 64,
         num_layers: int = 3,
         num_attention_heads: int = 8,
         attention_probs_dropout_prob: float = 0.1,
-        hidden_dropout_prob: float = 0.1,
-        ffn_intermediate_size: int = 256,
         max_position_embeddings: int = 512,
-        initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
         num_diffusion_steps: int = 1000,
         beta_start: float = 1e-4,
@@ -56,15 +52,10 @@ class DiffusionConfig(CommonConfig):
         """
         super().__init__()
 
-        self.hidden_size: int = hidden_size
         self.num_layers: int = num_layers
         self.num_attention_heads: int = num_attention_heads
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
-        self.hidden_dropout_prob: float = hidden_dropout_prob
-        self.ffn_intermediate_size: int = ffn_intermediate_size
         self.max_position_embeddings: int = max_position_embeddings
-        self.initializer_range: float = initializer_range
-        self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
         self.num_diffusion_steps: int = num_diffusion_steps
         self.beta_start: float = beta_start
@@ -116,10 +107,16 @@ class NoiseScheduler:
     tags=("generative", "diffusion", "probabilistic"),
 )
 class Diffusion(BaseModel):
-    """TensorFlow Diffusion model for time series forecasting"""
+    """Deprecated experimental denoiser; not a conditional diffusion forecaster."""
 
     def __init__(self, predict_sequence_length: int = 1, config: Optional[DiffusionConfig] = None):
         super().__init__()
+        warnings.warn(
+            "Diffusion is deprecated: its reconstruction objective does not implement conditional forecasting. "
+            "A noise-prediction objective and reverse sampler require a separate design.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.config = config or DiffusionConfig()
         self.predict_sequence_length = predict_sequence_length
         self.noise_scheduler = NoiseScheduler(self.config)

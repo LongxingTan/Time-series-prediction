@@ -11,6 +11,7 @@ from tensorflow.keras.layers import Dense, LayerNormalization
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
+from tfts.layers.revin import RevIN
 
 from ..layers.util_layer import ShapeLayer
 from .base import BaseModel, CommonConfig
@@ -22,15 +23,10 @@ class ITransformerConfig(CommonConfig):
 
     def __init__(
         self,
-        hidden_size: int = 64,
         num_layers: int = 3,
         num_attention_heads: int = 8,
         attention_probs_dropout_prob: float = 0.1,
-        hidden_dropout_prob: float = 0.1,
-        ffn_intermediate_size: int = 256,
         max_position_embeddings: int = 512,
-        initializer_range: float = 0.02,
-        layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
         **kwargs,
     ) -> None:
@@ -51,15 +47,10 @@ class ITransformerConfig(CommonConfig):
         """
         super().__init__()
 
-        self.hidden_size: int = hidden_size
         self.num_layers: int = num_layers
         self.num_attention_heads: int = num_attention_heads
         self.attention_probs_dropout_prob: float = attention_probs_dropout_prob
-        self.hidden_dropout_prob: float = hidden_dropout_prob
-        self.ffn_intermediate_size: int = ffn_intermediate_size
         self.max_position_embeddings: int = max_position_embeddings
-        self.initializer_range: float = initializer_range
-        self.layer_norm_eps: float = layer_norm_eps
         self.pad_token_id: int = pad_token_id
         self.update(kwargs)
 
@@ -87,15 +78,18 @@ class ITransformer(BaseModel):
 
         # Project from hidden_size to predict_sequence_length
         self.projector = Dense(self.predict_sequence_length)
+        self.revin = RevIN()
 
     def call(self, x, training=None, **kwargs):
         """iTransformer forward pass: Inverting Variates and Time"""
         # x shape: (batch, seq_len, n_vars)
         x, encoder_feature, _ = self._prepare_3d_inputs(x, ignore_decoder_inputs=True)
 
+        x, stats = self.revin(encoder_feature)
+
         # 1. Inversion: (batch, seq_len, n_vars) -> (batch, n_vars, seq_len)
         # Each variate becomes a "token"
-        x = tf.transpose(encoder_feature, perm=[0, 2, 1])
+        x = tf.transpose(x, perm=[0, 2, 1])
 
         # 2. Embedding: Map the whole history of each variate to hidden_size
         # (batch, n_vars, hidden_size)
@@ -111,6 +105,9 @@ class ITransformer(BaseModel):
 
         # 5. Reverse Inversion: (batch, predict_len, n_vars)
         x = tf.transpose(x, perm=[0, 2, 1])
+
+        # 6. De-normalize back to original scale
+        x = self.revin.inverse(x, stats)
 
         return x
 

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import tensorflow as tf
@@ -105,13 +106,20 @@ class GenerationInvariantTest(unittest.TestCase):
         np.testing.assert_allclose(direct.predictions, direct_feedback.predictions)
 
     def test_teacher_forced_native_matches_parallel_path(self):
+        # Full-sequence and cached matmuls have different shapes. TF32 can round
+        # their products differently (observed error 2.9e-4 on GPU); this test
+        # checks decoder semantics at float32 precision without relaxing atol.
+        previous_tf32 = tf.config.experimental.tensor_float_32_execution_enabled()
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+        self.addCleanup(tf.config.experimental.enable_tensor_float_32_execution, previous_tf32)
         model = self.model("transformer", horizon=3)
         batch = TimeSeriesBatch(
             past_values=tf.random.stateless_normal([2, 8, 1], [1, 2]),
             future_values=tf.random.stateless_normal([2, 3, 1], [3, 4]),
             future_time_features=tf.ones([2, 3, 1]),
         )
-        parallel = model.backbone.decode_teacher_forced(batch, training=False)
+        with patch.object(model.backbone.decoder, "step", side_effect=AssertionError("parallel path called step")):
+            parallel = model.backbone.decode_teacher_forced(batch, training=False)
         iterative = run(
             NativeDecoder(model),
             batch,
@@ -120,6 +128,19 @@ class GenerationInvariantTest(unittest.TestCase):
             seed=7,
         )
         np.testing.assert_allclose(iterative.predictions, parallel.predictions, atol=2e-5)
+
+    def test_parallel_teacher_forcing_traces_unknown_horizon(self):
+        model = self.model("transformer", horizon=3)
+        past = tf.ones([2, 8, 1])
+
+        @tf.function(input_signature=[tf.TensorSpec([None, None, 1], tf.float32)])
+        def decode(future):
+            batch = TimeSeriesBatch(past_values=past, future_values=future, future_time_features=tf.ones_like(future))
+            return model.backbone.decode_teacher_forced(batch, training=False).predictions
+
+        with patch.object(model.backbone.decoder, "step", side_effect=AssertionError("parallel path called step")):
+            for horizon in (1, 3, 5):
+                self.assertEqual(decode(tf.ones([2, horizon, 1])).shape, (2, horizon, 1))
 
     def test_default_inverse_scale_returns_input_units(self):
         class DoubleScaler:

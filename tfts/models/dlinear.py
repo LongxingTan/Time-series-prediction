@@ -19,10 +19,11 @@ class DLinearConfig(CommonConfig):
 
     def __init__(
         self,
-        kernel_size: int = 25,
+        kernel_size: int = 7,
         channels: int = 3,
         individual: bool = False,
         dropout_rate: float = 0.0,
+        **kwargs,
     ):
         super().__init__()
         self.kernel_size = kernel_size
@@ -31,6 +32,7 @@ class DLinearConfig(CommonConfig):
         self.dropout_rate = dropout_rate
         self.activation: Optional[str] = None
         self.initializer: str = "glorot_uniform"
+        self.update(kwargs)
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -40,6 +42,15 @@ class DLinearConfig(CommonConfig):
             raise ValueError(f"kernel_size must be positive and odd, got {self.kernel_size}")
         if not 0 <= self.dropout_rate < 1:
             raise ValueError(f"dropout_rate must be in [0, 1), got {self.dropout_rate}")
+        if self.target_dim <= 0:
+            raise ValueError(f"target_dim must be positive, got {self.target_dim}")
+
+
+def _uniform_avg_init(shape, dtype=None):
+    """(1 / seq_len) * ones, matching the reference DLinear linear weight init."""
+    if dtype is None:
+        dtype = "float32"
+    return tf.ones(shape, dtype=dtype) / tf.cast(shape[0], dtype)
 
 
 @register_model(
@@ -56,15 +67,25 @@ class DLinear(BaseModel):
         super(DLinear, self).__init__()
         self.config = config or DLinearConfig()
         self.predict_sequence_length = predict_sequence_length
+        self.target_dim = self.config.target_dim
 
         self.decomposition = SeriesDecomp(self.config.kernel_size)
         if self.config.individual:
-            self.linear_seasonal = [Dense(self.predict_sequence_length) for _ in range(self.config.channels)]
-            self.linear_trend = [Dense(self.predict_sequence_length) for _ in range(self.config.channels)]
+            self.linear_seasonal = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
+                for _ in range(self.config.channels)
+            ]
+            self.linear_trend = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
+                for _ in range(self.config.channels)
+            ]
         else:
-            self.linear_seasonal = Dense(self.predict_sequence_length)
-            self.linear_trend = Dense(self.predict_sequence_length)
-        self.project = Dense(1)
+            self.linear_seasonal = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
+            self.linear_trend = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
+
+    def build(self, input_shape):
+        self._validate_target_shape(input_shape)
+        super().build(input_shape)
 
     def call(self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
         """DLinear model forward pass.
@@ -81,7 +102,7 @@ class DLinear(BaseModel):
             and, when ``output_hidden_states`` is True, the model's decomposed
             ``'seasonal_component'`` and ``'trend_component'``.
         """
-        # Decompose the input into trend and seasonal components
+        # Decompose the input into trend and seasonal components (reference DLinear: no instance norm)
         seasonal, trend = self.decomposition(inputs)
 
         seasonal = Lambda(lambda x: tf.transpose(x, [0, 2, 1]))(seasonal)
@@ -100,6 +121,5 @@ class DLinear(BaseModel):
             trend_output = self.linear_trend(trend)
 
         output = seasonal_output + trend_output
-        output = Lambda(lambda t: tf.transpose(t, [0, 2, 1]))(output)
-        output = self.project(output)
-        return output
+        output = Lambda(lambda t: tf.transpose(t, [0, 2, 1]))(output)  # (b, pred, c)
+        return output[..., : self.target_dim]

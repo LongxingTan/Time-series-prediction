@@ -93,8 +93,22 @@ class AutoCorrelation(tf.keras.layers.Layer):
         Dropout probability for attention probabilities, by default 0.0.
     """
 
-    def __init__(self, d_model: int, num_attention_heads: int, attention_probs_dropout_prob: float = 0.0) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        d_model: int,
+        num_attention_heads: int,
+        attention_probs_dropout_prob: float = 0.0,
+        factor: Optional[float] = None,
+        max_delays: int = 8,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.factor = factor
+        self.max_delays = max_delays
+        if max_delays < 1:
+            raise ValueError("max_delays must be positive")
+        if factor is not None and factor <= 0:
+            raise ValueError("factor must be positive")
         if d_model % num_attention_heads != 0:
             raise ValueError(f"Hidden size {d_model} must be divisible by the number of heads {num_attention_heads}.")
         self.d_model = d_model
@@ -135,7 +149,7 @@ class AutoCorrelation(tf.keras.layers.Layer):
             Time-delayed autocorrelation between queries and keys.
         """
         batch_size = tf.shape(q)[0]
-        time_steps = tf.shape(q)[2]
+        time_steps = q.shape[2] if q.shape[2] is not None else tf.shape(q)[2]
 
         # Transform to frequency domain using FFT
         q_fft = tf.signal.rfft(tf.transpose(q, perm=[0, 1, 3, 2]))
@@ -145,15 +159,20 @@ class AutoCorrelation(tf.keras.layers.Layer):
         S_qk = q_fft * tf.math.conj(k_fft)
 
         # Transform back to time domain
-        R_qk = tf.signal.irfft(S_qk)
+        R_qk = tf.signal.irfft(S_qk, fft_length=[time_steps])
 
         # Create indices for the time steps
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
         init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.hidden_size, 1])
 
-        # Use a fixed number of top correlations instead of dynamic calculation
-        # This avoids the issue with symbolic tensors in range()
-        top_k = 8  # A reasonable default value based on typical sequence lengths
+        # Use a fixed number of top correlations but never more than the sequence length
+        # None preserves the existing checkpoint computation. Opt in to reference log(L) selection.
+        count = (
+            self.max_delays
+            if self.factor is None
+            else tf.cast(self.factor * tf.math.log(tf.cast(time_steps, tf.float32)), tf.int32)
+        )
+        top_k = tf.maximum(1, tf.minimum(count, time_steps))
 
         # Get top-k values and their indices
         weights, indices = tf.math.top_k(R_qk, k=top_k)
@@ -161,8 +180,9 @@ class AutoCorrelation(tf.keras.layers.Layer):
         # Apply softmax to get attention weights
         tmp_corr = tf.nn.softmax(weights, axis=-1)
 
-        # Prepare values tensor with concatenated repetition for circular handling
-        tmp_values = tf.tile(tf.transpose(q, perm=[0, 1, 3, 2]), [1, 1, 1, 2])
+        # Prepare values tensor with concatenated repetition for circular handling.
+        # NOTE: aggregate over the *value* projection (v), not the query (q).
+        tmp_values = tf.tile(tf.transpose(v, perm=[0, 1, 3, 2]), [1, 1, 1, 2])
         delays_agg = tf.zeros_like(tf.transpose(q, perm=[0, 1, 3, 2]))
 
         # Aggregate values based on top-k correlations using tf.map_fn instead of Python loop
@@ -247,12 +267,22 @@ class AutoCorrelation(tf.keras.layers.Layer):
         # Use tf.cond for graph-compatible conditional operations
         v_adjusted, k_adjusted = tf.cond(tf.greater(L, S), true_fn=pad_kv, false_fn=trim_kv)
 
+        v_adjusted = tf.ensure_shape(v_adjusted, q.shape)
+        k_adjusted = tf.ensure_shape(k_adjusted, q.shape)
+
         # Compute time-delayed autocorrelation
         delays_agg = self.time_delay_agg(q, k_adjusted, v_adjusted)
         delays_agg = tf.transpose(delays_agg, [0, 3, 1, 2])
 
         # Reshape and project to output dimension
-        concat_delays_agg = tf.reshape(delays_agg, (batch_size, -1, self.d_model))
+        # Use explicit dynamic dims instead of `-1` so graph-mode gradient replay
+        # does not collapse the feature axis.
+        batch_size_f = tf.shape(delays_agg)[0]
+        t_len = tf.shape(delays_agg)[1]
+        concat_delays_agg = tf.reshape(
+            delays_agg,
+            (batch_size_f, t_len, self.num_attention_heads * self.hidden_size),
+        )
         output = self.dense(concat_delays_agg)
 
         return output
@@ -285,6 +315,8 @@ class AutoCorrelation(tf.keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
+                "factor": self.factor,
+                "max_delays": self.max_delays,
                 "d_model": self.d_model,
                 "num_attention_heads": self.num_attention_heads,
                 "attention_probs_dropout_prob": self.attention_probs_dropout_prob,

@@ -45,7 +45,6 @@ class TransformerConfig(CommonConfig):
         classifier_dropout: Optional[float] = None,
         layer_norm_eps: float = 1e-12,
         pad_token_id: int = 0,
-        target_dim: int = 1,
         **kwargs: Any,
     ) -> None:
         """
@@ -75,7 +74,6 @@ class TransformerConfig(CommonConfig):
 
         self.decoder_format_version = 2
 
-        self.target_dim = target_dim
         self.hidden_size: int = hidden_size
         self.num_layers: int = num_layers
         self.num_decoder_layers: int = num_decoder_layers if num_decoder_layers is not None else self.num_layers
