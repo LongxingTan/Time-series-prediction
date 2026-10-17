@@ -6,6 +6,7 @@ from benchmark.datasets.m4 import M4Dataset
 from benchmark.datasets.npz import NpzDataset
 from benchmark.datasets.recruit_restaurant import RecruitRestaurantDataset
 from benchmark.datasets.synthetic import AirPassengersDataset, SineDataset
+from benchmark.datasets.ventilator import VentilatorDataset
 
 __all__ = [
     "SineDataset",
@@ -16,4 +17,5 @@ __all__ = [
     "CMIDetectSleepStatesDataset",
     "NpzDataset",
     "M4Dataset",
+    "VentilatorDataset",
 ]

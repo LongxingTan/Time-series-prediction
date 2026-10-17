@@ -41,6 +41,8 @@ class BertConfig(CommonConfig):
         use_cache: bool = False,
         dense_units: Tuple[int] = (512, 1024),
         classifier_dropout: Optional[float] = None,
+        regression_head: bool = False,
+        regression_head_units: int = 128,
         **kwargs: Dict[str, object],
     ) -> None:
         """Configuration class for BERT model, inheriting from BaseConfig.
@@ -60,6 +62,10 @@ class BertConfig(CommonConfig):
             positional_type: The type of position embedding ("absolute" or "relative"). Default is "absolute".
             use_cache: Whether to use the cache during inference. Default is True.
             classifier_dropout: Dropout probability for the classifier layer. Default is None.
+            regression_head: Emit a per-timestep regression output of shape
+                ``(batch, train_length, output_size)`` instead of pooling to a
+                single vector. The input length must match predict_sequence_length.
+            regression_head_units: Hidden units of the per-timestep regression head.
             **kwargs: Additional keyword arguments passed to the parent `BaseConfig` class.
         """
 
@@ -81,6 +87,8 @@ class BertConfig(CommonConfig):
         self.dense_units: Tuple[int] = dense_units
         self.classifier_dropout: Optional[float] = classifier_dropout
         self.pad_token_id: int = pad_token_id
+        self.regression_head: bool = regression_head
+        self.regression_head_units: int = regression_head_units
 
 
 @register_model(
@@ -147,6 +155,10 @@ class Bert(BaseModel):
             self.predict_sequence_length * self.config.output_size, activation="linear", name="projection"
         )
         self.reshape = Reshape((self.predict_sequence_length, self.config.output_size))
+        self.regression_projection = Dense(
+            self.config.regression_head_units, activation="gelu", name="regression_projection"
+        )
+        self.regression_head = Dense(self.config.output_size, activation="linear", name="regression_head")
         logger.debug("Model building completed")
 
     def call(
@@ -184,6 +196,20 @@ class Bert(BaseModel):
                 if return_dict:
                     return {"hidden_states": memory}
                 return memory
+
+            # Per-timestep regression keeps the full encoder sequence instead of
+            # collapsing it, so every aligned step receives its own prediction.
+            if self.config.regression_head:
+                tf.debugging.assert_equal(
+                    tf.shape(memory)[1],
+                    self.predict_sequence_length,
+                    message="Aligned BERT input length must equal predict_sequence_length",
+                )
+                regression = self.regression_projection(memory)
+                outputs = self.regression_head(regression)
+                if return_dict:
+                    return {"predictions": outputs}
+                return outputs
 
             # Extract the mean or last time step for prediction
             if self.config.pooling_method == "mean":

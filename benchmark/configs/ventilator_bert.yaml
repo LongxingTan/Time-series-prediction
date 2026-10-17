@@ -1,0 +1,16 @@
+# cdeotte reference transformer versus the TFTS encoder-only BERT regression
+# head, on the engineered reference features. Both share the same folds, loss,
+# optimizer schedule, epochs and batch size; run on CPU.
+#   python -m benchmark.ventilator_bert --config benchmark/configs/ventilator_bert.yaml \
+#     --data ../data/ventilator/train.csv
+benchmark:
+  epochs: 6
+  batch_size: 64
+  learning_rate: 6e-4
+  seed: 42
+  runs: 1
+  metrics: [mae]
+  verbose: 2
+  output_dir: outputs/ventilator_bert_6e
+datasets: [ventilator]
+models: [reference, bert]
