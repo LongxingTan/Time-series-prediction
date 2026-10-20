@@ -91,6 +91,7 @@ class BackboneCapabilities:
     supports_variable_length: bool = False
     supports_parallel_teacher_forcing: bool = False
     input_spec: ModelInputSpec = ModelInputSpec()
+    native_forecast_requires_target_history: bool = False
 
     def has_port(self, port: OutputPort) -> bool:
         if port == OutputPort.SEQUENCE and OutputPort.TEMPORAL_SEQUENCE in self.output_ports:

@@ -38,6 +38,7 @@ class ModelMetadata:
             "supports_future_covariates": self.capabilities.supports_future_covariates,
             "supports_missing_mask": self.capabilities.supports_missing_mask,
             "supports_variable_length": self.capabilities.supports_variable_length,
+            "native_forecast_requires_target_history": self.capabilities.native_forecast_requires_target_history,
             "input_spec": {
                 "layout": self.capabilities.input_spec.layout.value,
                 "accepted_roles": sorted(self.capabilities.input_spec.accepted_roles),

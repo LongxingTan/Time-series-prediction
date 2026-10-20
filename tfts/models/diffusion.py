@@ -9,6 +9,7 @@ import warnings
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -105,6 +106,7 @@ class NoiseScheduler:
     config=DiffusionConfig,
     paper="https://arxiv.org/abs/2006.11239",
     tags=("generative", "diffusion", "probabilistic"),
+    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class Diffusion(BaseModel):
     """Deprecated experimental denoiser; not a conditional diffusion forecaster."""

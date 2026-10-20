@@ -8,6 +8,7 @@ from typing import Dict, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -61,6 +62,7 @@ class ITransformerConfig(CommonConfig):
     paper="https://arxiv.org/abs/2310.06625",
     tags=("attention", "multivariate", "SOTA"),
     tier="core",
+    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class ITransformer(BaseModel):
     """TensorFlow iTransformer model for time series forecasting"""

@@ -8,6 +8,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda
 
+from tfts.contracts import BackboneCapabilities
 from tfts.layers.autoformer_layer import SeriesDecomp
 
 from .base import BaseModel, CommonConfig
@@ -59,6 +60,7 @@ def _uniform_avg_init(shape, dtype=None):
     paper="https://arxiv.org/abs/2205.13504",
     tags=("linear", "simple", "baseline", "SOTA"),
     tier="core",
+    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class DLinear(BaseModel):
     """DLinear Network for Time Series Forecasting."""

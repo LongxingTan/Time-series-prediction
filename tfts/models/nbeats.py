@@ -8,6 +8,8 @@ from typing import List, Optional
 
 import tensorflow as tf
 
+from tfts.contracts import BackboneCapabilities
+
 from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
 from .base import BaseModel, CommonConfig
 from .registry import register_model
@@ -86,6 +88,7 @@ class NBeatsConfig(CommonConfig):
     paper="https://arxiv.org/abs/1905.10437",
     tags=("mlp", "interpretable", "SOTA", "basis-expansion"),
     tier="core",
+    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class NBeats(BaseModel):
     """NBeats model (interpretable trend + seasonality stacks, doubly-residual stacking)."""

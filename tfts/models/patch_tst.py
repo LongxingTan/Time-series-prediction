@@ -13,6 +13,7 @@ except ImportError:  # Keras 2 bundled with TensorFlow < 2.16
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -83,6 +84,7 @@ class PatchTSTConfig(CommonConfig):
     paper="https://arxiv.org/abs/2211.14730",
     tags=("patching", "attention", "SOTA"),
     tier="core",
+    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class PatchTST(BaseModel):
     """TensorFlow PatchTST model for time series forecasting"""

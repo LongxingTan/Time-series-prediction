@@ -13,7 +13,7 @@
   diffusion design; remove the unrelated direct forecast-head rewrite.
 - Add registry-wide forecast shape/fit/predict checks and Keras forecast tensor output.
 - AutoFormer private layer constructors and TiDE weight shapes change; retrain
-  affected checkpoints. See `docs/review/model-review.md` for measurements and split details.
+  affected checkpoints.
 
 
 ## v0.0.22

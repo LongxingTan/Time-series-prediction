@@ -1,5 +1,3 @@
-"""Guardrails for the independently reviewable model changes."""
-
 from pathlib import Path
 import tempfile
 import unittest

@@ -92,6 +92,7 @@ class DeepAREncoder(tf.keras.layers.Layer):
     tier="core",
     capabilities=BackboneCapabilities(
         supports_parallel_teacher_forcing=True,
+        native_forecast_requires_target_history=True,
         output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
         forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
         input_spec=ModelInputSpec(

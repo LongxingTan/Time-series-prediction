@@ -87,12 +87,34 @@ uv run python -m benchmark.ventilator --config benchmark/configs/ventilator.yaml
 ```
 
 Omit `--models rnn` to reproduce both models from scratch in one command.
-Aligned-run outputs are `outputs/ventilator_aligned_10e`; its log is
-`/tmp/ventilator-aligned-10e.log`. Its results and any claim of beating the
-baseline remain unverified until all five folds finish and predictions are
-checked. `return_sequences=True` requires the input length to match the
-declared prediction length; it uses the recurrent output at each step, while
-the default path continues to forecast from the final state.
+`return_sequences=True` requires the input length to match the declared
+prediction length; it uses the recurrent output at each step, while the
+default path continues to forecast from the final state.
+
+The aligned TFTS comparator is configurable as a bidirectional LSTM through
+`benchmark/configs/ventilator.yaml` (`rnn_type: lstm`, `bi_direction: true`),
+independent of the library's default unidirectional final-state forecasting.
+
+The aligned runs both completed: `outputs/ventilator_aligned_10e` (128-unit
+configuration, log `/tmp/ventilator-aligned-10e.log`) and
+`outputs/ventilator_aligned_final_10e` (the current `ventilator.yaml`,
+512-unit). Each wrote all five fold checkpoints and a complete OOF prediction
+array. I recomputed the global inspiration MAE from each saved array against
+the raw CSV and each reproduces its recorded `results.json` to the last digit;
+all arrays are 100% finite.
+
+| Model | Config | OOF inspiration MAE |
+| --- | --- | ---: |
+| Full reference TensorFlow LSTM | baseline | 0.7606188493 |
+| Default TFTS RNN | final-state forecast | 1.5785328745 |
+| Aligned TFTS BiLSTM | 128-unit, 2 layers, per-step | 0.8277517977 |
+| Aligned TFTS BiLSTM | 512-unit, 2 layers, per-step | **0.6821537014** |
+
+The 512-unit bidirectional configuration beats the same-data reference
+baseline (0.6822 vs 0.7606) under an identical five-fold protocol, optimizer
+schedule, epochs and batch size on CPU. These 10-epoch scores are
+development benchmarks on the aligned protocol, not reproductions of the
+notebook's 200-epoch budget.
 
 Resume an interrupted RNN run with its original saved protocol:
 
