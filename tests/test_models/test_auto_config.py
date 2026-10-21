@@ -54,6 +54,21 @@ class TestAutoModel(unittest.TestCase):
 
                 self.assertEqual(type(config).__name__, info["config_class"])
                 self.assertEqual(type(model.backbone).__name__, info["class_name"])
+                self.assertEqual(set(info["capabilities"]), {"output_ports", "input_spec"})
+                self.assertEqual(
+                    set(info["capabilities"]["input_spec"]),
+                    {
+                        "accepted_roles",
+                        "supports_categorical",
+                        "supports_static",
+                        "supports_multivariate_target",
+                        "accepted_dtypes_by_role",
+                        "arrangement",
+                        "accepted_topologies",
+                        "supports_dynamic_graph",
+                        "supports_node_mask",
+                    },
+                )
 
     def test_registry_exposes_stability_tiers_and_class_objects(self):
         core_models = list_models(tier="core")

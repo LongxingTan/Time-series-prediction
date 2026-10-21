@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from tfts import AutoConfig, AutoModelForForecasting
-from tfts.contracts import InputLayout, ModelInputSpec
+from tfts.contracts import ModelInputSpec
 from tfts.data import SequenceMaterializer, TabularMaterializer, WindowIndexer, WindowSpec
 from tfts.features import (
     CategoricalEncoderTransform,
@@ -147,7 +147,6 @@ class FeaturePipelineTest(unittest.TestCase):
     def test_selection_is_resolved_against_model_inputs(self):
         selection = FeatureSelection(include_tags={"commercial", "weather"}, exclude_names={"temperature"})
         input_spec = ModelInputSpec(
-            layout=InputLayout.TABULAR,
             accepted_roles={FeatureRole.KNOWN_FUTURE.value},
             supports_categorical=True,
             supports_static=False,

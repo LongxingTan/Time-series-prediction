@@ -3,7 +3,6 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
-from dataclasses import replace
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -107,7 +106,7 @@ class TransformerConfig(CommonConfig):
     paper="https://arxiv.org/abs/1706.03762",
     tags=("attention", "encoder-decoder"),
     tier="core",
-    capabilities=replace(AUTOREGRESSIVE_CAPABILITIES, supports_parallel_teacher_forcing=True),
+    capabilities=AUTOREGRESSIVE_CAPABILITIES,
 )
 class Transformer(AutoregressiveModel):
     """Transformer model"""

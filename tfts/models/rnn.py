@@ -8,7 +8,6 @@ from typing import Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, Dense, Reshape
 
-from tfts.contracts import BackboneCapabilities
 from tfts.layers.rnn_layer import Encoder
 
 from .base import BaseModel, CommonConfig
@@ -64,7 +63,6 @@ class RNNConfig(CommonConfig):
     config=RNNConfig,
     tags=("baseline", "recurrent"),
     tier="core",
-    capabilities=BackboneCapabilities(supports_variable_length=True),
 )
 class RNN(BaseModel):
     """tfts RNN model"""

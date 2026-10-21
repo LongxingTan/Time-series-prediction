@@ -22,8 +22,10 @@ topology separately. Shared topology is attached after dataset batching.
 The explicit ``per_node`` forecasting strategy treats spatial locations as
 independent series and restores their axes on output.
 
-Backbone capabilities declare supported output ports and decoding behavior.
-Task factories resolve these declarations when constructing the model.
+Backbone capabilities declare supported output ports and an input specification.
+Task factories use output ports to select compatible heads. Feature resolution
+and spatial adaptation use the input specification to check accepted inputs.
+Decoding behavior is determined by the backbone's decoder methods.
 Model calls return named task outputs, such as ``ForecastOutput.predictions``
 and ``ClassificationOutput.logits``. Forecasting, classification, imputation, and anomaly
 detection own their heads and objectives. Anomaly thresholds require calibration
@@ -55,7 +57,7 @@ uses ``horizon`` for the requested inference length. Its ``mode`` is ``auto``,
 ``direct``, ``recursive``, or ``native``. Direct decoding emits one model block;
 recursive decoding advances a historical window with each predicted value;
 native decoding uses the backbone's incremental decoder. Automatic selection
-uses the available capabilities and requested horizon.
+uses the available decoder methods and requested horizon.
 
 Every decoder implements ``start``, ``step``, and ``feed``. ``State`` contains
 opaque decoder-owned data. ``step`` returns a ``Chunk`` containing ``offset``,

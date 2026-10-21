@@ -12,7 +12,6 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
-from tfts.contracts import BackboneCapabilities
 from tfts.layers.revin import RevIN
 
 from .base import BaseModel, CommonConfig
@@ -51,7 +50,6 @@ class TideConfig(CommonConfig):
     config=TideConfig,
     paper="https://arxiv.org/abs/2304.08424",
     tags=("mlp", "efficient", "covariates"),
-    capabilities=BackboneCapabilities(native_forecast_requires_target_history=True),
 )
 class Tide(BaseModel):
     """TiDE model for time series forecasting (reference-portable dense-encoder MLP)."""

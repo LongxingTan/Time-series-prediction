@@ -234,7 +234,6 @@ class FlattenHead(tf.keras.layers.Layer):
     paper="https://arxiv.org/abs/2402.19072",
     tags=("attention", "multivariate", "patch"),
     capabilities=BackboneCapabilities(
-        native_forecast_requires_target_history=True,
         output_ports=frozenset({OutputPort.SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST}),
     ),
 )

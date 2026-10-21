@@ -16,25 +16,10 @@ class OutputPort(str, Enum):
     DISTRIBUTION = "distribution"
 
 
-class ForecastMode(str, Enum):
-    DIRECT = "direct"
-    RECURSIVE = "recursive"
-    AUTOREGRESSIVE = "autoregressive"
-    DIFFUSION = "diffusion"
-
-
-class InputLayout(str, Enum):
-    """Physical input layout expected at the final model boundary."""
-
-    SEQUENCE = "sequence"
-    TABULAR = "tabular"
-
-
 @dataclass(frozen=True)
 class ModelInputSpec:
     """Feature roles and datatypes one model implementation can consume."""
 
-    layout: InputLayout = InputLayout.SEQUENCE
     accepted_roles: FrozenSet[str] = frozenset({"observed_past"})
     supports_categorical: bool = False
     supports_static: bool = False
@@ -46,7 +31,6 @@ class ModelInputSpec:
     supports_node_mask: bool = False
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "layout", InputLayout(self.layout))
         object.__setattr__(
             self,
             "accepted_roles",
@@ -82,16 +66,10 @@ class ModelInputSpec:
 
 @dataclass(frozen=True)
 class BackboneCapabilities:
-    """Properties that cannot be derived from the task-model registry."""
+    """Output ports and accepted inputs used by task composition."""
 
     output_ports: FrozenSet[OutputPort] = frozenset({OutputPort.NATIVE_FORECAST})
-    forecast_modes: FrozenSet[ForecastMode] = frozenset({ForecastMode.DIRECT})
-    supports_future_covariates: bool = False
-    supports_missing_mask: bool = False
-    supports_variable_length: bool = False
-    supports_parallel_teacher_forcing: bool = False
     input_spec: ModelInputSpec = ModelInputSpec()
-    native_forecast_requires_target_history: bool = False
 
     def has_port(self, port: OutputPort) -> bool:
         if port == OutputPort.SEQUENCE and OutputPort.TEMPORAL_SEQUENCE in self.output_ports:
