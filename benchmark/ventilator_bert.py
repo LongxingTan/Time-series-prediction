@@ -178,7 +178,9 @@ def run_comparison(path: Path, config: BenchmarkConfig, threads: int = 6, folds_
             score = inspiration_mae(targets[valid][..., 0:1], pred[..., 0:1], mask[valid])
             model.save_weights(str(output / f"{model_name}_fold{fold}.weights.h5"))
             with (output / f"{model_name}_fold{fold}_history.json").open("w", encoding="utf-8") as destination:
-                json.dump(history.history, destination)
+                json.dump(
+                    {name: [float(value) for value in values] for name, values in history.history.items()}, destination
+                )
             print(f"{model_name}: fold {fold + 1} inspiration MAE = {score:.6f}", flush=True)
             np.save(output / f"{model_name}_oof.npy", predictions)
         if np.isfinite(predictions).all():

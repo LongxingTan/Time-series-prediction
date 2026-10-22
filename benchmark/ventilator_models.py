@@ -18,14 +18,14 @@ reason, rather than silently scoring a mis-shaped tensor.
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Mapping, Union
 
 import tensorflow as tf
 
 from tfts.models.bert import Bert, BertConfig
 from tfts.models.rnn import RNN, RNNConfig
 
-ModelParameters = Mapping[str, int | float | bool | str]
+ModelParameters = Mapping[str, Union[int, float, bool, str]]
 
 ALIGNED_TFTS_MODELS = (
     "autoformer",
@@ -84,41 +84,39 @@ def build_aligned_tfts_model(name: str, overrides: ModelParameters | None = None
 def build_ventilator_model(name: str, num_features: int, overrides: ModelParameters | None = None) -> tf.keras.Model:
     """Construct the same architecture for training, resume, and verification."""
     parameters = dict(overrides or {})
-    match name:  # noqa: MATCH_OK - parse external benchmark model names
-        case "lstm_baseline":
-            return build_lstm_baseline(**parameters)
-        case "rnn":
-            return RNN(80, RNNConfig(**parameters))
-        case "reference":
-            if parameters.get("num_targets", 3) != 3:
-                raise VentilatorRunError("Reference targets must have three channels")
-            return ReferenceTransformer(num_features=num_features, **parameters)
-        case "bert":
-            defaults = {
-                "hidden_size": 64,
-                "num_layers": 4,
-                "num_attention_heads": 8,
-                "ffn_intermediate_size": 128,
-                "hidden_dropout_prob": 0.0,
-                "attention_probs_dropout_prob": 0.0,
-                "regression_head": True,
-                "regression_head_units": 128,
-                "output_size": 3,
-                "positional_type": "positional encoding",
-            }
-            unknown = parameters.keys() - defaults.keys()
-            if unknown:
-                raise VentilatorRunError(f"Unsupported BERT overrides: {sorted(unknown)}")
-            defaults.update(parameters)
-            if not defaults["regression_head"] or defaults["output_size"] != 3:
-                raise VentilatorRunError("BERT requires aligned regression with three output channels")
-            return Bert(predict_sequence_length=80, config=BertConfig(**defaults))
-        case _ if name in UNSUPPORTED_TFTS_MODELS:
-            raise VentilatorRunError(f"{name} cannot use the aligned protocol: {UNSUPPORTED_TFTS_MODELS[name]}")
-        case _ if name in ALIGNED_TFTS_MODELS:
-            return build_aligned_tfts_model(name, parameters)
-        case _:
-            raise VentilatorRunError(f"Unsupported ventilator model: {name}")
+    if name == "lstm_baseline":
+        return build_lstm_baseline(**parameters)
+    if name == "rnn":
+        return RNN(80, RNNConfig(**parameters))
+    if name == "reference":
+        if parameters.get("num_targets", 3) != 3:
+            raise VentilatorRunError("Reference targets must have three channels")
+        return ReferenceTransformer(num_features=num_features, **parameters)
+    if name == "bert":
+        defaults = {
+            "hidden_size": 64,
+            "num_layers": 4,
+            "num_attention_heads": 8,
+            "ffn_intermediate_size": 128,
+            "hidden_dropout_prob": 0.0,
+            "attention_probs_dropout_prob": 0.0,
+            "regression_head": True,
+            "regression_head_units": 128,
+            "output_size": 3,
+            "positional_type": "positional encoding",
+        }
+        unknown = parameters.keys() - defaults.keys()
+        if unknown:
+            raise VentilatorRunError(f"Unsupported BERT overrides: {sorted(unknown)}")
+        defaults.update(parameters)
+        if not defaults["regression_head"] or defaults["output_size"] != 3:
+            raise VentilatorRunError("BERT requires aligned regression with three output channels")
+        return Bert(predict_sequence_length=80, config=BertConfig(**defaults))
+    if name in UNSUPPORTED_TFTS_MODELS:
+        raise VentilatorRunError(f"{name} cannot use the aligned protocol: {UNSUPPORTED_TFTS_MODELS[name]}")
+    if name in ALIGNED_TFTS_MODELS:
+        return build_aligned_tfts_model(name, parameters)
+    raise VentilatorRunError(f"Unsupported ventilator model: {name}")
 
 
 def build_lstm_baseline(dense_dim: int = 512, lstm_dim: int = 512, logit_dim: int = 512) -> tf.keras.Model:

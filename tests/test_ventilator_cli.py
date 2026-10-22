@@ -106,6 +106,9 @@ class VentilatorCommandTest(unittest.TestCase):
             _, valid = dataset.fold_indices(0)
             for name in ("reference", "bert"):
                 history = json.loads((output / f"{name}_fold0_history.json").read_text())
+                self.assertEqual(len(history["loss"]), 1)
+                self.assertIsInstance(history["loss"][0], float)
+                self.assertIsInstance(history["learning_rate"][0], float)
                 self.assertAlmostEqual(history["learning_rate"][0], 0.0002)
                 model = _build_model(name, x.shape[-1], output)
                 model(x[valid])

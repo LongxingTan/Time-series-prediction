@@ -122,7 +122,10 @@ def run_comparison(
                 history = model.fit(train_data, epochs=config.epochs, verbose=config.verbose, shuffle=False)
                 model.save_weights(str(weights_path))
                 with (output / f"{model_name}_fold{fold}_history.json").open("w", encoding="utf-8") as destination:
-                    json.dump(history.history, destination)
+                    json.dump(
+                        {name: [float(value) for value in values] for name, values in history.history.items()},
+                        destination,
+                    )
             else:
                 model(x[valid[:1]], training=False)
                 model.load_weights(str(weights_path))
