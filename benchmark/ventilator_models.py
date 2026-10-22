@@ -5,6 +5,15 @@ an input projection, a stack of pre-norm MultiHeadAttention transformer blocks
 with a residual weighting, and a per-timestep multi-channel ``[pressure,
 pressure_diff, pressure_integral]`` head. The masked loss and the evaluation in
 ``benchmark.ventilator_bert`` match the notebook's transient sample weighting.
+
+The remaining names are general TFTS architectures running the aligned
+per-step protocol from ``benchmark/datasets/ventilator.py``: five raw inputs and
+one pressure per step. ``ALIGNED_TFTS_MODELS`` lists the architectures whose
+backbone already returns ``(batch, 80, 1)``. Architectures that forecast every
+input channel (``itransformer``, ``diffusion``, ``timemixer``, ``timesnet``) or
+that cannot accept a plain ``(batch, time, features)`` tensor (``stgcn``,
+``tft``, ``deep_ar``, ``nbeats``, ``timexer``) are rejected here with the
+reason, rather than silently scoring a mis-shaped tensor.
 """
 
 from __future__ import annotations
@@ -18,9 +27,58 @@ from tfts.models.rnn import RNN, RNNConfig
 
 ModelParameters = Mapping[str, int | float | bool | str]
 
+ALIGNED_TFTS_MODELS = (
+    "autoformer",
+    "bert",
+    "dlinear",
+    "gpt",
+    "informer",
+    "patch_tst",
+    "rnn",
+    "rwkv",
+    "tcn",
+    "tide",
+    "timesfm",
+)
+
+UNSUPPORTED_TFTS_MODELS = {
+    "itransformer": "forecasts every input channel and exposes no sequence port for a point head",
+    "diffusion": "forecasts every input channel and exposes no sequence port for a point head",
+    "timemixer": "forecasts every input channel; use a point head through the task layer",
+    "timesnet": "forecasts every input channel; use a point head through the task layer",
+    "timexer": "decoder length is patch_num + 1, so it cannot emit an aligned 80-step sequence",
+    "deep_ar": "tiles a series embedding onto a single input channel, so multivariate input breaks the encoder width",
+    "nbeats": "squeezes the channel axis and accepts only univariate input",
+    "stgcn": "requires the 'set' input arrangement instead of a past-values tensor",
+    "tft": "requires explicit encoder/decoder real and categorical dimensions",
+    "seq2seq": "decodes autoregressively, so every prediction depends on later input steps no causal meaning here",
+}
+
 
 class VentilatorRunError(ValueError):
     """A benchmark configuration cannot produce a valid comparison."""
+
+
+def build_aligned_tfts_model(name: str, overrides: ModelParameters | None = None) -> tf.keras.Model:
+    """Build a TFTS backbone that returns one value per input step."""
+    from tfts.models.auto_config import AutoConfig
+    from tfts.models.auto_model import AutoBackbone
+
+    if name in UNSUPPORTED_TFTS_MODELS:
+        raise VentilatorRunError(f"{name} cannot use the aligned protocol: {UNSUPPORTED_TFTS_MODELS[name]}")
+    if name not in ALIGNED_TFTS_MODELS:
+        raise VentilatorRunError(f"'{name}' is not an aligned TFTS architecture")
+    config = AutoConfig.for_model(name)
+    config.model_type = name
+    unknown = set(overrides or {}) - set(config.to_dict())
+    if unknown:
+        raise VentilatorRunError(f"Unsupported {name} overrides: {sorted(unknown)}")
+    config.update(dict(overrides or {}))
+    config.target_dim = 1
+    model = AutoBackbone.from_config(config, output_chunk_length=80)
+    if model.config.target_dim != 1:
+        raise VentilatorRunError(f"{name} must predict a single channel")
+    return model
 
 
 def build_ventilator_model(name: str, num_features: int, overrides: ModelParameters | None = None) -> tf.keras.Model:
@@ -55,6 +113,10 @@ def build_ventilator_model(name: str, num_features: int, overrides: ModelParamet
             if not defaults["regression_head"] or defaults["output_size"] != 3:
                 raise VentilatorRunError("BERT requires aligned regression with three output channels")
             return Bert(predict_sequence_length=80, config=BertConfig(**defaults))
+        case _ if name in UNSUPPORTED_TFTS_MODELS:
+            raise VentilatorRunError(f"{name} cannot use the aligned protocol: {UNSUPPORTED_TFTS_MODELS[name]}")
+        case _ if name in ALIGNED_TFTS_MODELS:
+            return build_aligned_tfts_model(name, parameters)
         case _:
             raise VentilatorRunError(f"Unsupported ventilator model: {name}")
 

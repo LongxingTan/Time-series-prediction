@@ -16,7 +16,7 @@ import tensorflow as tf
 from benchmark.base import BenchmarkConfig
 from benchmark.datasets.ventilator import VentilatorDataset, inspiration_mae
 from benchmark.formatter import BenchmarkResults
-from benchmark.ventilator_models import VentilatorRunError, build_ventilator_model, ventilator_loss
+from benchmark.ventilator_models import ALIGNED_TFTS_MODELS, VentilatorRunError, build_ventilator_model, ventilator_loss
 
 
 def run_comparison(
@@ -33,8 +33,8 @@ def run_comparison(
     """
     if config.batch_size < 1 or not np.isfinite(config.learning_rate) or config.learning_rate <= 0:
         raise VentilatorRunError("Batch size and learning rate must be positive")
-    if not config.models or set(config.models) - {"rnn", "lstm_baseline"}:
-        raise VentilatorRunError("Select rnn and/or lstm_baseline")
+    if not config.models or set(config.models) - ({"rnn", "lstm_baseline"} | set(ALIGNED_TFTS_MODELS)):
+        raise VentilatorRunError("Select rnn, lstm_baseline, or a listed aligned TFTS architecture")
     if folds_to_run is not None and (not resume or any(fold not in range(5) for fold in folds_to_run)):
         raise VentilatorRunError("Explicit folds require resume and indices between 0 and 4")
     tf.config.set_visible_devices([], "GPU")
@@ -169,7 +169,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--config", type=Path)
-    parser.add_argument("--models", nargs="+", choices=["lstm_baseline", "rnn"])
+    parser.add_argument("--models", nargs="+", choices=["lstm_baseline", *ALIGNED_TFTS_MODELS])
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--threads", type=int, default=4)

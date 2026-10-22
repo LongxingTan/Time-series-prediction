@@ -1,0 +1,36 @@
+# Aligned TFTS architecture sweep on the ventilator protocol.
+# Every model here returns one pressure per input step from the same five raw
+# inputs, folds, loss, optimizer schedule and epochs as the reference LSTM.
+# Small budgets by default so the sweep finishes on CPU; raise epochs for a
+# like-for-like comparison against outputs/ventilator_aligned_final_10e.
+#   python -m benchmark.ventilator --config benchmark/configs/ventilator_sweep.yaml \
+#     --data ../data/ventilator/train.csv --threads 6
+benchmark:
+  epochs: 3
+  batch_size: 128
+  learning_rate: 0.001
+  seed: 42
+  runs: 1
+  metrics: [mae]
+  verbose: 0
+  output_dir: outputs/ventilator_sweep_3e
+datasets: [ventilator]
+models:
+  dlinear:
+    hidden_size: 256
+  gpt:
+    hidden_size: 128
+    num_layers: 2
+    num_attention_heads: 4
+  informer:
+    hidden_size: 128
+    num_layers: 2
+    num_attention_heads: 4
+  tcn:
+    filters: 128
+    dense_hidden_size: 256
+  tide:
+    feature_encode_dim: 32
+  rwkv:
+    num_layers: 2
+    dense_hidden_size: 128
