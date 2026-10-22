@@ -4,9 +4,10 @@ Run from the repository root with:
 uv run python -m benchmark.ventilator --data ../data/ventilator/train.csv
 """
 
+from __future__ import annotations
+
 import argparse
 from dataclasses import replace
-import hashlib
 import json
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import tensorflow as tf
 from benchmark.base import BenchmarkConfig
 from benchmark.datasets.ventilator import VentilatorDataset, inspiration_mae
 from benchmark.formatter import BenchmarkResults
+from benchmark.utils import file_sha256
 from benchmark.ventilator_models import ALIGNED_TFTS_MODELS, VentilatorRunError, build_ventilator_model, ventilator_loss
 
 
@@ -51,8 +53,7 @@ def run_comparison(
         else [(fold, dataset.fold_indices(fold)[1]) for fold in range(5)]
     )
     folds = [(np.setdiff1d(np.arange(len(x)), valid), valid) for _, valid in validation_folds]
-    with path.open("rb") as source:
-        checksum = hashlib.file_digest(source, "sha256").hexdigest()
+    checksum = file_sha256(path)
     manifest = {
         "data_sha256": checksum,
         "features": ["R", "C", "u_in", "u_in_cumsum", "u_out"],

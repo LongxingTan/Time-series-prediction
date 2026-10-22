@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -52,6 +51,7 @@ import numpy as np
 import tensorflow as tf
 
 from benchmark.datasets.ventilator import VentilatorDataset, inspiration_mae
+from benchmark.utils import file_sha256
 from benchmark.ventilator_models import ModelParameters, VentilatorRunError, build_ventilator_model
 
 METRIC = "inspiration_mae"
@@ -62,7 +62,7 @@ _REFERENCE_MODELS = frozenset({"reference", "bert"})
 _RAW_MODELS = frozenset({"rnn", "lstm_baseline"})
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class VerificationResult:
     """Outcome of reloading and re-running one model's checkpoints."""
 
@@ -159,8 +159,7 @@ def _load_pipeline(output: Path, data: str) -> tuple[VentilatorDataset, np.ndarr
     if manifest_path.exists():
         saved = json.loads(manifest_path.read_text(encoding="utf-8"))
         if "data_sha256" in saved:
-            with Path(data).open("rb") as source:
-                checksum = hashlib.file_digest(source, "sha256").hexdigest()
+            checksum = file_sha256(Path(data))
             if checksum != saved["data_sha256"]:
                 raise VentilatorRunError("Input CSV checksum differs from the saved run")
     uses_engineered = bool(models & _REFERENCE_MODELS)

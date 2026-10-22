@@ -25,9 +25,10 @@ Run from ``Time-series-prediction/``:
     uv run python -m benchmark.ventilator_bert --data ../data/ventilator/train.csv
 """
 
+from __future__ import annotations
+
 import argparse
 from dataclasses import replace
-import hashlib
 import json
 from pathlib import Path
 
@@ -37,6 +38,7 @@ import tensorflow as tf
 from benchmark.base import BenchmarkConfig
 from benchmark.datasets.ventilator import VentilatorDataset, inspiration_mae
 from benchmark.formatter import BenchmarkResults
+from benchmark.utils import file_sha256
 from benchmark.ventilator_models import VentilatorRunError, build_ventilator_model, masked_multi_mae
 
 
@@ -114,8 +116,7 @@ def run_comparison(path: Path, config: BenchmarkConfig, threads: int = 6, folds_
         build_ventilator_model(name, num_features, config.get_model_config(name))
     packed = np.concatenate([targets, mask], axis=-1)
     folds = [dataset.fold_indices(fold) for fold in range(folds_to_run)]
-    with path.open("rb") as source:
-        checksum = hashlib.file_digest(source, "sha256").hexdigest()
+    checksum = file_sha256(path)
     lr_trace = _lr_trace(config.epochs, peak=config.learning_rate)
     manifest = {
         "data_sha256": checksum,
@@ -177,6 +178,9 @@ def run_comparison(path: Path, config: BenchmarkConfig, threads: int = 6, folds_
             predictions[valid] = pred
             score = inspiration_mae(targets[valid][..., 0:1], pred[..., 0:1], mask[valid])
             model.save_weights(str(output / f"{model_name}_fold{fold}.weights.h5"))
+            # Keras 2 logs this as "lr"; Keras 3 uses "learning_rate".
+            history.history.pop("lr", None)
+            history.history["learning_rate"] = lr_trace[: len(history.epoch)].tolist()
             with (output / f"{model_name}_fold{fold}_history.json").open("w", encoding="utf-8") as destination:
                 json.dump(
                     {name: [float(value) for value in values] for name, values in history.history.items()}, destination
