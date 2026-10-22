@@ -14,7 +14,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
 from tfts.contracts import BackboneCapabilities, ForecastOutput, ModelInputSpec, OutputPort
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 
 from ..distributions import NormalOutput
 from .base import BaseModel, CommonConfig

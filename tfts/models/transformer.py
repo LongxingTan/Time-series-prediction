@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.contracts import ForecastOutput
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 from tfts.layers.attention_layer import SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding

@@ -2,7 +2,17 @@
 
 import tensorflow as tf
 
-from tfts.contracts import AnomalyDetectionOutput, ClassificationOutput, ForecastOutput, ImputationOutput, OutputPort
+from tfts.contracts import (
+    AnomalyDetectionOutput,
+    AnomalyDetectionTaskConfig,
+    ClassificationOutput,
+    ClassificationTaskConfig,
+    ForecastOutput,
+    ForecastTaskConfig,
+    ImputationOutput,
+    ImputationTaskConfig,
+    OutputPort,
+)
 from tfts.distributions import NormalOutput
 from tfts.registry import ComponentSpec, register_task
 
@@ -17,7 +27,7 @@ from .auto_task import (
 from .base import TimeSeriesTaskModel
 
 
-@register_task("forecasting")
+@register_task("forecasting", config_class=ForecastTaskConfig)
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class ForecastingModel(TimeSeriesTaskModel):
     task_name = "forecasting"
@@ -174,7 +184,7 @@ class ForecastingModel(TimeSeriesTaskModel):
         return generate(self, inputs, config=config, **kwargs)
 
 
-@register_task("classification")
+@register_task("classification", config_class=ClassificationTaskConfig)
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class ClassificationModel(TimeSeriesTaskModel):
     task_name = "classification"
@@ -195,7 +205,7 @@ class ClassificationModel(TimeSeriesTaskModel):
         return ClassificationOutput(logits=logits, probabilities=tf.nn.softmax(logits), backbone_output=backbone_output)
 
 
-@register_task("imputation")
+@register_task("imputation", config_class=ImputationTaskConfig)
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class ImputationModel(TimeSeriesTaskModel):
     task_name = "imputation"
@@ -224,7 +234,7 @@ class ImputationModel(TimeSeriesTaskModel):
         )
 
 
-@register_task("anomaly_detection")
+@register_task("anomaly_detection", config_class=AnomalyDetectionTaskConfig)
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class AnomalyDetectionModel(TimeSeriesTaskModel):
     task_name = "anomaly_detection"

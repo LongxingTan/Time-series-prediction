@@ -2,30 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import Any, Mapping, Optional, Protocol
+from dataclasses import replace
+from typing import Any, Optional, Protocol
 
 import tensorflow as tf
 
-from tfts.registry import register_decoder
+from tfts.contracts.decoding import DecodeSession as _DecodeSession, DecodeStepOutput as _StepOutput  # noqa: F401
+from tfts.registry import register_decoder, resolve
 
 from .chunk import Chunk, State
-
-
-@dataclass(frozen=True)
-class _DecodeSession:
-    context: Any
-    state: Any
-    previous: tf.Tensor
-
-
-@dataclass(frozen=True)
-class _StepOutput:
-    prediction: tf.Tensor
-    state: Any = None
-    distribution: Optional[Any] = None
-    parameters: Optional[Mapping[str, tf.Tensor]] = None
-    quantile_values: Optional[tf.Tensor] = None
 
 
 def _empty_prefix(prediction):
@@ -34,6 +19,7 @@ def _empty_prefix(prediction):
 
 class Decoder(Protocol):
     output_chunk_length: int
+    output_distribution: Optional[Any]
 
     def start(self, batch, *, horizon, training=False) -> State: ...  # noqa: E704
 
@@ -46,6 +32,7 @@ class Decoder(Protocol):
 class DirectDecoder:
     def __init__(self, model, horizon=None):
         self.model = model
+        self.output_distribution = getattr(model, "output_distribution", None)
         self.output_chunk_length = int(model.output_chunk_length)
 
     def start(self, batch, *, horizon, training=False):
@@ -76,6 +63,7 @@ class RecursiveDecoder:
 
     def __init__(self, model, horizon=None):
         self.model = model
+        self.output_distribution = getattr(model, "output_distribution", None)
 
     def start(self, batch, *, horizon, training=False):
         clean = replace(batch, future_values=None, future_observed_mask=None, labels=None)
@@ -110,6 +98,7 @@ class NativeDecoder:
         if getattr(model, "head", None) is not None:
             raise ValueError("NativeDecoder cannot bypass a learned task head")
         self.model = model
+        self.output_distribution = getattr(model, "output_distribution", None)
         self.backbone = model.backbone
 
     def start(self, batch, *, horizon, training=False):
@@ -175,7 +164,7 @@ def decoder_for(model, mode="auto", *, horizon):
         raise ValueError("direct mode requires horizon <= output_chunk_length")
     if mode not in {"direct", "recursive", "native"}:
         raise ValueError(f"Unknown generation mode {mode!r}")
-    decoder_type = {"direct": DirectDecoder, "recursive": RecursiveDecoder, "native": NativeDecoder}[mode]
+    decoder_type = resolve("decoder", mode).factory
     return decoder_type(model=model, horizon=horizon)
 
 

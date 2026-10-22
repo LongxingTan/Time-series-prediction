@@ -57,11 +57,9 @@ class TaskPipeline:
         if self.processor is None or not hasattr(self.processor, "inverse_transform"):
             return output
         if hasattr(output, "predictions") and output.predictions is not None:
-            output.predictions = self.processor.inverse_transform(output.predictions)
-            output["predictions"] = output.predictions
+            return output.replace(predictions=self.processor.inverse_transform(output.predictions))
         elif hasattr(output, "imputed_values") and output.imputed_values is not None:
-            output.imputed_values = self.processor.inverse_transform(output.imputed_values)
-            output["imputed_values"] = output.imputed_values
+            return output.replace(imputed_values=self.processor.inverse_transform(output.imputed_values))
         return output
 
     def __call__(self, inputs, generation_config=None, **kwargs):
