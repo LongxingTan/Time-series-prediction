@@ -165,7 +165,6 @@ class AutoCorrelation(tf.keras.layers.Layer):
         init_index = tf.reshape(tf.range(time_steps), (1, 1, 1, -1))
         init_index = tf.tile(init_index, [batch_size, self.num_attention_heads, self.hidden_size, 1])
 
-        # Use a fixed number of top correlations but never more than the sequence length
         # None preserves the existing checkpoint computation. Opt in to reference log(L) selection.
         count = (
             self.max_delays
@@ -181,7 +180,6 @@ class AutoCorrelation(tf.keras.layers.Layer):
         tmp_corr = tf.nn.softmax(weights, axis=-1)
 
         # Prepare values tensor with concatenated repetition for circular handling.
-        # NOTE: aggregate over the *value* projection (v), not the query (q).
         tmp_values = tf.tile(tf.transpose(v, perm=[0, 1, 3, 2]), [1, 1, 1, 2])
         delays_agg = tf.zeros_like(tf.transpose(q, perm=[0, 1, 3, 2]))
 

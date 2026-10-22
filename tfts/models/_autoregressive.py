@@ -2,13 +2,11 @@
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, BackboneOutput, ForecastMode, ModelInputSpec, TimeSeriesBatch
+from tfts.contracts import BackboneCapabilities, BackboneOutput, ModelInputSpec, TimeSeriesBatch
 
 from .base import BaseModel
 
 AUTOREGRESSIVE_CAPABILITIES = BackboneCapabilities(
-    forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
-    supports_future_covariates=True,
     input_spec=ModelInputSpec(accepted_roles=frozenset({"observed_past", "known_future"})),
 )
 

@@ -294,7 +294,7 @@ class TimeMixerConfig(CommonConfig):
     paper="https://arxiv.org/abs/2405.14616",
     tags=("decomposition", "multi-scale", "seasonal", "SOTA"),
     capabilities=BackboneCapabilities(
-        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+        output_ports=frozenset({OutputPort.TEMPORAL_SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST}),
     ),
 )
 class TimeMixer(BaseModel):

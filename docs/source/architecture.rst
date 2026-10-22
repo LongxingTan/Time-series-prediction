@@ -22,8 +22,10 @@ topology separately. Shared topology is attached after dataset batching.
 The explicit ``per_node`` forecasting strategy treats spatial locations as
 independent series and restores their axes on output.
 
-Backbone capabilities declare supported output ports and decoding behavior.
-Task factories resolve these declarations when constructing the model.
+Backbone capabilities declare supported output ports and an input specification.
+Task factories use output ports to select compatible heads. Feature resolution
+and spatial adaptation use the input specification to check accepted inputs.
+Decoding behavior is determined by the backbone's decoder methods.
 Model calls return named task outputs, such as ``ForecastOutput.predictions``
 and ``ClassificationOutput.logits``. Forecasting, classification, imputation, and anomaly
 detection own their heads and objectives. Anomaly thresholds require calibration
@@ -55,7 +57,7 @@ uses ``horizon`` for the requested inference length. Its ``mode`` is ``auto``,
 ``direct``, ``recursive``, or ``native``. Direct decoding emits one model block;
 recursive decoding advances a historical window with each predicted value;
 native decoding uses the backbone's incremental decoder. Automatic selection
-uses the available capabilities and requested horizon.
+uses the available decoder methods and requested horizon.
 
 Every decoder implements ``start``, ``step``, and ``feed``. ``State`` contains
 opaque decoder-owned data. ``step`` returns a ``Chunk`` containing ``offset``,
@@ -135,3 +137,34 @@ Register a backbone with truthful capabilities, a task with its configuration
 and objective, or a generation component implementing its public contract.
 Keep architecture-specific state inside the decoder and reuse the shared
 chunk assembly loop for time-axis generation.
+
+Ownership and migration boundaries
+----------------------------------
+
+Training consolidation remains a migration boundary: existing callers pass
+compiled losses and metrics to task models whose custom training step consumes
+an Objective. Preserve those entry points through an explicit objective/metric
+bridge before removing the compiled-loss path. Sample weights require a
+reduction contract separate from observation and padding masks.
+
+Task registrations own both the task model class and its ``config_class``.
+Factories and task configuration restoration resolve that registration instead
+of maintaining another task table. The supported task vocabulary remains the
+``TaskType`` enum. Decoder mode selection resolves the decoder registry after
+validating the requested mode and backbone capabilities.
+
+Incremental backbones share ``DecodeSession`` and ``DecodeStepOutput`` from
+``tfts.contracts.decoding`` instead of importing private generation types.
+The old internal names remain aliases during migration.
+
+A decoder exposes ``output_chunk_length``, optional ``output_distribution``,
+and ``start`` / ``step`` / ``feed``. The assembly loop does not require a model
+attribute, so standalone decoders can use it. Pipeline postprocessing returns
+replacement output objects rather than mutating immutable task results.
+
+These changes do not alter backbone layers or checkpoint tracking. Further
+migration must characterize representative direct, sequence, probabilistic,
+native autoregressive, and spatial models before replacing their adapters.
+Required evidence includes numerical inference comparisons, weighted objective
+and gradient checks, old-checkpoint restoration, and supported eager/graph
+execution. Universal XLA support and full feature parity are not implied.

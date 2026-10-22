@@ -34,12 +34,7 @@ class ModelMetadata:
         """Return the legacy dictionary representation."""
         capabilities = {
             "output_ports": sorted(port.value for port in self.capabilities.output_ports),
-            "forecast_modes": sorted(mode.value for mode in self.capabilities.forecast_modes),
-            "supports_future_covariates": self.capabilities.supports_future_covariates,
-            "supports_missing_mask": self.capabilities.supports_missing_mask,
-            "supports_variable_length": self.capabilities.supports_variable_length,
             "input_spec": {
-                "layout": self.capabilities.input_spec.layout.value,
                 "accepted_roles": sorted(self.capabilities.input_spec.accepted_roles),
                 "supports_categorical": self.capabilities.input_spec.supports_categorical,
                 "supports_static": self.capabilities.input_spec.supports_static,

@@ -317,19 +317,25 @@ How do I prevent overfitting?
 Can I use pretrained models?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Yes, for transfer learning:**
+**Yes** — save a trained model once, then reload it for inference or transfer learning:
 
 .. code-block:: python
 
    # Save model
    model.save_pretrained('./my_model')
 
-   # Load pretrained weights
+   # Load the saved model back
    new_model = AutoModel.from_pretrained('./my_model')
 
-   # Fine-tune on new data
+   # Run inference on a new batch
+   forecast = new_model.predict(new_x)
+
+   # Or fine-tune on new data
    trainer = Trainer(new_model)
    trainer.train(new_data, epochs=10)
+
+``AutoModel.from_pretrained`` restores the task, config and weights, so the
+loaded model predicts without re-specifying the architecture or horizon.
 
 How do I load a ``.keras`` model with TFTS custom layers?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

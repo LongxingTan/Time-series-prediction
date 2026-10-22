@@ -234,7 +234,7 @@ class FlattenHead(tf.keras.layers.Layer):
     paper="https://arxiv.org/abs/2402.19072",
     tags=("attention", "multivariate", "patch"),
     capabilities=BackboneCapabilities(
-        output_ports=frozenset({OutputPort.SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST})
+        output_ports=frozenset({OutputPort.SEQUENCE, OutputPort.POOLED, OutputPort.NATIVE_FORECAST}),
     ),
 )
 class TimeXer(BaseModel):

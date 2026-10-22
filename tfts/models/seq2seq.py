@@ -9,7 +9,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Dense, GRUCell, LSTMCell
 
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 from tfts.layers.attention_layer import Attention
 
 from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features

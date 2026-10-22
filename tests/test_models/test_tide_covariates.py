@@ -1,5 +1,3 @@
-"""Focused regression coverage for the model review."""
-
 import unittest
 
 import numpy as np

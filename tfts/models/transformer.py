@@ -3,7 +3,6 @@
 <https://arxiv.org/abs/1706.03762>`_
 """
 
-from dataclasses import replace
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -11,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
 from tfts.contracts import ForecastOutput
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 from tfts.layers.attention_layer import SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -107,7 +106,7 @@ class TransformerConfig(CommonConfig):
     paper="https://arxiv.org/abs/1706.03762",
     tags=("attention", "encoder-decoder"),
     tier="core",
-    capabilities=replace(AUTOREGRESSIVE_CAPABILITIES, supports_parallel_teacher_forcing=True),
+    capabilities=AUTOREGRESSIVE_CAPABILITIES,
 )
 class Transformer(AutoregressiveModel):
     """Transformer model"""

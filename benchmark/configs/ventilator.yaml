@@ -1,0 +1,23 @@
+# Full reference LSTM versus the general aligned TFTS RNN, on the same inputs.
+# Run with python -m benchmark.ventilator --config benchmark/configs/ventilator.yaml
+#   --data ../data/ventilator/train.csv
+benchmark:
+  epochs: 10
+  batch_size: 128
+  learning_rate: 0.001
+  seed: 42
+  runs: 1
+  metrics: [mae]
+  verbose: 2
+  output_dir: outputs/ventilator_aligned_10e
+datasets: [ventilator]
+models:
+  lstm_baseline: {}
+  rnn:
+    rnn_hidden_size: 512
+    rnn_type: lstm
+    bi_direction: true
+    dense_hidden_size: 512
+    num_stacked_layers: 2
+    return_sequences: true
+    input_projection: true

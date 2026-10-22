@@ -9,7 +9,7 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 

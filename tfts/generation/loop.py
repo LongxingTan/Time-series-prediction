@@ -112,7 +112,7 @@ def run(decoder, batch, *, horizon, processors, stopping=(), training=False, see
         predictions=predictions,
         distribution_params=parameters,
         quantile_values=quantile_values,
-        distribution=getattr(decoder.model, "output_distribution", None),
+        distribution=getattr(decoder, "output_distribution", None),
     )
 
 

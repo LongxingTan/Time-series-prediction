@@ -46,7 +46,10 @@ class TideConfig(CommonConfig):
 
 
 @register_model(
-    "tide", config=TideConfig, paper="https://arxiv.org/abs/2304.08424", tags=("mlp", "efficient", "covariates")
+    "tide",
+    config=TideConfig,
+    paper="https://arxiv.org/abs/2304.08424",
+    tags=("mlp", "efficient", "covariates"),
 )
 class Tide(BaseModel):
     """TiDE model for time series forecasting (reference-portable dense-encoder MLP)."""

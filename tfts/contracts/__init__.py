@@ -1,7 +1,7 @@
 """Stable contracts shared by TFTS models, tasks, and generation."""
 
 from .batch import TimeSeriesBatch
-from .capabilities import BackboneCapabilities, ForecastMode, InputLayout, ModelInputSpec, OutputPort
+from .capabilities import BackboneCapabilities, ModelInputSpec, OutputPort
 from .outputs import (
     AnomalyDetectionOutput,
     BackboneOutput,
@@ -27,13 +27,11 @@ __all__ = [
     "BackboneOutput",
     "ClassificationOutput",
     "ClassificationTaskConfig",
-    "ForecastMode",
     "ForecastOutput",
     "ForecastTaskConfig",
     "GraphStructure",
     "ImputationOutput",
     "ImputationTaskConfig",
-    "InputLayout",
     "ModelOutput",
     "ModelInputSpec",
     "OutputPort",

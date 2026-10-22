@@ -13,8 +13,8 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
-from tfts.contracts import BackboneCapabilities, ForecastMode, ForecastOutput, ModelInputSpec, OutputPort
-from tfts.generation.decoders import _DecodeSession as DecodeSession, _StepOutput as StepOutput
+from tfts.contracts import BackboneCapabilities, ForecastOutput, ModelInputSpec, OutputPort
+from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
 
 from ..distributions import NormalOutput
 from .base import BaseModel, CommonConfig
@@ -91,9 +91,7 @@ class DeepAREncoder(tf.keras.layers.Layer):
     tags=("probabilistic", "recurrent", "uncertainty"),
     tier="core",
     capabilities=BackboneCapabilities(
-        supports_parallel_teacher_forcing=True,
         output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.DISTRIBUTION}),
-        forecast_modes=frozenset({ForecastMode.AUTOREGRESSIVE}),
         input_spec=ModelInputSpec(
             accepted_roles=frozenset({"static"}),
             supports_categorical=True,

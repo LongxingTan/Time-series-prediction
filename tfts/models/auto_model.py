@@ -20,26 +20,26 @@ from .registry import RegistryFieldView, get_model_capabilities, get_model_class
 
 MODEL_MAPPING_NAMES = RegistryFieldView("class_name")
 
-_TASK_MODEL_SPECS = {
-    TaskType.FORECASTING: (ForecastTaskConfig, ForecastingModel),
-    TaskType.CLASSIFICATION: (ClassificationTaskConfig, ClassificationModel),
-    TaskType.IMPUTATION: (ImputationTaskConfig, ImputationModel),
-    TaskType.ANOMALY_DETECTION: (AnomalyDetectionTaskConfig, AnomalyDetectionModel),
-}
+
+def _task_spec(task):
+    from tfts.registry import resolve
+
+    registration = resolve("task", TaskType.normalize(task).value)
+    return registration.metadata["config_class"], registration.factory
 
 
 def task_config_from_dict(values):
     """Restore the right task dataclass from its serialized values."""
     values = dict(values)
     task_type = TaskType.normalize(values.get("task"))
-    task_config_class, _ = _TASK_MODEL_SPECS[task_type]
+    task_config_class, _ = _task_spec(task_type)
     return task_config_class(**values)
 
 
 def build_task_model(config, task_config, model_kwargs=None):
     """Build a task model through the single task-to-model registry."""
     task_type = TaskType.normalize(task_config.task)
-    _, model_class = _TASK_MODEL_SPECS[task_type]
+    _, model_class = _task_spec(task_type)
     output_chunk_length = getattr(task_config, "output_chunk_length", 1)
     if hasattr(config, "target_dim") and task_type == TaskType.FORECASTING:
         config = copy.deepcopy(config)
@@ -80,7 +80,8 @@ class _BaseAutoTaskModel:
     def from_config(cls, config, task_config=None, **task_kwargs):
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
-        task_config = task_config or cls.task_config_class(**task_kwargs)
+        task_config_class, _ = _task_spec(cls.task_type)
+        task_config = task_config or task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != cls.task_type:
             raise ValueError("Expected task %s, got %s" % (cls.task_type.value, task_config.task.value))
         return build_task_model(config, task_config)
@@ -121,7 +122,7 @@ class AutoModel:
         task_type = TaskType.normalize(task)
         if task_config is not None and task_kwargs:
             raise ValueError("Pass either task_config or task keyword arguments, not both")
-        task_config_class, _ = _TASK_MODEL_SPECS[task_type]
+        task_config_class, _ = _task_spec(task_type)
         task_config = task_config or task_config_class(**task_kwargs)
         if TaskType.normalize(task_config.task) != task_type:
             raise ValueError("Expected task %s, got %s" % (task_type.value, task_config.task.value))

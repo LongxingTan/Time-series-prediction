@@ -47,7 +47,6 @@ class AutoFormerTest(unittest.TestCase):
 
         x = tf.random.normal([2, 50, hidden_size])  # after embedding
         memory = tf.random.normal([2, 100, hidden_size])
-        # init_trend = tf.random.normal([2, 50, hidden_size])
         y1, trend = layer(x, memory)
         self.assertEqual(trend.shape, x.shape)
 
