@@ -15,10 +15,18 @@ class ChannelScaler:
 
     def fit(self, values, sample_weight=None):
         values = np.asarray(values, dtype=np.float64)
-        valid = np.ones_like(values, dtype=bool)
+        if np.isinf(values).any():
+            raise ValueError("Scaler values must not contain Inf")
+        valid = np.isfinite(values)
         if sample_weight is not None:
             weight = np.asarray(sample_weight)
-            valid = np.broadcast_to(weight.reshape(weight.shape + (1,) * (values.ndim - weight.ndim)), values.shape) > 0
+            if weight.ndim < 1 or weight.ndim > values.ndim or weight.shape != values.shape[: weight.ndim]:
+                raise ValueError("sample_weight must match leading value dimensions")
+            if not np.isfinite(weight).all() or (weight < 0).any():
+                raise ValueError("sample_weight must be finite and nonnegative")
+            valid &= (
+                np.broadcast_to(weight.reshape(weight.shape + (1,) * (values.ndim - weight.ndim)), values.shape) > 0
+            )
         offsets, scales = [], []
         for channel in range(values.shape[-1]):
             observed = values[..., channel][valid[..., channel]]
@@ -50,4 +58,12 @@ class ChannelScaler:
         scaler = cls(values["method"])
         scaler.offset = np.asarray(values["offset"], dtype=np.float32)
         scaler.scale = np.asarray(values["scale"], dtype=np.float32)
+        if (
+            scaler.offset.ndim != 1
+            or scaler.scale.shape != scaler.offset.shape
+            or not np.isfinite(scaler.offset).all()
+            or not np.isfinite(scaler.scale).all()
+            or (scaler.scale <= 0).any()
+        ):
+            raise ValueError("Invalid saved scaler: finite offsets and positive scales are required")
         return scaler

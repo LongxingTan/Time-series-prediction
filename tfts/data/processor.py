@@ -11,7 +11,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from .timeseries import TimeSeriesSequence
+from tfts.features import FeatureRole, FeatureSpec, TimeSeriesSchema
+
+from .frame import FramePreprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ class DataProcessor:
         normalize: Normalization method — ``'minmax'``, ``'standard'``, or ``None``.
         group_col: Column(s) to group multiple time series.
         feature_cols: Additional feature columns to include.
-        fill_missing_dates: Whether to fill gaps in the time index.
+        fill_missing_dates: Reserved; regularize missing dates explicitly before prepare().
         freq: Frequency string (e.g. ``'D'``, ``'H'``) when filling dates.
         validation_split: Fraction of training data to use for validation.
         shuffle: Whether to shuffle the training dataset.
@@ -75,6 +77,8 @@ class DataProcessor:
             raise ValueError(f"validation_split must be in [0, 1), got {validation_split}")
         if normalize not in (None, "minmax", "standard"):
             raise ValueError(f"normalize must be 'minmax', 'standard', or None, got {normalize}")
+        if fill_missing_dates:
+            raise ValueError("Regularize missing dates explicitly before prepare()")
 
         self.lookback = lookback
         self.horizon = horizon
@@ -125,19 +129,51 @@ class DataProcessor:
         self._target_col = target_col or self._infer_target(df)
         self._time_col = time_col or self._infer_time(df)
 
-        # Normalize
-        if self.normalize is not None:
-            fit_df = self._normalization_fit_frame(df)
-            self._apply_normalization(fit_df, fit=True)
-            df = self._apply_normalization(df, fit=False)
+        groups = (
+            ()
+            if self.group_col is None
+            else (self.group_col,) if isinstance(self.group_col, str) else tuple(self.group_col)
+        )
+        schema = TimeSeriesSchema(
+            self._time_col,
+            (self._target_col,),
+            tuple(
+                FeatureSpec(name, FeatureRole.OBSERVED_PAST) for name in self.feature_cols if name != self._target_col
+            ),
+            groups,
+        )
+        self._processor = FramePreprocessor(schema, self.lookback, self.horizon, self.normalize, freq=self.freq)
+        prepared, train_windows, valid_windows = self._processor.fit(df, self.validation_split)
+        if self.stride > 1:
+            from dataclasses import replace
 
-        # Build sequence
-        seq = self._build_sequence(df)
-        ds = seq.get_tf_dataset()
-
-        if self.validation_split > 0:
-            return self._split_dataset(ds)
-        return ds
+            train_windows = replace(train_windows, windows=train_windows.windows[:: self.stride])
+            if valid_windows is not None:
+                valid_windows = replace(valid_windows, windows=valid_windows.windows[:: self.stride])
+        # Preserve the historical sample-standard-deviation convention at this adapter.
+        scaler = self._processor.target_scaler
+        if self.normalize == "standard":
+            training = self._normalization_fit_frame(df.sort_values(list(groups) + [self._time_col]))
+            scale = float(training[self._target_col].std())
+            previous_scale = scaler.scale.copy()
+            scaler.scale = np.asarray([scale if scale > 1e-8 else 1.0], dtype=np.float32)
+            prepared.frame[self._target_col] *= previous_scale[0] / scaler.scale[0]
+        if self.normalize == "standard":
+            self._scaler_params = {
+                "mean": float(training[self._target_col].mean()),
+                "std": scale if scale > 1e-8 else 1.0,
+            }
+        elif self.normalize == "minmax":
+            self._scaler_params = {"min": float(scaler.offset[0]), "max": float(scaler.offset[0] + scaler.scale[0])}
+        train = self._legacy_dataset(
+            self._processor.dataset(
+                prepared, train_windows, batch_size=self.batch_size, shuffle=self.shuffle, seed=self.seed
+            )
+        )
+        if valid_windows is None:
+            return train
+        valid = self._legacy_dataset(self._processor.dataset(prepared, valid_windows, batch_size=self.batch_size))
+        return train, valid
 
     def prepare_for_inference(
         self,
@@ -146,14 +182,23 @@ class DataProcessor:
         time_col: Optional[str] = None,
     ) -> tf.data.Dataset:
         """Prepare data for inference (no shuffle, batch_size=1 by default)."""
-        df = df.copy()
-        target = target_col or self._target_col or self._infer_target(df)
-        time = time_col or self._time_col or self._infer_time(df)
-        if self.normalize is not None:
-            if self._scaler_params is None:
-                raise RuntimeError("DataProcessor must be fitted with prepare() before normalized inference")
-            df = self._apply_normalization(df, fit=False)
-        return self._build_sequence(df, target_col=target, time_col=time, mode="inference").get_tf_dataset()
+        if not hasattr(self, "_processor"):
+            raise RuntimeError("DataProcessor must be fitted with prepare() before inference")
+        if target_col not in (None, self._target_col) or time_col not in (None, self._time_col):
+            raise ValueError("Inference columns must match the fitted schema")
+        prepared, windows, _ = self._processor.prediction(df)
+        return self._legacy_dataset(self._processor.dataset(prepared, windows, batch_size=1), inference=True)
+
+    def _legacy_dataset(self, dataset, inference=False):
+        def convert(inputs, labels=None):
+            values = inputs["past_values"]
+            if "past_time_features" in inputs:
+                values = tf.concat([values, inputs["past_time_features"]], axis=-1)
+            if labels is None:
+                labels = tf.zeros([tf.shape(values)[0], self.horizon, 1], dtype=values.dtype)
+            return values, labels
+
+        return dataset.map(convert)
 
     def inverse_transform(self, values: Union[np.ndarray, tf.Tensor]) -> Union[np.ndarray, tf.Tensor]:
         """Reverse the normalization applied during prepare().
@@ -207,23 +252,6 @@ class DataProcessor:
         # Fallback to first column
         return df.columns[0]
 
-    def _apply_normalization(self, df: pd.DataFrame, fit: bool) -> pd.DataFrame:
-        """Apply min-max or standard normalization to target column."""
-        target = self._target_col
-        if self.normalize == "minmax":
-            if fit:
-                self._scaler_params = {"min": df[target].min(), "max": df[target].max()}
-            min_val = self._scaler_params["min"]
-            max_val = self._scaler_params["max"]
-            df[target] = (df[target] - min_val) / (max_val - min_val + 1e-8)
-        elif self.normalize == "standard":
-            if fit:
-                self._scaler_params = {"mean": df[target].mean(), "std": df[target].std()}
-            mean = self._scaler_params["mean"]
-            std = self._scaler_params["std"]
-            df[target] = (df[target] - mean) / (std + 1e-8)
-        return df
-
     def _normalization_fit_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         """Return only the chronological training portion used to fit scaling."""
         if self.validation_split <= 0:
@@ -238,45 +266,8 @@ class DataProcessor:
         split_idx = max(1, int(len(df) * (1 - self.validation_split)))
         return df.iloc[:split_idx].copy()
 
-    def _build_sequence(
-        self,
-        df: pd.DataFrame,
-        target_col: Optional[str] = None,
-        time_col: Optional[str] = None,
-        mode: str = "train",
-    ) -> TimeSeriesSequence:
-        """Build a TimeSeriesSequence from the DataFrame."""
-        return TimeSeriesSequence(
-            data=df,
-            time_idx=time_col or self._time_col,
-            target_column=target_col or self._target_col,
-            train_sequence_length=self.lookback,
-            predict_sequence_length=self.horizon,
-            batch_size=self.batch_size,
-            group_column=self.group_col,
-            feature_columns=self.feature_cols if self.feature_cols else None,
-            stride=self.stride,
-            mode=mode,
-        )
-
-    def _split_dataset(self, ds: tf.data.Dataset) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
-        """Split a tf.data.Dataset into train / validation."""
-        samples = list(ds.unbatch().as_numpy_iterator())
-        if len(samples) < 2:
-            raise ValueError("At least two windows are required when validation_split is greater than zero")
-
-        split_idx = min(len(samples) - 1, max(1, int(len(samples) * (1 - self.validation_split))))
-        train_x = np.stack([sample[0] for sample in samples[:split_idx]])
-        train_y = np.stack([sample[1] for sample in samples[:split_idx]])
-        valid_x = np.stack([sample[0] for sample in samples[split_idx:]])
-        valid_y = np.stack([sample[1] for sample in samples[split_idx:]])
-
-        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
-        if self.shuffle:
-            train_ds = train_ds.shuffle(buffer_size=len(train_x), seed=self.seed)
-        train_ds = train_ds.batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
-        valid_ds = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(self.batch_size)
-        return train_ds, valid_ds
+    def _split_dataset(self, ds):
+        raise ValueError("Split raw rows with prepare(); splitting overlapping windows is unsupported")
 
 
 def _looks_like_time(series: pd.Series) -> bool:

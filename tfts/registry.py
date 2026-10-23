@@ -87,6 +87,7 @@ register_model = partial(register, "model")
 register_decoder = partial(register, "decoder")
 register_processor = partial(register, "processor")
 register_objective = partial(register, "objective")
+register_head = partial(register, "head")
 register_task = partial(register, "task")
 register_transform = partial(register, "transform")
 
@@ -100,6 +101,7 @@ __all__ = [
     "register_decoder",
     "register_model",
     "register_objective",
+    "register_head",
     "register_processor",
     "register_task",
     "register_transform",

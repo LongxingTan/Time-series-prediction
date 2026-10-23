@@ -17,7 +17,6 @@ class SpatialModelTest(unittest.TestCase):
         self.values = tf.random.normal([2, 8, 4, 2])
         self.batch = TimeSeriesBatch(
             self.values,
-            past_categorical_features=tf.zeros([2, 8, 1], tf.int32),
             structure=GraphStructure(4, adjacency=tf.eye(4), node_ids=("a", "b", "c", "d")),
         )
 
@@ -61,6 +60,12 @@ class SpatialModelTest(unittest.TestCase):
             return model(inputs).predictions
 
         self.assertEqual(run(self.batch.as_tensor_dict()).shape, (2, 3, 4, 1))
+
+    def test_ignored_covariates_are_rejected(self):
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
+        batch = replace(self.batch, past_categorical_features=tf.zeros([2, 8, 1], tf.int32))
+        with self.assertRaisesRegex(ValueError, "does not support covariates"):
+            model(batch)
 
     def test_stgcn_batched_adjacency_config_and_errors(self):
         batch = TimeSeriesBatch(
@@ -120,7 +125,6 @@ class SpatialModelTest(unittest.TestCase):
         model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
         expected = model(self.batch).predictions
         specs = model.get_build_config()["batch_specs"]
-        self.assertEqual(specs["past_categorical_features"]["dtype"], "int32")
         self.assertEqual(specs["structure.graph.num_nodes"]["dtype"], "int32")
         self.assertEqual(specs["structure.graph.node_ids"]["dtype"], "string")
         with tempfile.TemporaryDirectory() as directory:

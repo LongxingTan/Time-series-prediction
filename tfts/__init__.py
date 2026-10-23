@@ -31,6 +31,7 @@ from tfts.data import (
     pad_sequences,
     sequence_mask,
 )
+from tfts.estimator import Estimator, Forecaster, NotFittedError
 from tfts.features import (
     AutoFeatureEngineer,
     FeaturePipeline,
@@ -94,6 +95,9 @@ except (ImportError, ModuleNotFoundError):
 
 __all__ = [
     # -- Primary API --
+    "Estimator",
+    "Forecaster",
+    "NotFittedError",
     "pipeline",
     "ForecastingPipeline",
     "DataProcessor",

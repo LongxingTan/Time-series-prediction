@@ -166,6 +166,7 @@ User Guide
    :caption: Getting Started
 
    installation
+   estimators
    tutorials
 
 

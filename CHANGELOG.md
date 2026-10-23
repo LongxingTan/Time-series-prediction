@@ -1,5 +1,25 @@
 # Release notes
 
+## v0.0.24
+
+- Add `Estimator` and `Forecaster` with lazy model construction, fitted state,
+  train-only scaling, lazy dataframe windows, explicit future covariates, and
+  versioned model/preprocessing artifacts. Keep existing simple batch/config contracts.
+- Deprecate `TaskPipeline`, `ForecastingPipeline`, and `pipeline()` in favor of
+  the estimator. They delegate to one implementation and remain available for
+  at least one minor release. Legacy pipeline artifacts remain loadable.
+- Register forecast heads independently of task dispatch. Learned heads emit
+  any horizon, quantiles are ordered, and defaults select the matching objective.
+  Versioned task configs preserve the original head shapes for older artifacts.
+- Allow sequence regression with any backbone exposing temporal representations.
+- Track exact weighted losses for point, quantile, and distribution objectives;
+  mask target operands before loss arithmetic and support optimizer loss scaling.
+- **Breaking:** task calls now reject unsupported covariate fields rather than
+  silently ignoring them. DataProcessor rejects gapped/nonfinite history and
+  `fill_missing_dates=True`; regularize data explicitly. Custom training objectives
+  implement `reduce(batch, output) -> LossResult(total, weight)` and should be
+  registered for serialization.
+
 ## v0.0.23
 
 - Fix AutoCorrelation aggregation over value projections and odd-length FFT reconstruction.

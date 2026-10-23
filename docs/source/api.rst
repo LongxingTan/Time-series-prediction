@@ -1,5 +1,5 @@
 API
-====
+===
 
 .. currentmodule:: tfts
 
@@ -16,11 +16,11 @@ API
    training
    tasks
 
-Prepared-array pipelines
-------------------------
+Prepared-array estimators
+-------------------------
 
-Use ``tfts.pipeline("forecasting")`` for future targets, or
-``tfts.pipeline("sequence_regression")`` for targets at each input timestep.
+Use ``tfts.Forecaster()`` for future targets, or
+``tfts.Estimator("sequence_regression")`` for targets at each input timestep.
 Both use an RNN by default. Array shapes are ``(samples, time, channels)``;
 output length and target width are inferred during ``fit``.
 
@@ -28,11 +28,11 @@ output length and target width are inferred during ``fit``.
 
    import tfts
 
-   pipe = tfts.pipeline("sequence_regression", bidirectional=True)
+   pipe = tfts.Estimator("sequence_regression", bidirectional=True)
    pipe.fit(X_train, y_train, validation_data=(X_valid, y_valid))
    predictions = pipe.predict(X_test)
    pipe.save("outputs/regression")
-   restored = tfts.TaskPipeline.load("outputs/regression")
+   restored = tfts.Estimator.load("outputs/regression")
 
 Use bidirectional processing only when the complete input sequence is available
 at prediction time. Supply disjoint validation data, splitting by time or group

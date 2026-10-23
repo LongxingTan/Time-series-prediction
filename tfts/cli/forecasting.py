@@ -25,254 +25,85 @@ __all__ = ["ForecastingPipeline", "main"]
 
 
 class ForecastingPipeline(TaskPipeline):
-    """End-to-end forecasting pipeline with a transformers-like API.
-
-    Handles data preparation, model building, training, prediction, and
-    evaluation in a single object.
-
-    Args:
-        model: Model name (e.g. ``'patch_tst'``, ``'transformer'``) or an
-            ``AutoModel`` instance.
-        lookback: Number of past time steps used as input.
-        horizon: Number of future time steps to predict.
-        config: Optional AutoConfig for fine-grained control.
-        batch_size: Batch size for training.
-        normalize: Normalization — ``'minmax'``, ``'standard'``, or ``None``.
-        learning_rate: Learning rate for the optimizer.
-        epochs: Default number of training epochs.
-        early_stopping_patience: Patience for early stopping.
-        seed: Random seed for reproducibility.
-        **kwargs: Additional arguments passed to the model config.
-
-    Examples:
-        >>> import tfts
-        >>> pipe = tfts.pipeline("forecasting", model="dlinear",
-        ...                      lookback=96, horizon=24)
-        >>> pipe.fit(df, target_col="value", epochs=50)
-        >>> preds = pipe.predict(steps=24)
-
-        >>> # Evaluate on holdout
-        >>> metrics = pipe.evaluate(test_df)
-    """
+    """Deprecated forecasting argument adapter over the shared estimator."""
 
     def __init__(
         self,
-        model: Union[str, AutoModel] = "rnn",
-        lookback: int = 96,
-        horizon: int = 24,
-        config: Optional[AutoConfig] = None,
-        batch_size: int = 32,
-        normalize: Optional[str] = "standard",
-        learning_rate: float = 1e-3,
-        epochs: int = 50,
-        early_stopping_patience: Optional[int] = 5,
-        seed: int = 42,
+        model="rnn",
+        lookback=96,
+        horizon=24,
+        config=None,
+        batch_size=32,
+        normalize="standard",
+        learning_rate=1e-3,
+        epochs=50,
+        early_stopping_patience=5,
+        seed=42,
         **kwargs,
     ):
-        config = config or (AutoConfig.for_model(model) if isinstance(model, str) else model.config)
-        config.update(kwargs)
         super().__init__(
             "forecasting",
             model,
-            config=config if isinstance(model, str) else None,
+            config=config,
             batch_size=batch_size,
             normalize=normalize,
             learning_rate=learning_rate,
             epochs=epochs,
             early_stopping_patience=early_stopping_patience,
             seed=seed,
-            **({"output_chunk_length": horizon} if isinstance(model, str) else {}),
+            **kwargs,
         )
-        self.lookback = lookback
-        self.horizon = horizon
-        self.model_name = self.config.model_type
+        self._estimator.context, self._estimator.horizon = lookback, horizon
 
-        # Data processor
-        self.data_processor = DataProcessor(
-            lookback=lookback,
-            horizon=horizon,
-            batch_size=batch_size,
-            normalize=normalize,
-        )
+    @property
+    def lookback(self):
+        return getattr(self._estimator, "context_", self._estimator.context)
 
-        # Will be set during fit()
-        self.trainer: Trainer = Trainer(self.model)
-        self._target_col: Optional[str] = None
-        self._time_col: Optional[str] = None
-        self._fitted: bool = False
-
-        logger.info(f"Pipeline ready: model={self.model_name}, lookback={lookback}, horizon={horizon}")
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    @property
+    def horizon(self):
+        return getattr(self._estimator, "horizon_", self._estimator.horizon)
 
     def fit(
-        self,
-        df: pd.DataFrame,
-        targets=None,
-        target_col: Optional[str] = None,
-        time_col: Optional[str] = None,
-        validation_split: float = 0.2,
-        epochs: Optional[int] = None,
-        verbose: int = 1,
-        **trainer_kwargs,
-    ) -> tf.keras.callbacks.History:
-        """Train the forecasting model.
-
-        Args:
-            df: Time series DataFrame.
-            target_col: Column to forecast. Auto-detected if None.
-            time_col: Time column. Auto-detected if None.
-            validation_split: Fraction of data for validation.
-            epochs: Training epochs (overrides constructor default).
-            verbose: 0=silent, 1=progress bar, 2=one line.
-            **trainer_kwargs: Passed to ``Trainer.train()``.
-
-        Returns:
-            Keras History object.
-        """
+        self, df, targets=None, target_col=None, time_col=None, validation_split=0.2, epochs=None, verbose=1, **kwargs
+    ):
+        if epochs is not None:
+            kwargs["epochs"] = epochs
         if not isinstance(df, pd.DataFrame):
-            if targets is None:
-                raise ValueError("Prepared-array training requires targets")
-            history = super().fit(df, targets, epochs=epochs or self.epochs, verbose=verbose, **trainer_kwargs)
-            self.lookback = self._input_shapes["past_values"][0]
-            self.horizon = self.model.output_chunk_length
-            return history
+            return super().fit(df, targets, verbose=verbose, **kwargs)
+        from tfts.features import TimeSeriesSchema
+
         if targets is not None:
             if target_col is not None or not isinstance(targets, str):
                 raise ValueError("Use target_col for dataframe training")
             target_col = targets
-        self._target_col = target_col
-        self._time_col = time_col
+        df = df.copy()
+        time_col = time_col or DataProcessor._infer_time(df)
+        target_col = target_col or DataProcessor._infer_target(df)
+        self._estimator.schema = TimeSeriesSchema(time_col, (target_col,))
+        self._estimator.validation = validation_split
+        self._estimator.fit(df, verbose=verbose, **kwargs)
+        return self._estimator.history_
 
-        # Prepare data
-        self.data_processor.validation_split = validation_split
-        result = self.data_processor.prepare(df, target_col=target_col, time_col=time_col)
-
-        if isinstance(result, tuple):
-            train_ds, valid_ds = result
-        else:
-            train_ds, valid_ds = result, None
-
-        # Train
-        epochs = epochs or self.epochs
-        history = self.trainer.train(
-            train_ds,
-            optimizer=trainer_kwargs.pop("optimizer", tf.keras.optimizers.Adam(self.learning_rate)),
-            valid_dataset=valid_ds,
-            epochs=epochs,
-            batch_size=self.batch_size,
-            verbose=verbose,
-            early_stopping_patience=self.early_stopping_patience,
-            **{k: v for k, v in trainer_kwargs.items() if k != "early_stopping_patience"},
-        )
-
-        self._fitted = True
-        return history
-
-    def predict(self, inputs=None, steps: Optional[int] = None, df: Optional[pd.DataFrame] = None) -> np.ndarray:
-        """Generate forecasts.
-
-        Args:
-            steps: Number of steps to predict. Defaults to ``self.horizon``.
-            df: DataFrame with new data to predict from (uses training data if None).
-
-        Returns:
-            Numpy array of shape ``(n_series, steps, n_targets)``.
-        """
-        if not self._fitted:
-            raise RuntimeError("Pipeline must be fitted before prediction. Call .fit() first.")
-
-        if self._target_scaler is not None:
-            return super().predict(inputs)
-        if inputs is not None:
-            if isinstance(inputs, (int, np.integer)):
-                steps = inputs
-            else:
-                df = inputs
-        steps = steps or self.horizon
-
+    def predict(self, inputs=None, steps=None, df=None):
         if df is not None:
-            ds = self.data_processor.prepare_for_inference(df, target_col=self._target_col, time_col=self._time_col)
-            if steps <= self.horizon:
-                preds = self.trainer.predict(ds)
-            else:
-                generated = []
-                for batch in ds:
-                    model_inputs = batch[0] if isinstance(batch, (tuple, list)) else batch
-                    generated.append(
-                        self.model.generate(
-                            model_inputs,
-                            output_chunk_length=steps,
-                            strategy="recursive",
-                        ).predictions
-                    )
-                preds = tf.concat(generated, axis=0).numpy()
-        else:
-            # Use the model directly — user is responsible for input shape
-            raise ValueError(
-                "Please pass `df` with the latest lookback-length data for prediction, e.g. "
-                "pipeline.predict(steps=24, df=recent_data)"
-            )
+            if inputs is not None:
+                raise ValueError("Pass prediction history once")
+            inputs = df
+        if inputs is None:
+            raise ValueError("Pass recent history as inputs or df")
+        if getattr(self._estimator, "input_kind_", None) == "frame":
+            output = self._estimator.predict_output(inputs)
+            values = np.asarray(output.predictions)
+            if steps is not None and (steps < 1 or steps > self.horizon):
+                raise ValueError("steps must be between 1 and the fitted horizon")
+            return values[:, :steps] if steps is not None else values
+        return self._estimator.predict(inputs, steps=steps)
 
-        # Inverse transform
-        preds = self.data_processor.inverse_transform(preds)
+    def evaluate(self, df, target_col=None, time_col=None):
+        return self._estimator.evaluate(df)
 
-        # Trim to requested steps
-        if preds.shape[1] > steps:
-            preds = preds[:, :steps, :]
-
-        return preds
-
-    def evaluate(
-        self, df: pd.DataFrame, target_col: Optional[str] = None, time_col: Optional[str] = None
-    ) -> Dict[str, float]:
-        """Evaluate the model on a test DataFrame.
-
-        Args:
-            df: Test DataFrame.
-            target_col: Target column name.
-            time_col: Time column name.
-
-        Returns:
-            Dict of metric_name -> value.
-        """
-        if self.trainer is None:
-            raise RuntimeError("Pipeline must be fitted before evaluation. Call .fit() first.")
-
-        # Prepare the test data using the same processor params
-        processor = DataProcessor(
-            lookback=self.lookback, horizon=self.horizon, batch_size=self.batch_size, normalize=None
-        )
-        ds = processor.prepare(df, target_col=target_col or self._target_col, time_col=time_col or self._time_col)
-        if isinstance(ds, tuple):
-            ds = ds[0]  # use first split
-
-        return self.trainer.evaluate(ds)
-
-    def save(self, path: str) -> None:
-        """Save the trained model."""
-        if self.trainer is None:
-            raise RuntimeError("Nothing to save — train the pipeline first.")
-        if self._target_scaler is not None:
-            return super().save(path)
-        self.trainer.save_model(path)
-        logger.info(f"Pipeline saved to {path}")
-
-    def summary(self) -> None:
-        """Print a summary of the pipeline."""
-        line = "=" * 60
-        print(line)
-        print("TFTS Forecasting Pipeline")
-        print(line)
-        print(f"  Model      : {self.model_name}")
-        print(f"  Lookback   : {self.lookback}")
-        print(f"  Horizon    : {self.horizon}")
-        print(f"  Batch size : {self.batch_size}")
-        print(f"  Normalize  : {self.normalize}")
-        print(f"  Fitted     : {self._fitted}")
-        print(line)
+    def summary(self):
+        self.model.summary()
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:

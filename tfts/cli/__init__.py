@@ -1,4 +1,4 @@
-"""TFTS Pipeline API — the primary entry point for users.
+"""Legacy pipeline constructors; new applications should use Estimator.
 
 Provides a ``pipeline()`` factory function that returns the right
 Pipeline subclass for the requested task.
@@ -49,8 +49,7 @@ def pipeline(
 ) -> "Union[ForecastingPipeline, TaskPipeline]":
     """Create a pipeline for a time series task.
 
-    This is the recommended entry point. It returns a Pipeline object that
-    handles data preparation, model building, training, and prediction.
+    Compatibility entry point. Use Estimator or Forecaster in new applications.
 
     Args:
         task: ``'forecasting'``, ``'sequence_regression'``, or a registered task.
@@ -102,11 +101,15 @@ def pipeline(
         )
 
     if normalized_task == "sequence_regression":
+        from tfts.contracts import OutputPort
+        from tfts.models.registry import get_model_capabilities
+
         config = copy.deepcopy(config) if config is not None else AutoConfig.for_model(model)
-        if config.model_type != "rnn":
-            raise ValueError("sequence_regression currently supports model='rnn'")
+        if not get_model_capabilities(config.model_type).has_port(OutputPort.TEMPORAL_SEQUENCE):
+            raise ValueError("sequence_regression requires a temporal_sequence output port")
         options = dict(kwargs)
-        config.update({"input_projection": True, **options})
+        if hasattr(config, "input_projection"):
+            options.setdefault("input_projection", True)
         return TaskPipeline(
             normalized_task,
             model,
@@ -117,6 +120,7 @@ def pipeline(
             epochs=epochs,
             early_stopping_patience=early_stopping_patience,
             seed=seed,
+            **options,
         )
 
     task_only_kwargs = dict(kwargs)
@@ -126,6 +130,12 @@ def pipeline(
         normalized_task,
         model,
         config=config,
+        batch_size=batch_size,
+        normalize=normalize,
+        learning_rate=learning_rate,
+        epochs=epochs,
+        early_stopping_patience=early_stopping_patience,
+        seed=seed,
         processor=task_only_kwargs.pop("processor", None),
         **task_only_kwargs,
     )

@@ -8,6 +8,7 @@ from typing import Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, Dense, Reshape
 
+from tfts.contracts import BackboneCapabilities, OutputPort
 from tfts.layers.rnn_layer import Encoder
 
 from .base import BaseModel, CommonConfig
@@ -63,6 +64,9 @@ class RNNConfig(CommonConfig):
     config=RNNConfig,
     tags=("baseline", "recurrent"),
     tier="core",
+    capabilities=BackboneCapabilities(
+        output_ports=frozenset({OutputPort.NATIVE_FORECAST, OutputPort.TEMPORAL_SEQUENCE})
+    ),
 )
 class RNN(BaseModel):
     """tfts RNN model"""
@@ -157,6 +161,9 @@ class RNN(BaseModel):
         for layer in self.input_layers:
             encoder_feature = layer(encoder_feature)
         encoder_outputs, encoder_state = self.encoder(encoder_feature, mask=mask, training=training)
+
+        if output_hidden_states:
+            return encoder_outputs
 
         encoder_out = self.dense1(encoder_outputs if self.config.return_sequences else encoder_state)
         encoder_out = self.dense2(encoder_out)

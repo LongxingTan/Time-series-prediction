@@ -38,7 +38,8 @@ class ForecastTaskConfig(TaskConfig):
     task: TaskType = TaskType.FORECASTING
     output_chunk_length: int = 1
     target_dim: int = 1
-    head: str = "auto"
+    head: Any = "auto"
+    head_version: int = 2
     quantiles: Tuple[float, ...] = (0.1, 0.5, 0.9)
     residual: Optional[str] = None
     spatial_strategy: str = "raise"
@@ -58,9 +59,14 @@ class ForecastTaskConfig(TaskConfig):
         object.__setattr__(self, "quantiles", tuple(float(q) for q in self.quantiles))
         if self.output_chunk_length <= 0 or self.target_dim <= 0:
             raise ValueError("output_chunk_length and target_dim must be positive")
-        if self.head not in {"auto", "point", "quantile", "distribution", "native"}:
-            raise ValueError("Unknown forecast head %r" % self.head)
-        if self.head == "quantile":
+        from tfts.registry import ComponentSpec
+
+        if self.head_version not in (1, 2):
+            raise ValueError("Unsupported forecast head version")
+        head_name = ComponentSpec.from_value(self.head).name
+        if not isinstance(self.head, str):
+            object.__setattr__(self, "head", ComponentSpec.from_value(self.head))
+        if head_name == "quantile":
             if not self.quantiles or tuple(sorted(set(self.quantiles))) != self.quantiles:
                 raise ValueError("quantiles must be unique and sorted")
             if any(q <= 0 or q >= 1 for q in self.quantiles):
@@ -122,6 +128,7 @@ class SequenceRegressionTaskConfig(TaskConfig):
     """Predict targets aligned with a complete input window."""
 
     task: TaskType = TaskType.SEQUENCE_REGRESSION
+    head: str = "per_step"
     output_chunk_length: int = 1
     target_dim: int = 1
 

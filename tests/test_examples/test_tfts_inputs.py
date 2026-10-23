@@ -60,8 +60,8 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
-            if m == "rnn":
-                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+            if "known_future" not in model.capabilities.input_spec.accepted_roles:
+                with self.assertRaisesRegex(ValueError, "does not support covariates"):
                     model(x_train)
                 continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
@@ -90,8 +90,8 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
-            if m == "rnn":
-                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+            if "known_future" not in model.capabilities.input_spec.accepted_roles:
+                with self.assertRaisesRegex(ValueError, "does not support covariates"):
                     model(x_train)
                 continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
@@ -147,8 +147,8 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
-            if m == "rnn":
-                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+            if "known_future" not in model.capabilities.input_spec.accepted_roles:
+                with self.assertRaisesRegex(ValueError, "does not support covariates"):
                     model(next(iter(train_loader))[0])
                 continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)

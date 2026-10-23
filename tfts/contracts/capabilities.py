@@ -25,6 +25,7 @@ class ModelInputSpec:
     supports_static: bool = False
     supports_multivariate_target: bool = True
     requires_target_history: bool = False
+    requires_matching_time_features: bool = False
     accepted_dtypes_by_role: Mapping[str, FrozenSet[str]] = field(default_factory=dict)
     arrangement: SpatialArrangement = SpatialArrangement.NONE
     accepted_topologies: FrozenSet[TopologyInput] = frozenset({TopologyInput.NONE})

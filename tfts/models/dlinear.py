@@ -77,21 +77,22 @@ class DLinear(BaseModel):
         self.target_dim = self.config.target_dim
 
         self.decomposition = SeriesDecomp(self.config.kernel_size)
-        if self.config.individual:
-            self.linear_seasonal = [
-                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
-                for _ in range(self.config.channels)
-            ]
-            self.linear_trend = [
-                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
-                for _ in range(self.config.channels)
-            ]
-        else:
+        self.linear_seasonal = None
+        self.linear_trend = None
+        if not self.config.individual:
             self.linear_seasonal = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
             self.linear_trend = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
 
     def build(self, input_shape):
         self._validate_target_shape(input_shape)
+        self.channels = int(tf.TensorShape(input_shape)[-1])
+        if self.config.individual:
+            self.linear_seasonal = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init) for _ in range(self.channels)
+            ]
+            self.linear_trend = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init) for _ in range(self.channels)
+            ]
         super().build(input_shape)
 
     def call(self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
@@ -118,7 +119,7 @@ class DLinear(BaseModel):
         if self.config.individual:
             seasonal_output = []
             trend_output = []
-            for i in range(self.config.channels):
+            for i in range(self.channels):
                 seasonal_output.append(self.linear_seasonal[i](seasonal[:, i, :]))
                 trend_output.append(self.linear_trend[i](trend[:, i, :]))
             seasonal_output = tf.stack(seasonal_output, axis=1)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Tuple
+from typing import Any, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -37,8 +37,8 @@ class Window:
     """Row positions for one encoder/decoder sample."""
 
     group_key: Tuple[Any, ...]
-    encoder_indices: Tuple[int, ...]
-    decoder_indices: Tuple[int, ...]
+    encoder_indices: Sequence[int]
+    decoder_indices: Sequence[int]
 
 
 @dataclass(frozen=True)
@@ -101,8 +101,8 @@ class WindowIndexer:
             windows.append(
                 Window(
                     key,
-                    tuple(int(value) for value in local[: spec.context_length]),
-                    tuple(int(value) for value in decoder),
+                    _compact_indices(local[: spec.context_length]),
+                    _compact_indices(decoder),
                 )
             )
         return windows
@@ -122,10 +122,16 @@ class WindowIndexer:
             return None
         return Window(
             key,
-            tuple(int(positions[value]) for value in encoder_local),
-            tuple(int(positions[value]) for value in decoder_local),
+            _compact_indices(positions[encoder_local]),
+            _compact_indices(positions[decoder_local]),
         )
 
 
 def _as_tuple(value) -> Tuple[Any, ...]:
     return value if isinstance(value, tuple) else (value,)
+
+
+def _compact_indices(values):
+    if len(values) and int(values[-1]) - int(values[0]) + 1 == len(values):
+        return range(int(values[0]), int(values[-1]) + 1)
+    return tuple(int(value) for value in values)

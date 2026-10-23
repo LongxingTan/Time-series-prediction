@@ -140,11 +140,19 @@ class TestAutoModel(unittest.TestCase):
                 self.assertEqual(restored.to_dict(), json_normalized)
 
     def test_listed_models_satisfy_forward_contract(self):
-        # AutoFormer currently operates in its configured hidden dimension;
-        # N-BEATS is intentionally univariate. Other models accept a small
-        # multivariate input.
-        feature_counts = {"autoformer": 64, "nbeats": 1, "dlinear": 1, "patch_tst": 1, "tide": 1}
-        multivariate_outputs = {"diffusion", "itransformer", "timesnet", "timexer", "timemixer"}
+        # Use multivariate inputs and targets where supported. AutoFormer
+        # currently requires its hidden width; N-BEATS and DeepAR use one target.
+        feature_counts = {"autoformer": 64, "nbeats": 1, "deep_ar": 1}
+        multivariate_outputs = {
+            "diffusion",
+            "itransformer",
+            "timesnet",
+            "timexer",
+            "timemixer",
+            "dlinear",
+            "patch_tst",
+            "tide",
+        }
 
         predict_sequence_length = 8
         for model_name in list_models():
@@ -155,7 +163,10 @@ class TestAutoModel(unittest.TestCase):
                     # TFT treats every historical target channel as an encoder
                     # real variable; keep its explicit variable count aligned.
                     config.encoder_real_dim = feature_count
-                model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
+                target_dim = feature_count if model_name in multivariate_outputs else 1
+                model = AutoModel.from_config(
+                    config, output_chunk_length=predict_sequence_length, target_dim=target_dim
+                )
                 if model_name == "stgcn":
                     inputs = TimeSeriesBatch(
                         past_values=tf.random.normal([1, 16, 3, 1]),
@@ -163,7 +174,7 @@ class TestAutoModel(unittest.TestCase):
                     )
                 elif model_name == "deep_ar":
                     inputs = TimeSeriesBatch(
-                        past_values=tf.random.normal([1, 16, 1]),
+                        past_values=tf.random.normal([1, 16, feature_count]),
                         future_values=tf.random.normal([1, predict_sequence_length, 1]),
                         static_categorical_features=tf.zeros([1, 1], dtype=tf.int32),
                     )
@@ -173,7 +184,5 @@ class TestAutoModel(unittest.TestCase):
 
                 if model_name == "stgcn":
                     self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 3, 1))
-                elif model_name in multivariate_outputs:
-                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, feature_count))
                 else:
-                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 1))
+                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, target_dim))

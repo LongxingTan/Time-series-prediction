@@ -53,6 +53,7 @@ class TideConfig(CommonConfig):
         input_spec=ModelInputSpec(
             accepted_roles=frozenset({"observed_past", "known_future"}),
             requires_target_history=True,
+            requires_matching_time_features=True,
         )
     ),
     paper="https://arxiv.org/abs/2304.08424",
