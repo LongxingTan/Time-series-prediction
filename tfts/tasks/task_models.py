@@ -12,6 +12,7 @@ from tfts.contracts import (
     ImputationOutput,
     ImputationTaskConfig,
     OutputPort,
+    SequenceRegressionTaskConfig,
 )
 from tfts.distributions import NormalOutput
 from tfts.registry import ComponentSpec, register_task
@@ -275,3 +276,26 @@ class AnomalyDetectionModel(TimeSeriesTaskModel):
             labels=self.calibrator.predict(output.scores),
             threshold=tf.identity(self.calibrator.threshold),
         )
+
+
+@register_task("sequence_regression", config_class=SequenceRegressionTaskConfig)
+@tf.keras.utils.register_keras_serializable(package="tfts")
+class SequenceRegressionModel(TimeSeriesTaskModel):
+    """Aligned regression using the recurrent backbone's per-step head."""
+
+    task_name = "sequence_regression"
+    default_objective = "sequence_mse"
+
+    def __init__(self, backbone, task_config, capabilities, objective=None, **kwargs):
+        super().__init__(backbone, task_config, capabilities, **kwargs)
+        self.configure_objective(objective)
+
+    def forward(self, inputs, training=None):
+        batch = self.normalize_batch(inputs)
+        model_batch, restore = self.prepare_backbone_batch(batch)
+        output = self.adapter.forward(model_batch, training=training)
+        return ForecastOutput(predictions=restore(output.native_forecast))
+
+    def predict_step(self, data):
+        inputs, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        return self(inputs, training=False).predictions

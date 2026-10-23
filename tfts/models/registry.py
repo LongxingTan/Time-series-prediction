@@ -39,6 +39,7 @@ class ModelMetadata:
                 "supports_categorical": self.capabilities.input_spec.supports_categorical,
                 "supports_static": self.capabilities.input_spec.supports_static,
                 "supports_multivariate_target": self.capabilities.input_spec.supports_multivariate_target,
+                "requires_target_history": self.capabilities.input_spec.requires_target_history,
                 "accepted_dtypes_by_role": {
                     role: sorted(dtypes)
                     for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
@@ -254,6 +255,8 @@ def list_supported_tasks(model_name: str) -> List[str]:
 
     capabilities = get_model_capabilities(model_name)
     tasks = ["forecasting"]
+    if model_name == "rnn":
+        tasks.append("sequence_regression")
     if capabilities.has_port(OutputPort.SEQUENCE):
         tasks.append("classification")
     if capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):

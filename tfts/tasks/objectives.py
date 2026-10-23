@@ -28,25 +28,67 @@ def _weighted_mean(values, mask=None):
 def _forecast_target(batch, output):
     if batch.future_values is None:
         raise ValueError("forecast objective requires future_values")
+    tf.debugging.assert_equal(
+        tf.shape(batch.future_values),
+        tf.shape(output.predictions),
+        message="Targets and predictions must have identical shapes",
+    )
     return tf.cast(batch.future_values, output.predictions.dtype), output.predictions
+
+
+def point_weights(batch, target):
+    """Combine observation masks and sample weights without implicit broadcasting."""
+    weight = batch.sample_weight
+    if weight is not None:
+        weight = tf.cast(weight, target.dtype)
+        rank = weight.shape.rank
+        if rank not in (1, 2, 3):
+            raise ValueError("sample_weight must have shape (B,), (B,T), or (B,T,D)")
+        tf.debugging.assert_equal(
+            tf.shape(weight), tf.shape(target)[:rank], message="sample_weight shape does not match targets"
+        )
+        weight = tf.reshape(weight, tf.concat([tf.shape(weight), tf.ones([3 - rank], tf.int32)], 0))
+        weight = tf.broadcast_to(weight, tf.shape(target))
+        tf.debugging.assert_all_finite(weight, "sample_weight must be finite")
+        tf.debugging.assert_non_negative(weight)
+    if batch.future_observed_mask is not None:
+        mask = tf.cast(batch.future_observed_mask, target.dtype)
+        tf.debugging.assert_equal(tf.shape(mask), tf.shape(target))
+        weight = mask if weight is None else weight * mask
+    return weight
+
+
+@register_objective("sequence_mse")
+class SequenceMeanSquaredError:
+    requires_targets = True
+    supports_sample_weight = True
+
+    def __call__(self, batch, output):
+        target = tf.cast(batch.labels, output.predictions.dtype)
+        tf.debugging.assert_equal(
+            tf.shape(target), tf.shape(output.predictions), message="Targets and predictions must have identical shapes"
+        )
+        return _weighted_mean(tf.square(target - output.predictions), point_weights(batch, target))
 
 
 @register_objective("mse")
 class MeanSquaredError:
     requires_targets = True
+    supports_sample_weight = True
 
     def __call__(self, batch, output):
         target, prediction = _forecast_target(batch, output)
-        return _weighted_mean(tf.square(target - prediction), batch.future_observed_mask)
+        return _weighted_mean(tf.square(target - prediction), point_weights(batch, target))
 
 
 @register_objective("mae")
 class MeanAbsoluteError:
     requires_targets = True
+    supports_sample_weight = True
 
     def __call__(self, batch, output):
         target, prediction = _forecast_target(batch, output)
-        return _weighted_mean(tf.abs(target - prediction), batch.future_observed_mask)
+        return _weighted_mean(tf.abs(target - prediction), point_weights(batch, target))
 
 
 @register_objective("smape")

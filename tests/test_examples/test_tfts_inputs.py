@@ -60,6 +60,10 @@ class InputsTest(unittest.TestCase):
         for m in self.test_models:
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
+            if m == "rnn":
+                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+                    model(x_train)
+                continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
@@ -86,6 +90,10 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
+            if m == "rnn":
+                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+                    model(x_train)
+                continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train((x_train, y_train), (x_valid, y_valid), optimizer=tf.keras.optimizers.Adam(0.003), epochs=1)
 
@@ -139,6 +147,10 @@ class InputsTest(unittest.TestCase):
             print(f"==== Test model {m} ====")
             config = AutoConfig.for_model(m)
             model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
+            if m == "rnn":
+                with self.assertRaisesRegex(ValueError, "RNN accepts"):
+                    model(next(iter(train_loader))[0])
+                continue
             trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)
             trainer.train(
                 train_dataset=train_loader,

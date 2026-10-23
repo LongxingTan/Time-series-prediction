@@ -13,6 +13,7 @@ except ImportError:  # Keras 2 bundled with TensorFlow < 2.16
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities, ModelInputSpec
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
@@ -23,6 +24,7 @@ from .registry import register_model
 
 class PatchTSTConfig(CommonConfig):
     model_type: str = "patch_tst"
+    attribute_map = {"output_size": "target_dim"}
 
     def __init__(
         self,
@@ -80,6 +82,12 @@ class PatchTSTConfig(CommonConfig):
 @register_model(
     "patch_tst",
     config=PatchTSTConfig,
+    capabilities=BackboneCapabilities(
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset(),
+            requires_target_history=True,
+        )
+    ),
     paper="https://arxiv.org/abs/2211.14730",
     tags=("patching", "attention", "SOTA"),
     tier="core",

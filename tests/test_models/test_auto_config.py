@@ -62,6 +62,7 @@ class TestAutoModel(unittest.TestCase):
                         "supports_categorical",
                         "supports_static",
                         "supports_multivariate_target",
+                        "requires_target_history",
                         "accepted_dtypes_by_role",
                         "arrangement",
                         "accepted_topologies",
@@ -142,7 +143,7 @@ class TestAutoModel(unittest.TestCase):
         # AutoFormer currently operates in its configured hidden dimension;
         # N-BEATS is intentionally univariate. Other models accept a small
         # multivariate input.
-        feature_counts = {"autoformer": 64, "nbeats": 1}
+        feature_counts = {"autoformer": 64, "nbeats": 1, "dlinear": 1, "patch_tst": 1, "tide": 1}
         multivariate_outputs = {"diffusion", "itransformer", "timesnet", "timexer", "timemixer"}
 
         predict_sequence_length = 8

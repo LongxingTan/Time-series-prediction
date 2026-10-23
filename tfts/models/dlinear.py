@@ -8,6 +8,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda
 
+from tfts.contracts import BackboneCapabilities, ModelInputSpec
 from tfts.layers.autoformer_layer import SeriesDecomp
 
 from .base import BaseModel, CommonConfig
@@ -56,6 +57,12 @@ def _uniform_avg_init(shape, dtype=None):
 @register_model(
     "dlinear",
     config=DLinearConfig,
+    capabilities=BackboneCapabilities(
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset(),
+            requires_target_history=True,
+        )
+    ),
     paper="https://arxiv.org/abs/2205.13504",
     tags=("linear", "simple", "baseline", "SOTA"),
     tier="core",

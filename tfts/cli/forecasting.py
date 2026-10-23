@@ -16,6 +16,7 @@ from ..data import get_data
 from ..data.processor import DataProcessor
 from ..models.auto_config import AutoConfig
 from ..models.auto_model import AutoModel
+from ..tasks.pipeline import TaskPipeline
 from ..training import Trainer, set_seed
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["ForecastingPipeline", "main"]
 
 
-class ForecastingPipeline:
+class ForecastingPipeline(TaskPipeline):
     """End-to-end forecasting pipeline with a transformers-like API.
 
     Handles data preparation, model building, training, prediction, and
@@ -56,42 +57,38 @@ class ForecastingPipeline:
 
     def __init__(
         self,
-        model: Union[str, AutoModel] = "dlinear",
+        model: Union[str, AutoModel] = "rnn",
         lookback: int = 96,
         horizon: int = 24,
         config: Optional[AutoConfig] = None,
         batch_size: int = 32,
-        normalize: Optional[str] = "minmax",
+        normalize: Optional[str] = "standard",
         learning_rate: float = 1e-3,
         epochs: int = 50,
         early_stopping_patience: Optional[int] = 5,
         seed: int = 42,
         **kwargs,
     ):
+        config = config or (AutoConfig.for_model(model) if isinstance(model, str) else model.config)
+        config.update(kwargs)
+        super().__init__(
+            "forecasting",
+            model,
+            config=config if isinstance(model, str) else None,
+            batch_size=batch_size,
+            normalize=normalize,
+            learning_rate=learning_rate,
+            epochs=epochs,
+            early_stopping_patience=early_stopping_patience,
+            seed=seed,
+            **({"output_chunk_length": horizon} if isinstance(model, str) else {}),
+        )
         self.lookback = lookback
         self.horizon = horizon
-        self.batch_size = batch_size
-        self.normalize = normalize
-        self.learning_rate = learning_rate
-        self.epochs = epochs
-        self.early_stopping_patience = early_stopping_patience
-        self.seed = seed
-
-        set_seed(seed)
-
-        # Model setup
-        if isinstance(model, str):
-            self.config = config or AutoConfig.for_model(model)
-            self.config.update(kwargs)
-            self._model = AutoModel.from_config(self.config, output_chunk_length=horizon)
-        else:
-            self._model = model
-            self.config = getattr(model, "config", config)
-
-        self.model_name = getattr(self.config, "model_type", model if isinstance(model, str) else "custom")
+        self.model_name = self.config.model_type
 
         # Data processor
-        self.processor = DataProcessor(
+        self.data_processor = DataProcessor(
             lookback=lookback,
             horizon=horizon,
             batch_size=batch_size,
@@ -99,7 +96,7 @@ class ForecastingPipeline:
         )
 
         # Will be set during fit()
-        self.trainer: Trainer = Trainer(self._model)
+        self.trainer: Trainer = Trainer(self.model)
         self._target_col: Optional[str] = None
         self._time_col: Optional[str] = None
         self._fitted: bool = False
@@ -113,6 +110,7 @@ class ForecastingPipeline:
     def fit(
         self,
         df: pd.DataFrame,
+        targets=None,
         target_col: Optional[str] = None,
         time_col: Optional[str] = None,
         validation_split: float = 0.2,
@@ -134,12 +132,23 @@ class ForecastingPipeline:
         Returns:
             Keras History object.
         """
+        if not isinstance(df, pd.DataFrame):
+            if targets is None:
+                raise ValueError("Prepared-array training requires targets")
+            history = super().fit(df, targets, epochs=epochs or self.epochs, verbose=verbose, **trainer_kwargs)
+            self.lookback = self._input_shapes["past_values"][0]
+            self.horizon = self.model.output_chunk_length
+            return history
+        if targets is not None:
+            if target_col is not None or not isinstance(targets, str):
+                raise ValueError("Use target_col for dataframe training")
+            target_col = targets
         self._target_col = target_col
         self._time_col = time_col
 
         # Prepare data
-        self.processor.validation_split = validation_split
-        result = self.processor.prepare(df, target_col=target_col, time_col=time_col)
+        self.data_processor.validation_split = validation_split
+        result = self.data_processor.prepare(df, target_col=target_col, time_col=time_col)
 
         if isinstance(result, tuple):
             train_ds, valid_ds = result
@@ -150,6 +159,7 @@ class ForecastingPipeline:
         epochs = epochs or self.epochs
         history = self.trainer.train(
             train_ds,
+            optimizer=trainer_kwargs.pop("optimizer", tf.keras.optimizers.Adam(self.learning_rate)),
             valid_dataset=valid_ds,
             epochs=epochs,
             batch_size=self.batch_size,
@@ -161,7 +171,7 @@ class ForecastingPipeline:
         self._fitted = True
         return history
 
-    def predict(self, steps: Optional[int] = None, df: Optional[pd.DataFrame] = None) -> np.ndarray:
+    def predict(self, inputs=None, steps: Optional[int] = None, df: Optional[pd.DataFrame] = None) -> np.ndarray:
         """Generate forecasts.
 
         Args:
@@ -174,10 +184,17 @@ class ForecastingPipeline:
         if not self._fitted:
             raise RuntimeError("Pipeline must be fitted before prediction. Call .fit() first.")
 
+        if self._target_scaler is not None:
+            return super().predict(inputs)
+        if inputs is not None:
+            if isinstance(inputs, (int, np.integer)):
+                steps = inputs
+            else:
+                df = inputs
         steps = steps or self.horizon
 
         if df is not None:
-            ds = self.processor.prepare_for_inference(df, target_col=self._target_col, time_col=self._time_col)
+            ds = self.data_processor.prepare_for_inference(df, target_col=self._target_col, time_col=self._time_col)
             if steps <= self.horizon:
                 preds = self.trainer.predict(ds)
             else:
@@ -185,7 +202,7 @@ class ForecastingPipeline:
                 for batch in ds:
                     model_inputs = batch[0] if isinstance(batch, (tuple, list)) else batch
                     generated.append(
-                        self._model.generate(
+                        self.model.generate(
                             model_inputs,
                             output_chunk_length=steps,
                             strategy="recursive",
@@ -200,7 +217,7 @@ class ForecastingPipeline:
             )
 
         # Inverse transform
-        preds = self.processor.inverse_transform(preds)
+        preds = self.data_processor.inverse_transform(preds)
 
         # Trim to requested steps
         if preds.shape[1] > steps:
@@ -238,6 +255,8 @@ class ForecastingPipeline:
         """Save the trained model."""
         if self.trainer is None:
             raise RuntimeError("Nothing to save — train the pipeline first.")
+        if self._target_scaler is not None:
+            return super().save(path)
         self.trainer.save_model(path)
         logger.info(f"Pipeline saved to {path}")
 

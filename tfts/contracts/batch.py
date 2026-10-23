@@ -30,6 +30,7 @@ class TimeSeriesBatch:
     future_observed_mask: Optional[tf.Tensor] = None
     padding_mask: Optional[tf.Tensor] = None
     labels: Optional[tf.Tensor] = None
+    sample_weight: Optional[tf.Tensor] = None
     metadata: Optional[Mapping[str, Any]] = None
     structure: Optional[SpatialStructure] = None
 
@@ -52,6 +53,7 @@ class TimeSeriesBatch:
             "future_observed_mask",
             "padding_mask",
             "labels",
+            "sample_weight",
         ):
             value = getattr(self, name)
             if value is not None:

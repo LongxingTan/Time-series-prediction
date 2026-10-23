@@ -24,13 +24,13 @@ from tfts.contracts import (
 class TestAutoModel(unittest.TestCase):
     def test_factory_returns_a_task_model_with_structured_output(self):
         config = AutoConfig.for_model("dlinear")
-        model = AutoModelForForecasting.from_config(config, output_chunk_length=3)
+        model = AutoModelForForecasting.from_config(config, output_chunk_length=3, target_dim=2)
         batch = TimeSeriesBatch(tf.random.normal([2, 12, 2]))
 
         output = model(batch)
 
         self.assertIsInstance(output, ForecastOutput)
-        self.assertEqual(output.predictions.shape, (2, 3, 1))
+        self.assertEqual(output.predictions.shape, (2, 3, 2))
         self.assertIs(model.config, model.backbone.config)
 
     def test_task_dispatch_and_capability_validation(self):

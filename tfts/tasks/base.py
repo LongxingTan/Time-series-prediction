@@ -111,6 +111,8 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         output = self.forward(inputs, training=training)
         batch = self.normalize_batch(inputs)
         if self.objective is not None and self.has_targets(batch):
+            if batch.sample_weight is not None and not getattr(self.objective, "supports_sample_weight", False):
+                raise ValueError("This objective does not support sample_weight")
             output = output.replace(loss=self.objective(batch, output))
         return output
 
@@ -129,9 +131,11 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         from dataclasses import replace
 
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        if sample_weight is not None:
-            raise ValueError("sample_weight is not supported by batch-aware Objectives")
+        if sample_weight is not None and self.task_name not in {"forecasting", "sequence_regression"}:
+            raise ValueError("sample_weight is only supported for forecasting and sequence_regression")
         batch = self.normalize_batch(x)
+        if sample_weight is not None:
+            batch = replace(batch, sample_weight=tf.convert_to_tensor(sample_weight))
         if y is None:
             if self.task_name == "anomaly_detection" and batch.labels is None:
                 batch = replace(batch, labels=batch.past_values)
@@ -158,7 +162,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         if not pairs:
             raise ValueError("Objective produced no gradients for trainable variables")
         self.optimizer.apply_gradients(pairs)
-        self._loss_tracker.update_state(loss)
+        self._loss_tracker.update_state(loss, sample_weight=self._loss_weight(batch, output))
         return {"loss": self._loss_tracker.result()}
 
     def test_step(self, data):
@@ -167,8 +171,17 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         if output.loss is None:
             raise ValueError(f"{self.task_name} evaluation requires targets and an Objective")
         loss = output.loss + (tf.add_n(self.losses) if self.losses else 0.0)
-        self._loss_tracker.update_state(loss)
+        self._loss_tracker.update_state(loss, sample_weight=self._loss_weight(batch, output))
         return {"loss": self._loss_tracker.result()}
+
+    def _loss_weight(self, batch, output):
+        from .objectives import MeanAbsoluteError, MeanSquaredError, SequenceMeanSquaredError, point_weights
+
+        if isinstance(self.objective, (MeanSquaredError, MeanAbsoluteError, SequenceMeanSquaredError)):
+            target = batch.labels if self.task_name == "sequence_regression" else batch.future_values
+            weight = point_weights(batch, tf.cast(target, output.predictions.dtype))
+            return tf.cast(tf.size(target), tf.float32) if weight is None else tf.reduce_sum(weight)
+        return 1.0
 
     def build_from_config(self, config):
         """Build every child layer before Keras restores saved variables."""

@@ -113,6 +113,26 @@ class BackboneAdapter:
         self._adapt_batch = getattr(backbone, "adapt_batch", None)
 
     def prepare_inputs(self, batch: TimeSeriesBatch):
+        spec = self.capabilities.input_spec
+        if spec.requires_target_history:
+            tf.debugging.assert_equal(
+                tf.shape(batch.past_values)[-1],
+                self.backbone.config.target_dim,
+                message="past_values must contain exactly target_dim target histories; pass covariates separately",
+            )
+            for field, role in (("past_time_features", "observed_past"), ("future_time_features", "known_future")):
+                if getattr(batch, field) is not None and role not in spec.accepted_roles:
+                    raise ValueError(f"{self.model_type} does not support covariates in {field}")
+            if any(
+                getattr(batch, name) is not None
+                for name in (
+                    "static_real_features",
+                    "static_categorical_features",
+                    "past_categorical_features",
+                    "future_categorical_features",
+                )
+            ):
+                raise ValueError(f"{self.model_type} does not support these static/categorical input fields")
         if self._adapt_batch is not None:
             return self._adapt_batch(batch)
 

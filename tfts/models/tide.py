@@ -12,6 +12,7 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
+from tfts.contracts import BackboneCapabilities, ModelInputSpec
 from tfts.layers.revin import RevIN
 
 from .base import BaseModel, CommonConfig
@@ -48,6 +49,12 @@ class TideConfig(CommonConfig):
 @register_model(
     "tide",
     config=TideConfig,
+    capabilities=BackboneCapabilities(
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset({"observed_past", "known_future"}),
+            requires_target_history=True,
+        )
+    ),
     paper="https://arxiv.org/abs/2304.08424",
     tags=("mlp", "efficient", "covariates"),
 )
@@ -70,7 +77,7 @@ class Tide(BaseModel):
         self.feature_dim = c.feature_dim
         self.target_dim = c.target_dim
         self.revin = RevIN()
-        self.feature_encoder = ResBlock(hidden, self.feature_encode_dim, dropout, eps) if self.feature_dim else None
+        self.feature_encoder = ResBlock(hidden, self.feature_encode_dim, dropout, eps)
         self.encoders = [ResBlock(hidden, hidden, dropout, eps) for _ in range(num_layers)]
         self.decoders = [ResBlock(hidden, hidden, dropout, eps) for _ in range(max(0, decoder_layers - 1))]
         self.decoders.append(ResBlock(hidden, 1 * self.predict_sequence_length, dropout, eps))
@@ -79,18 +86,23 @@ class Tide(BaseModel):
 
     def build(self, input_shape):
         self._validate_target_shape(input_shape)
-        if self.feature_dim:
+        if isinstance(input_shape, dict) or (
+            isinstance(input_shape, (tuple, list)) and isinstance(input_shape[0], (tuple, list, tf.TensorShape))
+        ):
             if isinstance(input_shape, dict):
                 history_shape = input_shape["encoder_feature"]
                 future_shape = input_shape.get("decoder_feature")
-            elif isinstance(input_shape, (tuple, list)) and isinstance(input_shape[0], (tuple, list, tf.TensorShape)):
-                history_shape, future_shape = input_shape[1:]
             else:
-                raise ValueError("TiDE feature_dim > 0 requires encoder_feature and decoder_feature")
+                history_shape, future_shape = input_shape[1:]
+            if not self.feature_dim and history_shape[-1]:
+                self.feature_dim = int(history_shape[-1])
+                self.config.feature_dim = self.feature_dim
             if future_shape is None or history_shape[-1] != self.feature_dim or future_shape[-1] != self.feature_dim:
                 raise ValueError("TiDE encoder_feature and decoder_feature widths must match feature_dim")
             if future_shape[1] is not None and future_shape[1] != self.predict_sequence_length:
                 raise ValueError("TiDE decoder_feature length must match the prediction horizon")
+        elif self.feature_dim:
+            raise ValueError("TiDE feature_dim > 0 requires encoder_feature and decoder_feature")
         super().build(input_shape)
 
     def call(self, x, training=None, **kwargs):
@@ -117,7 +129,7 @@ class Tide(BaseModel):
 
         xn, stats = self.revin(target)
         feature = None
-        if self.feature_encoder is not None:
+        if self.feature_dim:
             if decoder_feature is None:
                 raise ValueError("TiDE feature_dim > 0 requires encoder_feature and decoder_feature")
             history_marks = encoder_feature[..., -self.feature_dim :]

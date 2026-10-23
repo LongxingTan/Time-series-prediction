@@ -68,6 +68,17 @@ class RNN(BaseModel):
     """tfts RNN model"""
 
     def adapt_batch(self, batch):
+        if any(
+            getattr(batch, name) is not None
+            for name in (
+                "future_time_features",
+                "static_real_features",
+                "static_categorical_features",
+                "past_categorical_features",
+                "future_categorical_features",
+            )
+        ):
+            raise ValueError("RNN accepts past_values, past_time_features, and padding_mask only")
         # Time features and padding masks are optional RNN inputs.  Without
         # them the public contract stays a plain (batch, time, features)
         # tensor so the persisted ``input_shape`` remains the flat
@@ -107,7 +118,9 @@ class RNN(BaseModel):
 
         self.dense1 = Dense(self.config.dense_hidden_size, activation="relu")
         self.dense2 = Dense(self.config.dense_hidden_size, activation="relu")
-        self.project1 = Dense(1 if self.config.return_sequences else predict_sequence_length, activation=None)
+        self.project1 = Dense(
+            self.config.target_dim * (1 if self.config.return_sequences else predict_sequence_length), activation=None
+        )
 
     def call(
         self,
@@ -150,7 +163,7 @@ class RNN(BaseModel):
         outputs = self.project1(encoder_out)
         if self.config.return_sequences:
             return outputs
-        outputs = Reshape((outputs.shape[1], 1))(outputs)
+        outputs = Reshape((self.predict_sequence_length, self.config.target_dim))(outputs)
         return outputs
 
 

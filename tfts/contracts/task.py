@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 class TaskType(str, Enum):
     FORECASTING = "forecasting"
+    SEQUENCE_REGRESSION = "sequence_regression"
     IMPUTATION = "imputation"
     CLASSIFICATION = "classification"
     ANOMALY_DETECTION = "anomaly_detection"
@@ -114,3 +115,17 @@ class AnomalyDetectionTaskConfig(TaskConfig):
             raise ValueError("Unknown anomaly scorer %r" % self.scorer)
         if not 0 < self.threshold_quantile < 1:
             raise ValueError("threshold_quantile must lie strictly between 0 and 1")
+
+
+@dataclass(frozen=True)
+class SequenceRegressionTaskConfig(TaskConfig):
+    """Predict targets aligned with a complete input window."""
+
+    task: TaskType = TaskType.SEQUENCE_REGRESSION
+    output_chunk_length: int = 1
+    target_dim: int = 1
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.output_chunk_length <= 0 or self.target_dim <= 0:
+            raise ValueError("output_chunk_length and target_dim must be positive")

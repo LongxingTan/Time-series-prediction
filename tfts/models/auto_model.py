@@ -41,9 +41,13 @@ def build_task_model(config, task_config, model_kwargs=None):
     task_type = TaskType.normalize(task_config.task)
     _, model_class = _task_spec(task_type)
     output_chunk_length = getattr(task_config, "output_chunk_length", 1)
-    if hasattr(config, "target_dim") and task_type == TaskType.FORECASTING:
+    if task_type in {TaskType.FORECASTING, TaskType.SEQUENCE_REGRESSION}:
         config = copy.deepcopy(config)
         config.target_dim = task_config.target_dim
+    if task_type == TaskType.SEQUENCE_REGRESSION:
+        if config.model_type != "rnn":
+            raise ValueError(f"{config.model_type} does not support sequence_regression. Use model='rnn'")
+        config.return_sequences = True
     backbone = AutoBackbone.from_config(config, output_chunk_length=output_chunk_length)
     capabilities = get_model_capabilities(config.model_type)
     return model_class(

@@ -13,7 +13,8 @@ Examples:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+import copy
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from ..models.auto_config import AutoConfig
 from ..tasks.pipeline import TaskPipeline
@@ -34,25 +35,25 @@ def __getattr__(name: str):
 
 def pipeline(
     task: str = "forecasting",
-    model: Any = "dlinear",
+    model: Any = "rnn",
     lookback: int = 96,
     horizon: int = 24,
     config: Optional[AutoConfig] = None,
     batch_size: int = 32,
-    normalize: Optional[str] = "minmax",
+    normalize: Optional[str] = "standard",
     learning_rate: float = 1e-3,
     epochs: int = 50,
     early_stopping_patience: Optional[int] = 5,
     seed: int = 42,
     **kwargs,
-) -> "ForecastingPipeline":
+) -> "Union[ForecastingPipeline, TaskPipeline]":
     """Create a pipeline for a time series task.
 
     This is the recommended entry point. It returns a Pipeline object that
     handles data preparation, model building, training, and prediction.
 
     Args:
-        task: Task type — ``'forecasting'`` (more tasks coming soon).
+        task: ``'forecasting'``, ``'sequence_regression'``, or a registered task.
         model: Model name (e.g. ``'patch_tst'``, ``'transformer'``,
             ``'dlinear'``, ``'nbeats'``) or an ``AutoModel`` instance.
         lookback: Number of past steps to use as input.
@@ -81,6 +82,10 @@ def pipeline(
     from .forecasting import ForecastingPipeline
 
     normalized_task = task.lower().replace("-", "_")
+    if "bidirectional" in kwargs:
+        if "bi_direction" in kwargs:
+            raise ValueError("Pass only bidirectional, not both direction aliases")
+        kwargs["bi_direction"] = kwargs.pop("bidirectional")
     if normalized_task == "forecasting":
         return ForecastingPipeline(
             model=model,
@@ -94,6 +99,24 @@ def pipeline(
             early_stopping_patience=early_stopping_patience,
             seed=seed,
             **kwargs,
+        )
+
+    if normalized_task == "sequence_regression":
+        config = copy.deepcopy(config) if config is not None else AutoConfig.for_model(model)
+        if config.model_type != "rnn":
+            raise ValueError("sequence_regression currently supports model='rnn'")
+        options = dict(kwargs)
+        config.update({"input_projection": True, **options})
+        return TaskPipeline(
+            normalized_task,
+            model,
+            config=config,
+            batch_size=batch_size,
+            normalize=normalize,
+            learning_rate=learning_rate,
+            epochs=epochs,
+            early_stopping_patience=early_stopping_patience,
+            seed=seed,
         )
 
     task_only_kwargs = dict(kwargs)

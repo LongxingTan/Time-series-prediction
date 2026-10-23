@@ -17,8 +17,7 @@ class TestDesignContracts(unittest.TestCase):
             def inverse_transform(self, value):
                 return value * 2
 
-        pipeline = object.__new__(TaskPipeline)
-        pipeline.processor = Processor()
+        pipeline = TaskPipeline("forecasting", "rnn", processor=Processor())
         for output, field in (
             (ForecastOutput(predictions=tf.ones([1, 2, 1])), "predictions"),
             (ImputationOutput(imputed_values=tf.ones([1, 2, 1])), "imputed_values"),
