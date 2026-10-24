@@ -8,9 +8,11 @@ from typing import List, Optional
 
 import tensorflow as tf
 
+from tfts.config import CommonConfig
+from tfts.models.base import BaseModel
+
 from ..layers.nbeats_layer import GenericBlock, SeasonalityBlock, TrendBlock
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class NBeatsConfig(CommonConfig):

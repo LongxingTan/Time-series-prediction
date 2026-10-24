@@ -9,7 +9,12 @@ API
    :recursive:
 
    data
-   features
+   datasets
+   estimator
+   batch
+   config
+   forecast
+   registry
    layers
    models
    losses
@@ -46,4 +51,4 @@ DLinear and PatchTST task models accept target histories only. TiDE additionally
 accepts ``past_time_features`` and ``future_time_features`` with matching widths
 and ordering, inferring the feature encoder width. These named fields accompany
 ``past_values`` in an input dictionary. Packed extra channels are rejected for
-these three models. Raw backbone calls remain compatible with earlier releases.
+these three models. The restructure removes the old module paths; use the owning modules documented here.

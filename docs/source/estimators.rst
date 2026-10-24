@@ -11,7 +11,7 @@ model instance is reused. ``set_params`` invalidates fitted state.
 Forecast a dataframe
 --------------------
 
-Declare columns with the existing ``TimeSeriesSchema``. No additional shape
+Declare columns with the existing ``Schema``. No additional shape
 contract is required.
 
 .. code-block:: python
@@ -19,7 +19,7 @@ contract is required.
    import numpy as np
    import pandas as pd
    import tfts
-   from tfts.features import TimeSeriesSchema
+   from tfts.data.features import Schema
 
    df = pd.DataFrame({
        "date": pd.date_range("2024-01-01", periods=40),
@@ -27,7 +27,7 @@ contract is required.
    })
    forecaster = tfts.Forecaster(
        "dlinear", context=8, horizon=3,
-       schema=TimeSeriesSchema("date", ("sales",)), epochs=1,
+       schema=Schema("date", ("sales",)), epochs=1,
    )
    forecaster.fit(df, verbose=0)
    forecast = forecaster.predict(df.tail(8))
@@ -108,9 +108,10 @@ estimator:
    import numpy as np
    import tensorflow as tf
    import tfts
-   from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort
-   from tfts.models.base import BaseModel, CommonConfig
-   from tfts.models.registry import register_model
+   from tfts.models.base import BackboneCapabilities, ModelInputSpec, OutputPort
+   from tfts.models.base import BaseModel
+   from tfts.config import CommonConfig
+   from tfts.models.catalog import register_model
 
    class SmallConvConfig(CommonConfig):
        model_type = "example_small_conv"

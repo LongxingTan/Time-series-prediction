@@ -4,12 +4,14 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import ForecastOutput, ImputationOutput, TimeSeriesBatch
-from tfts.data.preprocessing import inverse_output
+from tfts.batch import TimeSeriesBatch
+from tfts.data.arrays import inverse_output
 from tfts.data.scaling import ChannelScaler
+from tfts.forecast import ForecastOutput
 from tfts.generation.chunk import Chunk, State
 from tfts.generation.loop import run
 from tfts.generation.processors import Mean
+from tfts.tasks.imputation import ImputationOutput
 
 
 class TestDesignContracts(unittest.TestCase):

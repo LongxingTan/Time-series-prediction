@@ -1,15 +1,45 @@
 """Base classes for task heads and task models."""
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
+from enum import Enum
 import json
 import os
-from typing import Any
+from typing import Any, Dict
 
 import tensorflow as tf
 
-from tfts.contracts import ModelOutput, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.models.base import ModelOutput
 from tfts.registry import build
+
+
+class TaskType(str, Enum):
+    FORECASTING = "forecasting"
+    SEQUENCE_REGRESSION = "sequence_regression"
+    IMPUTATION = "imputation"
+    CLASSIFICATION = "classification"
+    ANOMALY_DETECTION = "anomaly_detection"
+
+    @classmethod
+    def normalize(cls, value):
+        if isinstance(value, cls):
+            return value
+        normalized = str(value).lower().replace("-", "_")
+        return cls(normalized)
+
+
+@dataclass(frozen=True)
+class TaskConfig:
+    task: TaskType
+
+    def __post_init__(self):
+        object.__setattr__(self, "task", TaskType.normalize(self.task))
+
+    def to_dict(self) -> Dict[str, Any]:
+        values = asdict(self)
+        values["task"] = self.task.value
+        return values
 
 
 class BaseHead(tf.keras.layers.Layer, ABC):
@@ -31,7 +61,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
 
     def __init__(self, backbone, task_config, capabilities, **kwargs):
         super().__init__(**kwargs)
-        from tfts.models.adapters import BackboneAdapter, SpatialAdapter
+        from tfts.models._adapters import BackboneAdapter, SpatialAdapter
 
         self.backbone = backbone
         self.backbone_config = backbone.config
@@ -105,6 +135,13 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     @abstractmethod
     def forward(self, inputs, training=None) -> ModelOutput:
         raise NotImplementedError
+
+    def dry_run(self, data):
+        """Validate a Keras batch, output and objective without updating weights."""
+        batch = self._batch_from_keras(data)
+        output = self(batch, training=False, compute_loss=False)
+        self._objective_result(batch, output)
+        return output
 
     def configure_objective(self, objective=None, **context):
         from tfts.registry import ComponentSpec
@@ -198,10 +235,9 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         return {"loss": self._loss_tracker.result()}
 
     def predict_step(self, data):
-        from tfts.training.trainer import _output_tensor
 
         inputs, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        return _output_tensor(self(inputs, training=False, compute_loss=False))
+        return self(inputs, training=False, compute_loss=False).prediction()
 
     def build_from_config(self, config):
         """Build every child layer before Keras restores saved variables."""
@@ -272,7 +308,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def from_config(cls, config):
         """Reconstruct a task model from a Keras object config."""
         from tfts.models.auto_config import AutoConfig
-        from tfts.models.auto_model import build_task_model, task_config_from_dict
+        from tfts.tasks.auto import build_task_model, task_config_from_dict
 
         config = dict(config)
         backbone_values = config.pop("backbone_config", None)
@@ -327,4 +363,4 @@ class BaseTask(ABC):
         raise NotImplementedError
 
 
-from tfts.contracts import ModelOutput as ModelOutput  # noqa: E402,F401
+from tfts.models.base import ModelOutput as ModelOutput

@@ -19,12 +19,13 @@ from tensorflow.keras.layers import (
     UpSampling1D,
 )
 
+from tfts.config import CommonConfig
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.unet_layer import ConvbrLayer, ReBlock, SeBlock
+from tfts.models.base import BaseModel
 
 from ..layers.util_layer import ShapeLayer
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 

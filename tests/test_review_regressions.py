@@ -5,9 +5,9 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+from tfts.config import CommonConfig
 from tfts.layers.autoformer_layer import AutoCorrelation
 from tfts.models.autoformer import AutoFormer, AutoFormerConfig, DecoderLayer, EncoderLayer
-from tfts.models.base import CommonConfig
 from tfts.models.dlinear import DLinear, DLinearConfig
 from tfts.models.itransformer import ITransformer, ITransformerConfig
 from tfts.models.rwkv import RWKV, RWKVConfig

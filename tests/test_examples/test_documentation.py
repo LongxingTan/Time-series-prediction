@@ -13,7 +13,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 
 def snippet(path, marker):
-    source = (_ROOT / path).read_text()
+    source = (_ROOT / path).read_text(encoding="utf-8")
     blocks = re.findall(r"\.\. code-block:: python\n((?:[ \t].*\n|\n)+)", source)
     return next(textwrap.dedent(block).strip() for block in blocks if marker in block)
 

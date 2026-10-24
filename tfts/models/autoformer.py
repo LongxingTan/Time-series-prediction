@@ -8,10 +8,11 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
+from tfts.config import CommonConfig
 from tfts.layers.autoformer_layer import AutoCorrelation, SeriesDecomp
+from tfts.models.base import BaseModel
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class AutoFormerConfig(CommonConfig):

@@ -6,9 +6,10 @@ from typing import Optional, Sequence
 
 import tensorflow as tf
 
+from tfts.tasks.auto import AutoModel
+
 from ..data import get_data
 from ..models.auto_config import AutoConfig
-from ..models.auto_model import AutoModel
 from ..training import Trainer, set_seed
 
 logger = logging.getLogger(__name__)

@@ -6,11 +6,12 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import GraphStructure, ModelInputSpec, SpatialArrangement, TimeSeriesBatch, TopologyInput
+from tfts.batch import TimeSeriesBatch
+from tfts.config import BaseConfig
+from tfts.graph.structure import GraphStructure, SpatialArrangement, TopologyInput
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
-from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
-from tfts.models.base import BaseConfig
-from tfts.models.registry import (
+from tfts.models.base import ModelInputSpec
+from tfts.models.catalog import (
     MODEL_REGISTRY,
     check_batch_support,
     get_config_class,
@@ -18,6 +19,7 @@ from tfts.models.registry import (
     get_model_info,
     list_models,
 )
+from tfts.tasks.auto import MODEL_MAPPING_NAMES, AutoModel
 
 
 class TestAutoModel(unittest.TestCase):

@@ -4,8 +4,9 @@ from typing import Optional, Sequence, Tuple
 
 import tensorflow as tf
 
-from tfts.contracts import ForecastOutput, OutputPort
 from tfts.distributions import DistributionOutput, NormalOutput
+from tfts.forecast import ForecastOutput
+from tfts.models.base import OutputPort
 from tfts.registry import ComponentSpec, register_head
 
 from .base import BaseHead

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
-from tfts.features.datetime_feature import add_datetime_feature
+from tfts.data.features.calendar import add_datetime_feature
 
 
 class TestDatetimeFeatures(unittest.TestCase):

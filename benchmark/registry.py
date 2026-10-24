@@ -4,7 +4,7 @@ import logging
 from typing import Callable, Dict, List, Optional, Type, Union
 
 from benchmark.base import Dataset
-from tfts.models.auto_model import MODEL_MAPPING_NAMES
+from tfts.tasks.auto import MODEL_MAPPING_NAMES
 
 logger = logging.getLogger(__name__)
 

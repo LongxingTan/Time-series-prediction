@@ -7,7 +7,6 @@ from typing import Any, Optional, Protocol
 
 import tensorflow as tf
 
-from tfts.contracts.decoding import DecodeSession as _DecodeSession, DecodeStepOutput as _StepOutput  # noqa: F401
 from tfts.registry import register_decoder, resolve
 
 from .chunk import Chunk, State

@@ -7,7 +7,8 @@ from typing import NamedTuple, Protocol
 
 import tensorflow as tf
 
-from tfts.contracts import ModelOutput, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.models.base import ModelOutput
 from tfts.registry import register_objective
 
 

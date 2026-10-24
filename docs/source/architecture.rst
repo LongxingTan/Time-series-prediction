@@ -165,7 +165,7 @@ of maintaining another task table. The supported task vocabulary remains the
 validating the requested mode and backbone capabilities.
 
 Incremental backbones share ``DecodeSession`` and ``DecodeStepOutput`` from
-``tfts.contracts.decoding`` instead of importing private generation types.
+``tfts.models._autoregressive`` instead of importing private generation types.
 The old internal names remain aliases during migration.
 
 A decoder exposes ``output_chunk_length``, optional ``output_distribution``,

@@ -191,6 +191,7 @@ User Guide
    :caption: Additional Information
 
    architecture
+   design/fork-architecture
    faq
 
 
@@ -261,37 +262,23 @@ samples at inference time for confidence intervals:
 
 **Feature Engineering**
 
-Use :class:`tfts.features.AutoFeatureEngineer` to create lag, rolling and
-datetime features, then window the result with ``TimeSeriesSequence``:
+Use the fitted dataframe pipeline for schema validation, temporal splitting,
+training-only scaling, and lazy windows.
 
 .. code-block:: python
 
    import numpy as np
    import pandas as pd
-   from tfts.features import AutoFeatureEngineer
-   from tfts.data import TimeSeriesSequence
+   from tfts.data import FramePipeline, Schema
 
    df = pd.DataFrame({
-       "timestamp": pd.date_range("2020-01-01", periods=1000, freq="h"),
-       "target": np.random.randn(1000).cumsum(),
+       "timestamp": pd.date_range("2020-01-01", periods=400, freq="h"),
+       "value": np.random.default_rng(7).normal(size=400).cumsum(),
    })
-
-   engineer = AutoFeatureEngineer(
-       lags=[1, 2, 3, 7, 14],
-       windows=[7, 14],
-       rolling_functions=["mean", "std"],
-       add_datetime=True,
-       datetime_features=["hour", "dayofweek", "month"],
-   )
-   df = engineer.fit_transform(df, time_col="timestamp", target_col="target")
-
-   data_loader = TimeSeriesSequence(
-       df,
-       target_column="target",
-       time_idx="timestamp",
-       train_sequence_length=24,
-       predict_sequence_length=8,
-   )
+   pipeline = FramePipeline(Schema("timestamp", ("value",)), context=24, horizon=8)
+   prepared, train_windows, valid_windows = pipeline.fit(df, validation=0.2)
+   train = pipeline.dataset(prepared, train_windows, batch_size=16, shuffle=True)
+   valid = pipeline.dataset(prepared, valid_windows, batch_size=16)
 
 
 Community and Support

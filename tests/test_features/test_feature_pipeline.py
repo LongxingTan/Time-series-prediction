@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 
 from tfts import AutoConfig, AutoModelForForecasting
-from tfts.contracts import ModelInputSpec
 from tfts.data import SequenceMaterializer, TabularMaterializer, WindowIndexer, WindowSpec
-from tfts.features import (
+from tfts.data.features import (
     CategoricalEncoderTransform,
     DatetimeTransform,
     FeatureDType,
@@ -19,10 +18,11 @@ from tfts.features import (
     FeatureSpec,
     LagTransform,
     RollingTransform,
-    TimeSeriesSchema,
-    resolve_feature_plan,
+    Schema,
 )
-from tfts.models import resolve_model_features
+from tfts.data.pipeline import index_frame
+from tfts.estimator.compat import resolve_feature_plan, resolve_model_features
+from tfts.models.base import ModelInputSpec
 
 
 class FeaturePipelineTest(unittest.TestCase):
@@ -36,7 +36,7 @@ class FeaturePipelineTest(unittest.TestCase):
                 "temperature": np.linspace(10, 20, 24),
             }
         )
-        self.schema = TimeSeriesSchema(
+        self.schema = Schema(
             time_col="time",
             target_cols=("sales",),
             features=(
@@ -96,7 +96,7 @@ class FeaturePipelineTest(unittest.TestCase):
     def test_categorical_encoder_reuses_training_codes_and_handles_unknowns(self):
         frame = self.frame.copy()
         frame["store_type"] = ["urban", "rural"] * 12
-        schema = TimeSeriesSchema(
+        schema = Schema(
             "time",
             ("sales",),
             (FeatureSpec("store_type", FeatureRole.KNOWN_FUTURE, FeatureDType.CATEGORICAL),),
@@ -117,7 +117,7 @@ class FeaturePipelineTest(unittest.TestCase):
     def test_categorical_encoder_reserves_configured_unknown_code(self):
         frame = self.frame.copy()
         frame["store_type"] = ["urban", "rural"] * 12
-        schema = TimeSeriesSchema(
+        schema = Schema(
             "time",
             ("sales",),
             (FeatureSpec("store_type", FeatureRole.KNOWN_FUTURE, FeatureDType.CATEGORICAL),),
@@ -173,7 +173,7 @@ class FeaturePipelineTest(unittest.TestCase):
         self.assertEqual(rnn_plan.feature_names, ("temperature",))
 
     def test_deep_ar_rejects_unsupported_static_real_and_multivariate_targets(self):
-        schema = TimeSeriesSchema(
+        schema = Schema(
             "time",
             ("sales",),
             (FeatureSpec("store_size", FeatureRole.STATIC),),
@@ -182,7 +182,7 @@ class FeaturePipelineTest(unittest.TestCase):
         self.assertEqual(plan.feature_names, ())
         self.assertIn("dtype", plan.excluded["store_size"])
 
-        multivariate = TimeSeriesSchema("time", ("sales", "returns"))
+        multivariate = Schema("time", ("sales", "returns"))
         with self.assertRaisesRegex(ValueError, "multivariate targets"):
             resolve_model_features("deep_ar", multivariate, unsupported="drop")
 
@@ -200,7 +200,7 @@ class MaterializerTest(unittest.TestCase):
                 "static_cat": np.full(18, 4),
             }
         )
-        schema = TimeSeriesSchema(
+        schema = Schema(
             "time",
             ("target",),
             (
@@ -214,7 +214,7 @@ class MaterializerTest(unittest.TestCase):
 
     def test_same_windows_materialize_to_2d_and_3d(self):
         prepared = self._prepared()
-        windows = WindowIndexer().build(prepared, WindowSpec(context_length=4, prediction_length=3))
+        windows = index_frame(prepared, WindowSpec(context_length=4, prediction_length=3))
         tabular = TabularMaterializer().materialize(prepared, windows)
         sequence = SequenceMaterializer().materialize(prepared, windows)
 
@@ -230,7 +230,7 @@ class MaterializerTest(unittest.TestCase):
 
     def test_future_targets_cannot_change_model_inputs(self):
         prepared = self._prepared()
-        windows = WindowIndexer().build(prepared, WindowSpec(4, 2))
+        windows = index_frame(prepared, WindowSpec(4, 2))
         baseline = TabularMaterializer().materialize(prepared, windows)
         changed_frame = prepared.frame.copy()
         last_decoder = list(windows.windows[0].decoder_indices)
@@ -249,7 +249,7 @@ class MaterializerTest(unittest.TestCase):
         future["known_real"] = [2.0, 3.0]
         future["known_cat"] = [1, 2]
         inference = type(prepared)(pd.concat([prepared.frame, future], ignore_index=True), prepared.manifest)
-        windows = WindowIndexer().build(inference, WindowSpec(4, 2, mode="predict"))
+        windows = index_frame(inference, WindowSpec(4, 2, mode="predict"))
         batch = SequenceMaterializer().materialize(inference, windows)
 
         self.assertIsNone(batch.labels)
@@ -258,7 +258,7 @@ class MaterializerTest(unittest.TestCase):
 
     def test_tf_dataset_retains_teacher_forcing_values_for_deep_ar(self):
         prepared = self._prepared()
-        windows = WindowIndexer().build(prepared, WindowSpec(4, 2))
+        windows = index_frame(prepared, WindowSpec(4, 2))
         batch = SequenceMaterializer().materialize(
             prepared,
             windows,

@@ -3,9 +3,10 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.graph.structure import GraphStructure
 from tfts.layers import FoldSpatialToBatch, UnfoldBatchToSpatial
-from tfts.models.adapters import SpatialBatchTransform
+from tfts.models._adapters import SpatialBatchTransform
 
 
 class FoldLayerTest(unittest.TestCase):

@@ -8,11 +8,11 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec
+from tfts.config import CommonConfig
 from tfts.layers.autoformer_layer import SeriesDecomp
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class DLinearConfig(CommonConfig):

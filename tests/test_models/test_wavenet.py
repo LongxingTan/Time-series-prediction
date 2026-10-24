@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
 from tfts.models.wavenet import Decoder, Encoder, WaveNet, WaveNetConfig
 
 

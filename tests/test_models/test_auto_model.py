@@ -12,13 +12,11 @@ from tfts import (
     AutoModelForImputation,
     AutoModelForTimeSeriesClassification,
 )
-from tfts.contracts import (
-    AnomalyDetectionOutput,
-    ClassificationOutput,
-    ForecastOutput,
-    ImputationOutput,
-    TimeSeriesBatch,
-)
+from tfts.batch import TimeSeriesBatch
+from tfts.forecast import ForecastOutput
+from tfts.tasks.anomaly import AnomalyDetectionOutput
+from tfts.tasks.classification import ClassificationOutput
+from tfts.tasks.imputation import ImputationOutput
 
 
 class TestAutoModel(unittest.TestCase):

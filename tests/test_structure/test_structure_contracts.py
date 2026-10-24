@@ -2,8 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, SpatialArrangement
-from tfts.contracts.structure import SpatialStructure
+from tfts.graph.structure import GraphStructure, SpatialArrangement, SpatialStructure
 
 
 class StructureContractTest(unittest.TestCase):

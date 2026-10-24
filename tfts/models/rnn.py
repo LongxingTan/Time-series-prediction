@@ -8,11 +8,11 @@ from typing import Literal, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, Dense, Reshape
 
-from tfts.contracts import BackboneCapabilities, OutputPort
+from tfts.config import CommonConfig
 from tfts.layers.rnn_layer import Encoder
+from tfts.models.base import BackboneCapabilities, BaseModel, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class RNNConfig(CommonConfig):

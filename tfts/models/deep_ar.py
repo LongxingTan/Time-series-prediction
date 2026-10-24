@@ -13,12 +13,13 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import RNN, Concatenate, Embedding, Lambda, LSTMCell
 
-from tfts.contracts import BackboneCapabilities, ForecastOutput, ModelInputSpec, OutputPort
-from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
+from tfts.config import CommonConfig
+from tfts.forecast import ForecastOutput
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec, OutputPort
 
 from ..distributions import NormalOutput
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from ._autoregressive import DecodeSession, DecodeStepOutput
+from .catalog import register_model
 
 
 class DeepARConfig(CommonConfig):
@@ -255,7 +256,7 @@ class DeepAR(BaseModel):
 
     def decode_step(self, previous, state, context, *, offset, training=False):
         params, state = self._decode_target(previous, context, state, training=training)
-        return StepOutput(
+        return DecodeStepOutput(
             self.output_distribution.mean(params),
             state=tuple(tuple(s) for s in state),
             distribution=self.output_distribution,

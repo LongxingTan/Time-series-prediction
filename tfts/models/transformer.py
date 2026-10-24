@@ -9,15 +9,21 @@ from typing import Any, Dict, List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization, MultiHeadAttention
 
-from tfts.contracts import ForecastOutput
-from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
+from tfts.config import CommonConfig
+from tfts.forecast import ForecastOutput
 from tfts.layers.attention_layer import SelfAttention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 
-from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features
-from .base import CommonConfig
-from .registry import register_model
+from ._autoregressive import (
+    AUTOREGRESSIVE_CAPABILITIES,
+    AutoregressiveModel,
+    DecodeSession,
+    DecodeStepOutput,
+    decoder_features,
+    encoder_features,
+)
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 
@@ -378,13 +384,13 @@ class Decoder(tf.keras.layers.Layer):
             x = self.embed(state[:, : offset + 1, :])
             for block in self.blocks:
                 x, _ = block(x, memory, training=training)
-            return StepOutput(self.projection(x[:, -1:, :]), state=state)
+            return DecodeStepOutput(self.projection(x[:, -1:, :]), state=state)
         x = self.embed(values, offset)
         caches = []
         for block, cache in zip(self.blocks, state):
             x, cache = block(x, memory, cache=cache, offset=offset, training=training)
             caches.append(cache)
-        return StepOutput(self.projection(x), state=tuple(caches))
+        return DecodeStepOutput(self.projection(x), state=tuple(caches))
 
     def get_config(self):
         config = super().get_config()

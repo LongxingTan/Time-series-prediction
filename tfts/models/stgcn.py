@@ -4,11 +4,12 @@ from typing import Optional
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort, SpatialArrangement, TopologyInput
+from tfts.config import CommonConfig
+from tfts.graph.structure import SpatialArrangement, TopologyInput
 from tfts.layers import AdjacencyPolynomialConv
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class STGCNConfig(CommonConfig):

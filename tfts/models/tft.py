@@ -9,10 +9,10 @@ from typing import List, Optional, Sequence
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort
+from tfts.config import CommonConfig
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class TFTransformerConfig(CommonConfig):

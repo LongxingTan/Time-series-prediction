@@ -9,7 +9,9 @@ class PackageInitTest(unittest.TestCase):
         tfts = importlib.reload(__import__("tfts"))
         self.assertEqual(tfts.__version__, "0.0.5")
         self.assertIn("Trainer", tfts.__all__)
-        self.assertIn("BenchmarkRunner", tfts.__all__)
+        self.assertNotIn("BenchmarkRunner", tfts.__all__)
+        self.assertIn("FramePipeline", tfts.__all__)
+        self.assertIn("TemporalSplit", tfts.__all__)
         self.assertIn("Estimator", tfts.__all__)
         self.assertIn("Forecaster", tfts.__all__)
 

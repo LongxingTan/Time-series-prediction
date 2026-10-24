@@ -71,7 +71,7 @@ The fastest way to train and forecast is the estimator API:
    forecaster = tfts.Forecaster(
        model="dlinear",
        context=24,
-       schema=tfts.TimeSeriesSchema("timestamp", ("sales",)),
+       schema=tfts.Schema("timestamp", ("sales",)),
        horizon=8,
        learning_rate=1e-3,
        epochs=10,
@@ -114,41 +114,22 @@ Available datasets include ``"sine"`` and ``"airpassengers"``.
 Your own data
 ~~~~~~~~~~~~~
 
-Feed a pandas ``DataFrame`` to ``TimeSeriesSequence`` which windows the series
-into ``(input, target)`` pairs and optional feature engineering:
+Prepare a dataframe with the same pipeline used by ``Forecaster``:
 
 .. code-block:: python
 
    import numpy as np
    import pandas as pd
-   from tfts.data import TimeSeriesSequence
-   from tfts.features import AutoFeatureEngineer
+   from tfts.data import FramePipeline, Schema
 
-   df = pd.DataFrame(
-       {
-           "timestamp": pd.date_range("2020-01-01", periods=400, freq="h"),
-           "value": np.random.randn(400).cumsum(),
-       }
-   )
-
-   # Engineers lags, rolling statistics and datetime features for you.
-   fe = AutoFeatureEngineer(
-       lags=[1, 2, 3, 24], windows=[6, 24],
-       rolling_functions=["mean", "std"], add_datetime=True,
-       datetime_features=["hour", "dayofweek", "month"],
-   )
-   df = fe.fit_transform(df, time_col="timestamp", target_col="value")
-
-   data_loader = TimeSeriesSequence(
-       df,
-       target_column="value",
-       time_idx="timestamp",
-       train_sequence_length=24,
-       predict_sequence_length=8,
-       batch_size=16,
-       mode="train",
-   )
-   # data_loader behaves like a tf.keras.utils.Sequence — usable with any trainer.
+   df = pd.DataFrame({
+       "timestamp": pd.date_range("2020-01-01", periods=400, freq="h"),
+       "value": np.random.default_rng(7).normal(size=400).cumsum(),
+   })
+   pipeline = FramePipeline(Schema("timestamp", ("value",)), context=24, horizon=8)
+   prepared, train_windows, valid_windows = pipeline.fit(df, validation=0.2)
+   train = pipeline.dataset(prepared, train_windows, batch_size=16, shuffle=True)
+   valid = pipeline.dataset(prepared, valid_windows, batch_size=16)
 
 .. _manual_api:
 
@@ -299,7 +280,7 @@ TFTS builds lag, rolling-window and datetime features automatically. See
 
 .. code-block:: python
 
-   from tfts.features import AutoFeatureEngineer
+   from tfts.data.features import AutoFeatureEngineer
    import pandas as pd
 
    df = pd.DataFrame({"timestamp": pd.date_range("2020-01-01", periods=300, freq="D"),

@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 
-from tfts.data.get_data import get_air_passengers, get_ar_data, get_data, get_sine, get_stock_data
+from tfts.datasets.prepared import get_air_passengers, get_data, get_sine
+from tfts.datasets.synthetic import load_ar
 
 
 class GetDataTest(unittest.TestCase):
@@ -106,7 +107,7 @@ class GetDataTest(unittest.TestCase):
 
     def test_get_ar_data_basic(self):
         """Test basic AR data generation"""
-        df = get_ar_data(n_series=5, timesteps=100)
+        df = load_ar(n_series=5, timesteps=100)
 
         self.assertIsInstance(df, pd.DataFrame)
         self.assertIn("series", df.columns)
@@ -116,7 +117,7 @@ class GetDataTest(unittest.TestCase):
 
     def test_get_ar_data_with_covariates(self):
         """Test AR data generation with covariates"""
-        df = get_ar_data(n_series=3, timesteps=50, add_covariates=True)
+        df = load_ar(n_series=3, timesteps=50, add_covariates=True)
 
         self.assertIn("day_of_week", df.columns)
         self.assertIn("month", df.columns)
@@ -130,7 +131,7 @@ class GetDataTest(unittest.TestCase):
 
     def test_get_ar_data_with_components(self):
         """Test AR data generation returning components"""
-        df, components = get_ar_data(n_series=3, timesteps=50, return_components=True)
+        df, components = load_ar(n_series=3, timesteps=50, return_components=True)
 
         self.assertIsInstance(components, dict)
         self.assertIn("linear_trends", components)
@@ -141,22 +142,22 @@ class GetDataTest(unittest.TestCase):
 
     def test_get_ar_data_exponential(self):
         """Test AR data with exponential transformation"""
-        df = get_ar_data(n_series=2, timesteps=50, exp=True)
+        df = load_ar(n_series=2, timesteps=50, exp=True)
 
         # Exponential values should all be positive
         self.assertTrue((df["value"] > 0).all())
 
     def test_get_ar_data_seeded_reproducibility(self):
         """Test that same seed produces same data"""
-        df1 = get_ar_data(n_series=3, timesteps=50, seed=42)
-        df2 = get_ar_data(n_series=3, timesteps=50, seed=42)
+        df1 = load_ar(n_series=3, timesteps=50, seed=42)
+        df2 = load_ar(n_series=3, timesteps=50, seed=42)
 
         pd.testing.assert_frame_equal(df1, df2)
 
     def test_get_ar_data_different_seeds(self):
         """Test that different seeds produce different data"""
-        df1 = get_ar_data(n_series=3, timesteps=50, seed=42)
-        df2 = get_ar_data(n_series=3, timesteps=50, seed=123)
+        df1 = load_ar(n_series=3, timesteps=50, seed=42)
+        df2 = load_ar(n_series=3, timesteps=50, seed=123)
 
         # Values should be different
         self.assertFalse(df1["value"].equals(df2["value"]))
@@ -164,19 +165,19 @@ class GetDataTest(unittest.TestCase):
     def test_get_ar_data_invalid_params(self):
         """Test AR data validation for invalid parameters"""
         with self.assertRaises(ValueError):
-            get_ar_data(n_series=0, timesteps=100)
+            load_ar(n_series=0, timesteps=100)
 
         with self.assertRaises(ValueError):
-            get_ar_data(n_series=5, timesteps=-10)
+            load_ar(n_series=5, timesteps=-10)
 
         with self.assertRaises(ValueError):
-            get_ar_data(n_series=5, timesteps=100, noise=-0.5)
+            load_ar(n_series=5, timesteps=100, noise=-0.5)
 
     def test_get_ar_data_parameter_effects(self):
         """Test that parameters affect data as expected"""
         # High noise should create more variance
-        df_low_noise = get_ar_data(n_series=5, timesteps=100, noise=0.01, seed=42)
-        df_high_noise = get_ar_data(n_series=5, timesteps=100, noise=1.0, seed=42)
+        df_low_noise = load_ar(n_series=5, timesteps=100, noise=0.01, seed=42)
+        df_high_noise = load_ar(n_series=5, timesteps=100, noise=1.0, seed=42)
 
         # Not directly comparing variance due to random effects,
         # but shapes should match

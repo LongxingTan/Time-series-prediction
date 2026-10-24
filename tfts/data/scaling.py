@@ -7,14 +7,16 @@ class ChannelScaler:
     """Scale each channel across samples and time, preserving constant signals."""
 
     def __init__(self, method="standard"):
-        if method not in {None, "standard", "minmax"}:
-            raise ValueError("normalize must be 'standard', 'minmax', or None")
+        if method not in {None, "standard", "minmax", "robust", "log1p"}:
+            raise ValueError("normalize must be standard, minmax, robust, log1p, or None")
         self.method = method
         self.offset = None
         self.scale = None
 
     def fit(self, values, sample_weight=None):
         values = np.asarray(values, dtype=np.float64)
+        if values.ndim < 1 or not values.size:
+            raise ValueError("Scaler values must be nonempty with a channel axis")
         if np.isinf(values).any():
             raise ValueError("Scaler values must not contain Inf")
         valid = np.isfinite(values)
@@ -36,7 +38,11 @@ class ChannelScaler:
                 offset, scale = observed.mean(), observed.std()
             elif self.method == "minmax":
                 offset, scale = observed.min(), np.ptp(observed)
+            elif self.method == "robust":
+                offset, scale = np.median(observed), np.subtract(*np.percentile(observed, [75, 25]))
             else:
+                if self.method == "log1p" and (observed <= -1).any():
+                    raise ValueError("log1p requires values greater than -1")
                 offset, scale = 0.0, 1.0
             offsets.append(offset)
             scales.append(scale if scale > 1e-8 else 1.0)
@@ -45,9 +51,22 @@ class ChannelScaler:
         return self
 
     def transform(self, values):
-        return (np.asarray(values, dtype=np.float32) - self.offset) / self.scale
+        if self.scale is None:
+            raise RuntimeError("Scaler is not fitted")
+        values = np.asarray(values, dtype=np.float32)
+        if values.shape[-1] != len(self.scale) or np.isinf(values).any():
+            raise ValueError("Scaler input width must match fitted channels and contain no Inf")
+        if self.method == "log1p":
+            if (values <= -1).any():
+                raise ValueError("log1p requires values greater than -1")
+            return np.log1p(values)
+        return (values - self.offset) / self.scale
 
     def inverse_transform(self, values):
+        if self.scale is None:
+            raise RuntimeError("Scaler is not fitted")
+        if self.method == "log1p":
+            return np.expm1(values)
         return values * self.scale + self.offset
 
     def to_dict(self):

@@ -2,9 +2,9 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import ClassificationOutput
 from tfts.models.auto_config import AutoConfig
-from tfts.models.auto_model import AutoModel
+from tfts.tasks.auto import AutoModel
+from tfts.tasks.classification import ClassificationOutput
 
 
 class TestTaskComposition(unittest.TestCase):

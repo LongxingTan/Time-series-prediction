@@ -16,13 +16,13 @@ from tensorflow.keras.layers import (
     MaxPool1D,
 )
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec
+from tfts.config import CommonConfig
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class InformerConfig(CommonConfig):

@@ -8,12 +8,12 @@ from typing import List, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv1D, Dense, Dropout, Lambda, ReLU
 
-from tfts.contracts import BackboneCapabilities, OutputPort
+from tfts.config import CommonConfig
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
+from tfts.models.base import BackboneCapabilities, BaseModel, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class TCNConfig(CommonConfig):

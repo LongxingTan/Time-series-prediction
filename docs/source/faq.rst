@@ -129,19 +129,22 @@ TFTS accepts multiple formats:
    x_train = np.array([...])  # Shape: (samples, timesteps, features)
    y_train = np.array([...])  # Shape: (samples, pred_length, 1)
 
-2. **Pandas DataFrames (via TimeSeriesSequence):**
+2. **Pandas DataFrames (via FramePipeline):**
 
 .. code-block:: python
 
-   from tfts.data import TimeSeriesSequence
+   import numpy as np
+   import pandas as pd
+   from tfts.data import FramePipeline, Schema
 
-   data_loader = TimeSeriesSequence(
-       data=df,
-       time_idx='timestamp',
-       target_column='target',
-       train_sequence_length=24,
-       predict_sequence_length=8
-   )
+   df = pd.DataFrame({
+       "timestamp": pd.date_range("2020-01-01", periods=400, freq="h"),
+       "value": np.random.default_rng(7).normal(size=400).cumsum(),
+   })
+   pipeline = FramePipeline(Schema("timestamp", ("value",)), context=24, horizon=8)
+   prepared, train_windows, valid_windows = pipeline.fit(df, validation=0.2)
+   train = pipeline.dataset(prepared, train_windows, batch_size=16, shuffle=True)
+   valid = pipeline.dataset(prepared, valid_windows, batch_size=16)
 
 3. **TensorFlow datasets:**
 

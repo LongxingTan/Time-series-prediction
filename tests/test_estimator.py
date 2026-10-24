@@ -12,11 +12,13 @@ import pandas as pd
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import BackboneCapabilities, ForecastOutput, OutputPort, TimeSeriesBatch
-from tfts.data.frame import FramePreprocessor
-from tfts.features import FeatureRole, FeatureSpec, TimeSeriesSchema
-from tfts.models.base import BaseModel, CommonConfig
-from tfts.models.registry import register_model
+from tfts.batch import TimeSeriesBatch
+from tfts.config import CommonConfig
+from tfts.data.features import FeatureRole, FeatureSpec, Schema
+from tfts.data.pipeline import FramePipeline
+from tfts.forecast import ForecastOutput
+from tfts.models.base import BackboneCapabilities, BaseModel, OutputPort
+from tfts.models.catalog import register_model
 from tfts.tasks.objectives import MeanSquaredError, QuantileObjective
 
 
@@ -29,12 +31,12 @@ class EstimatorTest(unittest.TestCase):
         self.frame = pd.DataFrame(
             {"date": pd.date_range("2024-01-01", periods=32), "value": np.arange(32, dtype=float)}
         )
-        self.schema = TimeSeriesSchema("date", ("value",))
+        self.schema = Schema("date", ("value",))
 
     def test_constructor_is_inert_and_fitted_parameters_are_separate(self):
         config = tfts.AutoConfig.for_model("rnn")
         original = copy.deepcopy(config.to_dict())
-        with mock.patch("tfts.estimator.tf.keras.utils.set_random_seed") as seed:
+        with mock.patch("tfts.estimator.estimator.tf.keras.utils.set_random_seed") as seed:
             estimator = tfts.Estimator(config=config, epochs=1)
             self.assertFalse(hasattr(estimator, "model_"))
             seed.assert_not_called()
@@ -163,7 +165,7 @@ class EstimatorTest(unittest.TestCase):
                 tfts.Forecaster.load(directory)
 
     def test_temporal_partition_uses_context_before_validation_cutoff(self):
-        processor = FramePreprocessor(self.schema, 4, 3)
+        processor = FramePipeline(self.schema, 4, 3)
         _, train, valid = processor.fit(self.frame, validation=0.25)
         self.assertEqual(max(window.decoder_indices[-1] for window in train.windows), 23)
         self.assertEqual(valid.windows[0].encoder_indices[0], 20)
@@ -172,7 +174,7 @@ class EstimatorTest(unittest.TestCase):
 
     def test_known_future_covariates_are_explicit_and_saved(self):
         frame = self.frame.assign(promotion=np.arange(32) % 2)
-        schema = TimeSeriesSchema("date", ("value",), (FeatureSpec("promotion", FeatureRole.KNOWN_FUTURE),))
+        schema = Schema("date", ("value",), (FeatureSpec("promotion", FeatureRole.KNOWN_FUTURE),))
         estimator = tfts.Forecaster("tide", context=4, horizon=2, schema=schema, epochs=1, hidden_size=8, num_layers=1)
         estimator.fit(frame, verbose=0)
         with self.assertRaisesRegex(ValueError, "future"):
@@ -200,7 +202,7 @@ class EstimatorTest(unittest.TestCase):
 
     def test_short_prediction_history_reuses_fitted_frequency(self):
         for context in (1, 2):
-            processor = FramePreprocessor(self.schema, context, 2)
+            processor = FramePipeline(self.schema, context, 2)
             processor.fit(self.frame)
             _, windows, dates = processor.prediction(self.frame.tail(context))
             self.assertEqual(len(windows), 1)
@@ -246,9 +248,9 @@ class EstimatorTest(unittest.TestCase):
             np.testing.assert_allclose(restored.predict(self.x), estimator.predict(self.x), atol=1e-6)
 
     def test_lazy_windows_match_eager_materialization(self):
-        from tfts.data.materializers import SequenceMaterializer
+        from tfts.data.tf_dataset import SequenceMaterializer
 
-        processor = FramePreprocessor(self.schema, 4, 2)
+        processor = FramePipeline(self.schema, 4, 2)
         prepared, windows, _ = processor.fit(self.frame)
         eager = SequenceMaterializer().materialize(prepared, windows, plan=processor.plan)
         batches = list(processor.dataset(prepared, windows, batch_size=7))
@@ -280,9 +282,9 @@ class EstimatorTest(unittest.TestCase):
                 )
                 return {"sequence_output": sequence, "native_forecast": forecast}
 
-        from tfts.models import registry
+        from tfts import registry
 
-        self.addCleanup(registry._ENTRIES.pop, TinyConfig.model_type)
+        self.addCleanup(registry._REGISTRY["backbone"].pop, TinyConfig.model_type)
         for task, target in (("forecasting", self.y), ("sequence_regression", self.x[..., :2])):
             with self.subTest(task=task):
                 estimator = tfts.Estimator(task, TinyConfig.model_type, epochs=1)

@@ -7,7 +7,8 @@ import numpy as np
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import ForecastOutput, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.forecast import ForecastOutput
 from tfts.tasks.objectives import SequenceMeanSquaredError
 
 
