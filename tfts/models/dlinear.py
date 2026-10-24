@@ -8,10 +8,11 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda
 
+from tfts.config import CommonConfig
 from tfts.layers.autoformer_layer import SeriesDecomp
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class DLinearConfig(CommonConfig):
@@ -56,6 +57,12 @@ def _uniform_avg_init(shape, dtype=None):
 @register_model(
     "dlinear",
     config=DLinearConfig,
+    capabilities=BackboneCapabilities(
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset(),
+            requires_target_history=True,
+        )
+    ),
     paper="https://arxiv.org/abs/2205.13504",
     tags=("linear", "simple", "baseline", "SOTA"),
     tier="core",
@@ -70,21 +77,22 @@ class DLinear(BaseModel):
         self.target_dim = self.config.target_dim
 
         self.decomposition = SeriesDecomp(self.config.kernel_size)
-        if self.config.individual:
-            self.linear_seasonal = [
-                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
-                for _ in range(self.config.channels)
-            ]
-            self.linear_trend = [
-                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
-                for _ in range(self.config.channels)
-            ]
-        else:
+        self.linear_seasonal = None
+        self.linear_trend = None
+        if not self.config.individual:
             self.linear_seasonal = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
             self.linear_trend = Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init)
 
     def build(self, input_shape):
         self._validate_target_shape(input_shape)
+        self.channels = int(tf.TensorShape(input_shape)[-1])
+        if self.config.individual:
+            self.linear_seasonal = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init) for _ in range(self.channels)
+            ]
+            self.linear_trend = [
+                Dense(self.predict_sequence_length, kernel_initializer=_uniform_avg_init) for _ in range(self.channels)
+            ]
         super().build(input_shape)
 
     def call(self, inputs: tf.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
@@ -111,7 +119,7 @@ class DLinear(BaseModel):
         if self.config.individual:
             seasonal_output = []
             trend_output = []
-            for i in range(self.config.channels):
+            for i in range(self.channels):
                 seasonal_output.append(self.linear_seasonal[i](seasonal[:, i, :]))
                 trend_output.append(self.linear_trend[i](trend[:, i, :]))
             seasonal_output = tf.stack(seasonal_output, axis=1)

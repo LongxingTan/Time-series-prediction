@@ -1,3 +1,6 @@
+from tfts.data import FramePipeline, Schema
+from tfts.data.pipeline import index_frame
+
 """Test the TFT model"""
 
 import unittest
@@ -7,8 +10,8 @@ import pandas as pd
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer, TimeSeriesBatch
-from tfts.data import SequenceMaterializer, TimeSeriesSequence, WindowIndexer, WindowSpec, get_data
-from tfts.features import FeatureDType, FeaturePipeline, FeatureRole, FeatureSpec, TimeSeriesSchema
+from tfts.data import SequenceMaterializer, WindowIndexer, WindowSpec, get_data
+from tfts.data.features import FeatureDType, FeaturePipeline, FeatureRole, FeatureSpec
 from tfts.models.tft import TFTransformer, TFTransformerConfig
 from tfts.training import TrainingArguments
 
@@ -112,7 +115,7 @@ class TFTransformerTest(unittest.TestCase):
                 "known_cat": np.arange(12) % 3,
             }
         )
-        schema = TimeSeriesSchema(
+        schema = Schema(
             "time",
             ("target",),
             (
@@ -121,7 +124,7 @@ class TFTransformerTest(unittest.TestCase):
             ),
         )
         prepared = FeaturePipeline().fit_transform(frame, schema)
-        windows = WindowIndexer().build(prepared, WindowSpec(4, 2))
+        windows = index_frame(prepared, WindowSpec(4, 2))
         batch = SequenceMaterializer().materialize(prepared, windows)
         config = TFTransformerConfig(
             encoder_real_dim=1,
@@ -144,18 +147,14 @@ class TFTransformerTest(unittest.TestCase):
         train_sequence_length = 16
         predict_sequence_length = 4
 
-        ts_sequence = TimeSeriesSequence(
-            data=data,
-            time_idx="time_idx",
-            target_column="value",
-            train_sequence_length=train_sequence_length,
-            predict_sequence_length=predict_sequence_length,
-            batch_size=16,
-            group_column=["series"],  # Group by series ID
+        pipeline = FramePipeline(
+            Schema("time_idx", ("value",), group_cols=("series",)), train_sequence_length, predict_sequence_length
         )
+        prepared, windows, _ = pipeline.fit(data, validation=0)
+        ts_sequence = pipeline.dataset(prepared, windows, batch_size=16)
 
         config = AutoConfig.for_model("tft")
-        config.encoder_input_dim = ts_sequence[0][0].shape[-1]
+        config.encoder_input_dim = 1
 
         model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
         trainer = KerasTrainer(model, args=_SINGLE_DEVICE_ARGS)

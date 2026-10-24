@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from tfts.features.auto_feature import AutoFeatureEngineer, _default_datetime_features, _default_fourier_features
+from tfts.data.features.auto import AutoFeatureEngineer, _default_datetime_features, _default_fourier_features
 
 
 class AutoFeatureEngineerTest(unittest.TestCase):
@@ -30,13 +30,25 @@ class AutoFeatureEngineerTest(unittest.TestCase):
         )
         result = engineer.fit_transform(self.df, time_col="date", target_col="value")
 
-        self.assertEqual(len(result), len(self.df) - 1)
+        self.assertEqual(len(result), len(self.df) - 2)
         self.assertIn("value_lag_1", result.columns)
         self.assertIn("value_roll_2_max", result.columns)
         self.assertIn("date_month", result.columns)
         self.assertIn("date_month_sin", result.columns)
         self.assertEqual(len(engineer.get_feature_names()), len(result.columns) - 2)
         self.assertIn("fitted", repr(engineer))
+
+    def test_preserves_missing_rows_and_uses_only_past_values(self):
+        frame = self.df.copy()
+        frame.loc[5, "value"] = np.nan
+        engineer = AutoFeatureEngineer(lags=[1], windows=[2])
+        result = engineer.fit_transform(frame, time_col="date", target_col="value")
+        self.assertEqual(len(result), len(frame) - 2)
+        self.assertTrue(pd.isna(result.loc[result.date == frame.date[5], "value"].iloc[0]))
+        self.assertEqual(result.iloc[0]["value_roll_2_mean"], 0.5)
+        changed = frame.copy()
+        changed.loc[8:, "value"] = 10000
+        pd.testing.assert_frame_equal(result.iloc[:6], engineer.transform(changed).iloc[:6])
 
     def test_rolling_function_variants_and_datetime_defaults(self):
         self.assertEqual(AutoFeatureEngineer(rolling_functions="median")._resolve_rolling_functions(), ["median"])
@@ -61,7 +73,7 @@ class AutoFeatureEngineerTest(unittest.TestCase):
         engineer = AutoFeatureEngineer(lags=[1], windows=[2], group_cols=["group"])
         result = engineer.fit_transform(df, time_col="date", target_col="value")
         self.assertEqual(set(result["group"]), {"a", "b"})
-        self.assertEqual(result.loc[result["group"] == "b", "value_lag_1"].iloc[0], 10.0)
+        self.assertEqual(result.loc[result["group"] == "b", "value_lag_1"].iloc[0], 20.0)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,8 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, SpatialArrangement, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.graph.structure import GraphStructure, SpatialArrangement
 
 
 class BatchStructureTest(unittest.TestCase):

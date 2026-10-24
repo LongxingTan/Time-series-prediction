@@ -4,8 +4,8 @@ from dataclasses import fields, replace
 
 import tensorflow as tf
 
-from tfts.contracts import TimeSeriesBatch
-from tfts.data.sequence_utils import pad_sequences
+from tfts.batch import TimeSeriesBatch
+from tfts.data.padding import pad_sequences
 from tfts.registry import ComponentSpec, build, resolve
 
 from .config import GenerationConfig
@@ -144,7 +144,7 @@ def generate(
             kwargs = dict(spec.kwargs)
             if spec.name == "inverse_scale":
                 kwargs.setdefault("scaler", scaler)
-            component = resolve("transform", spec.name).factory(**kwargs)
+            component = resolve("postprocessor", spec.name).factory(**kwargs)
         if getattr(component, "requires_fit", False) and not getattr(component, "is_fitted", False):
             raise RuntimeError(f"{type(component).__name__} must be fitted before use")
         result = component(result)

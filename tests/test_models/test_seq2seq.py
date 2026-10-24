@@ -2,8 +2,9 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneOutput, TimeSeriesBatch
-from tfts.models.seq2seq import Decoder, Encoder, Seq2seq
+from tfts.batch import TimeSeriesBatch
+from tfts.models.base import BackboneOutput
+from tfts.models.seq2seq import Decoder, Encoder, Seq2seq, Seq2seqConfig
 
 
 class Seq2seqTest(unittest.TestCase):
@@ -30,6 +31,18 @@ class Seq2seqTest(unittest.TestCase):
         y = model(batch=TimeSeriesBatch(x))
         self.assertIsInstance(y, BackboneOutput)
         self.assertEqual(y.native_forecast.shape, (2, predict_sequence_length, 1))
+
+    def test_first_call_inside_tf_function(self):
+        for rnn_type in ("gru", "lstm"):
+            with self.subTest(rnn_type=rnn_type):
+                model = Seq2seq(predict_sequence_length=3, config=Seq2seqConfig(rnn_type=rnn_type))
+
+                @tf.function(input_signature=[tf.TensorSpec([None, 8, 1], tf.float32)])
+                def forecast(values):
+                    return model(values).native_forecast
+
+                self.assertEqual(forecast(tf.ones([2, 8, 1])).shape, (2, 3, 1))
+                self.assertEqual(forecast(tf.ones([1, 8, 1])).shape, (1, 3, 1))
 
     def test_model_gru_attn(self):
         predict_sequence_length = 8

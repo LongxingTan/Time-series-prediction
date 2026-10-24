@@ -21,7 +21,8 @@ from typing import List, Sequence
 import numpy as np
 import tensorflow as tf
 
-from ..data.window_sampling import final_windows, sampled_windows
+from tfts.data.windows import final_windows, sampled_windows
+
 from ..losses.loss import smape_loss as _smape_loss_fn
 from ..models.base import BaseModel
 

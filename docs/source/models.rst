@@ -703,7 +703,7 @@ You can create custom models by combining TFTS components:
 
        def call(self, inputs):
            features = self.backbone(inputs)
-           return self.custom_head(features)
+           return self.custom_head(features.native_forecast)
 
 
 See Also

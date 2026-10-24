@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForForecasting
-from tfts.models.registry import get_model_capabilities, list_models
+from tfts.models.catalog import get_model_capabilities, list_models
 
 
 class RegistryShapeTest(unittest.TestCase):

@@ -41,7 +41,7 @@
 
 **Installation**
 
-- python >= 3.7
+- python >= 3.8
 - tensorflow >= 2.4
 
 ```shell
@@ -278,7 +278,7 @@ def build_model():
 
 ## Examples
 
-- [Forecasting](./examples/run_prediction_simple.py): train, restore, and forecast with either the pipeline or manual API
+- [Forecasting](./examples/run_prediction_simple.py): train, restore, and forecast with either the estimator or manual API
 - [Classification](./examples/run_classification.py): train, restore, and evaluate a FordA classifier
 - [Anomaly detection](./examples/run_anomaly.py): train, restore, calibrate, and score ECG windows
 - [Parameter tuning](./examples/run_tuner.py): save each Optuna trial and restore the best trial for inference

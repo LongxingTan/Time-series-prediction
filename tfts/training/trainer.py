@@ -31,17 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 def _output_tensor(output):
-    from tfts.contracts import AnomalyDetectionOutput, ClassificationOutput, ForecastOutput, ImputationOutput
-
-    if isinstance(output, ForecastOutput):
-        return output.predictions
-    if isinstance(output, ClassificationOutput):
-        return output.logits
-    if isinstance(output, ImputationOutput):
-        return output.imputed_values
-    if isinstance(output, AnomalyDetectionOutput):
-        return output.scores
-    return output
+    return output.prediction() if hasattr(output, "prediction") else output
 
 
 def set_seed(seed: int) -> None:

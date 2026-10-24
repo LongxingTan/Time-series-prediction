@@ -9,13 +9,19 @@ from typing import List, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Lambda, ReLU
 
-from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
+from tfts.config import CommonConfig
 from tfts.layers.cnn_layer import ConvTemp
 from tfts.layers.dense_layer import DenseTemp
 
-from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features
-from .base import CommonConfig
-from .registry import register_model
+from ._autoregressive import (
+    AUTOREGRESSIVE_CAPABILITIES,
+    AutoregressiveModel,
+    DecodeSession,
+    DecodeStepOutput,
+    decoder_features,
+    encoder_features,
+)
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +224,7 @@ class Decoder(tf.keras.layers.Layer):
             x = x + residual
             skips.append(skip)
         value = self.dense6(self.dense5(tf.nn.relu(tf.concat(skips, axis=-1))))
-        return StepOutput(value[:, None, :], state=tuple(buffers))
+        return DecodeStepOutput(value[:, None, :], state=tuple(buffers))
 
     def get_config(self):
         config = super().get_config()

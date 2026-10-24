@@ -7,7 +7,7 @@ import numpy as np
 
 from benchmark.base import Dataset
 from benchmark.datasets.base import split_train_valid
-from tfts.data.get_data import get_air_passengers, get_sine
+from tfts.datasets.prepared import get_air_passengers, get_sine
 
 
 class SineDataset(Dataset):

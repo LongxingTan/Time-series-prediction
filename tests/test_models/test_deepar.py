@@ -4,7 +4,8 @@ import numpy as np
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModelForForecasting
-from tfts.contracts import ForecastOutput, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.forecast import ForecastOutput
 from tfts.generation import GenerationConfig, MedianSamples
 
 

@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tfts.contracts import ForecastOutput
 from tfts.distributions import NormalOutput
+from tfts.forecast import ForecastOutput
 from tfts.tasks.anomaly import QuantileCalibrator, SquaredErrorScorer
 from tfts.tasks.auto_task import (
     ClassificationHead,

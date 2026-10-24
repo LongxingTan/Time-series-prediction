@@ -18,11 +18,19 @@ tasks. Each workflow follows the same production-oriented lifecycle:
 | [Anomaly detection](./run_anomaly.py) | Detect unusual patterns | `python examples/run_anomaly.py` |
 | [Parameter tuning](./run_tuner.py) | Tune model parameters with Optuna | `python examples/run_tuner.py` |
 
-All examples accept `--output_dir` (the tuner uses it as the parent directory
+The four training examples above accept `--output_dir` (the tuner uses it as the parent directory
 for per-trial artifacts). The default output locations are under `./outputs/`.
 These paths can be changed when integrating the examples into a larger project.
 
+The spatial inference demo runs with `python examples/run_spatial.py` and uses
+synthetic graph data without training or saving.
+
 ## Save, load, and inference
+
+The default forecasting example uses `Forecaster.save(...)` and
+`Forecaster.load(...)` to persist the model and fitted preprocessing together.
+The manual forecasting path and the other training scripts use the lower-level
+model artifact shown below.
 
 `trainer.save_model(...)` writes a task-aware model directory containing the
 architecture configuration, task configuration, and TensorFlow weights. Load
@@ -76,7 +84,7 @@ print(result.labels.numpy())
 ```
 
 For a raw Keras `.keras` archive, use `model.save("model.keras")` and
-`tfts.load_model("model.keras", compile=False)`. The example scripts use the
+`tfts.load_model("model.keras", compile=False)`. The manual training scripts use the
 TFTS task-aware directory format because it restores the task head and is also
 usable for further fine-tuning.
 

@@ -2,8 +2,9 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import GraphStructure, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
 from tfts.data import SequenceMaterializer
+from tfts.graph.structure import GraphStructure
 
 
 class SpatialMaterializerTest(unittest.TestCase):

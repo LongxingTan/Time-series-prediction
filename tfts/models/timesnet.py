@@ -16,10 +16,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1D, Conv2D, Dense, Dropout, LayerNormalization
 
-from tfts.contracts import BackboneCapabilities, OutputPort
+from tfts.config import CommonConfig
+from tfts.models.base import BackboneCapabilities, BaseModel, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class PositionalEmbedding(tf.keras.layers.Layer):

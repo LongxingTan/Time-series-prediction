@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import numpy as np
 
-from tfts.contracts.structure import GraphStructure
+from tfts.graph.structure import GraphStructure
 
 
 def _adjacency(structure: GraphStructure):

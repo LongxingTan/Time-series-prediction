@@ -9,11 +9,13 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, LayerNormalization
 
+from tfts.config import CommonConfig
+from tfts.models.base import BaseModel
+
 from ..layers.attention_layer import SelfAttention
 from ..layers.dense_layer import FeedForwardNetwork
 from ..layers.embed_layer import DataEmbedding
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 

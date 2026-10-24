@@ -4,11 +4,12 @@ from typing import Optional
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort, SpatialArrangement, TopologyInput
+from tfts.config import CommonConfig
+from tfts.graph.structure import SpatialArrangement, TopologyInput
 from tfts.layers import AdjacencyPolynomialConv
+from tfts.models.base import BackboneCapabilities, BaseModel, ModelInputSpec, OutputPort
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class STGCNConfig(CommonConfig):
@@ -75,6 +76,7 @@ class _STGCNBlock(tf.keras.layers.Layer):
     capabilities=BackboneCapabilities(
         output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
         input_spec=ModelInputSpec(
+            accepted_roles=frozenset(),
             arrangement=SpatialArrangement.SET,
             accepted_topologies=frozenset({TopologyInput.DENSE_ADJACENCY}),
             supports_multivariate_target=False,

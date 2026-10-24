@@ -3,6 +3,7 @@
 # Directories to run style checks on
 CHECK_DIRS := tfts examples tests
 UV_RUN := uv run --frozen
+TESTS ?= discover
 
 ## Format code and run linting tools
 style:  ## Run formatters and linters (black, isort, flake8, pre-commit)
@@ -19,7 +20,7 @@ TEST_ENV := TF_ENABLE_ONEDNN_OPTS=0 TF_CPP_MIN_LOG_LEVEL=3 PYTHONWARNINGS=ignore
 
 ## Run all unit tests
 test:  ## Run unit tests without routine TensorFlow/Python warnings
-	$(TEST_ENV) $(UV_RUN) python -m unittest discover
+	$(TEST_ENV) $(UV_RUN) python -m unittest $(TESTS)
 
 test-coverage:  ## Run unit tests and report branch coverage for the package
 	$(TEST_ENV) $(UV_RUN) coverage run --branch --source=tfts -m unittest discover

@@ -9,12 +9,12 @@ from typing import Dict, Optional, Tuple
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Lambda, Reshape
 
-from tfts.contracts import BackboneCapabilities, OutputPort
+from tfts.config import CommonConfig
 from tfts.layers.embed_layer import DataEmbedding, TokenEmbedding
+from tfts.models.base import BackboneCapabilities, BaseModel, OutputPort
 from tfts.models.transformer import Encoder
 
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 

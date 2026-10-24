@@ -7,7 +7,7 @@ from typing import Any, Mapping, Optional, Tuple
 
 import tensorflow as tf
 
-from tfts.registry import register_transform
+from tfts.registry import register_postprocessor
 
 
 @dataclass(frozen=True)
@@ -90,7 +90,7 @@ class TrajectoryTransform:
             raise RuntimeError(f"{type(self).__name__} must be fitted before use")
 
 
-@register_transform("mean_samples")
+@register_postprocessor("mean_samples")
 class MeanSamples(TrajectoryTransform):
     def __call__(self, trajectory):
         if trajectory.samples is None:
@@ -98,7 +98,7 @@ class MeanSamples(TrajectoryTransform):
         return trajectory.replace(predictions=tf.reduce_mean(trajectory.samples, axis=1))
 
 
-@register_transform("median_samples")
+@register_postprocessor("median_samples")
 class MedianSamples(TrajectoryTransform):
     def __call__(self, trajectory):
         if trajectory.samples is None:
@@ -109,7 +109,7 @@ class MedianSamples(TrajectoryTransform):
         return trajectory.replace(predictions=median)
 
 
-@register_transform("inverse_scale")
+@register_postprocessor("inverse_scale")
 class InverseScale(TrajectoryTransform):
     def __init__(self, scaler=None):
         self.scaler = scaler
@@ -128,7 +128,7 @@ class InverseScale(TrajectoryTransform):
         )
 
 
-@register_transform("repair_quantile_crossing")
+@register_postprocessor("repair_quantile_crossing")
 class RepairQuantileCrossing(TrajectoryTransform):
     def __call__(self, trajectory):
         if trajectory.quantile_values is None:
@@ -136,7 +136,7 @@ class RepairQuantileCrossing(TrajectoryTransform):
         return trajectory.replace(quantile_values=tf.sort(trajectory.quantile_values, axis=-1))
 
 
-@register_transform("reconcile_hierarchy")
+@register_postprocessor("reconcile_hierarchy")
 class ReconcileHierarchy(TrajectoryTransform):
     def __init__(self, S):
         self.S = tf.convert_to_tensor(S)
@@ -149,7 +149,7 @@ class ReconcileHierarchy(TrajectoryTransform):
         return trajectory.replace(predictions=predictions, samples=samples)
 
 
-@register_transform("conformal_calibrate")
+@register_postprocessor("conformal_calibrate")
 class ConformalCalibrate(TrajectoryTransform):
     requires_fit = True
 
@@ -172,7 +172,7 @@ class ConformalCalibrate(TrajectoryTransform):
         return trajectory.replace(quantile_values=values, quantiles=(self.alpha / 2, 1 - self.alpha / 2))
 
 
-@register_transform("clip")
+@register_postprocessor("clip")
 class Clip(TrajectoryTransform):
     def __init__(self, minimum=None, maximum=None):
         if minimum is None and maximum is None:

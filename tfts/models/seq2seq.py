@@ -9,12 +9,18 @@ from typing import Optional
 import tensorflow as tf
 from tensorflow.keras.layers import GRU, LSTM, Dense, GRUCell, LSTMCell
 
-from tfts.contracts.decoding import DecodeSession, DecodeStepOutput as StepOutput
+from tfts.config import CommonConfig
 from tfts.layers.attention_layer import Attention
 
-from ._autoregressive import AUTOREGRESSIVE_CAPABILITIES, AutoregressiveModel, decoder_features, encoder_features
-from .base import CommonConfig
-from .registry import register_model
+from ._autoregressive import (
+    AUTOREGRESSIVE_CAPABILITIES,
+    AutoregressiveModel,
+    DecodeSession,
+    DecodeStepOutput,
+    decoder_features,
+    encoder_features,
+)
+from .catalog import register_model
 
 logger = logging.getLogger(__name__)
 
@@ -219,8 +225,12 @@ class Decoder(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         width = input_shape[-1] + self.target_dim + (self.attention_size if self.use_attention else 0)
-        self.rnn_cell.build([input_shape[0], width])
-        self.dense.build([input_shape[0], self.rnn_size])
+        # This decoder is built directly by initialize_decode, outside Keras'
+        # automatic build scope. Lift variable creation out of tracing so Keras 2
+        # does not pass a graph-only callable caching device to eager variables.
+        with tf.init_scope():
+            self.rnn_cell.build([input_shape[0], width])
+            self.dense.build([input_shape[0], self.rnn_size])
         super().build(input_shape)
 
     def step(self, previous, state, features, memory=None, training=None):
@@ -231,7 +241,7 @@ class Decoder(tf.keras.layers.Layer):
             query = tf.concat(state, axis=-1)[:, None, :]
             inputs.append(self.attention(query, memory, memory, training=training)[:, 0, :])
         hidden, state = self.rnn_cell(tf.concat(inputs, axis=-1), state, training=training)
-        return StepOutput(self.dense(hidden)[:, None, :], state=tuple(state))
+        return DecodeStepOutput(self.dense(hidden)[:, None, :], state=tuple(state))
 
     def get_config(self):
         config = super().get_config()

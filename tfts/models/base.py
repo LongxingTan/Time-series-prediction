@@ -1,20 +1,125 @@
-"""Base class for config and model"""
+"""Shared model contracts and the base model implementation."""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from dataclasses import dataclass, field, fields, replace
+from enum import Enum
 from functools import wraps
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Union
+from types import MappingProxyType
+from typing import Any, Dict, FrozenSet, Optional, Tuple, Union
 
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Lambda
+
+from tfts.config import BaseConfig
+from tfts.graph.structure import SpatialArrangement, TopologyInput
 
 from ..constants import CONFIG_NAME, TF2_WEIGHTS_INDEX_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME
 from ..layers.util_layer import CreateDecoderFeature
 
 logger = logging.getLogger(__name__)
+
+
+class OutputPort(str, Enum):
+    SEQUENCE = "sequence"
+    TEMPORAL_SEQUENCE = "temporal_sequence"
+    POOLED = "pooled"
+    NATIVE_FORECAST = "native_forecast"
+    DISTRIBUTION = "distribution"
+
+
+@dataclass(frozen=True)
+class ModelInputSpec:
+    """Feature roles and datatypes one model implementation can consume."""
+
+    accepted_roles: FrozenSet[str] = frozenset({"observed_past"})
+    supports_categorical: bool = False
+    supports_static: bool = False
+    supports_multivariate_target: bool = True
+    requires_target_history: bool = False
+    requires_matching_time_features: bool = False
+    accepted_dtypes_by_role: Mapping[str, FrozenSet[str]] = field(default_factory=dict)
+    arrangement: SpatialArrangement = SpatialArrangement.NONE
+    accepted_topologies: FrozenSet[TopologyInput] = frozenset({TopologyInput.NONE})
+    supports_dynamic_graph: bool = False
+    supports_node_mask: bool = False
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "accepted_roles",
+            frozenset(getattr(role, "value", role) for role in self.accepted_roles),
+        )
+        unknown_roles = set(self.accepted_roles) - {"observed_past", "known_future", "static"}
+        if unknown_roles:
+            raise ValueError(f"unknown feature roles: {sorted(unknown_roles)}")
+        if "static" in self.accepted_roles and not self.supports_static:
+            raise ValueError("accepted static features require supports_static=True")
+        accepted_dtypes = {
+            getattr(role, "value", role): frozenset(getattr(dtype, "value", dtype) for dtype in dtypes)
+            for role, dtypes in self.accepted_dtypes_by_role.items()
+        }
+        unknown_roles = set(accepted_dtypes) - set(self.accepted_roles)
+        if unknown_roles:
+            raise ValueError(f"dtype constraints reference unaccepted roles: {sorted(unknown_roles)}")
+        unknown_dtypes = set().union(*accepted_dtypes.values()) - {"real", "categorical", "boolean"}
+        if unknown_dtypes:
+            raise ValueError(f"unknown feature dtypes: {sorted(unknown_dtypes)}")
+        if not self.supports_categorical and any("categorical" in dtypes for dtypes in accepted_dtypes.values()):
+            raise ValueError("categorical dtype constraints require supports_categorical=True")
+        object.__setattr__(self, "accepted_dtypes_by_role", MappingProxyType(accepted_dtypes))
+        arrangement = SpatialArrangement.normalize(self.arrangement)
+        topologies = frozenset(TopologyInput.normalize(topology) for topology in self.accepted_topologies)
+        if not topologies:
+            raise ValueError("accepted_topologies cannot be empty")
+        if (self.supports_dynamic_graph or self.supports_node_mask) and (arrangement != SpatialArrangement.SET):
+            raise ValueError("graph capabilities require the set arrangement")
+        object.__setattr__(self, "arrangement", arrangement)
+        object.__setattr__(self, "accepted_topologies", topologies)
+
+
+@dataclass(frozen=True)
+class BackboneCapabilities:
+    """Output ports and accepted inputs used by task composition."""
+
+    output_ports: FrozenSet[OutputPort] = frozenset({OutputPort.NATIVE_FORECAST})
+    input_spec: ModelInputSpec = ModelInputSpec()
+
+    def has_port(self, port: OutputPort) -> bool:
+        if port == OutputPort.SEQUENCE and OutputPort.TEMPORAL_SEQUENCE in self.output_ports:
+            return True
+        return port in self.output_ports
+
+
+@dataclass(frozen=True)
+class ModelOutput:
+    """Immutable base for every task and backbone output."""
+
+    loss: Optional[tf.Tensor] = None
+
+    def replace(self, **changes):
+        return replace(self, **changes)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            field.name: getattr(self, field.name) for field in fields(self) if getattr(self, field.name) is not None
+        }
+
+
+@dataclass(frozen=True)
+class BackboneOutput(ModelOutput):
+    sequence_output: Optional[tf.Tensor] = None
+    pooled_output: Optional[tf.Tensor] = None
+    native_forecast: Optional[tf.Tensor] = None
+    distribution_params: Optional[Mapping[str, tf.Tensor]] = None
+    state: Any = None
+    hidden_states: Optional[Tuple[tf.Tensor, ...]] = None
+    attentions: Optional[Tuple[tf.Tensor, ...]] = None
 
 
 class BaseModel(tf.keras.Model, ABC):
@@ -311,193 +416,3 @@ class BaseModel(tf.keras.Model, ABC):
             restored_config.update(model_config)
             config["config"] = restored_config
         return cls(**config)
-
-
-class BaseConfig(ABC):
-    """Base class for tfts config."""
-
-    attribute_map: Dict[str, str] = {}
-    model_type: str
-
-    @staticmethod
-    def validate_checkpoint_config(values):
-        """Validate persisted architecture versions before constructing layers."""
-
-    def __init_subclass__(cls, **kwargs):
-        """Validate concrete configs once their complete constructor returns."""
-        super().__init_subclass__(**kwargs)
-        original_init = cls.__dict__.get("__init__")
-        if original_init is None or getattr(original_init, "_tfts_validated_init", False):
-            return
-
-        @wraps(original_init)
-        def validated_init(self, *args, **init_kwargs):
-            depth = getattr(self, "_config_init_depth", 0)
-            object.__setattr__(self, "_config_init_depth", depth + 1)
-            try:
-                original_init(self, *args, **init_kwargs)
-            finally:
-                object.__setattr__(self, "_config_init_depth", depth)
-            if depth == 0:
-                self.validate()
-
-        validated_init._tfts_validated_init = True
-        cls.__init__ = validated_init
-
-    def __init__(self, **kwargs):
-        self.update(kwargs)
-
-    @classmethod
-    def _attribute_mapping(cls) -> Dict[str, str]:
-        mapping: Dict[str, str] = {}
-        for base in reversed(cls.__mro__):
-            mapping.update(base.__dict__.get("attribute_map", {}))
-        return mapping
-
-    def __setattr__(self, key: str, value):
-        mapped_key = type(self)._attribute_mapping().get(key, key)
-        super().__setattr__(mapped_key, value)
-
-    def __getattr__(self, key: str):
-        mapped_key = type(self)._attribute_mapping().get(key)
-        if mapped_key is None or mapped_key == key:
-            raise AttributeError(f"{type(self).__name__!s} has no attribute {key!r}")
-        return object.__getattribute__(self, mapped_key)
-
-    def update(self, config_dict: Dict[str, Any]):
-        for key, value in config_dict.items():
-            try:
-                setattr(self, key, value)
-            except AttributeError as err:
-                logger.error(f"Can't set {key} with value {value} for {self}")
-                raise err
-        if getattr(self, "_config_init_depth", 0) == 0:
-            self.validate()
-
-    def validate(self) -> None:
-        """Validate common fields and any model-specific ``__post_init__``."""
-        for field in ("hidden_size", "num_layers", "num_attention_heads", "intermediate_size", "target_dim"):
-            value = getattr(self, field, None)
-            if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
-                raise ValueError(f"{field} must be a positive integer, got {value!r}")
-
-        dropout = getattr(self, "dropout", None)
-        if dropout is not None and not 0 <= dropout < 1:
-            raise ValueError(f"dropout must be in [0, 1), got {dropout!r}")
-
-        model_validator = type(self).__dict__.get("__post_init__")
-        if model_validator is not None:
-            model_validator(self)
-
-    def to_dict(self):
-        instance_attributes = {key: getattr(self, key) for key in self.__dict__ if not key.startswith("_")}
-
-        if hasattr(self, "model_type"):
-            instance_attributes["model_type"] = self.model_type
-        return instance_attributes
-
-    def to_json(self, json_file: Union[str, os.PathLike]):
-        config_dict = self.to_dict()
-        with open(json_file, "w", encoding="utf-8") as file:
-            json.dump(config_dict, file, indent=4)
-
-    @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]):
-        config = cls()
-        config.update(config_dict)
-        return config
-
-    @classmethod
-    def from_json(cls, json_file: Union[str, os.PathLike]):
-        with open(json_file, "r", encoding="utf-8") as reader:
-            text = reader.read()
-        config_dict = json.loads(text)
-        return cls.from_dict(config_dict)
-
-    @classmethod
-    def from_pretrained(
-        cls,
-        pretrained_model_name_or_path: Union[str, os.PathLike],
-        cache_dir: Optional[Union[str, os.PathLike]] = None,
-        force_download: bool = False,
-    ):
-        path = os.fspath(pretrained_model_name_or_path)
-        if os.path.isdir(path):
-            path = os.path.join(path, CONFIG_NAME)
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"Config file not found at {path}")
-
-        # These arguments are retained for API compatibility. Remote artifact
-        # downloads are not supported by BaseConfig yet.
-        del cache_dir, force_download
-        with open(path, "r", encoding="utf-8") as f:
-            config_dict = json.load(f)
-        return cls.from_dict(config_dict)
-
-    def save_pretrained(self, save_directory: Union[str, os.PathLike]):
-        if os.path.isfile(save_directory):
-            raise ValueError(f"Provided path ({save_directory}) must be a directory")
-        os.makedirs(save_directory, exist_ok=True)
-        output_config_file = os.path.join(save_directory, CONFIG_NAME)
-        self.to_json(output_config_file)
-        logger.info(f"Model config successfully saved in {output_config_file}")
-
-    def __str__(self):
-        """Convert config to string representation in dictionary format"""
-        return str({k: v for k, v in self.__dict__.items() if not k.startswith("_")})
-
-
-class CommonConfig(BaseConfig):
-    """Shared, canonical configuration vocabulary for model configs.
-
-    Legacy names remain readable and writable through ``attribute_map`` while
-    serialization uses the canonical names.
-    """
-
-    attribute_map = {
-        "d_model": "hidden_size",
-        "d_ff": "intermediate_size",
-        "e_layers": "num_layers",
-        "ffn_intermediate_size": "intermediate_size",
-        "hidden_dropout_prob": "dropout",
-        "dropout_rate": "dropout",
-    }
-
-    def __init__(
-        self,
-        hidden_size: int = 64,
-        num_layers: int = 2,
-        num_attention_heads: int = 4,
-        intermediate_size: int = 256,
-        dropout: float = 0.1,
-        layer_norm_eps: float = 1e-5,
-        initializer_range: float = 0.02,
-        target_dim: int = 1,
-        **kwargs,
-    ):
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.num_attention_heads = num_attention_heads
-        self.intermediate_size = intermediate_size
-        self.dropout = dropout
-        self.layer_norm_eps = layer_norm_eps
-        self.initializer_range = initializer_range
-        self.target_dim = target_dim
-        super().__init__(**kwargs)
-
-
-def flatten_dict(nested, sep="/"):
-    """Flatten dictionary and concatenate nested keys with separator."""
-
-    def rec(nest, prefix, into):
-        for k, v in nest.items():
-            if sep in k:
-                raise ValueError(f"separator '{sep}' not allowed to be in key '{k}'")
-            if isinstance(v, Mapping):
-                rec(v, prefix + k + sep, into)
-            else:
-                into[prefix + k] = v
-
-    flat = {}
-    rec(nested, "", flat)
-    return flat

@@ -1,15 +1,45 @@
 """Base classes for task heads and task models."""
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
+from enum import Enum
 import json
 import os
-from typing import Any
+from typing import Any, Dict
 
 import tensorflow as tf
 
-from tfts.contracts import ModelOutput, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.models.base import ModelOutput
 from tfts.registry import build
+
+
+class TaskType(str, Enum):
+    FORECASTING = "forecasting"
+    SEQUENCE_REGRESSION = "sequence_regression"
+    IMPUTATION = "imputation"
+    CLASSIFICATION = "classification"
+    ANOMALY_DETECTION = "anomaly_detection"
+
+    @classmethod
+    def normalize(cls, value):
+        if isinstance(value, cls):
+            return value
+        normalized = str(value).lower().replace("-", "_")
+        return cls(normalized)
+
+
+@dataclass(frozen=True)
+class TaskConfig:
+    task: TaskType
+
+    def __post_init__(self):
+        object.__setattr__(self, "task", TaskType.normalize(self.task))
+
+    def to_dict(self) -> Dict[str, Any]:
+        values = asdict(self)
+        values["task"] = self.task.value
+        return values
 
 
 class BaseHead(tf.keras.layers.Layer, ABC):
@@ -26,15 +56,19 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     task_name = None
     required_output_port = None
     default_objective = None
+    target_field = "labels"
+    default_target_field = None
 
     def __init__(self, backbone, task_config, capabilities, **kwargs):
         super().__init__(**kwargs)
-        from tfts.models.adapters import BackboneAdapter, SpatialAdapter
+        from tfts.models._adapters import BackboneAdapter, SpatialAdapter
 
         self.backbone = backbone
         self.backbone_config = backbone.config
         self.task_config = task_config
         self.capabilities = capabilities
+        if not capabilities.input_spec.supports_multivariate_target and getattr(task_config, "target_dim", 1) > 1:
+            raise ValueError("This backbone does not support multivariate targets")
         self.adapter = BackboneAdapter(backbone, capabilities)
         spatial_strategy = getattr(task_config, "spatial_strategy", "raise")
         self.spatial_adapter = SpatialAdapter(capabilities.input_spec, self.adapter.model_type, spatial_strategy)
@@ -67,7 +101,6 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         casts = {}
         for name in (
             "past_values",
-            "future_values",
             "past_time_features",
             "future_time_features",
             "static_real_features",
@@ -103,72 +136,108 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def forward(self, inputs, training=None) -> ModelOutput:
         raise NotImplementedError
 
+    def dry_run(self, data):
+        """Validate a Keras batch, output and objective without updating weights."""
+        batch = self._batch_from_keras(data)
+        output = self(batch, training=False, compute_loss=False)
+        self._objective_result(batch, output)
+        return output
+
     def configure_objective(self, objective=None, **context):
+        from tfts.registry import ComponentSpec
+
         component = self.default_objective if objective is None else objective
+        self._objective_spec = None
+        if isinstance(component, (str, dict, ComponentSpec)):
+            spec = ComponentSpec.from_value(component)
+            self._objective_spec = ComponentSpec(
+                spec.name, {key: value for key, value in spec.kwargs.items() if key != "distribution"}
+            )
+            if spec.name == "nll" and "distribution" not in spec.kwargs:
+                context["distribution"] = getattr(self, "output_distribution", None)
         self.objective = None if component is None else build("objective", component, **context)
 
-    def call(self, inputs, training=None):
+    def call(self, inputs, training=None, compute_loss=True):
         output = self.forward(inputs, training=training)
         batch = self.normalize_batch(inputs)
-        if self.objective is not None and self.has_targets(batch):
-            output = output.replace(loss=self.objective(batch, output))
+        if compute_loss and self.objective is not None and self.has_targets(batch):
+            output = output.replace(loss=self._objective_result(batch, output).value)
         return output
 
     def has_targets(self, batch):
-        if self.task_name == "forecasting":
-            return batch.future_values is not None
-        if self.task_name == "classification":
-            return batch.labels is not None
-        if self.task_name == "imputation":
-            return batch.labels is not None
-        if self.task_name == "anomaly_detection":
-            return batch.labels is not None
-        return batch.labels is not None or batch.future_values is not None
+        return getattr(batch, self.target_field) is not None
+
+    @classmethod
+    def resolve_targets(cls, batch, targets=None):
+        """Resolve explicit, embedded, or task-default labels in that order."""
+        if targets is None:
+            targets = getattr(batch, cls.target_field)
+        if targets is None and cls.default_target_field is not None:
+            targets = getattr(batch, cls.default_target_field)
+        return targets
 
     def _batch_from_keras(self, data):
         from dataclasses import replace
 
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        if sample_weight is not None:
-            raise ValueError("sample_weight is not supported by batch-aware Objectives")
         batch = self.normalize_batch(x)
-        if y is None:
-            if self.task_name == "anomaly_detection" and batch.labels is None:
-                batch = replace(batch, labels=batch.past_values)
-            return batch
-        field = "future_values" if self.task_name == "forecasting" else "labels"
-        target = tf.convert_to_tensor(y)
-        if target.dtype.is_floating:
-            target = tf.cast(target, self.compute_dtype)
-        return replace(batch, **{field: target})
+        changes = {}
+        if sample_weight is not None:
+            changes["sample_weight"] = tf.convert_to_tensor(sample_weight)
+        target = self.resolve_targets(batch, y)
+        if target is not None:
+            target = tf.convert_to_tensor(target)
+            changes[self.target_field] = tf.cast(target, tf.float32) if target.dtype.is_floating else target
+        return replace(batch, **changes) if changes else batch
 
     @property
     def metrics(self):
         return [self._loss_tracker]
 
+    def _objective_result(self, batch, output):
+        if self.objective is None or not self.has_targets(batch):
+            raise ValueError(f"{self.task_name} training requires targets and an Objective")
+        if batch.sample_weight is not None and not getattr(self.objective, "supports_sample_weight", False):
+            raise ValueError("This objective does not support sample_weight")
+        if not hasattr(self.objective, "reduce"):
+            raise TypeError("Training objectives must implement reduce(batch, output) -> LossResult(total, weight)")
+        return self.objective.reduce(batch, output)
+
     def train_step(self, data):
         batch = self._batch_from_keras(data)
         with tf.GradientTape() as tape:
-            output = self(batch, training=True)
-            if output.loss is None:
-                raise ValueError(f"{self.task_name} training requires targets and an Objective")
-            loss = output.loss + (tf.add_n(self.losses) if self.losses else 0.0)
-        gradients = tape.gradient(loss, self.trainable_variables)
+            output = self(batch, training=True, compute_loss=False)
+            result = self._objective_result(batch, output)
+            loss = result.value + (
+                tf.add_n([tf.cast(value, tf.float32) for value in self.losses]) if self.losses else 0.0
+            )
+            if hasattr(self.optimizer, "scale_loss"):
+                differentiated_loss = self.optimizer.scale_loss(loss)
+            elif hasattr(self.optimizer, "get_scaled_loss"):
+                differentiated_loss = self.optimizer.get_scaled_loss(loss)
+            else:
+                differentiated_loss = loss
+        gradients = tape.gradient(differentiated_loss, self.trainable_variables)
+        if hasattr(self.optimizer, "get_unscaled_gradients"):
+            gradients = self.optimizer.get_unscaled_gradients(gradients)
         pairs = [(g, v) for g, v in zip(gradients, self.trainable_variables) if g is not None]
         if not pairs:
             raise ValueError("Objective produced no gradients for trainable variables")
         self.optimizer.apply_gradients(pairs)
-        self._loss_tracker.update_state(loss)
+        self._loss_tracker.update_state(result.value, sample_weight=result.weight)
         return {"loss": self._loss_tracker.result()}
 
     def test_step(self, data):
         batch = self._batch_from_keras(data)
-        output = self(batch, training=False)
-        if output.loss is None:
-            raise ValueError(f"{self.task_name} evaluation requires targets and an Objective")
-        loss = output.loss + (tf.add_n(self.losses) if self.losses else 0.0)
-        self._loss_tracker.update_state(loss)
+        output = self(batch, training=False, compute_loss=False)
+        result = self._objective_result(batch, output)
+        self._loss_tracker.update_state(result.value, sample_weight=result.weight)
         return {"loss": self._loss_tracker.result()}
+
+    def predict_step(self, data):
+
+        inputs, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        return self(inputs, training=False, compute_loss=False).prediction()
 
     def build_from_config(self, config):
         """Build every child layer before Keras restores saved variables."""
@@ -223,11 +292,14 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         representations instead.  The child backbone and task head weights
         remain tracked by Keras and are restored from the same archive.
         """
+        if self.objective is not None and self._objective_spec is None:
+            raise ValueError("To save a custom objective, register it and configure it with ComponentSpec")
         config = super().get_config()
         config.update(
             {
                 "backbone_config": self.backbone_config.to_dict(),
                 "task_config": self.task_config.to_dict(),
+                "objective": None if self._objective_spec is None else self._objective_spec.to_dict(),
             }
         )
         return config
@@ -236,7 +308,7 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def from_config(cls, config):
         """Reconstruct a task model from a Keras object config."""
         from tfts.models.auto_config import AutoConfig
-        from tfts.models.auto_model import build_task_model, task_config_from_dict
+        from tfts.tasks.auto import build_task_model, task_config_from_dict
 
         config = dict(config)
         backbone_values = config.pop("backbone_config", None)
@@ -291,4 +363,4 @@ class BaseTask(ABC):
         raise NotImplementedError
 
 
-from tfts.contracts import ModelOutput as ModelOutput  # noqa: E402,F401
+from tfts.models.base import ModelOutput as ModelOutput

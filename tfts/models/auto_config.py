@@ -2,8 +2,9 @@
 
 from typing import Dict
 
-from .base import BaseConfig
-from .registry import RegistryFieldView, get_config_class
+from tfts.config import BaseConfig
+
+from .catalog import RegistryFieldView, get_config_class
 
 CONFIG_MAPPING_NAMES = RegistryFieldView("config_class")
 

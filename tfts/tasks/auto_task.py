@@ -4,27 +4,59 @@ from typing import Optional, Sequence, Tuple
 
 import tensorflow as tf
 
-from tfts.distributions import DistributionOutput
+from tfts.distributions import DistributionOutput, NormalOutput
+from tfts.forecast import ForecastOutput
+from tfts.models.base import OutputPort
+from tfts.registry import ComponentSpec, register_head
 
 from .base import BaseHead
 
 
-class PointForecastHead(BaseHead):
+class ForecastHead(BaseHead):
+    """A registered forecast projection owns its output and default objective."""
+
+    required_output_port = OutputPort.SEQUENCE
+    default_objective = "mse"
+
+    @classmethod
+    def from_task_config(cls, config, **kwargs):
+        return cls(config.output_chunk_length, target_dim=config.target_dim, **kwargs)
+
+    def to_output(self, value):
+        return ForecastOutput(predictions=value)
+
+
+@register_head("point")
+class PointForecastHead(ForecastHead):
     def __init__(self, prediction_length: int, target_dim: int = 1, residual: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.prediction_length = int(prediction_length)
         self.target_dim = int(target_dim)
         self.residual = residual
-        self.projection = tf.keras.layers.Dense(self.target_dim)
+        self.flatten = tf.keras.layers.Flatten()
+        self.projection = tf.keras.layers.Dense(self.prediction_length * self.target_dim)
+
+    @classmethod
+    def from_task_config(cls, config, **kwargs):
+        return cls(
+            config.output_chunk_length,
+            config.target_dim,
+            residual=config.residual,
+            **kwargs,
+        )
 
     def call(self, sequence_output, past_values=None, **kwargs):
-        states = sequence_output[:, -self.prediction_length :, :]
-        predictions = self.projection(states)
+        predictions = tf.reshape(
+            self.projection(self.flatten(sequence_output)), [-1, self.prediction_length, self.target_dim]
+        )
         if self.residual is None:
             return predictions
         if past_values is None:
             raise ValueError("past_values is required for residual forecasting")
-        target = past_values[..., : self.target_dim]
+        tf.debugging.assert_equal(
+            tf.shape(past_values)[-1], self.target_dim, message="Residual forecasts require exact target histories"
+        )
+        target = past_values
         if self.residual == "last_value":
             baseline = tf.tile(target[:, -1:, :], [1, self.prediction_length, 1])
         elif self.residual == "mean":
@@ -36,29 +68,71 @@ class PointForecastHead(BaseHead):
         return predictions + tf.cast(baseline, predictions.dtype)
 
 
-class QuantileForecastHead(BaseHead):
+@register_head("quantile")
+class QuantileForecastHead(ForecastHead):
     def __init__(self, prediction_length: int, quantiles: Sequence[float], target_dim: int = 1, **kwargs):
         super().__init__(**kwargs)
         self.prediction_length = int(prediction_length)
         self.quantiles = tuple(float(value) for value in quantiles)
         self.target_dim = int(target_dim)
-        self.projection = tf.keras.layers.Dense(self.target_dim * len(self.quantiles))
+        if (
+            not self.quantiles
+            or tuple(sorted(set(self.quantiles))) != self.quantiles
+            or any(q <= 0 or q >= 1 for q in self.quantiles)
+        ):
+            raise ValueError("quantiles must be unique, sorted, and between 0 and 1")
+        self.flatten = tf.keras.layers.Flatten()
+        self.projection = tf.keras.layers.Dense(self.prediction_length * self.target_dim * len(self.quantiles))
+
+    @classmethod
+    def from_task_config(cls, config, **kwargs):
+        return cls(
+            config.output_chunk_length,
+            kwargs.pop("quantiles", config.quantiles),
+            config.target_dim,
+            **kwargs,
+        )
+
+    @property
+    def default_objective(self):
+        return ComponentSpec("quantile", {"quantiles": self.quantiles})
+
+    def to_output(self, value):
+        index = min(range(len(self.quantiles)), key=lambda i: abs(self.quantiles[i] - 0.5))
+        return ForecastOutput(predictions=value[..., index], quantile_values=value, quantiles=self.quantiles)
 
     def call(self, sequence_output, **kwargs):
-        states = sequence_output[:, -self.prediction_length :, :]
-        values = self.projection(states)
-        shape = tf.concat([tf.shape(values)[:-1], [self.target_dim, len(self.quantiles)]], axis=0)
-        return tf.reshape(values, shape)
+        values = tf.reshape(
+            self.projection(self.flatten(sequence_output)),
+            [-1, self.prediction_length, self.target_dim, len(self.quantiles)],
+        )
+        increments = tf.cumsum(tf.nn.softplus(values[..., 1:]), axis=-1)
+        return values[..., :1] + tf.concat([tf.zeros_like(values[..., :1]), increments], axis=-1)
 
 
-class DistributionForecastHead(BaseHead):
+@register_head("distribution")
+class DistributionForecastHead(ForecastHead):
     def __init__(self, distribution: DistributionOutput, prediction_length: int, **kwargs):
         super().__init__(**kwargs)
         self.distribution = distribution
         self.prediction_length = int(prediction_length)
+        self.flatten = tf.keras.layers.Flatten()
+        self.projection = tf.keras.layers.Dense(self.prediction_length * 32)
+
+    @classmethod
+    def from_task_config(cls, config, **kwargs):
+        return cls(NormalOutput(config.target_dim), config.output_chunk_length, **kwargs)
+
+    @property
+    def default_objective(self):
+        return ComponentSpec("nll", {"distribution": self.distribution})
+
+    def to_output(self, value):
+        return ForecastOutput(predictions=self.distribution.mean(value), distribution_params=value)
 
     def call(self, sequence_output, **kwargs):
-        return self.distribution.parameters(sequence_output[:, -self.prediction_length :, :])
+        hidden = tf.reshape(self.projection(self.flatten(sequence_output)), [-1, self.prediction_length, 32])
+        return self.distribution.parameters(hidden)
 
 
 class ClassificationHead(BaseHead):
@@ -88,9 +162,3 @@ class ReconstructionHead(BaseHead):
 
     def call(self, sequence_output, **kwargs):
         return self.projection(sequence_output)
-
-
-# Concise aliases for callers that prefer the older noun order.
-PredictionHead = PointForecastHead
-QuantileHead = QuantileForecastHead
-DistributionHead = DistributionForecastHead

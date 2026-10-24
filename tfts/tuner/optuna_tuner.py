@@ -11,8 +11,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from tfts.tasks.auto import AutoModel
+
 from ..models.auto_config import AutoConfig
-from ..models.auto_model import AutoModel
 from ..training import Trainer
 from ..training.runtime import create_adamw
 

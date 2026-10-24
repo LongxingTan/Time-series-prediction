@@ -6,11 +6,12 @@ import unittest
 import tensorflow as tf
 
 import tfts
-from tfts.contracts import GraphStructure, ModelInputSpec, SpatialArrangement, TimeSeriesBatch, TopologyInput
+from tfts.batch import TimeSeriesBatch
+from tfts.config import BaseConfig
+from tfts.graph.structure import GraphStructure, SpatialArrangement, TopologyInput
 from tfts.models.auto_config import CONFIG_MAPPING_NAMES, AutoConfig
-from tfts.models.auto_model import MODEL_MAPPING_NAMES, AutoModel
-from tfts.models.base import BaseConfig
-from tfts.models.registry import (
+from tfts.models.base import ModelInputSpec
+from tfts.models.catalog import (
     MODEL_REGISTRY,
     check_batch_support,
     get_config_class,
@@ -18,6 +19,7 @@ from tfts.models.registry import (
     get_model_info,
     list_models,
 )
+from tfts.tasks.auto import MODEL_MAPPING_NAMES, AutoModel
 
 
 class TestAutoModel(unittest.TestCase):
@@ -62,6 +64,7 @@ class TestAutoModel(unittest.TestCase):
                         "supports_categorical",
                         "supports_static",
                         "supports_multivariate_target",
+                        "requires_target_history",
                         "accepted_dtypes_by_role",
                         "arrangement",
                         "accepted_topologies",
@@ -139,11 +142,19 @@ class TestAutoModel(unittest.TestCase):
                 self.assertEqual(restored.to_dict(), json_normalized)
 
     def test_listed_models_satisfy_forward_contract(self):
-        # AutoFormer currently operates in its configured hidden dimension;
-        # N-BEATS is intentionally univariate. Other models accept a small
-        # multivariate input.
-        feature_counts = {"autoformer": 64, "nbeats": 1}
-        multivariate_outputs = {"diffusion", "itransformer", "timesnet", "timexer", "timemixer"}
+        # Use multivariate inputs and targets where supported. AutoFormer
+        # currently requires its hidden width; N-BEATS and DeepAR use one target.
+        feature_counts = {"autoformer": 64, "nbeats": 1, "deep_ar": 1}
+        multivariate_outputs = {
+            "diffusion",
+            "itransformer",
+            "timesnet",
+            "timexer",
+            "timemixer",
+            "dlinear",
+            "patch_tst",
+            "tide",
+        }
 
         predict_sequence_length = 8
         for model_name in list_models():
@@ -154,7 +165,10 @@ class TestAutoModel(unittest.TestCase):
                     # TFT treats every historical target channel as an encoder
                     # real variable; keep its explicit variable count aligned.
                     config.encoder_real_dim = feature_count
-                model = AutoModel.from_config(config, output_chunk_length=predict_sequence_length)
+                target_dim = feature_count if model_name in multivariate_outputs else 1
+                model = AutoModel.from_config(
+                    config, output_chunk_length=predict_sequence_length, target_dim=target_dim
+                )
                 if model_name == "stgcn":
                     inputs = TimeSeriesBatch(
                         past_values=tf.random.normal([1, 16, 3, 1]),
@@ -162,7 +176,7 @@ class TestAutoModel(unittest.TestCase):
                     )
                 elif model_name == "deep_ar":
                     inputs = TimeSeriesBatch(
-                        past_values=tf.random.normal([1, 16, 1]),
+                        past_values=tf.random.normal([1, 16, feature_count]),
                         future_values=tf.random.normal([1, predict_sequence_length, 1]),
                         static_categorical_features=tf.zeros([1, 1], dtype=tf.int32),
                     )
@@ -172,7 +186,5 @@ class TestAutoModel(unittest.TestCase):
 
                 if model_name == "stgcn":
                     self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 3, 1))
-                elif model_name in multivariate_outputs:
-                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, feature_count))
                 else:
-                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, 1))
+                    self.assertEqual(output.predictions.shape, (1, predict_sequence_length, target_dim))

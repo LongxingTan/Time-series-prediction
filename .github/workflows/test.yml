@@ -84,6 +84,10 @@ jobs:
         run: |
           uv run --no-sync python -c "import platform, sys, tensorflow as tf; print(sys.version); print(platform.platform()); print('TensorFlow', tf.__version__)"
 
+      - name: Check package boundaries
+        shell: bash
+        run: uv run --no-sync python -m unittest tests.test_architecture
+
       - name: Run unittest
         shell: bash
         run: uv run --no-sync coverage run -m unittest discover -s ./tests -p 'test_*.py'

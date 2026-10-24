@@ -62,7 +62,7 @@ class VentilatorRunError(ValueError):
 def build_aligned_tfts_model(name: str, overrides: ModelParameters | None = None) -> tf.keras.Model:
     """Build a TFTS backbone that returns one value per input step."""
     from tfts.models.auto_config import AutoConfig
-    from tfts.models.auto_model import AutoBackbone
+    from tfts.tasks.auto import AutoBackbone
 
     if name in UNSUPPORTED_TFTS_MODELS:
         raise VentilatorRunError(f"{name} cannot use the aligned protocol: {UNSUPPORTED_TFTS_MODELS[name]}")

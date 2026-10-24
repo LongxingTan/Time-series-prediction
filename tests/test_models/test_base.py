@@ -2,7 +2,8 @@ import os
 import tempfile
 import unittest
 
-from tfts.models.base import BaseConfig, BaseModel, CommonConfig
+from tfts.config import BaseConfig, CommonConfig
+from tfts.models.base import BaseModel
 
 
 class TestBaseConfig(unittest.TestCase):

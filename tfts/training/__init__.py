@@ -1,6 +1,6 @@
 """Training APIs and runtime helpers."""
 
-from tfts.data.window_sampling import final_windows, sampled_windows
+from tfts.data.windows import final_windows, sampled_windows
 
 from .exposure_bias import add_exposure_bias_noise, add_exposure_bias_noise_np, position_ramp
 from .runtime import configure_precision, create_distribution_strategy

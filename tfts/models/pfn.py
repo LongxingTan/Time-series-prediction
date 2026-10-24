@@ -8,7 +8,8 @@ TODO: Implement ForecastPFN model. This is currently a stub.
 import logging
 from typing import Optional
 
-from .base import BaseModel, CommonConfig
+from tfts.config import CommonConfig
+from tfts.models.base import BaseModel
 
 logger = logging.getLogger(__name__)
 

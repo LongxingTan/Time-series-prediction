@@ -1,14 +1,36 @@
-"""Shared input boundary for native continuous autoregressive backbones."""
+"""Shared contracts and input boundary for native autoregressive backbones."""
+
+from dataclasses import dataclass
+from typing import Any, Mapping, Optional
 
 import tensorflow as tf
 
-from tfts.contracts import BackboneCapabilities, BackboneOutput, ModelInputSpec, TimeSeriesBatch
-
-from .base import BaseModel
+from tfts.batch import TimeSeriesBatch
+from tfts.models.base import BackboneCapabilities, BackboneOutput, BaseModel, ModelInputSpec
 
 AUTOREGRESSIVE_CAPABILITIES = BackboneCapabilities(
     input_spec=ModelInputSpec(accepted_roles=frozenset({"observed_past", "known_future"})),
 )
+
+
+@dataclass(frozen=True)
+class DecodeSession:
+    """Transient backbone-owned context, state, and initial feedback."""
+
+    context: Any
+    state: Any
+    previous: tf.Tensor
+
+
+@dataclass(frozen=True)
+class DecodeStepOutput:
+    """One prediction shaped [B, 1, ..., target_dim] and updated decoder state."""
+
+    prediction: tf.Tensor
+    state: Any = None
+    distribution: Optional[Any] = None
+    parameters: Optional[Mapping[str, tf.Tensor]] = None
+    quantile_values: Optional[tf.Tensor] = None
 
 
 def decoder_features(batch, horizon):

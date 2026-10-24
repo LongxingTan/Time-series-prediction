@@ -8,14 +8,15 @@ from typing import Dict, Optional
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 
+from tfts.config import CommonConfig
 from tfts.layers.attention_layer import Attention
 from tfts.layers.dense_layer import FeedForwardNetwork
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.revin import RevIN
+from tfts.models.base import BaseModel
 
 from ..layers.util_layer import ShapeLayer
-from .base import BaseModel, CommonConfig
-from .registry import register_model
+from .catalog import register_model
 
 
 class ITransformerConfig(CommonConfig):

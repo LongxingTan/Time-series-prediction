@@ -1,3 +1,4 @@
+from dataclasses import replace
 import os
 import tempfile
 import unittest
@@ -16,7 +17,6 @@ class SpatialModelTest(unittest.TestCase):
         self.values = tf.random.normal([2, 8, 4, 2])
         self.batch = TimeSeriesBatch(
             self.values,
-            past_categorical_features=tf.zeros([2, 8, 1], tf.int32),
             structure=GraphStructure(4, adjacency=tf.eye(4), node_ids=("a", "b", "c", "d")),
         )
 
@@ -25,13 +25,13 @@ class SpatialModelTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "spatial_strategy='per_node'"):
             AutoModelForForecasting.from_config(config, output_chunk_length=3)(self.batch)
         model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("dlinear"), output_chunk_length=3, spatial_strategy="per_node"
+            AutoConfig.for_model("dlinear"), output_chunk_length=3, target_dim=2, spatial_strategy="per_node"
         )
-        result = model(self.batch).predictions
-        self.assertEqual(result.shape, (2, 3, 4, 1))
+        result = model(replace(self.batch, past_categorical_features=None)).predictions
+        self.assertEqual(result.shape, (2, 3, 4, 2))
 
         structure_free = TimeSeriesBatch(self.values)
-        self.assertEqual(model(structure_free).predictions.shape, (2, 3, 4, 1))
+        self.assertEqual(model(structure_free).predictions.shape, (2, 3, 4, 2))
 
     def test_plain_batch_cannot_be_coerced_into_a_graph_model(self):
         plain = TimeSeriesBatch(tf.zeros([2, 8, 1]))
@@ -44,9 +44,9 @@ class SpatialModelTest(unittest.TestCase):
 
     def test_per_node_matches_independent_node_at_inference(self):
         model = AutoModelForForecasting.from_config(
-            AutoConfig.for_model("dlinear"), output_chunk_length=3, spatial_strategy="per_node"
+            AutoConfig.for_model("dlinear"), output_chunk_length=3, target_dim=2, spatial_strategy="per_node"
         )
-        combined = model(self.batch, training=False).predictions
+        combined = model(replace(self.batch, past_categorical_features=None), training=False).predictions
         node = TimeSeriesBatch(self.values[:, :, 1, :])
         independent = model.backbone(node.past_values)
         np.testing.assert_allclose(combined[:, :, 1, :].numpy(), independent.numpy(), atol=1e-6)
@@ -60,6 +60,12 @@ class SpatialModelTest(unittest.TestCase):
             return model(inputs).predictions
 
         self.assertEqual(run(self.batch.as_tensor_dict()).shape, (2, 3, 4, 1))
+
+    def test_ignored_covariates_are_rejected(self):
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
+        batch = replace(self.batch, past_categorical_features=tf.zeros([2, 8, 1], tf.int32))
+        with self.assertRaisesRegex(ValueError, "does not support covariates"):
+            model(batch)
 
     def test_stgcn_batched_adjacency_config_and_errors(self):
         batch = TimeSeriesBatch(
@@ -119,7 +125,6 @@ class SpatialModelTest(unittest.TestCase):
         model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=3)
         expected = model(self.batch).predictions
         specs = model.get_build_config()["batch_specs"]
-        self.assertEqual(specs["past_categorical_features"]["dtype"], "int32")
         self.assertEqual(specs["structure.graph.num_nodes"]["dtype"], "int32")
         self.assertEqual(specs["structure.graph.node_ids"]["dtype"], "string")
         with tempfile.TemporaryDirectory() as directory:

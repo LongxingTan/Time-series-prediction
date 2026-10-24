@@ -62,10 +62,34 @@ def register(kind: str, name: str, obj: Optional[Callable[..., Any]] = None, **m
 
 
 def resolve(kind: str, name: str) -> Registration:
+    if name not in _REGISTRY.get(kind, {}):
+        from importlib import import_module
+
+        modules = {
+            "transform": ("tfts.data.features",),
+            "objective": ("tfts.tasks.objectives",),
+            "head": ("tfts.tasks.auto_task",),
+            "task": (
+                "tfts.tasks.forecasting",
+                "tfts.tasks.classification",
+                "tfts.tasks.imputation",
+                "tfts.tasks.anomaly",
+                "tfts.tasks.sequence_regression",
+            ),
+        }
+        for module in modules.get(kind, ()):
+            import_module(module)
     try:
         return _REGISTRY[kind][name]
     except KeyError as error:
         raise KeyError(f"Unknown {kind} {name!r}. Available: {available(kind)}") from error
+
+
+def registrations(kind: str):
+    """Read-only snapshot of registered factories and metadata for one kind."""
+    from types import MappingProxyType
+
+    return MappingProxyType(dict(_REGISTRY.get(kind, {})))
 
 
 def available(kind: str) -> List[str]:
@@ -83,12 +107,13 @@ def build(kind: str, component, **context):
     return component
 
 
-register_model = partial(register, "model")
 register_decoder = partial(register, "decoder")
 register_processor = partial(register, "processor")
 register_objective = partial(register, "objective")
+register_head = partial(register, "head")
 register_task = partial(register, "task")
 register_transform = partial(register, "transform")
+register_postprocessor = partial(register, "postprocessor")
 
 
 __all__ = [
@@ -98,10 +123,11 @@ __all__ = [
     "build",
     "register",
     "register_decoder",
-    "register_model",
     "register_objective",
+    "register_head",
     "register_processor",
     "register_task",
     "register_transform",
+    "register_postprocessor",
     "resolve",
 ]

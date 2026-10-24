@@ -1,3 +1,5 @@
+from tfts.data import FramePipeline, Schema
+
 """Test the N-beats model"""
 
 import unittest
@@ -6,7 +8,7 @@ import pandas as pd
 import tensorflow as tf
 
 from tfts import AutoConfig, AutoModel, KerasTrainer
-from tfts.data import TimeSeriesSequence, get_data
+from tfts.data import get_data
 from tfts.models.nbeats import NBeats
 from tfts.training import TrainingArguments
 
@@ -32,15 +34,11 @@ class NBeatsTest(unittest.TestCase):
         train_sequence_length = 16
         predict_sequence_length = 4
 
-        ts_sequence = TimeSeriesSequence(
-            data=data,
-            time_idx="time_idx",
-            target_column="value",
-            train_sequence_length=train_sequence_length,
-            predict_sequence_length=predict_sequence_length,
-            batch_size=16,
-            group_column=["series"],  # Group by series ID
+        pipeline = FramePipeline(
+            Schema("time_idx", ("value",), group_cols=("series",)), train_sequence_length, predict_sequence_length
         )
+        prepared, windows, _ = pipeline.fit(data, validation=0)
+        ts_sequence = pipeline.dataset(prepared, windows, batch_size=16)
 
         config = AutoConfig.for_model("tft")
 

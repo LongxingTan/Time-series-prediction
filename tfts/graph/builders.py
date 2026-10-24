@@ -6,7 +6,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from tfts.contracts.structure import GraphStructure
+from tfts.graph.structure import GraphStructure
 
 
 def from_adjacency(matrix, node_ids: Optional[Sequence[str]] = None) -> GraphStructure:

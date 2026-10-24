@@ -2,7 +2,10 @@ import unittest
 
 import tensorflow as tf
 
-from tfts.contracts import ClassificationTaskConfig, ForecastTaskConfig, TaskType, TimeSeriesBatch
+from tfts.batch import TimeSeriesBatch
+from tfts.tasks.base import TaskType
+from tfts.tasks.classification import ClassificationTaskConfig
+from tfts.tasks.forecasting import ForecastTaskConfig
 
 
 class TimeSeriesBatchTest(unittest.TestCase):
