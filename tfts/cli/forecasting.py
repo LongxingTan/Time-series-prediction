@@ -1,109 +1,19 @@
-"""Forecasting CLI and end-to-end forecasting workflow.
-
-Provides the highest-level API for time series forecasting, wrapping
-DataProcessor, AutoModel, and Trainer behind a single interface.
-"""
+"""Train and evaluate a forecasting model from the command line."""
 
 import argparse
 import logging
-from typing import Dict, Optional, Sequence, Union
+from typing import Optional, Sequence
 
-import numpy as np
-import pandas as pd
 import tensorflow as tf
 
 from ..data import get_data
-from ..data.processor import DataProcessor
 from ..models.auto_config import AutoConfig
 from ..models.auto_model import AutoModel
-from ..tasks.pipeline import TaskPipeline
 from ..training import Trainer, set_seed
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ForecastingPipeline", "main"]
-
-
-class ForecastingPipeline(TaskPipeline):
-    """Deprecated forecasting argument adapter over the shared estimator."""
-
-    def __init__(
-        self,
-        model="rnn",
-        lookback=96,
-        horizon=24,
-        config=None,
-        batch_size=32,
-        normalize="standard",
-        learning_rate=1e-3,
-        epochs=50,
-        early_stopping_patience=5,
-        seed=42,
-        **kwargs,
-    ):
-        super().__init__(
-            "forecasting",
-            model,
-            config=config,
-            batch_size=batch_size,
-            normalize=normalize,
-            learning_rate=learning_rate,
-            epochs=epochs,
-            early_stopping_patience=early_stopping_patience,
-            seed=seed,
-            **kwargs,
-        )
-        self._estimator.context, self._estimator.horizon = lookback, horizon
-
-    @property
-    def lookback(self):
-        return getattr(self._estimator, "context_", self._estimator.context)
-
-    @property
-    def horizon(self):
-        return getattr(self._estimator, "horizon_", self._estimator.horizon)
-
-    def fit(
-        self, df, targets=None, target_col=None, time_col=None, validation_split=0.2, epochs=None, verbose=1, **kwargs
-    ):
-        if epochs is not None:
-            kwargs["epochs"] = epochs
-        if not isinstance(df, pd.DataFrame):
-            return super().fit(df, targets, verbose=verbose, **kwargs)
-        from tfts.features import TimeSeriesSchema
-
-        if targets is not None:
-            if target_col is not None or not isinstance(targets, str):
-                raise ValueError("Use target_col for dataframe training")
-            target_col = targets
-        df = df.copy()
-        time_col = time_col or DataProcessor._infer_time(df)
-        target_col = target_col or DataProcessor._infer_target(df)
-        self._estimator.schema = TimeSeriesSchema(time_col, (target_col,))
-        self._estimator.validation = validation_split
-        self._estimator.fit(df, verbose=verbose, **kwargs)
-        return self._estimator.history_
-
-    def predict(self, inputs=None, steps=None, df=None):
-        if df is not None:
-            if inputs is not None:
-                raise ValueError("Pass prediction history once")
-            inputs = df
-        if inputs is None:
-            raise ValueError("Pass recent history as inputs or df")
-        if getattr(self._estimator, "input_kind_", None) == "frame":
-            output = self._estimator.predict_output(inputs)
-            values = np.asarray(output.predictions)
-            if steps is not None and (steps < 1 or steps > self.horizon):
-                raise ValueError("steps must be between 1 and the fitted horizon")
-            return values[:, :steps] if steps is not None else values
-        return self._estimator.predict(inputs, steps=steps)
-
-    def evaluate(self, df, target_col=None, time_col=None):
-        return self._estimator.evaluate(df)
-
-    def summary(self):
-        self.model.summary()
+__all__ = ["main"]
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:

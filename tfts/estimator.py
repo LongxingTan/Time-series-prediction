@@ -138,10 +138,6 @@ class Estimator:
         config_class = resolve("task", task.value).metadata["config_class"]
         task_fields = {field.name for field in fields(config_class)} - {"task"}
         options = dict(self._model_options)
-        if "bidirectional" in options:
-            if "bi_direction" in options:
-                raise ValueError("Pass only one direction option")
-            options["bi_direction"] = options.pop("bidirectional")
         task_options = {key: options.pop(key) for key in tuple(options) if key in task_fields}
         known = set(config.to_dict()) | set(config._attribute_mapping())
         unknown = set(options) - known
@@ -163,6 +159,54 @@ class Estimator:
                     continue
                 inferred[name] = value
         return config, replace(task_config, **inferred)
+
+    def _training_targets(self, inputs, targets=None):
+        """Apply the task's target contract to arrays and dataset batches alike."""
+        task = TaskType.normalize(self.task)
+        batch = TimeSeriesBatch.from_inputs(inputs)
+        targets = resolve("task", task.value).factory.resolve_targets(batch, targets)
+        if targets is None:
+            raise ValueError(f"{task.value} training requires targets")
+        target = tf.convert_to_tensor(targets)
+        if task == TaskType.CLASSIFICATION:
+            if target.shape.rank != 1:
+                raise ValueError("Classification targets must have shape (B,) with nonnegative integer class ids")
+            tf.debugging.assert_all_finite(tf.cast(target, tf.float64), "Class ids must be finite")
+            tf.debugging.assert_non_negative(target, message="Class ids must be nonnegative")
+            if target.dtype.is_floating:
+                tf.debugging.assert_equal(target, tf.floor(target), message="Class ids must be integers")
+            target = tf.cast(target, tf.int64)
+        else:
+            if target.shape.rank != batch.past_values.shape.rank:
+                raise ValueError("Regression/reconstruction targets must have the same rank as past_values")
+            if task != TaskType.FORECASTING:
+                tf.debugging.assert_equal(
+                    tf.shape(target)[1],
+                    tf.shape(batch.past_values)[1],
+                    message=f"{task.value} requires one target timestep per input timestep",
+                )
+        tf.debugging.assert_positive(tf.shape(target), message="Targets must be nonempty")
+        tf.debugging.assert_equal(
+            tf.shape(target)[0],
+            tf.shape(batch.past_values)[0],
+            message="Inputs and targets must have the same sample count",
+        )
+        return target
+
+    def _configuration_for_targets(self, target, *, dataset=False):
+        if TaskType.normalize(self.task) == TaskType.CLASSIFICATION:
+            if (
+                dataset
+                and isinstance(self.model, str)
+                and self.task_config is None
+                and "num_labels" not in self._model_options
+            ):
+                raise ValueError(
+                    "Dataset classification requires explicit num_labels or task_config; "
+                    "a batch may not contain every class"
+                )
+            return self._configuration(num_labels=max(2, int(tf.reduce_max(target)) + 1))
+        return self._configuration(horizon=int(tf.shape(target)[1]), target_dim=int(tf.shape(target)[-1]))
 
     def fit(self, inputs, targets=None, *, validation_data=None, sample_weight=None, **fit_options):
         """Fit from scratch and return self; Keras History is available as history_."""
@@ -214,40 +258,14 @@ class Estimator:
             train, valid = inputs, validation_data
             first = next(iter(train)) if isinstance(train, tf.data.Dataset) else train[0]
             x, y, _ = tf.keras.utils.unpack_x_y_sample_weight(first)
-            batch = TimeSeriesBatch.from_inputs(x)
-            y = y if y is not None else (batch.future_values if task == TaskType.FORECASTING else batch.labels)
-            y = None if y is None else tf.convert_to_tensor(y)
-            horizon = int(y.shape[1]) if y is not None and y.shape.rank == 3 else self.horizon
-            width = int(y.shape[-1]) if y is not None and y.shape.rank == 3 else None
-            config, task_config = self._configuration(horizon, width)
+            y = self._training_targets(x, y)
+            config, task_config = self._configuration_for_targets(y, dataset=True)
             input_kind = "dataset"
         else:
             x = input_arrays(inputs)
-            if targets is None:
-                if task == TaskType.ANOMALY_DETECTION:
-                    targets = x["past_values"]
-                else:
-                    raise ValueError("Prepared-array training requires targets")
-            y, weight = target_arrays(targets, sample_weight)
+            y, weight = target_arrays(self._training_targets(x, targets), sample_weight)
             classification = task == TaskType.CLASSIFICATION
-            if classification:
-                if y.ndim != 1 or not np.equal(y, np.floor(y)).all() or (y < 0).any():
-                    raise ValueError("Classification targets must have shape (B,) with nonnegative integer class ids")
-                y = y.astype(np.int32)
-            elif y.ndim != 3:
-                raise ValueError("Regression/reconstruction targets must have shape (B,T,D)")
-            if len(y) != len(x["past_values"]):
-                raise ValueError("Inputs and targets must have the same sample count")
-            if (
-                task in {TaskType.SEQUENCE_REGRESSION, TaskType.IMPUTATION, TaskType.ANOMALY_DETECTION}
-                and x["past_values"].shape[1] != y.shape[1]
-            ):
-                raise ValueError(f"{task.value} requires one target timestep per input timestep")
-            config, task_config = self._configuration(
-                None if classification else y.shape[1],
-                None if classification else y.shape[-1],
-                max(2, int(y.max()) + 1) if classification else None,
-            )
+            config, task_config = self._configuration_for_targets(y)
             spec = get_model_capabilities(config.model_type).input_spec
             preprocessor = ArrayPreprocessor(self.normalize).fit(
                 x,
@@ -264,7 +282,10 @@ class Estimator:
                 if not isinstance(validation_data, (tuple, list)) or len(validation_data) not in (2, 3):
                     raise ValueError("Provide validation_data=(X_valid, y_valid[, sample_weight])")
                 vx = input_arrays(validation_data[0])
-                vy, vw = target_arrays(*validation_data[1:])
+                vy, vw = target_arrays(
+                    self._training_targets(vx, validation_data[1]),
+                    validation_data[2] if len(validation_data) == 3 else None,
+                )
                 if vy.shape[1:] != y.shape[1:]:
                     raise ValueError("Training and validation target shapes must match")
                 valid = preprocessor.dataset(vx, vy, vw, batch_size=batch_size)
@@ -283,15 +304,14 @@ class Estimator:
         batch = model._batch_from_keras(first)
         model._objective_result(batch, model(batch, training=False, compute_loss=False))
         trainer = Trainer(model)
+        patience = fit_options.pop("early_stopping_patience", self.early_stopping_patience)
         history = trainer.train(
             train,
             valid_dataset=valid,
             optimizer=fit_options.pop("optimizer", tf.keras.optimizers.Adam(self.learning_rate)),
             epochs=fit_options.pop("epochs", self.epochs),
             batch_size=batch_size,
-            early_stopping_patience=(
-                fit_options.pop("early_stopping_patience", self.early_stopping_patience) if valid is not None else None
-            ),
+            early_stopping_patience=patience if valid is not None else None,
             **fit_options,
         )
         self.model_, self.trainer_, self.history_ = model, trainer, history
@@ -382,8 +402,9 @@ class Estimator:
             windows = WindowIndexer().build(prepared, WindowSpec(self.context_, self.horizon_))
             dataset = self.preprocessor_.dataset(prepared, windows, batch_size=self.batch_size_)
         elif self.preprocessor_ is not None:
-            target, weight = target_arrays(targets, sample_weight)
-            dataset = self.preprocessor_.dataset(input_arrays(inputs), target, weight, batch_size=self.batch_size_)
+            arrays = input_arrays(inputs)
+            target, weight = target_arrays(self._training_targets(arrays, targets), sample_weight)
+            dataset = self.preprocessor_.dataset(arrays, target, weight, batch_size=self.batch_size_)
         else:
             dataset = inputs
         if getattr(self.model_, "optimizer", None) is None:

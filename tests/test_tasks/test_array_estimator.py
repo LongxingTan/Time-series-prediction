@@ -11,7 +11,7 @@ from tfts.contracts import ForecastOutput, TimeSeriesBatch
 from tfts.tasks.objectives import SequenceMeanSquaredError
 
 
-class ArrayPipelineTest(unittest.TestCase):
+class ArrayEstimatorTest(unittest.TestCase):
     def setUp(self):
         tf.keras.backend.clear_session()
         rng = np.random.default_rng(17)
@@ -19,41 +19,43 @@ class ArrayPipelineTest(unittest.TestCase):
         self.y = np.stack((2 * self.x[..., 1] + 10, self.x[..., 2] - 20), axis=-1)
 
     def test_aligned_training_and_saved_preprocessing(self):
-        pipe = tfts.pipeline("sequence_regression", bidirectional=True, epochs=2, batch_size=4)
+        pipe = tfts.Estimator("sequence_regression", bi_direction=True, epochs=2, batch_size=4)
         weight = np.ones((8, 8), dtype="float32")
         weight[:, -1] = 0
         labels = self.y[:8].copy()
         labels[:, -1] = 100000
         pipe.fit(self.x[:8], labels, sample_weight=weight, validation_data=(self.x[8:], self.y[8:]), verbose=0)
-        self.assertTrue(pipe.config.bi_direction)
-        self.assertEqual(pipe.config.target_dim, 2)
-        np.testing.assert_allclose(pipe._target_scaler.offset, self.y[:8, :-1].mean(axis=(0, 1)), rtol=1e-6)
-        np.testing.assert_allclose(pipe._scalers["past_values"].offset, self.x[:8].mean(axis=(0, 1)), atol=1e-7)
+        self.assertTrue(pipe.model_.config.bi_direction)
+        self.assertEqual(pipe.model_.config.target_dim, 2)
+        np.testing.assert_allclose(
+            pipe.preprocessor_.target_scaler.offset, self.y[:8, :-1].mean(axis=(0, 1)), rtol=1e-6
+        )
+        np.testing.assert_allclose(
+            pipe.preprocessor_.scalers["past_values"].offset, self.x[:8].mean(axis=(0, 1)), atol=1e-7
+        )
         prediction = pipe.predict(self.x[8:])
         self.assertEqual(prediction.shape, self.y[8:].shape)
         self.assertTrue(np.isfinite(prediction).all())
         with tempfile.TemporaryDirectory() as directory:
             pipe.save(directory)
-            restored = tfts.TaskPipeline.load(directory)
+            restored = tfts.Estimator.load(directory)
             np.testing.assert_allclose(restored.predict(self.x[8:]), prediction, atol=1e-6)
         with self.assertRaisesRegex(ValueError, "window shapes"):
             pipe.predict(self.x[8:, :, :2])
 
     def test_forecast_dimensions_inferred(self):
-        pipe = tfts.pipeline("forecasting", epochs=1)
+        pipe = tfts.Estimator("forecasting", epochs=1)
         y = self.y[:, :3]
         pipe.fit(self.x[:8], y[:8], validation_data=(self.x[8:], y[8:]), verbose=0)
         self.assertEqual(pipe.predict(self.x[8:]).shape, (4, 3, 2))
         with tempfile.TemporaryDirectory() as directory:
             pipe.save(directory)
-            restored = tfts.TaskPipeline.load(directory)
+            restored = tfts.Estimator.load(directory)
             np.testing.assert_allclose(restored.predict(self.x[8:]), pipe.predict(self.x[8:]), atol=1e-6)
 
     def test_no_implicit_validation_split_or_shape_broadcast(self):
-        pipe = tfts.pipeline("sequence_regression")
-        with self.assertRaisesRegex(ValueError, "validation_data"):
-            pipe.fit(self.x, self.y)
-        with self.assertRaisesRegex(ValueError, "one target timestep"):
+        pipe = tfts.Estimator("sequence_regression")
+        with self.assertRaisesRegex(tf.errors.InvalidArgumentError, "one target timestep"):
             pipe.fit(self.x[:8], self.y[:8, :2], validation_data=(self.x[8:], self.y[8:, :2]))
         with self.assertRaisesRegex(ValueError, "sample_weight"):
             pipe.fit(self.x[:8], self.y[:8], sample_weight=np.ones((8, 1)), validation_data=(self.x[8:], self.y[8:]))
@@ -62,7 +64,7 @@ class ArrayPipelineTest(unittest.TestCase):
         for name in ("dlinear", "patch_tst", "tide"):
             with self.subTest(model=name):
                 with self.assertRaisesRegex(ValueError, "sequence_regression"):
-                    tfts.pipeline("sequence_regression", model=name)
+                    tfts.Estimator("sequence_regression", model=name).fit(self.x, self.x)
                 model = tfts.AutoModel.from_config(tfts.AutoConfig.for_model(name), output_chunk_length=2)
                 with self.assertRaisesRegex((ValueError, tf.errors.InvalidArgumentError), "target_dim"):
                     model(self.x)
@@ -76,18 +78,18 @@ class ArrayPipelineTest(unittest.TestCase):
             past_values=self.x[..., :1], past_time_features=self.x[..., 1:], future_time_features=self.x[:, :3, 1:]
         )
         y = self.y[:, :3, :1]
-        pipe = tfts.pipeline("forecasting", model="tide", epochs=1)
+        pipe = tfts.Estimator("forecasting", model="tide", epochs=1)
         pipe.fit(
             {k: v[:8] for k, v in x.items()},
             y[:8],
             validation_data=({k: v[8:] for k, v in x.items()}, y[8:]),
             verbose=0,
         )
-        self.assertEqual(pipe.config.feature_dim, 2)
+        self.assertEqual(pipe.model_.config.feature_dim, 2)
         prediction = pipe.predict(x)
         with tempfile.TemporaryDirectory() as directory:
             pipe.save(directory)
-            restored = tfts.TaskPipeline.load(directory)
+            restored = tfts.Estimator.load(directory)
             np.testing.assert_allclose(restored.predict(x), prediction, atol=1e-5)
 
     def test_masked_objective_and_exact_target_shape(self):
@@ -129,7 +131,7 @@ class ArrayPipelineTest(unittest.TestCase):
         rng = np.random.default_rng(31)
         x = rng.normal(size=(128, 8, 3)).astype("float32")
         y = 3 * x[..., 1:2] - 2 * x[..., 2:3] + 10
-        pipe = tfts.pipeline("sequence_regression", epochs=12, batch_size=16)
+        pipe = tfts.Estimator("sequence_regression", input_projection=True, epochs=12, batch_size=16)
         pipe.fit(x[:96], y[:96], validation_data=(x[96:], y[96:]), verbose=0)
         mse = np.mean((pipe.predict(x[96:]) - y[96:]) ** 2)
         baseline = np.mean((y[96:] - y[:96].mean()) ** 2)

@@ -3,7 +3,6 @@
 The primary composition is explicit: backbone config + task config -> task model.
 """
 
-from tfts.cli import pipeline
 from tfts.contracts import (
     AnomalyDetectionTaskConfig,
     ClassificationTaskConfig,
@@ -58,7 +57,6 @@ from tfts.models.auto_model import (
     AutoModelForTimeSeriesClassification,
 )
 from tfts.models.registry import list_models, list_supported_tasks, resolve_model_features
-from tfts.tasks.pipeline import Pipeline, TaskPipeline
 from tfts.training import EagerTrainer, KerasTrainer, Trainer, TrainingArguments, load_model, set_seed
 from tfts.tuner import OptunaTuner
 
@@ -98,8 +96,6 @@ __all__ = [
     "Estimator",
     "Forecaster",
     "NotFittedError",
-    "pipeline",
-    "ForecastingPipeline",
     "DataProcessor",
     "generate_sequence_windows",
     "pad_sequence",
@@ -166,17 +162,6 @@ __all__ = [
     "SequenceMaterializer",
     # -- Evaluation --
     "evaluate_metrics",
-    # -- Pipelines --
-    "TaskPipeline",
-    "Pipeline",
 ] + _BENCHMARK_EXPORTS
 
 __version__ = "0.0.5"
-
-
-def __getattr__(name: str):
-    if name == "ForecastingPipeline":
-        from tfts.cli.forecasting import ForecastingPipeline
-
-        return ForecastingPipeline
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

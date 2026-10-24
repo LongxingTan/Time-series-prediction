@@ -28,7 +28,7 @@ output length and target width are inferred during ``fit``.
 
    import tfts
 
-   pipe = tfts.Estimator("sequence_regression", bidirectional=True)
+   pipe = tfts.Estimator("sequence_regression", bi_direction=True)
    pipe.fit(X_train, y_train, validation_data=(X_valid, y_valid))
    predictions = pipe.predict(X_test)
    pipe.save("outputs/regression")

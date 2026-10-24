@@ -60,6 +60,79 @@ class EstimatorTest(unittest.TestCase):
             estimator.preprocessor_.target_scaler.offset, (self.y + 10).mean(axis=(0, 1)), atol=1e-6
         )
 
+    def test_early_stopping_override_with_and_without_validation(self):
+        for validation in (None, (self.x, self.y)):
+            with self.subTest(validation=validation is not None):
+                estimator = tfts.Forecaster(epochs=1)
+                estimator.fit(self.x, self.y, validation_data=validation, early_stopping_patience=2, verbose=0)
+                self.assertEqual(len(estimator.history_.history["loss"]), 1)
+                self.assertEqual("val_loss" in estimator.history_.history, validation is not None)
+
+    def test_dataset_classification_requires_declared_class_count(self):
+        # The first batch deliberately omits the last class.
+        labels = np.repeat(np.arange(3), 4)
+        dataset = tf.data.Dataset.from_tensor_slices((self.x, labels)).batch(4)
+        with self.assertRaisesRegex(ValueError, "explicit num_labels"):
+            tfts.Estimator("classification", epochs=1).fit(dataset, verbose=0)
+        for options in ({"num_labels": 3}, {"task_config": tfts.ClassificationTaskConfig(num_labels=3)}):
+            with self.subTest(options=options):
+                estimator = tfts.Estimator("classification", epochs=1, **options).fit(dataset, verbose=0)
+                self.assertEqual(estimator.predict(dataset).shape, (12, 3))
+                self.assertTrue(np.isfinite(estimator.evaluate(dataset, verbose=0)["loss"]))
+
+    def test_dataset_and_sequence_infer_anomaly_target_width_without_labels(self):
+        class Batches(tf.keras.utils.Sequence):
+            def __init__(self, values):
+                super().__init__()
+                self.values = values
+
+            def __len__(self):
+                return 3
+
+            def __getitem__(self, index):
+                return {"past_values": self.values[index * 4 : (index + 1) * 4]}
+
+        for inputs in (
+            tf.data.Dataset.from_tensor_slices({"past_values": self.x}).batch(4),
+            Batches(self.x),
+        ):
+            with self.subTest(input_type=type(inputs).__name__):
+                estimator = tfts.Estimator("anomaly_detection", epochs=1).fit(inputs, verbose=0)
+                self.assertEqual(estimator.model_.task_config.target_dim, 3)
+                output = estimator.predict_output(inputs)
+                self.assertEqual(output.reconstruction.shape, self.x.shape)
+                self.assertTrue(np.isfinite(estimator.evaluate(inputs, verbose=0)["loss"]))
+                with tempfile.TemporaryDirectory() as directory:
+                    estimator.save(directory)
+                    restored = tfts.Estimator.load(directory)
+                    np.testing.assert_allclose(restored.predict(inputs), estimator.predict(inputs), atol=1e-6)
+
+    def test_grid_forecasting_dataset_infers_dimensions(self):
+        values = self.x.reshape(12, 8, 1, 3, 1)
+        targets = values[:, :2]
+        dataset = tf.data.Dataset.from_tensor_slices((values, targets)).batch(4)
+        estimator = tfts.Forecaster("dlinear", spatial_strategy="per_node", epochs=1)
+        estimator.fit(dataset, verbose=0)
+        self.assertEqual(estimator.horizon_, 2)
+        self.assertEqual(estimator.predict(dataset).shape, targets.shape)
+        self.assertTrue(np.isfinite(estimator.evaluate(dataset, verbose=0)["loss"]))
+
+    def test_array_anomaly_evaluation_uses_the_same_default_targets_as_fit(self):
+        estimator = tfts.Estimator("anomaly_detection", epochs=1).fit(self.x, verbose=0)
+        implicit = estimator.evaluate(self.x, verbose=0)["loss"]
+        explicit = estimator.evaluate(self.x, self.x, verbose=0)["loss"]
+        self.assertAlmostEqual(implicit, explicit)
+
+    def test_arrays_and_datasets_validate_the_same_target_contract(self):
+        for labels in (np.ones(12) * 0.5, np.full(12, -1), np.ones((12, 1)), np.ones((12, 2))):
+            for inputs, targets in (
+                (self.x, labels),
+                (tf.data.Dataset.from_tensor_slices((self.x, labels)).batch(4), None),
+            ):
+                with self.subTest(shape=labels.shape, dataset=targets is None):
+                    with self.assertRaises((ValueError, tf.errors.InvalidArgumentError)):
+                        tfts.Estimator("classification", num_labels=3, epochs=1).fit(inputs, targets, verbose=0)
+
     def test_array_and_classification_roundtrip(self):
         for task, target in (("forecasting", self.y), ("classification", np.arange(12) % 3)):
             with self.subTest(task=task):
@@ -222,25 +295,6 @@ class EstimatorTest(unittest.TestCase):
 
 
 class ReductionTest(unittest.TestCase):
-    def test_legacy_head_config_keeps_original_weight_shapes(self):
-        from tfts.tasks.task_models import ForecastingModel
-
-        for head in ("point", "quantile", "distribution"):
-            model = tfts.AutoModel.from_config(
-                tfts.AutoConfig.for_model("rnn"),
-                output_chunk_length=2,
-                head=head,
-                head_version=1,
-            )
-            x = tf.ones([2, 4, 1])
-            expected = model(x).predictions
-            config = model.get_config()
-            del config["task_config"]["head_version"]
-            restored = ForecastingModel.from_config(config)
-            restored(x)
-            restored.set_weights(model.get_weights())
-            np.testing.assert_allclose(restored(x).predictions, expected, atol=1e-6)
-
     def test_custom_objective_only_needs_reduction_method(self):
         from tfts.tasks.objectives import LossResult
 

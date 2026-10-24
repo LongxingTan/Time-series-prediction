@@ -5,18 +5,23 @@
 - Add `Estimator` and `Forecaster` with lazy model construction, fitted state,
   train-only scaling, lazy dataframe windows, explicit future covariates, and
   versioned model/preprocessing artifacts. Keep existing simple batch/config contracts.
-- Deprecate `TaskPipeline`, `ForecastingPipeline`, and `pipeline()` in favor of
-  the estimator. They delegate to one implementation and remain available for
-  at least one minor release. Legacy pipeline artifacts remain loadable.
+- **Breaking:** replace `TaskPipeline`, `ForecastingPipeline`, and `pipeline()`
+  with `Estimator` / `Forecaster`. Remove legacy pipeline artifact loading and
+  versioned forecast-head implementations. Use current estimator artifacts.
 - Register forecast heads independently of task dispatch. Learned heads emit
   any horizon, quantiles are ordered, and defaults select the matching objective.
-  Versioned task configs preserve the original head shapes for older artifacts.
 - Allow sequence regression with any backbone exposing temporal representations.
+- Share target resolution and dimension inference between arrays and datasets;
+  require explicit `num_labels` for dataset classification and infer unlabeled
+  anomaly reconstruction widths from inputs.
+- Use one fitted scaler and canonical tensor dictionaries in DataProcessor;
+  standard scaling uses population variance throughout.
+- Fix fit-time early-stopping overrides when validation data is absent.
 - Track exact weighted losses for point, quantile, and distribution objectives;
   mask target operands before loss arithmetic and support optimizer loss scaling.
 - **Breaking:** task calls now reject unsupported covariate fields rather than
   silently ignoring them. DataProcessor rejects gapped/nonfinite history and
-  `fill_missing_dates=True`; regularize data explicitly. Custom training objectives
+  no longer accepts `fill_missing_dates`; regularize data explicitly. Custom training objectives
   implement `reduce(batch, output) -> LossResult(total, weight)` and should be
   registered for serialization.
 

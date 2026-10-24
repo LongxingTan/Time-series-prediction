@@ -393,15 +393,16 @@ How do I deploy TFTS models?
 .. code-block:: python
 
    from flask import Flask, request
-   import joblib
+   import numpy as np
+   import tfts
 
    app = Flask(__name__)
-   model = joblib.load('model.pkl')
+   model = tfts.load_model('model.keras', compile=False)
 
    @app.route('/predict', methods=['POST'])
    def predict():
        data = request.json
-       prediction = model.predict(data)
+       prediction = model.predict(np.asarray(data, dtype=np.float32))
        return {'prediction': prediction.tolist()}
 
 
@@ -414,7 +415,7 @@ How do I handle missing values in production?
 
 .. code-block:: python
 
-   df = df.fillna(method='ffill')
+   df = df.ffill()
 
 2. **Interpolation:**
 
@@ -515,9 +516,16 @@ Can I customize model architectures?
    config = AutoConfig.for_model('seq2seq')
    backbone = AutoBackbone.from_config(config, output_chunk_length=24)
 
-   # Wrap the TFTS backbone with your own Keras head
+   class ForecastLayer(tf.keras.layers.Layer):
+       def __init__(self, backbone):
+           super().__init__()
+           self.backbone = backbone
+
+       def call(self, inputs):
+           return self.backbone(inputs).native_forecast
+
    inputs = tf.keras.Input(shape=(24, 1))
-   outputs = tf.keras.layers.Dense(1, activation='sigmoid')(backbone(inputs))
+   outputs = tf.keras.layers.Dense(1, activation='sigmoid')(ForecastLayer(backbone)(inputs))
    model = tf.keras.Model(inputs=inputs, outputs=outputs)
    model.compile(loss='mse', optimizer='rmsprop')
 
@@ -540,7 +548,7 @@ Can I customize model architectures?
            ])
 
        def call(self, inputs):
-           return self.custom_layers(self.backbone(inputs))
+           return self.custom_layers(self.backbone(inputs).native_forecast)
 
 
 How do I implement custom loss functions?
@@ -548,16 +556,23 @@ How do I implement custom loss functions?
 
 .. code-block:: python
 
-   class CustomLoss(tf.keras.losses.Loss):
-       def call(self, y_true, y_pred):
-           # Your custom loss logic
-           mse = tf.reduce_mean(tf.square(y_true - y_pred))
-           mae = tf.reduce_mean(tf.abs(y_true - y_pred))
-           return mse + 0.1 * mae
+   from tfts import Trainer
+   from tfts.registry import register_objective
+   from tfts.tasks.objectives import LossResult, MeanAbsoluteError, MeanSquaredError
 
-   # Use in training
+   @register_objective("mse_plus_mae")
+   class CustomObjective:
+       requires_targets = True
+
+       def reduce(self, batch, output):
+           mse = MeanSquaredError().reduce(batch, output)
+           mae = MeanAbsoluteError().reduce(batch, output)
+           return LossResult(mse.total + 0.1 * mae.total, mse.weight)
+
+   model.configure_objective("mse_plus_mae")
    trainer = Trainer(model)
-   trainer.train(train, valid, loss_fn=CustomLoss())
+   trainer.train(train, valid, epochs=1)
+
 
 
 How do I quantify forecast uncertainty?

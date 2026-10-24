@@ -32,10 +32,6 @@ def task_config_from_dict(values):
     """Restore the right task dataclass from its serialized values."""
     values = dict(values)
     task_type = TaskType.normalize(values.get("task"))
-    if task_type == TaskType.FORECASTING and "head_version" not in values:
-        values["head_version"] = 1
-    if task_type == TaskType.SEQUENCE_REGRESSION and "head" not in values:
-        values["head"] = "native"
     task_config_class, _ = _task_spec(task_type)
     return task_config_class(**values)
 
@@ -48,8 +44,6 @@ def build_task_model(config, task_config, model_kwargs=None):
     if task_type in {TaskType.FORECASTING, TaskType.SEQUENCE_REGRESSION}:
         config = copy.deepcopy(config)
         config.target_dim = task_config.target_dim
-    if task_type == TaskType.SEQUENCE_REGRESSION and task_config.head == "native":
-        config.return_sequences = True
     backbone = AutoBackbone.from_config(config, output_chunk_length=output_chunk_length)
     capabilities = get_model_capabilities(config.model_type)
     return model_class(

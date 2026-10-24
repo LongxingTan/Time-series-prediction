@@ -15,7 +15,7 @@ def main():
     )
     model = AutoModelForForecasting.from_config(AutoConfig.for_model("stgcn"), output_chunk_length=6)
     forecast = model(batch)
-    print(forecast.shape)
+    print(forecast.predictions.shape)
 
 
 if __name__ == "__main__":

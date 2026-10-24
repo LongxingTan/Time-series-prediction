@@ -246,30 +246,22 @@ class SequenceRegressionModel(TimeSeriesTaskModel):
 
     def __init__(self, backbone, task_config, capabilities, objective=None, **kwargs):
         super().__init__(backbone, task_config, capabilities, **kwargs)
-        self.head = None
-        if task_config.head == "per_step":
-            if not capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):
-                raise ValueError(
-                    f"{backbone.config.model_type} does not support sequence_regression: "
-                    "a temporal_sequence port is required"
-                )
-            self.head = ReconstructionHead(task_config.target_dim)
-        elif task_config.head != "native":
-            raise ValueError("sequence_regression head must be 'per_step' or 'native'")
+        if not capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):
+            raise ValueError(
+                f"{backbone.config.model_type} does not support sequence_regression: "
+                "a temporal_sequence port is required"
+            )
+        self.head = ReconstructionHead(task_config.target_dim)
         self.configure_objective(objective)
 
     def forward(self, inputs, training=None):
         batch = self.normalize_batch(inputs)
         model_batch, restore = self.prepare_backbone_batch(batch)
-        if self.head is None:
-            output = self.adapter.forward(model_batch, training=training)
-            predictions = output.native_forecast
-        else:
-            output = self.adapter.forward(model_batch, training=training, require=OutputPort.TEMPORAL_SEQUENCE)
-            tf.debugging.assert_equal(
-                tf.shape(output.sequence_output)[1],
-                model_batch.context_length,
-                message="Temporal output must align with every input step",
-            )
-            predictions = self.head(output.sequence_output)
+        output = self.adapter.forward(model_batch, training=training, require=OutputPort.TEMPORAL_SEQUENCE)
+        tf.debugging.assert_equal(
+            tf.shape(output.sequence_output)[1],
+            model_batch.context_length,
+            message="Temporal output must align with every input step",
+        )
+        predictions = self.head(output.sequence_output)
         return ForecastOutput(predictions=restore(predictions))

@@ -7,9 +7,10 @@ model through a decoder, processes each emitted chunk, then transforms the
 assembled trajectory.
 
 ``Estimator`` owns preprocessing, fitting, and artifact persistence.
-``Forecaster`` is its forecasting convenience constructor. Legacy pipeline
-classes forward to this implementation. See :doc:`estimators` for dataframe
-usage and a complete one-file model extension.
+``Forecaster`` is its forecasting convenience constructor. Task models own
+target resolution, including reconstruction defaults; the estimator shares
+validation and dimension inference across arrays and dataset batches.
+See :doc:`estimators` for dataframe usage and a complete one-file model extension.
 
 Contracts and tasks
 -------------------

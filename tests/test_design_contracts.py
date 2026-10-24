@@ -5,25 +5,22 @@ import unittest
 import tensorflow as tf
 
 from tfts.contracts import ForecastOutput, ImputationOutput, TimeSeriesBatch
+from tfts.data.preprocessing import inverse_output
+from tfts.data.scaling import ChannelScaler
 from tfts.generation.chunk import Chunk, State
 from tfts.generation.loop import run
 from tfts.generation.processors import Mean
-from tfts.tasks.pipeline import TaskPipeline
 
 
 class TestDesignContracts(unittest.TestCase):
-    def test_pipeline_replaces_outputs_without_mutating_them(self):
-        class Processor:
-            def inverse_transform(self, value):
-                return value * 2
-
-        pipeline = TaskPipeline("forecasting", "rnn", processor=Processor())
+    def test_inverse_scaling_replaces_outputs_without_mutating_them(self):
+        scaler = ChannelScaler("minmax").fit([[0.0], [2.0]])
         for output, field in (
             (ForecastOutput(predictions=tf.ones([1, 2, 1])), "predictions"),
             (ImputationOutput(imputed_values=tf.ones([1, 2, 1])), "imputed_values"),
         ):
             with self.subTest(field=field):
-                result = pipeline.postprocess(output)
+                result = inverse_output(output, scaler)
                 self.assertEqual(float(tf.reduce_mean(getattr(result, field))), 2.0)
                 self.assertEqual(float(tf.reduce_mean(getattr(output, field))), 1.0)
 

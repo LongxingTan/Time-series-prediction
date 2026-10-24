@@ -82,7 +82,13 @@ batches, including quantile and likelihood losses. Float32 loss reductions and
 optimizer loss scaling support mixed precision.
 
 An estimator fitted from ``tf.data.Dataset`` or a Keras ``Sequence`` leaves
-preprocessing to the caller. For full Keras control, construct a task model with
+preprocessing to the caller. Dataset classification requires an explicit
+``num_labels`` (or ``ClassificationTaskConfig``): the first batch may omit
+classes, and streaming datasets cannot safely be scanned. Array classification
+infers the class count from all supplied labels. Unlabeled anomaly detection
+uses ``past_values`` as reconstruction targets for both arrays and datasets.
+
+For full Keras control, construct a task model with
 ``AutoModel.from_config`` and call ``compile`` / ``fit`` directly. Choose its
 loss with ``configure_objective``; task training uses that objective rather than
 Keras' compiled ``loss`` argument. Models consume tensor dictionaries at dataset
@@ -99,7 +105,9 @@ estimator:
 
 .. code-block:: python
 
+   import numpy as np
    import tensorflow as tf
+   import tfts
    from tfts.contracts import BackboneCapabilities, ModelInputSpec, OutputPort
    from tfts.models.base import BaseModel, CommonConfig
    from tfts.models.registry import register_model
@@ -129,8 +137,8 @@ estimator:
    assert estimator.predict(x).shape == y.shape
 
 Import the model's module before resolving its registered name or loading its
-artifact. For an in-tree built-in, also add its module to the lazy import list
-in ``tfts.models.registry``. A patch or variate representation declares
+artifact. For an in-tree built-in, the registry discovers implementation modules
+in ``tfts.models`` automatically. A patch or variate representation declares
 ``OutputPort.SEQUENCE``; only representations aligned one-to-one with input
 timesteps declare ``TEMPORAL_SEQUENCE``. Alignment is checked before a per-step
 head runs. Declare only covariates the backbone actually reads. A backbone with
@@ -142,18 +150,11 @@ extension surface. Head factories own their projection, typed output conversion,
 and default objective, so adding a registered forecast head does not require
 editing the forecasting task's dispatch logic.
 
-Migration and persistence
--------------------------
-
-``TaskPipeline``, ``ForecastingPipeline``, and ``pipeline()`` are deprecated
-argument adapters to the same estimator. They retain their historical
-``fit`` return value (Keras History). New code uses ``Estimator`` / ``Forecaster``
-and reads ``history_``. The wrappers may be removed after a minor-release
-deprecation period; they no longer own a separate training implementation.
+Persistence
+-----------
 
 Artifacts contain ``model.keras``, ``estimator.json`` (parameters and fitted
 preprocessing), and ``manifest.json`` (format/library versions and a state hash).
 Unknown format versions and modified state are rejected. Custom components must
-be registered before loading. ``TaskPipeline.load`` also accepts legacy
-``pipeline.json`` artifacts. Learned forecast heads save a version marker so
-older head weights keep their original shape on restoration.
+be registered before loading. Use ``Estimator`` / ``Forecaster`` for fitted
+workflows and ``AutoModel`` for direct model calls and generation.

@@ -130,6 +130,15 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
     def has_targets(self, batch):
         return getattr(batch, self.target_field) is not None
 
+    @classmethod
+    def resolve_targets(cls, batch, targets=None):
+        """Resolve explicit, embedded, or task-default labels in that order."""
+        if targets is None:
+            targets = getattr(batch, cls.target_field)
+        if targets is None and cls.default_target_field is not None:
+            targets = getattr(batch, cls.default_target_field)
+        return targets
+
     def _batch_from_keras(self, data):
         from dataclasses import replace
 
@@ -138,11 +147,10 @@ class TimeSeriesTaskModel(tf.keras.Model, ABC):
         changes = {}
         if sample_weight is not None:
             changes["sample_weight"] = tf.convert_to_tensor(sample_weight)
-        if y is not None:
-            target = tf.convert_to_tensor(y)
+        target = self.resolve_targets(batch, y)
+        if target is not None:
+            target = tf.convert_to_tensor(target)
             changes[self.target_field] = tf.cast(target, tf.float32) if target.dtype.is_floating else target
-        elif not self.has_targets(batch) and self.default_target_field is not None:
-            changes[self.target_field] = getattr(batch, self.default_target_field)
         return replace(batch, **changes) if changes else batch
 
     @property

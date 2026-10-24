@@ -39,7 +39,6 @@ class ForecastTaskConfig(TaskConfig):
     output_chunk_length: int = 1
     target_dim: int = 1
     head: Any = "auto"
-    head_version: int = 2
     quantiles: Tuple[float, ...] = (0.1, 0.5, 0.9)
     residual: Optional[str] = None
     spatial_strategy: str = "raise"
@@ -61,8 +60,6 @@ class ForecastTaskConfig(TaskConfig):
             raise ValueError("output_chunk_length and target_dim must be positive")
         from tfts.registry import ComponentSpec
 
-        if self.head_version not in (1, 2):
-            raise ValueError("Unsupported forecast head version")
         head_name = ComponentSpec.from_value(self.head).name
         if not isinstance(self.head, str):
             object.__setattr__(self, "head", ComponentSpec.from_value(self.head))
@@ -128,7 +125,6 @@ class SequenceRegressionTaskConfig(TaskConfig):
     """Predict targets aligned with a complete input window."""
 
     task: TaskType = TaskType.SEQUENCE_REGRESSION
-    head: str = "per_step"
     output_chunk_length: int = 1
     target_dim: int = 1
 

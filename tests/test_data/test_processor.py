@@ -20,21 +20,21 @@ class DataProcessorTest(unittest.TestCase):
     def test_standard_inverse_transform(self):
         processor = DataProcessor(lookback=4, horizon=2, normalize="standard", validation_split=0)
         processor.prepare(self.df, target_col="value", time_col="date")
-        normalized = (self.df["value"].to_numpy() - self.df["value"].mean()) / self.df["value"].std()
-        np.testing.assert_allclose(processor.inverse_transform(normalized), self.df["value"], rtol=1e-6)
+        normalized = (self.df["value"].to_numpy() - self.df["value"].mean()) / self.df["value"].std(ddof=0)
+        np.testing.assert_allclose(processor.inverse_transform(normalized), self.df["value"], rtol=1e-6, atol=1e-6)
 
     def test_inference_reuses_training_scaler_and_latest_window(self):
         processor = DataProcessor(lookback=4, horizon=2, normalize="minmax", validation_split=0)
         processor.prepare(self.df, target_col="value", time_col="date")
-        scaler = dict(processor._scaler_params)
+        scaler = processor._processor.target_scaler.to_dict()
 
         inference_df = self.df.tail(4).copy()
         inference_ds = processor.prepare_for_inference(inference_df, target_col="value", time_col="date")
         batches = list(inference_ds.as_numpy_iterator())
 
-        self.assertEqual(processor._scaler_params, scaler)
+        self.assertEqual(processor._processor.target_scaler.to_dict(), scaler)
         self.assertEqual(len(batches), 1)
-        self.assertEqual(batches[0][0].shape, (1, 4, 1))
+        self.assertEqual(batches[0]["past_values"].shape, (1, 4, 1))
 
     def test_validation_split_is_chronological(self):
         processor = DataProcessor(
@@ -46,14 +46,14 @@ class DataProcessorTest(unittest.TestCase):
             batch_size=64,
         )
         train_ds, valid_ds = processor.prepare(self.df, target_col="value", time_col="date")
-        train_x = next(iter(train_ds))[0].numpy()
-        valid_x = next(iter(valid_ds))[0].numpy()
+        train_x = next(iter(train_ds))[0]["past_values"].numpy()
+        valid_x = next(iter(valid_ds))[0]["past_values"].numpy()
         self.assertLess(train_x[-1, -1, 0], valid_x[0, -1, 0])
 
     def test_scaler_is_fitted_without_validation_leakage(self):
         processor = DataProcessor(lookback=3, horizon=1, normalize="minmax", validation_split=0.25)
         processor.prepare(self.df, target_col="value", time_col="date")
-        self.assertEqual(processor._scaler_params["max"], 14.0)
+        np.testing.assert_allclose(processor.inverse_transform(np.array([1.0])), [14.0])
 
     def test_prepare_without_validation_and_standard_inverse(self):
         processor = DataProcessor(lookback=4, horizon=2, normalize="standard", validation_split=0, shuffle=False)
@@ -65,7 +65,8 @@ class DataProcessorTest(unittest.TestCase):
         minmax.prepare(self.df, target_col="value", time_col="date")
         np.testing.assert_allclose(minmax.inverse_transform(np.array([0.0, 1.0])), np.array([0.0, 19.0]))
         unfitted = DataProcessor(normalize="minmax")
-        np.testing.assert_array_equal(unfitted.inverse_transform(np.array([1.0])), np.array([1.0]))
+        with self.assertRaisesRegex(RuntimeError, "fitted"):
+            unfitted.inverse_transform(np.array([1.0]))
 
     def test_inference_requires_fitted_normalizer(self):
         processor = DataProcessor(lookback=4, horizon=2, normalize="minmax")
@@ -94,16 +95,12 @@ class DataProcessorTest(unittest.TestCase):
         self.assertTrue(_looks_like_time(pd.Series(pd.date_range("2024-01-01", periods=2))))
         with self.assertRaises(ValueError):
             DataProcessor._infer_target(pd.DataFrame({"text": ["a", "b"]}))
-        with self.assertRaises(ValueError):
-            DataProcessor(lookback=2, horizon=2, validation_split=0.5)._split_dataset(
-                tf.data.Dataset.from_tensor_slices((np.zeros((0, 2, 1)), np.zeros((0, 2, 1))))
-            )
 
-    def test_group_normalization_fit_frame_and_time_like_heuristic(self):
+    def test_group_training_partition_and_time_like_heuristic(self):
         grouped = self.df.assign(group=["a"] * 10 + ["b"] * 10)
-        processor = DataProcessor(group_col="group", validation_split=0.25)
-        fit_frame = processor._normalization_fit_frame(grouped)
-        self.assertEqual(len(fit_frame), 14)
+        processor = DataProcessor(lookback=3, horizon=1, group_col="group", validation_split=0.25)
+        processor.prepare(grouped, target_col="value", time_col="date")
+        self.assertEqual(processor._processor.fit_report["training_rows"], 14)
         self.assertTrue(
             DataProcessor._infer_time(pd.DataFrame(index=pd.date_range("2024-01-01", periods=2))).endswith("idx")
         )
