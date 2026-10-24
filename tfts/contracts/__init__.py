@@ -16,6 +16,7 @@ from .task import (
     ClassificationTaskConfig,
     ForecastTaskConfig,
     ImputationTaskConfig,
+    SequenceRegressionTaskConfig,
     TaskConfig,
     TaskType,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "ClassificationTaskConfig",
     "ForecastOutput",
     "ForecastTaskConfig",
+    "SequenceRegressionTaskConfig",
     "GraphStructure",
     "ImputationOutput",
     "ImputationTaskConfig",

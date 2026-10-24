@@ -46,3 +46,13 @@ class DocumentationTest(unittest.TestCase):
         blocks = re.findall(r"\.\. code-block:: python\n\n((?:(?:   [^\n]*|)\n)+)", source)
         self.assertEqual(len(blocks), 2)
         self.execute_blocks(path, blocks)
+
+    def test_estimator_and_model_extension_examples(self):
+        from tfts.models import registry
+
+        path = "docs/source/estimators.rst"
+        source = (ROOT / path).read_text(encoding="utf-8")
+        blocks = re.findall(r"\.\. code-block:: python\n\n((?:(?:   [^\n]*|)\n)+)", source)
+        self.assertEqual(len(blocks), 2)
+        self.addCleanup(registry._ENTRIES.pop, "example_small_conv", None)
+        self.execute_blocks(path, blocks)

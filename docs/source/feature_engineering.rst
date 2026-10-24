@@ -208,7 +208,9 @@ Working with static / encoded data
 
 For a ready-made end-to-end data pipeline (windowing + normalization + batch
 generation) you can use :class:`tfts.data.DataProcessor` instead of composing
-the blocks above manually — see :doc:`api`. The notebook tutorials in
+the blocks above manually — see :doc:`api`. It uses the estimator's fitted
+scalers and returns canonical tensor dictionaries; training datasets also
+include labels. Standard scaling uses population variance. The notebook tutorials in
 :doc:`tutorials` (for example ``single_step_weather_prediction``,
 ``tft_stallion_prediction``) show realistic feature-engineering workflows on
 public datasets.

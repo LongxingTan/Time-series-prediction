@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import tensorflow as tf
 
-from examples.run_prediction_simple import parse_args, run_manual, run_pipeline
+from examples.run_prediction_simple import parse_args, run_estimator, run_manual
 from tfts import set_seed
 
 
@@ -33,9 +33,9 @@ class PredictionTest(unittest.TestCase):
         set_seed(315)
         run_manual(_make_args(use_model="rnn"))
 
-    def test_pipeline(self):
+    def test_estimator(self):
         set_seed(315)
-        pred = run_pipeline(_make_args(use_model="dlinear"))
+        pred = run_estimator(_make_args(use_model="dlinear"))
         self.assertIsNotNone(pred)
         self.assertEqual(pred.shape[-1], 1)
 

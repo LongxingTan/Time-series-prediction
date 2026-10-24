@@ -1,9 +1,9 @@
 """End-to-end time-series forecasting with TFTS.
 
 Two equivalent approaches:
-  1. Simple pipeline API (recommended)
+  1. Estimator API (recommended)
      python run_prediction_simple.py --use_model dlinear
-  2. Manual API (for full control, original style)
+  2. Manual API (for full control)
      python run_prediction_simple.py --use_model rnn --manual
 """
 
@@ -40,7 +40,7 @@ def parse_args():
         default="./outputs/forecasting_model",
         help="Directory in which to save the trained model",
     )
-    parser.add_argument("--manual", action="store_true", help="Use the manual API instead of pipeline")
+    parser.add_argument("--manual", action="store_true", help="Use the manual API instead of the estimator")
     return parser.parse_args()
 
 
@@ -58,22 +58,20 @@ def load_and_predict(model_dir, inputs):
 
 
 # ==============================================================
-# Approach 1: Simple Pipeline API (recommended for most users)
+# Approach 1: Estimator API (recommended for most users)
 # ==============================================================
 
 
-def run_pipeline(args):
-    """Train, save, restore, and infer with the pipeline API."""
+def run_estimator(args):
+    """Train, save, restore, and infer with the estimator API."""
     tfts.set_seed(args.seed)
 
     # Get data
     train, valid = tfts.get_data(args.use_data, args.train_length, args.predict_sequence_length, test_size=0.2)
 
-    # Create pipeline
-    pipe = tfts.pipeline(
-        "forecasting",
+    forecaster = tfts.Forecaster(
         model=args.use_model,
-        lookback=args.train_length,
+        context=args.train_length,
         horizon=args.predict_sequence_length,
         learning_rate=args.learning_rate,
         epochs=args.epochs,
@@ -81,26 +79,16 @@ def run_pipeline(args):
         early_stopping_patience=5,
         seed=args.seed,
     )
-    pipe.summary()
-
-    # Train (using raw arrays — pipeline handles the rest)
-    _ = pipe.trainer.train(
-        train,
-        valid,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        verbose=1,
-        early_stopping_patience=5,
-    )
+    forecaster.fit(train[0], train[1], validation_data=valid, verbose=1)
+    forecaster.model_.summary()
 
     model_dir = _output_dir(args)
-    pipe.trainer.save_model(model_dir)
-    print(f"Saved model to {model_dir}")
+    forecaster.save(model_dir)
+    print(f"Saved estimator to {model_dir}")
 
-    # Use the restored artifact for the inference demo. In a production
-    # service, `valid[0]` would be replaced with the latest input window.
-    pred = load_and_predict(model_dir, valid[0])
-    pipe.trainer.plot(history=valid[0], true=valid[1], pred=pred)
+    restored = tfts.Forecaster.load(model_dir)
+    pred = restored.predict(valid[0])
+    forecaster.trainer_.plot(history=valid[0], true=valid[1], pred=pred)
     return pred
 
 
@@ -155,5 +143,5 @@ if __name__ == "__main__":
     if args.manual:
         run_manual(args)
     else:
-        run_pipeline(args)
+        run_estimator(args)
     plt.show()

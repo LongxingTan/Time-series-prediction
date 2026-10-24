@@ -75,6 +75,7 @@ class _STGCNBlock(tf.keras.layers.Layer):
     capabilities=BackboneCapabilities(
         output_ports=frozenset({OutputPort.NATIVE_FORECAST}),
         input_spec=ModelInputSpec(
+            accepted_roles=frozenset(),
             arrangement=SpatialArrangement.SET,
             accepted_topologies=frozenset({TopologyInput.DENSE_ADJACENCY}),
             supports_multivariate_target=False,

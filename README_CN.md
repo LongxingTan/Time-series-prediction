@@ -46,7 +46,7 @@
 
 **安装**
 
-- python >= 3.7
+- python >= 3.8
 - tensorflow >= 2.4
 
 ```shell

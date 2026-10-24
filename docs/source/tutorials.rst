@@ -51,7 +51,7 @@ Quick start
 
 .. _quickstart:
 
-The fastest way to train and forecast is the pipeline API:
+The fastest way to train and forecast is the estimator API:
 
 .. code-block:: python
 
@@ -67,11 +67,11 @@ The fastest way to train and forecast is the pipeline API:
        "sales": np.random.randn(500).cumsum(),
    })
 
-   # 2. Build a forecasting pipeline ("dlinear", "transformer", "tft", ...)
-   pipe = tfts.pipeline(
-       "forecasting",
+   # 2. Build a forecaster ("dlinear", "transformer", "tft", ...)
+   forecaster = tfts.Forecaster(
        model="dlinear",
-       lookback=24,
+       context=24,
+       schema=tfts.TimeSeriesSchema("timestamp", ("sales",)),
        horizon=8,
        learning_rate=1e-3,
        epochs=10,
@@ -79,13 +79,14 @@ The fastest way to train and forecast is the pipeline API:
    )
 
    # 3. Train, holding out the last 20% of the series for validation
-   history = pipe.fit(df, target_col="sales", time_col="timestamp", epochs=10)
+   forecaster.fit(df)
+   history = forecaster.history_
 
    # 4. Forecast 8 steps ahead from the most recent lookback window
-   pred = pipe.predict(steps=8, df=df.tail(24))
+   pred = forecaster.predict(df.tail(24), steps=8)
    print("predictions shape:", pred.shape)
 
-Under the hood the pipeline composes a backbone (``AutoConfig`` → ``AutoBackbone``)
+Under the hood the estimator composes a backbone (``AutoConfig`` → ``AutoBackbone``)
 with a task head (``ForecastTaskConfig``) and a ``Trainer``. You can control
 every component yourself (see :ref:`manual_api` below).
 
@@ -166,12 +167,12 @@ loss:
    # 1. Data
    train, valid = tfts.get_data("sine", 24, 8)
 
-   # 2. Backbone config + model. The task head ("quantile") adds prediction_length outputs.
+   # 2. Backbone config + task model.
    config = AutoConfig.for_model("dlinear")
    model = AutoModelForForecasting.from_config(config, output_chunk_length=8)
 
-   # 3. Loss and optimizer
-   loss_fn = tf.keras.losses.MeanSquaredError()
+   # 3. The task defaults to MSE; select its objective explicitly if needed.
+   model.configure_objective("mse")
    optimizer = tf.keras.optimizers.Adam(1e-3)
 
    # 4. Trainer. strategy="default" keeps the default (single-device) strategy.
@@ -181,7 +182,7 @@ loss:
    )
 
    # 5. Train
-   trainer.train(train, valid, loss_fn=loss_fn, optimizer=optimizer, epochs=10, batch_size=16)
+   trainer.train(train, valid, optimizer=optimizer, epochs=10, batch_size=16)
 
    # 6. Predict / evaluate
    pred = trainer.predict(valid[0])
@@ -192,7 +193,7 @@ e.g. ``"transformer"``, ``"tft"``, ``"informer"``, ``"nbeats"``, ``"deep_ar"``.
 
 .. note::
 
-   **Multiple GPUs.** By default ``Trainer``/``pipeline`` use ``strategy="auto"``,
+   **Multiple GPUs.** By default ``Trainer`` use ``strategy="auto"``,
    which selects ``MirroredStrategy`` when more than one GPU is present
    (single GPU / CPU fall back to the default strategy). Multi-GPU training
    additionally requires a working **NCCL** installation. The examples above use
@@ -248,11 +249,17 @@ also ``tf.keras.Model`` objects:
    model = AutoModelForForecasting.from_config(
        AutoConfig.for_model("seq2seq"), output_chunk_length=8
    )
-   model.compile(loss="mse", optimizer="rmsprop")
+   # Extract the tensor inside a layer before returning to the Functional API.
+   class ForecastLayer(tf.keras.layers.Layer):
+       def __init__(self, task_model):
+           super().__init__()
+           self.task_model = task_model
 
-   # A Keras functional model wrapping the TFTS backbone
+       def call(self, inputs):
+           return self.task_model(inputs).predictions
+
    inputs = tf.keras.Input(shape=(24, 1))
-   outputs = tf.keras.layers.Dense(1, activation="sigmoid")(model(inputs))
+   outputs = tf.keras.layers.Dense(1, activation="sigmoid")(ForecastLayer(model)(inputs))
    keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
    keras_model.compile(loss="mse", optimizer="rmsprop")
 
@@ -349,9 +356,11 @@ with TensorFlow Serving:
 
 .. code-block:: python
 
+   import tensorflow as tf
    import tfts
 
    model = tfts.AutoModelForForecasting.from_config(tfts.AutoConfig.for_model("dlinear"), output_chunk_length=8)
+   _ = model(tf.zeros([1, 24, 1]))
    model.save_pretrained("./my_model")
 
    # Alternatively, export a single Keras archive for inference

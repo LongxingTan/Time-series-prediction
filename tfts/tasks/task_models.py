@@ -12,18 +12,12 @@ from tfts.contracts import (
     ImputationOutput,
     ImputationTaskConfig,
     OutputPort,
+    SequenceRegressionTaskConfig,
 )
-from tfts.distributions import NormalOutput
-from tfts.registry import ComponentSpec, register_task
+from tfts.registry import ComponentSpec, register_task, resolve
 
 from .anomaly import QuantileCalibrator, make_anomaly_scorer
-from .auto_task import (
-    ClassificationHead,
-    DistributionForecastHead,
-    PointForecastHead,
-    QuantileForecastHead,
-    ReconstructionHead,
-)
+from .auto_task import ClassificationHead, ReconstructionHead
 from .base import TimeSeriesTaskModel
 
 
@@ -31,6 +25,7 @@ from .base import TimeSeriesTaskModel
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class ForecastingModel(TimeSeriesTaskModel):
     task_name = "forecasting"
+    target_field = "future_values"
     required_output_port = None
     default_objective = "mse"
 
@@ -40,32 +35,25 @@ class ForecastingModel(TimeSeriesTaskModel):
         self.output_distribution = (
             getattr(backbone, "output_distribution", None) if capabilities.has_port(OutputPort.DISTRIBUTION) else None
         )
-        head_type = task_config.head
-        if head_type in {"auto", "native"}:
+        head_spec = ComponentSpec.from_value(task_config.head)
+        head_type = head_spec.name
+        if head_type == "auto":
+            head_type = "native" if capabilities.has_port(OutputPort.NATIVE_FORECAST) else "point"
+        if head_type == "native":
             if not capabilities.has_port(OutputPort.NATIVE_FORECAST):
                 raise ValueError("Native forecasting requires the native_forecast output port")
-        elif head_type == "point":
-            self._require_sequence()
-            self.head = PointForecastHead(
-                task_config.output_chunk_length,
-                task_config.target_dim,
-                residual=task_config.residual,
-            )
-        elif head_type == "quantile":
-            self._require_sequence()
-            self.head = QuantileForecastHead(
-                task_config.output_chunk_length,
-                task_config.quantiles,
-                task_config.target_dim,
-            )
-        elif head_type == "distribution":
-            if capabilities.has_port(OutputPort.DISTRIBUTION):
-                if self.output_distribution is None:
-                    raise ValueError("Backbone declares a distribution port but exposes no distribution")
-            else:
-                self._require_sequence()
-                self.output_distribution = NormalOutput(target_dim=task_config.target_dim)
-                self.head = DistributionForecastHead(self.output_distribution, task_config.output_chunk_length)
+        elif head_type == "distribution" and capabilities.has_port(OutputPort.DISTRIBUTION):
+            if self.output_distribution is None:
+                raise ValueError("Backbone declares a distribution port but exposes no distribution")
+        else:
+            head_class = resolve("head", head_type).factory
+            required = head_class.required_output_port
+            if not capabilities.has_port(required):
+                raise ValueError(
+                    f"{head_type} requires {required.value}, which {self.backbone_config.model_type} does not expose"
+                )
+            self.head = head_class.from_task_config(task_config, **head_spec.kwargs)
+            self.output_distribution = getattr(self.head, "distribution", None)
 
         self.generation_probabilistic = self.output_distribution is not None
         self._native_decode = self.head is None and hasattr(backbone, "initialize_decode")
@@ -76,27 +64,13 @@ class ForecastingModel(TimeSeriesTaskModel):
             name="teacher_probability",
         )
         if objective is None:
-            if head_type == "quantile":
-                objective = ComponentSpec("quantile", {"quantiles": task_config.quantiles})
+            if self.head is not None:
+                objective = self.head.default_objective
             elif self.output_distribution is not None:
                 objective = ComponentSpec("nll", {"distribution": self.output_distribution})
             else:
                 objective = self.default_objective
         self.configure_objective(objective)
-
-    def predict_step(self, data):
-        """Expose forecast tensors to Keras predict's graph/NumPy adapter.
-
-        call() retains the richer ForecastOutput contract for direct callers.
-        """
-        inputs, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        return self(inputs, training=False).predictions
-
-    def _require_sequence(self):
-        if not self.capabilities.has_port(OutputPort.SEQUENCE):
-            raise ValueError(
-                f"{self.backbone_config.model_type} cannot use a learned head because it exposes no sequence port"
-            )
 
     def forward(self, inputs, training=None, teacher_probability=None):
         batch = self.normalize_batch(inputs)
@@ -158,25 +132,9 @@ class ForecastingModel(TimeSeriesTaskModel):
                 backbone_output=backbone_output,
             )
 
-        backbone_output = self.adapter.forward(model_batch, training=training, require=OutputPort.SEQUENCE)
-        if isinstance(self.head, PointForecastHead):
-            prediction = self.head(backbone_output.sequence_output, past_values=model_batch.past_values)
-            return ForecastOutput(predictions=restore(prediction), backbone_output=backbone_output)
-        if isinstance(self.head, QuantileForecastHead):
-            values = restore(self.head(backbone_output.sequence_output))
-            median = min(range(len(self.task_config.quantiles)), key=lambda i: abs(self.task_config.quantiles[i] - 0.5))
-            return ForecastOutput(
-                predictions=values[..., median],
-                quantile_values=values,
-                quantiles=self.task_config.quantiles,
-                backbone_output=backbone_output,
-            )
-        parameters = restore(self.head(backbone_output.sequence_output))
-        return ForecastOutput(
-            predictions=self.output_distribution.mean(parameters),
-            distribution_params=parameters,
-            backbone_output=backbone_output,
-        )
+        backbone_output = self.adapter.forward(model_batch, training=training, require=self.head.required_output_port)
+        value = self.head(backbone_output.sequence_output, past_values=model_batch.past_values, training=training)
+        return self.head.to_output(restore(value)).replace(backbone_output=backbone_output)
 
     def generate(self, inputs, config=None, **kwargs):
         from tfts.generation import generate
@@ -238,6 +196,7 @@ class ImputationModel(TimeSeriesTaskModel):
 @tf.keras.utils.register_keras_serializable(package="tfts")
 class AnomalyDetectionModel(TimeSeriesTaskModel):
     task_name = "anomaly_detection"
+    default_target_field = "past_values"
     required_output_port = OutputPort.TEMPORAL_SEQUENCE
     default_objective = "masked_mse"
 
@@ -275,3 +234,34 @@ class AnomalyDetectionModel(TimeSeriesTaskModel):
             labels=self.calibrator.predict(output.scores),
             threshold=tf.identity(self.calibrator.threshold),
         )
+
+
+@register_task("sequence_regression", config_class=SequenceRegressionTaskConfig)
+@tf.keras.utils.register_keras_serializable(package="tfts")
+class SequenceRegressionModel(TimeSeriesTaskModel):
+    """Aligned regression from any backbone with temporal representations."""
+
+    task_name = "sequence_regression"
+    default_objective = "sequence_mse"
+
+    def __init__(self, backbone, task_config, capabilities, objective=None, **kwargs):
+        super().__init__(backbone, task_config, capabilities, **kwargs)
+        if not capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):
+            raise ValueError(
+                f"{backbone.config.model_type} does not support sequence_regression: "
+                "a temporal_sequence port is required"
+            )
+        self.head = ReconstructionHead(task_config.target_dim)
+        self.configure_objective(objective)
+
+    def forward(self, inputs, training=None):
+        batch = self.normalize_batch(inputs)
+        model_batch, restore = self.prepare_backbone_batch(batch)
+        output = self.adapter.forward(model_batch, training=training, require=OutputPort.TEMPORAL_SEQUENCE)
+        tf.debugging.assert_equal(
+            tf.shape(output.sequence_output)[1],
+            model_batch.context_length,
+            message="Temporal output must align with every input step",
+        )
+        predictions = self.head(output.sequence_output)
+        return ForecastOutput(predictions=restore(predictions))

@@ -218,6 +218,69 @@ class SequenceMaterializer:
             metadata=metadata,
         )
 
+    def dataset(self, prepared, windows, *, plan=None, batch_size=32, shuffle=False, seed=0):
+        """Slice flat role arrays lazily; memory does not grow with window width."""
+        import tensorflow as tf
+
+        plan = _one_plan(prepared, None, plan)
+        frame, schema = prepared.frame, prepared.schema
+        if not len(windows):
+            raise ValueError("no valid windows could be constructed")
+        columns = {
+            "past_values": schema.target_cols,
+            "past_time_features": [spec.name for spec in plan.selected if _past_real(spec)],
+            "future_time_features": [spec.name for spec in plan.selected if _future_real(spec)],
+            "past_categorical_features": [spec.name for spec in plan.selected if _past_categorical(spec)],
+            "future_categorical_features": [spec.name for spec in plan.selected if _future_categorical(spec)],
+            "static_real_features": [spec.name for spec in plan.selected if _static_real(spec)],
+            "static_categorical_features": [spec.name for spec in plan.selected if _static_categorical(spec)],
+        }
+        arrays = {}
+        for name, names in columns.items():
+            if names:
+                values = frame[list(names)].to_numpy()
+                arrays[name] = tf.convert_to_tensor(
+                    _categorical_array(values, name)
+                    if "categorical" in name
+                    else _numeric_array(values, self.fill_value, name)
+                )
+        observed = tf.convert_to_tensor(frame[list(schema.target_cols)].notna().to_numpy())
+        starts = []
+        for window in windows.windows:
+            indices = window.encoder_indices
+            if indices[-1] - indices[0] + 1 != len(indices):
+                raise ValueError("Lazy windows require rows sorted by group and time")
+            if window.decoder_indices and window.decoder_indices[0] != indices[-1] + 1:
+                raise ValueError("Decoder rows must immediately follow the context")
+            starts.append(indices[0])
+        context, horizon = windows.spec.context_length, windows.spec.prediction_length
+        training = windows.spec.mode == "train"
+        if any(name.startswith("future_") for name in arrays):
+            for window in windows.windows:
+                _require_decoder(window, windows, columns.get("future_time_features", ()))
+        dataset = tf.data.Dataset.from_tensor_slices(np.asarray(starts, dtype=np.int32))
+        if shuffle:
+            dataset = dataset.shuffle(len(starts), seed=seed)
+
+        def gather(start):
+            past = tf.range(start, start + context)
+            future = tf.range(start + context, start + context + horizon)
+            inputs = {}
+            for name, values in arrays.items():
+                index = (
+                    start + context - 1
+                    if name.startswith("static_")
+                    else (future if name.startswith("future_") else past)
+                )
+                inputs[name] = tf.gather(values, index)
+            inputs["past_observed_mask"] = tf.gather(observed, past)
+            if training:
+                inputs["future_observed_mask"] = tf.gather(observed, future)
+                return inputs, tf.gather(arrays["past_values"], future)
+            return inputs
+
+        return dataset.map(gather).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
     @staticmethod
     def as_tf_dataset(
         batch: TimeSeriesBatch,
@@ -289,7 +352,9 @@ def _numeric_array(values, fill_value, name):
         array = np.asarray(values, dtype=np.float32)
     except (TypeError, ValueError) as error:
         raise ValueError(f"{name} must be numeric. Encode categorical strings before materialization") from error
-    return np.nan_to_num(array, nan=fill_value)
+    if np.isinf(array).any():
+        raise ValueError(f"{name} contains Inf")
+    return np.where(np.isnan(array), fill_value, array)
 
 
 def _categorical_array(values, name):

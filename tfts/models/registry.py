@@ -39,6 +39,7 @@ class ModelMetadata:
                 "supports_categorical": self.capabilities.input_spec.supports_categorical,
                 "supports_static": self.capabilities.input_spec.supports_static,
                 "supports_multivariate_target": self.capabilities.input_spec.supports_multivariate_target,
+                "requires_target_history": self.capabilities.input_spec.requires_target_history,
                 "accepted_dtypes_by_role": {
                     role: sorted(dtypes)
                     for role, dtypes in self.capabilities.input_spec.accepted_dtypes_by_role.items()
@@ -221,6 +222,34 @@ def check_batch_support(model_name: str, batch, spec=None) -> None:
         if arrangement != SpatialArrangement.NONE and spec.arrangement == SpatialArrangement.NONE:
             message += " Use spatial_strategy='per_node' for independent spatial forecasts."
         raise ValueError(message)
+    for field, role in (
+        ("past_time_features", "observed_past"),
+        ("past_categorical_features", "observed_past"),
+        ("future_time_features", "known_future"),
+        ("future_categorical_features", "known_future"),
+        ("static_real_features", "static"),
+        ("static_categorical_features", "static"),
+    ):
+        if getattr(batch, field, None) is None:
+            continue
+        if role not in spec.accepted_roles:
+            raise ValueError(f"{model_name} does not support covariates in {field}")
+        dtype = "categorical" if "categorical" in field else "real"
+        if dtype == "categorical" and not spec.supports_categorical:
+            raise ValueError(f"{model_name} does not support categorical field {field}")
+        accepted = spec.accepted_dtypes_by_role.get(role)
+        if accepted is not None and dtype not in accepted:
+            raise ValueError(f"{model_name} does not support {dtype} field {field}")
+    if spec.requires_matching_time_features and batch.future_time_features is not None:
+        if batch.past_time_features is None:
+            raise ValueError(f"{model_name} requires matching historical and future covariates")
+        import tensorflow as tf
+
+        tf.debugging.assert_equal(
+            tf.shape(batch.past_time_features)[-1],
+            tf.shape(batch.future_time_features)[-1],
+            message="Historical and future covariate widths must match",
+        )
     structure = batch.structure
     if structure is not None and getattr(structure, "is_dynamic", False) and not spec.supports_dynamic_graph:
         raise ValueError(f"{model_name!r} does not support time-varying adjacency")
@@ -254,6 +283,8 @@ def list_supported_tasks(model_name: str) -> List[str]:
 
     capabilities = get_model_capabilities(model_name)
     tasks = ["forecasting"]
+    if capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):
+        tasks.append("sequence_regression")
     if capabilities.has_port(OutputPort.SEQUENCE):
         tasks.append("classification")
     if capabilities.has_port(OutputPort.TEMPORAL_SEQUENCE):

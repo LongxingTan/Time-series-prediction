@@ -16,6 +16,7 @@ from tensorflow.keras.layers import (
     MaxPool1D,
 )
 
+from tfts.contracts import BackboneCapabilities, ModelInputSpec
 from tfts.layers.attention_layer import Attention, ProbAttention
 from tfts.layers.embed_layer import DataEmbedding
 from tfts.layers.mask_layer import CausalMask
@@ -54,6 +55,12 @@ class InformerConfig(CommonConfig):
 @register_model(
     "informer",
     config=InformerConfig,
+    capabilities=BackboneCapabilities(
+        input_spec=ModelInputSpec(
+            accepted_roles=frozenset({"observed_past", "known_future"}),
+            supports_multivariate_target=False,
+        )
+    ),
     paper="https://arxiv.org/abs/2012.07436",
     tags=("attention", "long-sequence", "efficient", "SOTA"),
     tier="core",

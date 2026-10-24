@@ -6,6 +6,12 @@ model combines a backbone with a head and objective. Generation uses that task
 model through a decoder, processes each emitted chunk, then transforms the
 assembled trajectory.
 
+``Estimator`` owns preprocessing, fitting, and artifact persistence.
+``Forecaster`` is its forecasting convenience constructor. Task models own
+target resolution, including reconstruction defaults; the estimator shares
+validation and dimension inference across arrays and dataset batches.
+See :doc:`estimators` for dataframe usage and a complete one-file model extension.
+
 Contracts and tasks
 -------------------
 
@@ -30,6 +36,11 @@ Model calls return named task outputs, such as ``ForecastOutput.predictions``
 and ``ClassificationOutput.logits``. Forecasting, classification, imputation, and anomaly
 detection own their heads and objectives. Anomaly thresholds require calibration
 on normal reference windows after loading a model.
+
+Sequence regression attaches a per-step head to any declared temporal port.
+Forecast heads are registered projections with their own output conversion and
+default objective. New learned heads emit the full horizon independently of
+token count; quantile heads enforce ordered quantiles with positive increments.
 
 Backbone and task configuration are separate serializable objects:
 

@@ -113,6 +113,16 @@ class BackboneAdapter:
         self._adapt_batch = getattr(backbone, "adapt_batch", None)
 
     def prepare_inputs(self, batch: TimeSeriesBatch):
+        from tfts.models.registry import check_batch_support
+
+        spec = self.capabilities.input_spec
+        check_batch_support(self.model_type, batch, spec)
+        if spec.requires_target_history:
+            tf.debugging.assert_equal(
+                tf.shape(batch.past_values)[-1],
+                self.backbone.config.target_dim,
+                message="past_values must contain exactly target_dim target histories; pass covariates separately",
+            )
         if self._adapt_batch is not None:
             return self._adapt_batch(batch)
 
