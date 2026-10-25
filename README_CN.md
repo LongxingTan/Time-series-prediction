@@ -50,7 +50,7 @@
 - tensorflow >= 2.4
 
 ```shell
-pip install tfts
+pip install tfts matplotlib
 ```
 
 **入门使用**

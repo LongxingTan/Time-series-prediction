@@ -29,6 +29,14 @@ class PredictionTest(unittest.TestCase):
             args = parse_args()
             self.assertEqual(args.seed, 315)
 
+    def test_strategy_requires_manual(self):
+        with patch("sys.argv", ["example", "--strategy", "mirrored"]):
+            with self.assertRaises(SystemExit) as error:
+                parse_args()
+        self.assertEqual(error.exception.code, 2)
+        with patch("sys.argv", ["example", "--manual", "--strategy", "mirrored"]):
+            self.assertEqual(parse_args().strategy, "mirrored")
+
     def test_train_manual(self):
         set_seed(315)
         run_manual(_make_args(use_model="rnn"))

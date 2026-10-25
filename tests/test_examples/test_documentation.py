@@ -53,6 +53,32 @@ class DocumentationTest(unittest.TestCase):
             restored = AutoModel.from_pretrained(directory)
             self.assertEqual(restored(tf.ones([2, 24, 1])).predictions.shape, (2, 8, 1))
 
+    def test_serving_export(self):
+        from tfts import AutoConfig, AutoModelForForecasting
+
+        model = AutoModelForForecasting.from_config(AutoConfig.for_model("dlinear"), output_chunk_length=8)
+        inputs = tf.ones([2, 24, 1])
+        expected = model(inputs).predictions.numpy()
+        with tempfile.TemporaryDirectory() as directory:
+            model.save_pretrained(directory + "/model")
+            code = snippet("docs/source/faq.rst", "class ForecastService")
+            code = code.replace("'./my_model'", repr(directory + "/model"))
+            code = code.replace("'./saved_model/1'", repr(directory + "/saved_model/1"))
+            exec(code, {})
+            service = tf.saved_model.load(directory + "/saved_model/1")
+            result = service.signatures["serving_default"](inputs=inputs)["predictions"]
+            np.testing.assert_allclose(result.numpy(), expected, rtol=1e-5, atol=1e-6)
+
+    def test_documented_convolutional_models(self):
+        for name in ("tcn", "wavenet"):
+            with self.subTest(model=name):
+                namespace = {}
+                exec(snippet("docs/source/models.rst", "for_model('" + name + "')"), namespace)
+                predictions = namespace["model"](tf.ones([2, 24, 1])).predictions
+                self.assertEqual(predictions.shape, (2, 24, 1))
+                config = namespace["config"]
+                self.assertEqual(len(config.kernel_sizes), len(config.dilation_rates))
+
     def test_spatial_example(self):
         from examples.run_spatial import main
 

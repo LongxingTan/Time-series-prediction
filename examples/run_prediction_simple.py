@@ -32,7 +32,8 @@ def parse_args():
         "--strategy",
         type=str,
         default="auto",
-        help="Distribution strategy: auto/default/one_device/mirrored/multi_worker",
+        choices=("auto", "default", "one_device", "mirrored", "multi_worker"),
+        help="Distribution strategy for --manual (default: auto)",
     )
     parser.add_argument(
         "--output_dir",
@@ -41,7 +42,10 @@ def parse_args():
         help="Directory in which to save the trained model",
     )
     parser.add_argument("--manual", action="store_true", help="Use the manual API instead of the estimator")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.manual and args.strategy != "auto":
+        parser.error("--strategy requires --manual")
+    return args
 
 
 def _output_dir(args):
@@ -122,6 +126,7 @@ def run_manual(args):
         loss_fn=loss_fn,
         optimizer=optimizer,
         epochs=args.epochs,
+        batch_size=args.batch_size,
         callbacks=[EarlyStopping("val_loss", patience=5)],
     )
 

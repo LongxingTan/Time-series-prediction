@@ -34,7 +34,7 @@ copyright = "2020, Longxing Tan"
 author = "Longxing Tan"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = tfts.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -60,8 +60,8 @@ autosummary_generate = True
 numpydoc_class_members_toctree = False
 numpydoc_show_class_members = False
 
-# The tutorial notebooks are multi-GPU / data-heavy; run them interactively in
-# docs/source/tutorials and commit the rendered outputs. Sphinx just renders them.
+# Execute the tutorials separately and commit their outputs. Documentation
+# builds render those results without repeating downloads and model training.
 nbsphinx_execute = "never"
 
 # Add any paths that contain templates here, relative to this directory.
@@ -159,9 +159,9 @@ mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?
 # theme options
 html_theme_options = {
     "github_url": "https://github.com/LongxingTan/Time-series-prediction",
+    "navbar_end": ["navbar-icon-links.html", "search-field.html"],
 }
 
-html_theme_options = {"navbar_end": ["navbar-icon-links.html", "search-field.html"]}
 
 html_sidebars = {
     "index": [],
