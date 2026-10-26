@@ -218,17 +218,15 @@ Dilated causal convolutions for sequence modeling.
 
    config = AutoConfig.for_model('tcn')
    config.filters = 64
-   config.kernel_sizes = [3]
-   config.num_layers = 3
-   config.dropout = 0.1
+   config.kernel_sizes = [3, 3, 3]
+   config.dilation_rates = [1, 2, 4]
 
    model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
 **Key Parameters:**
    - ``filters``: Number of convolutional filters
    - ``kernel_sizes``: Convolution kernel sizes (per layer)
-   - ``num_layers``: Number of dilated residual layers
-   - ``dilation_rates``: dilation factors
+   - ``dilation_rates``: Dilation rate for each convolutional layer
 
 **References:**
    - Bai et al. "An Empirical Evaluation of Generic Convolutional and Recurrent Networks" (2018)
@@ -257,8 +255,8 @@ Deep generative model with dilated causal convolutions.
 
    config = AutoConfig.for_model('wavenet')
    config.filters = 32
-   config.num_layers = 4
-   config.kernel_sizes = [3]
+   config.dilation_rates = [1, 2, 4, 8]
+   config.kernel_sizes = [3, 3, 3, 3]
 
    model = AutoModelForForecasting.from_config(config, output_chunk_length=24)
 
@@ -561,7 +559,7 @@ All models can be configured using ``AutoConfig``:
    # Modify configuration
    config.hidden_size = 256
    config.num_layers = 4
-   config.dropout = 0.2
+   config.hidden_dropout_prob = 0.2
 
    # Save configuration
    config.save_pretrained('./my_config')
@@ -573,12 +571,13 @@ All models can be configured using ``AutoConfig``:
 Common Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Most models share these common parameters:
+Configuration fields and defaults depend on the model. For example,
+Transformer configurations expose:
 
 **Architecture:**
-   - ``hidden_size``: Model dimension (default: 128)
-   - ``num_layers``: Number of layers (default: 2-4)
-   - ``dropout``: Dropout rate (default: 0.1)
+   - ``hidden_size``: Model dimension
+   - ``num_layers``: Number of encoder layers
+   - ``hidden_dropout_prob``: Hidden-layer dropout rate
 
 **Training (set on the Trainer / TrainingArguments, not the config):**
    - ``learning_rate``: Initial learning rate

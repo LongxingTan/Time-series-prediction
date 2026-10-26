@@ -210,9 +210,13 @@ class SequenceMaterializer:
         if shuffle:
             dataset = dataset.shuffle(len(starts), seed=seed)
 
+        # Constant offsets preserve context/horizon dimensions during graph tracing.
+        past_offsets = tf.range(context, dtype=tf.int64)
+        future_offsets = tf.range(context, context + horizon, dtype=tf.int64)
+
         def gather(start):
-            past = tf.range(start, start + context)
-            future = tf.range(start + context, start + context + horizon)
+            past = start + past_offsets
+            future = start + future_offsets
             inputs = {}
             for name, values in arrays.items():
                 index = (

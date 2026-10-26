@@ -70,11 +70,10 @@ See :doc:`installation` for detailed instructions.
 Which TensorFlow version should I use?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Recommended:** TensorFlow >= 2.4
-
-- **TensorFlow 2.4-2.8:** Stable, well-tested
-- **TensorFlow 2.9+:** Latest features, best performance
-- **TensorFlow 2.15+:** Keras 3.0 support (experimental)
+The package declares ``tensorflow >= 2.4``. The repository's test matrix covers
+TensorFlow 2.13, 2.15, 2.16, 2.20, and 2.21 across supported Python/platform
+combinations. Use the locked environment for repository examples (see
+:doc:`installation`).
 
 Check compatibility:
 
@@ -291,7 +290,7 @@ How do I prevent overfitting?
 
 .. code-block:: python
 
-   config.dropout = 0.2
+   config.hidden_dropout_prob = 0.2
    config.attention_probs_dropout_prob = 0.1
 
 2. **Early stopping:**
@@ -309,7 +308,9 @@ How do I prevent overfitting?
 
 .. code-block:: python
 
-   config.weight_decay = 0.01
+   from tfts import Trainer, TrainingArguments
+
+   trainer = Trainer(model, args=TrainingArguments(output_dir="./outputs", weight_decay=0.01))
 
 4. **Reduce model complexity:**
    - Decrease hidden_size
@@ -372,10 +373,30 @@ How do I deploy TFTS models?
 
 **Option 1: TensorFlow Serving**
 
+Export a SavedModel into a numbered version directory. Adjust the input shape
+to match the trained model; this example uses 24 timesteps and one channel.
+A ``.keras`` archive is for Keras loading and cannot be served directly.
+
 .. code-block:: python
 
-   # Save model (Keras archive, recommended for serving)
-   model.save('./saved_model.keras')
+   import tensorflow as tf
+   from tfts import AutoModel
+
+   model = AutoModel.from_pretrained('./my_model')
+
+   class ForecastService(tf.Module):
+       def __init__(self, model):
+           super().__init__()
+           # Track weights without exporting the task model's structured output.
+           self.model = self._no_dependency(model)
+           self.weights = model.variables
+
+       @tf.function(input_signature=[tf.TensorSpec([None, 24, 1], tf.float32, name="inputs")])
+       def serve(self, inputs):
+           return {"predictions": self.model(inputs, training=False).predictions}
+
+   service = ForecastService(model)
+   tf.saved_model.save(service, './saved_model/1', signatures={"serving_default": service.serve})
 
 .. code-block:: bash
 

@@ -25,7 +25,8 @@ Notebook examples
 -----------------
 
 Runnable notebooks live in ``docs/source/tutorials/`` and are rendered here in
-the documentation. The corresponding runnable plain scripts (no notebook
+the documentation with saved outputs. Each notebook includes installation
+instructions and uses the installed TFTS API without repository-only helpers. The corresponding runnable plain scripts (no notebook
 formatting) live in ``examples/``:
 
 .. toctree::
@@ -195,15 +196,15 @@ Each model has a typed, serializable ``AutoConfig``:
    print(config)
 
    config.hidden_size = 256      # modify attributes directly ...
-   config.update({"num_layers": 4, "dropout": 0.1})   # ... or via a dict
+   config.update({"num_layers": 4, "hidden_dropout_prob": 0.1})   # ... or via a dict
    config.save_pretrained("./my_config")
    reloaded = AutoConfig.from_pretrained("./my_config")
 
 Multi-variable, multi-step input
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Models accept batches of shape ``(batch, lookback, n_features)`` and produce
-``(batch, prediction_length, n_features)``:
+Models accept batches of shape ``(batch, lookback, n_features)``. The following
+example forecasts one target channel, producing ``(batch, prediction_length, 1)``:
 
 .. code-block:: python
 
@@ -320,7 +321,6 @@ each trial:
        param_space={
            "model_type": ["rnn", "dlinear"],       # categorical
            "learning_rate": [1e-4, 1e-2],          # log-uniform
-           "num_layers": [1, 4],                   # int uniform
        },
        n_trials=10,
        epochs=5,
@@ -332,8 +332,8 @@ See ``examples/run_tuner.py`` for a full, self-contained tuning script.
 Deployment
 ----------
 
-Models built with Keras export to ``SavedModel`` / ``.keras`` and can be served
-with TensorFlow Serving:
+Save a task-aware TFTS directory for restoration with ``AutoModel.from_pretrained``.
+TensorFlow Serving requires a separate SavedModel export; see :doc:`faq`.
 
 .. code-block:: python
 

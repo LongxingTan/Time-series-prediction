@@ -42,6 +42,26 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(float(y[0, 1, 0]), 0)
         self.assertFalse(bool(x["past_observed_mask"][5, 0, 0]))
 
+    def test_dataset_preserves_static_window_shapes_for_graph_training(self):
+        import tensorflow as tf
+
+        from tfts import AutoConfig, AutoModelForForecasting
+
+        pipeline = FramePipeline(self.schema, 4, 2)
+        prepared, windows, _ = pipeline.fit(self.frame, validation=0)
+        dataset = pipeline.dataset(prepared, windows, batch_size=2)
+        inputs, labels = dataset.element_spec
+        self.assertEqual(inputs["past_values"].shape.as_list(), [None, 4, 1])
+        self.assertEqual(inputs["past_observed_mask"].shape.as_list(), [None, 4, 1])
+        self.assertEqual(labels.shape.as_list(), [None, 2, 1])
+        for name in ("nbeats", "deep_ar"):
+            with self.subTest(model=name):
+                model = AutoModelForForecasting.from_config(AutoConfig.for_model(name), output_chunk_length=2)
+                model.compile(optimizer=tf.keras.optimizers.Adam(), run_eagerly=False)
+                history = model.fit(dataset.take(1), epochs=1, verbose=0)
+                self.assertTrue(np.isfinite(history.history["loss"]).all())
+                tf.keras.backend.clear_session()
+
     def test_covariate_masks_distinguish_missing_and_unseen(self):
         schema = Schema(
             "time",

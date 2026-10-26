@@ -9,6 +9,18 @@ tasks. Each workflow follows the same production-oriented lifecycle:
 4. restore the artifact in a new model instance; and
 5. run a small inference pass with the restored model.
 
+## Setup
+
+Run from the repository root after installing the locked example dependencies:
+
+```sh
+uv sync --frozen --group docs
+```
+
+Prefix the commands below with `uv run --frozen --group docs` to use that environment.
+A plain `pip install tfts` does not install Matplotlib, scikit-learn, or Optuna.
+Classification and anomaly detection download their datasets and require network access.
+
 ## Quick reference
 
 | Example | Task | Command |
@@ -89,6 +101,11 @@ TFTS task-aware directory format because it restores the task head and is also
 usable for further fine-tuning.
 
 ## Notebooks
+
+The notebooks use the installed TFTS package and include pip setup instructions;
+no repository-only helpers or import-path changes are needed. The Stallion
+notebook also uses PyArrow. The sales notebook uses clearly identified synthetic
+data unless the Kaggle CSV configured in its `CFG.input_dir` exists.
 
 The longer notebooks are maintained in `docs/source/tutorials/` and rendered
 on the documentation site:
