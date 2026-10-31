@@ -579,6 +579,7 @@ class EagerTrainer(object):
     ) -> None:
         """Train with manual gradient tape loop."""
         self.loss_fn = loss_fn
+        self._compiled_micro_batch_step = None
         if optimizer is None:
             optimizer = tf.keras.optimizers.Adam(0.003)
         self.optimizer = optimizer
@@ -641,11 +642,15 @@ class EagerTrainer(object):
         accum_steps = self.gradient_accumulation_steps
         step = 0
 
+        # Compile the per-micro-batch forward/backward once and reuse it; each
+        # micro-batch still runs its own tape so activations are freed per step.
+        if getattr(self, "_compiled_micro_batch_step", None) is None:
+            self._compiled_micro_batch_step = tf.function(self._micro_batch_step, reduce_retracing=True)
+
         for step, (x_train, y_train) in enumerate(train_loader):
-            with tf.GradientTape() as tape:
-                y_pred = _output_tensor(self.model(x_train, training=True))
-                loss = self.loss_fn(y_train, y_pred)
-            grads = tape.gradient(loss, self.model.trainable_variables)
+            # The first call of an unbuilt model creates variables, so run it eagerly.
+            step_fn = self._compiled_micro_batch_step if self.model.built else self._micro_batch_step
+            y_pred, loss, grads = step_fn(x_train, y_train)
 
             # Accumulate gradients over micro-batches before applying an update.
             if accum_grads is None:
@@ -672,6 +677,13 @@ class EagerTrainer(object):
             for metric in self.eval_metric:
                 scores.append(metric(y_trues, y_preds))
         return train_loss / (step + 1), scores
+
+    def _micro_batch_step(self, x_train: tf.Tensor, y_train: tf.Tensor) -> tuple[Any, tf.Tensor, List[Any]]:
+        """Run one micro-batch forward and backward pass."""
+        with tf.GradientTape() as tape:
+            y_pred = _output_tensor(self.model(x_train, training=True))
+            loss = self.loss_fn(y_train, y_pred)
+        return y_pred, loss, tape.gradient(loss, self.model.trainable_variables)
 
     def _apply_gradients(self, accum_grads: List[Optional[tf.Tensor]], accum_steps: int) -> None:
         """Normalize and apply accumulated gradients."""
